@@ -34,9 +34,13 @@ if [ ${#malos[@]} -ne 0 ]; then
     exit 1
 fi
 
-con_fondo_de_main=(Main EstadoPin EstadoPinIncorrecto EstadoAcercaDe EstadoFirmarDeTodosModos EstadoPaginasSinFirmaVisible)
+con_fondo_de_main=(Main EstadoPin EstadoPinIncorrecto EstadoAcercaDe EstadoFirmarDeTodosModos EstadoPaginasSinFirmaVisible EstadoVerFirmas)
 # La barra de la ventana principal la llevan tambien las vistas sin pestanas.
 solo_cabecera=(PreferenciasPantalla PanelEstado RetirarCertificado PrimerArranque)
+# El aviso de firmas previas lo lleva todo el fondo de Main salvo 5b, y las
+# fichas de las firmas, solo el resumen de Main y el dialogo «Ver firmas».
+con_aviso_firmas=(Main EstadoPin EstadoPinIncorrecto EstadoAcercaDe EstadoFirmarDeTodosModos EstadoVerFirmas)
+con_fichas_firmas=(Main EstadoVerFirmas)
 
 for part in _*.part; do
     [ "$part" = _helmet.part ] && continue
@@ -45,10 +49,13 @@ for part in _*.part; do
     for f in *.dc.html; do
         abre=$(grep -cF "<!-- $part -->" "$f" || true)
         obligado=no
-        for a in "${con_fondo_de_main[@]}"; do [ "$f" = "$a.dc.html" ] && obligado=si; done
-        if [ "$part" = _cabecera.part ]; then
-            for a in "${solo_cabecera[@]}"; do [ "$f" = "$a.dc.html" ] && obligado=si; done
-        fi
+        case "$part" in
+            _aviso-firmas.part) lista=("${con_aviso_firmas[@]}") ;;
+            _fichas-firmas.part) lista=("${con_fichas_firmas[@]}") ;;
+            _cabecera.part) lista=("${con_fondo_de_main[@]}" "${solo_cabecera[@]}") ;;
+            *) lista=("${con_fondo_de_main[@]}") ;;
+        esac
+        for a in "${lista[@]}"; do [ "$f" = "$a.dc.html" ] && obligado=si; done
         [ "$abre" = 0 ] && [ "$obligado" = no ] && continue
         cierra=$(grep -cF "<!-- /$part -->" "$f" || true)
         suyo=$(awk -v a="<!-- $part -->" -v c="<!-- /$part -->" \

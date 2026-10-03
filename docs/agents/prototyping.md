@@ -212,8 +212,7 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 | Caso de uso | Canvas | Estado | Fichas |
 | ----------- | ------ | ------ | ------ |
-
-No hay ningún prototipo en vuelo.
+| La validez de las firmas en la ventana | `Main`, `EstadoFirmarDeTodosModos`, `EstadoVerFirmas` (nuevo), `SedeConsentimiento`, sin página de trabajo; razonamiento en `nota-validez` | en revisión | `panel-de-firma`, `dialogo-firmar-de-todos-modos`, `ventana-de-sede` |
 
 El caso de uso **el resumen unificado con `verify --gui`** se validó el
 **03/10/2026**, en `Main` y sin página de trabajo: el resumen de después de
