@@ -108,8 +108,7 @@ esté abierta, y el proceso termina con ellas:
   listaliases         Lista los certificados de los almacenes.
   verify              Valida las firmas de un fichero.
 
-Parámetros de las órdenes (rfirma <orden> --help da la sintaxis de cada una).
-La forma -parámetro del original también se acepta:
+Parámetros de las órdenes (rfirma <orden> --help da la sintaxis de cada una):
   -i <fichero>        Fichero de entrada.
   -o <fichero>        Fichero de salida, que se sobrescribe si existe.
                       Obligatorio salvo con --xml.
@@ -144,7 +143,7 @@ Desviaciones de la línea de órdenes de AutoFirma:
                       No existen.
   --preurl, --posturl, --hformat, --halgorithm, -r, --operation
                       No existen.
-  --algorithm         sha1     Se rechaza.
+  --algorithm sha1    Se rechaza.
   --store             Un almacén que AutoFirma no reconoce se rechaza.
   --certgui, --certtui
                       No listan certificados caducados ni cambian de almacén.

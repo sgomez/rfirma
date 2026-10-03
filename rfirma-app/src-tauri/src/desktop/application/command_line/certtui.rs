@@ -20,8 +20,8 @@ pub(super) fn the_certificate_chosen_on_the_terminal(
 ) -> Result<TokenCertificate, Outcome> {
     if !ports.terminal.is_interactive() {
         return Err(Outcome::failed(
-            "rfirma: -certtui necesita una terminal en la que elegir el certificado; \
-             sin ella, usa -alias o -filter"
+            "rfirma: --certtui necesita una terminal en la que elegir el certificado; \
+             sin ella, usa --alias o --filter"
                 .to_owned(),
         ));
     }

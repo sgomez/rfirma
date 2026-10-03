@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+use super::command_line::documented;
+
 const WITH_VALUE: [&str; 9] = [
     "-i",
     "-o",
@@ -87,7 +89,7 @@ impl fmt::Display for ArgumentsRefusal {
                 write!(formatter, "el argumento «{argument}» no se reconoce")
             }
             Self::MissingValue(parameter) => {
-                write!(formatter, "el parámetro {parameter} necesita un valor")
+                write!(formatter, "el parámetro {} necesita un valor", documented(parameter))
             }
             Self::MissingInput => write!(formatter, "falta -i <fichero>"),
             Self::MissingOutput => write!(formatter, "falta -o <fichero>, salvo con --xml"),

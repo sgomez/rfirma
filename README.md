@@ -107,8 +107,7 @@ argumento y sin unirse a la ventana abierta: `sign`, `cosign`, `listaliases` y
 `verify`, con `-i`, `-o`, `--format`, `--store`, `--alias`, `--filter`, `--algorithm`,
 `--config` y `--xml`. `rfirma --help` las describe todas, `rfirma <orden> --help`
 da la sintaxis de cada una, y `rfirma --version` dice la versión de rFirma y la de
-AutoFirma de la que salen los validadores. La forma `-opción` del original también se
-acepta. El código de salida es 0 si termina bien; por la
+AutoFirma de la que salen los validadores. El código de salida es 0 si termina bien; por la
 salida estándar solo sale lo que se consume (el XML de `--xml`) y los mensajes van
 a la de errores.
 

@@ -134,6 +134,12 @@ fn an_unknown_argument_a_missing_value_or_a_bad_descriptor_is_refused() {
         parsed(&["-i", "a", "-o"]),
         Err(ArgumentsRefusal::MissingValue("-o"))
     );
+    assert_eq!(
+        parsed(&["-i", "a", "-o", "b", "-alias"])
+            .unwrap_err()
+            .to_string(),
+        "el parámetro --alias necesita un valor"
+    );
     assert!(matches!(
         parsed(&["-i", "a", "-o", "b", "-alias", "yo", "-password-fd", "x"]),
         Err(ArgumentsRefusal::InvalidDescriptor(_))

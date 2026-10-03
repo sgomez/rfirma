@@ -222,14 +222,14 @@ fn signed(
     let outcome = |outcome: Outcome| Signed(outcome, None);
     let Some(selection) = &parsed.selection else {
         return outcome(Outcome::not_yet_available(
-            "elegir el certificado sin -alias",
+            "elegir el certificado sin --alias",
         ));
     };
     let parameters = match config::parameters_of(parsed.config.as_deref()) {
         Ok(parameters) => parameters,
         Err(reason) => {
             return outcome(Outcome::failed(format!(
-                "rfirma: -config no se acepta ({reason})"
+                "rfirma: --config no se acepta ({reason})"
             )))
         }
     };
@@ -386,7 +386,7 @@ fn the_certificate_named(
     };
     one_copy_of(&named, first).ok_or_else(|| {
         Outcome::failed(format!(
-            "rfirma: hay varios certificados con el alias «{alias}»; acota el almacén con -store"
+            "rfirma: hay varios certificados con el alias «{alias}»; acota el almacén con --store"
         ))
     })
 }
