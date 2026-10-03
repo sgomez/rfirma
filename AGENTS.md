@@ -53,11 +53,11 @@ Las decisiones están en `docs/adr/`; cada zona tiene su mapa con sus trampas. L
 
 ### Mapas: lee el índice antes que el código
 
-Antes de abrir código o hacer `grep`, en este orden:
+Antes de abrir código, en este orden:
 
 1. Lee entero el mapa de tu zona (lista de abajo) y, en el backend, el de su contexto.
 2. Pide el índice de la carpeta que vas a tocar, sin `| head` ni `2>/dev/null` (unas 40 líneas): `just outline rfirma-app/src-tauri/src/signing/` en el backend (también `site`, `documents`, `identity`, `desktop`, `crossing`; `signing/domain/` si ya sabes la capa) o `just outline rfirma-app/src/signing/` en la interfaz.
-3. Abre el módulo cuya línea es el tuyo. `grep -n '<símbolo>'` queda para lo que el índice no cubre, como el puente Java.
+3. Abre el módulo cuya línea es el tuyo. Si el issue ya nombra un símbolo, `grep -rln '<símbolo>'` lo localiza; sus vecinos —vistas, tests, contrato— salen del índice de su carpeta, no de más `grep`.
 
 * `rfirma-app/src-tauri/src/AGENTS.md` — backend Rust.
 * `rfirma-app/src/AGENTS.md` — interfaz.
@@ -67,8 +67,6 @@ Antes de abrir código o hacer `grep`, en este orden:
 * `docs/AGENTS.md` — ADR, research, fichas de diseño y contratos de proceso.
 
 ### Presupuesto de exploración
-
-Lo leído se reenvía en cada turno: una lectura cuesta su tamaño por los turnos que le siguen.
 
 * **De un fichero, `just outline <fichero>...`**: el esqueleto con números de línea (`.rs`, `.ts`, `.tsx`), de varios a la vez.
 * **Abre los tramos de todos los ficheros en una llamada**: `just outline a.rs:10-40,80-120 b.tsx:5-30`.
