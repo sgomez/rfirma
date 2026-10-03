@@ -164,6 +164,9 @@ pub(crate) fn tracked_modules() -> Vec<Module> {
     let listing = Command::new("git")
         .args(["ls-files", "--", "src"])
         .current_dir(&root)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
         .output()
         .expect("git deberia poder listar los ficheros versionados");
     assert!(
