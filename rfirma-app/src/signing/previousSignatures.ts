@@ -33,7 +33,7 @@ export interface PreviousSignature {
 }
 
 /** El estado de una firma previa. */
-export type SignatureStatus =
+type SignatureStatus =
   | "valid"
   | "certificateExpired"
   | "certificateNotYetValid"
@@ -65,7 +65,7 @@ export type DocumentFinding =
   | "contentAddedOnTop";
 
 /** El tono del peor aviso, de menor a mayor gravedad. */
-export type Tone = "information" | "indeterminate" | "attention";
+type Tone = "information" | "indeterminate" | "attention";
 
 /** El formato de firma del documento, o que no se reconoce. */
 export type SignatureFormat = "pades" | "cades" | "xades" | "unrecognized";
