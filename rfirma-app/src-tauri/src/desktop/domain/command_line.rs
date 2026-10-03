@@ -92,6 +92,14 @@ pub fn documented(parameter: &str) -> String {
     }
 }
 
+/// El argumento en la forma documentada si es una opción conocida, o tal como llegó.
+pub fn as_documented(argument: &str) -> String {
+    match argument.strip_prefix('-') {
+        Some(name) if is_a_known_option(name) => documented(argument),
+        _ => argument.to_owned(),
+    }
+}
+
 /// Los argumentos con cada `--opción` conocida en la forma `-opción` que usa el resto del código.
 pub fn normalised(arguments: &[String]) -> Vec<String> {
     arguments

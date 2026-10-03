@@ -117,7 +117,7 @@ describe("terminal order origin", () => {
       expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toBeInTheDocument();
     });
 
-    it("blames the -filter when it leaves none, and only offers to close", async () => {
+    it("blames the --filter when it leaves none, and only offers to close", async () => {
       vi.useRealTimers();
       const user = userEvent.setup();
       const { port, calls } = scriptedErrand(
@@ -127,7 +127,7 @@ describe("terminal order origin", () => {
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(
-        screen.getByText("Tu -filter no deja ninguno de tus 3 certificados"),
+        screen.getByText("Tu --filter no deja ninguno de tus 3 certificados"),
       ).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Instalar un certificado…" })).toBeNull();
       expect(screen.queryByText(/sede/i)).toBeNull();

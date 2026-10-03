@@ -454,7 +454,7 @@ mantiene la sede»—, y no se repite lo que ya dice la orden.
   resultado sale en la terminal: no hay «firmando» ni desenlace en ventana.
 - **Sin certificado utilizable** se abre la ventana, también lanzada sin
   terminal: «ninguno» y «todos caducados» como en la sede, sin cuerpo;
-  «excluidos» es que el `-filter` no deja ninguno —«Tu -filter no deja ninguno
+  «excluidos» es que el `-filter` no deja ninguno —«Tu --filter no deja ninguno
   de tus N certificados»—, solo con `Cerrar`.
 - **`-config` con `visibleSignature` o `checkSignatures`** no añade pantallas: el
   recuadro sale del `-config`, y pulsar `Firmar` con el aviso de firmas previas

@@ -420,7 +420,7 @@ fn the_only_certificate_accepted_by(
     one_copy_of(&accepted, first).ok_or_else(|| {
         Outcome::failed(format!(
             "rfirma: varios certificados cumplen el filtro «{expression}»; \
-             afínalo o acota el almacén con -store"
+             afínalo o acota el almacén con --store"
         ))
     })
 }

@@ -147,6 +147,19 @@ fn an_unknown_argument_a_missing_value_or_a_bad_descriptor_is_refused() {
 }
 
 #[test]
+fn an_unknown_argument_is_named_in_the_double_dash_form_only_when_it_is_a_known_option() {
+    let refused = |words: &[&str]| parsed(words).unwrap_err().to_string();
+    assert_eq!(
+        refused(&["-i", "a", "-o", "b", "-alias", "yo", "-preurl", "x"]),
+        "el argumento «--preurl» no se reconoce"
+    );
+    assert_eq!(
+        refused(&["-i", "a", "-zzz"]),
+        "el argumento «-zzz» no se reconoce"
+    );
+}
+
+#[test]
 fn gui_hands_the_file_to_the_window_without_the_other_requirements() {
     let arguments = parsed(&["-gui", "-i", "a.pdf"]).expect("válido");
 

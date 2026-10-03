@@ -2022,9 +2022,9 @@ msgstr[2] ""
 
 msgid "sede.noCertificate.terminalExcludedTitle"
 msgid_plural "sede.noCertificate.terminalExcludedTitle"
-msgstr[0] "Zure -filter-ak ez du zure ziurtagiria uzten"
-msgstr[1] "Zure -filter-ak ez du zure {{count}} ziurtagirietako bat ere uzten"
-msgstr[2] "Zure -filter-ak ez du zure {{count}} ziurtagirietako bat ere uzten"
+msgstr[0] "Zure --filter-ak ez du zure ziurtagiria uzten"
+msgstr[1] "Zure --filter-ak ez du zure {{count}} ziurtagirietako bat ere uzten"
+msgstr[2] "Zure --filter-ak ez du zure {{count}} ziurtagirietako bat ere uzten"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Instalatu beste ziurtagiri bat, edo itxi eta jarraitu egoitzatik."

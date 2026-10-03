@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use super::command_line::documented;
+use super::command_line::{as_documented, documented};
 
 const WITH_VALUE: [&str; 9] = [
     "-i",
@@ -86,7 +86,7 @@ impl fmt::Display for ArgumentsRefusal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnknownArgument(argument) => {
-                write!(formatter, "el argumento «{argument}» no se reconoce")
+                write!(formatter, "el argumento «{}» no se reconoce", as_documented(argument))
             }
             Self::MissingValue(parameter) => {
                 write!(formatter, "el parámetro {} necesita un valor", documented(parameter))

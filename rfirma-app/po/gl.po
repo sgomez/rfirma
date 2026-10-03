@@ -1978,9 +1978,9 @@ msgstr[2] "{{origin}} non acepta ningún dos teus {{count}} certificados"
 
 msgid "sede.noCertificate.terminalExcludedTitle"
 msgid_plural "sede.noCertificate.terminalExcludedTitle"
-msgstr[0] "O teu -filter non deixa o teu certificado"
-msgstr[1] "O teu -filter non deixa ningún dos teus {{count}} certificados"
-msgstr[2] "O teu -filter non deixa ningún dos teus {{count}} certificados"
+msgstr[0] "O teu --filter non deixa o teu certificado"
+msgstr[1] "O teu --filter non deixa ningún dos teus {{count}} certificados"
+msgstr[2] "O teu --filter non deixa ningún dos teus {{count}} certificados"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Instala outro certificado, ou pecha e continúa desde a sede."
