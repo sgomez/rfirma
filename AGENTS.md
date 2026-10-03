@@ -30,7 +30,7 @@ Las decisiones están en `docs/adr/`; cada zona tiene su mapa con sus trampas. L
 | Cuándo | Qué |
 | --- | --- |
 | En cada rojo → verde | Solo la prueba que tocas: `cargo test <filtro>`, `pnpm exec vitest run <fichero> --reporter=dot` |
-| Antes de commitear | `just fmt`. El resto lo corre lefthook en el pre-push: formato, biome y `just structural-guards`; tipos, i18n y knip si tocas `rfirma-app/src/`; `just check-rust` si tocas `rfirma-app/src-tauri/` |
+| Antes de commitear | `just fmt`. El commit corre `just structural-guards` con lefthook. El resto lo corre en el pre-push: formato, biome y las guardas otra vez; tipos, i18n y knip si tocas `rfirma-app/src/`; `just check-rust` si tocas `rfirma-app/src-tauri/` |
 | Al abrir la PR | Push: el veredicto de `just check` es del CI |
 | Si el CI sale en rojo | Vuelve al primer peldaño con lo que falló. `IO failure on output stream` o `No space left on device` en local es el disco: `just clean-coverage` |
 | Al revisar una PR | Nada, si el CI está verde para ese head sha (`docs/agents/code-host.md`) |

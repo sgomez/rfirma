@@ -305,7 +305,7 @@ de extraerlo a un helper. Solo informa: sin `--threshold` ni `--exit-code`, así
 que nunca sale en rojo. No entra en el CI hasta ver cuánto ruido da en la
 práctica.
 
-## Un solo hook: lo que el CI tumba a menudo y se ve en local, antes del push
+## Dos hooks: lo que el CI tumba a menudo y se ve en local, antes del push
 
 `pre-push` con **lefthook**, encadenado (`piped`: el primer trabajo que falla para los demás), y dentro cuatro trabajos. Los dos primeros corren siempre. El primero, **formato y lint de biome**: `just
 fmt-check`, que comprueba `cargo fmt` en la app y en la suite de conformidad, `biome check` —el
@@ -324,6 +324,11 @@ tarda menos de un segundo. Son las mismas pruebas que corre `cargo test` en el c
 así que el umbral, el baseline y la regla tienen un único sitio, el fichero de la guarda. Existe
 porque una guarda de estas que saltaba en el CI costaba una vuelta entera de más de diez minutos
 por algo que se ve leyendo el árbol.
+
+Las guardas corren además en un `pre-commit`, solas. Tardan 0,6 segundos, y en el push eran el
+rojo más frecuente: al commitear, el rojo llega en el mismo paso y no después de lanzar el push y
+de un commit de arreglo. El `pre-push` las conserva, porque un commit hecho con `--no-verify` o
+desde una rama anterior al hook no las ha pasado.
 
 Los otros dos corren solo si el push toca su cadena, con el `glob` de lefthook sobre los ficheros
 del push. El tercero, si toca `rfirma-app/src/`: `just build-ts lint-i18n knip` —tipos, claves de
