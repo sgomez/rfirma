@@ -1,3 +1,5 @@
+//! El acuse de recibo del documento firmado y los dos caminos hasta el fichero.
+
 import { useEffect, useState } from "react";
 import { classify, type NamedFailure } from "./errors/classify";
 import type { SigningBackend } from "./signing/flow";

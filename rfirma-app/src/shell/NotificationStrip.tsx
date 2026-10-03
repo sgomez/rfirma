@@ -1,3 +1,5 @@
+//! La franja de notificación bajo la cabecera: el patrón, no el aviso concreto.
+
 import { InfoIcon } from "../design-system/icons";
 import "./NotificationStrip.css";
 

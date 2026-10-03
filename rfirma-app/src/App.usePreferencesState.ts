@@ -1,3 +1,5 @@
+//! Los ajustes, el destino previsto para el documento activo y la rúbrica adoptada.
+
 import { useEffect, useState } from "react";
 import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { applyTheme, noWindowTheme, type WindowTheme } from "./preferences/theme";

@@ -1,3 +1,5 @@
+//! Los dobles y el `renderApp` que comparten las pruebas de `App`.
+
 import { screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { App } from "./App";

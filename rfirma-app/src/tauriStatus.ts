@@ -1,4 +1,4 @@
-/** El puerto de Tauri del estado de la instalación. */
+//! El puerto de Tauri del estado de la instalación.
 
 import { invoke } from "@tauri-apps/api/core";
 import type { SignalRow, StatusPort, WithdrawalReport } from "./status/status";

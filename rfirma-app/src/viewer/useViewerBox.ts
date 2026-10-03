@@ -1,3 +1,5 @@
+//! Los gestos que colocan el recuadro de la firma visible —arrastrar, redimensionar, trazar y moverlo con las flechas— y sellar o quitar el sello de la página que se mira.
+
 import { type KeyboardEvent, useEffect, useRef } from "react";
 import type { Viewport } from "./pdf";
 import {

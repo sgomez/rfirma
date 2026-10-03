@@ -1,3 +1,5 @@
+//! Los idiomas publicados: reexporta `LANGUAGES` y `CATALOGS` de los `locales/` que genera `tools/po-import.mjs`, con `LanguageTag`, el idioma de reserva y `isLanguageTag`.
+
 export { CATALOGS, LANGUAGES } from "./locales";
 
 import { LANGUAGES } from "./locales";

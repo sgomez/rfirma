@@ -1,3 +1,5 @@
+//! El contexto de React que enchufa i18next y deja el cambio de idioma al alcance de Preferencias (`LanguageProvider`, `useLanguage`).
+
 import type { i18n as I18n } from "i18next";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { I18nextProvider } from "react-i18next";

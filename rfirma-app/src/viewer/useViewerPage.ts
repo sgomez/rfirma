@@ -1,3 +1,5 @@
+//! La pintada sobre el `<canvas>`, el recorrido de páginas con el teclado y el zoom: continuo, «ajustar» como modo y anclado al puntero.
+
 import {
   type KeyboardEvent,
   useCallback,

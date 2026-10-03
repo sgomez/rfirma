@@ -1,3 +1,5 @@
+//! El asistente del primer arranque, en dos pasos —bienvenida y configuración—, que no se monta una vez visto (`Preferences.setupWizardSeen`); usa los casos de uso del panel de estado.
+
 import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

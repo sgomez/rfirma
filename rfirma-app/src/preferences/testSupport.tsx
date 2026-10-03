@@ -1,3 +1,5 @@
+//! Los dobles y ayudas de las pruebas de Preferencias (`defaults`, `renderView`, `openTab`, `anInstalledCertificate`), que usan también las de `App` y del asistente.
+
 import { screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import type { Certificate } from "../signing/certificate";

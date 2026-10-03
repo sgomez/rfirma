@@ -1,3 +1,5 @@
+//! La forma del catálogo, `Catalog`, tomada del castellano generado, y `catalogKeys` y `catalogValues`, que recorren sus hojas.
+
 import type es from "./locales/es";
 
 /**

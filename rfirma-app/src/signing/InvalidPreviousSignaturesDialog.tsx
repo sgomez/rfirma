@@ -1,3 +1,5 @@
+//! El diálogo «¿Firmar de todos modos?», justo antes de firmar, con alguna firma previa no válida.
+
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { formatSignedAt } from "../App.signingOrder";

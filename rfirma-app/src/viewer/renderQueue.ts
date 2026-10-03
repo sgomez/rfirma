@@ -1,3 +1,5 @@
+//! La cola que deja una sola pintada viva sobre el lienzo (`createRenderQueue`) y `observeSize`, que avisa de cada cambio de tamaño de la parte visible del visor.
+
 import type { RenderTask } from "./pdf";
 
 /**

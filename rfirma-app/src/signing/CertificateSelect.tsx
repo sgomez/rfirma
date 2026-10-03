@@ -1,3 +1,5 @@
+//! El selector de certificado: la caja de dos líneas que al abrirse es un buscador, primer bloque del panel de firma y el mismo en la sede.
+
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";

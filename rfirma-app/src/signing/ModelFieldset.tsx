@@ -1,3 +1,5 @@
+//! Qué se estampa en el recuadro: las tarjetas de modelo, la frase de *Personalizada* y la rúbrica.
+
 import { useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { RubricIcon } from "../design-system/icons";

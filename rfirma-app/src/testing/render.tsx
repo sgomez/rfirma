@@ -1,3 +1,5 @@
+//! El `renderWithCatalog` de las pruebas: pinta un componente con el catálogo y el idioma enchufados.
+
 import { type RenderResult, render as renderReact } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { createI18n } from "../i18n/i18n";

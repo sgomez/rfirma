@@ -1,3 +1,5 @@
+//! El aviso de que la página usa un cliente web antiguo, que no detiene el trámite.
+
 import { useTranslation } from "react-i18next";
 import { AlertIcon } from "../design-system/icons";
 import { SedeBody, useDefaultButton } from "./SedeFrame";

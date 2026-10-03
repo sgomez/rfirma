@@ -1,3 +1,5 @@
+//! La ventana de sede: sigue el trámite por `SiteErrandPort` y monta el componente de cada momento entre cuerpo y pie.
+
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";

@@ -1,6 +1,4 @@
-/**
- * Puerto de consulta y medición de señales del panel de estado.
- */
+//! El puerto de consulta y medición de las señales del panel de estado, con su doble en memoria `memoryStatus` y el nombre en pantalla de cada sitio. Sin React.
 
 import type { TFunction } from "i18next";
 

@@ -1,3 +1,5 @@
+//! Buscar certificados, instalar y quitar `.p12`, vaciar el almacén y elegir uno del desplegable.
+
 import { useCallback, useEffect, useState } from "react";
 import { chosenFrom } from "./App.signingOrder";
 import { classify } from "./errors/classify";

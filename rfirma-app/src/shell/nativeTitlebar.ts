@@ -1,4 +1,4 @@
-/** El puerto de la barra de título nativa: el estado que la ventana le manda y las acciones que devuelve. */
+//! El puerto de la barra de título nativa: el estado que la ventana le manda y las acciones que devuelve, con su doble en memoria y la barra ausente. Sin React.
 
 export type TitlebarActionName =
   | "open"

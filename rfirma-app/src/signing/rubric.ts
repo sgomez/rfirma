@@ -1,6 +1,5 @@
+//! La rúbrica, la firma manuscrita escaneada que va dentro del recuadro: la imagen ya normalizada, sus fallos y el puerto `RubricPicker` (ADR-0012).
 /**
- * La rúbrica: la firma manuscrita escaneada que va **dentro** del recuadro.
- *
  * Elegirla, comprobarla, reescalarla y aplanar su transparencia a blanco es
  * cosa de `rubric::normalize` en Rust (ADR-0012). La interfaz recibe la imagen
  * **ya normalizada** y la enseña: la miniatura no es una vista previa de lo que

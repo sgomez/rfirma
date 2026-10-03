@@ -1,3 +1,5 @@
+//! El componente `App` de la ventana principal: compone los `App.use*`, reparte su estado por el árbol y entrega el `AppHandle` que abre sus vistas desde fuera.
+
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { forgetActivity } from "./App.forgetActivity";

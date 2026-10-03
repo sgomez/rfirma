@@ -1,3 +1,5 @@
+//! El sello que se ve dentro del recuadro antes de firmar: su puerto `StampComposer`, sus estados y el umbral del documento grande. Sin React.
+
 import type { PdfDocument } from "../viewer/pdf";
 import type { DocumentFailure } from "../viewer/source";
 import type { SigningOrder } from "./flow";

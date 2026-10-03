@@ -1,3 +1,5 @@
+//! La declaración de tipos de i18next que da las claves del catálogo a `tsc` y al editor; se versiona a mano, a diferencia de `resources.d.ts`, que es generado.
+
 import type Resources from "./resources";
 
 /**

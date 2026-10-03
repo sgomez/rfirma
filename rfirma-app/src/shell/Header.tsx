@@ -1,3 +1,5 @@
+//! La cabecera única, sin barra de menús (ADR-0007): el hueco de las pestañas, el aviso de estado y el menú cuando se ancla en la cabecera.
+
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, ExternalLinkIcon, MenuIcon } from "../design-system/icons";

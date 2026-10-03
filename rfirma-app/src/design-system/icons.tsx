@@ -1,6 +1,5 @@
+//! Los iconos de la interfaz, copiados en línea de los artboards, salvo los cinco de veredicto, que dibuja `VerdictIcon` con trazados de Heroicons.
 /**
- * Los iconos de la interfaz, **copiados en línea de los artboards**.
- *
  * No hay biblioteca de iconos ni icono de fuente (ID-53): el artboard los trae
  * como `<svg>` en línea y la transcripción los copia tal cual. Meter una
  * dependencia para reproducir un trazado que ya está escrito sería pagar un

@@ -1,3 +1,5 @@
+//! Olvidar la actividad: los ajustes y los documentos abiertos, aunque uno de los dos falle. Sin React.
+
 /** Olvida los ajustes y los documentos, aunque el primero falle, y relanza el primer fallo. */
 export async function forgetActivity(
   forgetPreferences: () => Promise<void>,

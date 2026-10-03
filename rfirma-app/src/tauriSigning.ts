@@ -1,4 +1,4 @@
-/** Los puertos de Tauri de la firma: certificados, las tres etapas, la rúbrica y el sello (#60, #128, #194). */
+//! Los puertos de Tauri de la firma: certificados, las tres etapas, la rúbrica, la última firma visible y el sello.
 
 import { invoke } from "@tauri-apps/api/core";
 import { classify } from "./errors/classify";

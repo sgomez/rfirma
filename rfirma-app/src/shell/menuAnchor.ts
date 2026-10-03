@@ -1,3 +1,5 @@
+//! Dónde se ancla el menú de la aplicación, por plataforma: cabecera o barra de título GTK.
+
 /**
  * Dónde se ancla el menú de la aplicación (ADR-0007): el ☰ de la cabecera en
  * Windows y macOS, y la barra de título GTK en Linux. Con `"titlebar"` la cabecera HTML se queda en la tira de pestañas.

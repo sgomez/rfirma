@@ -1,3 +1,5 @@
+//! La firma visible, apagada mientras no hay certificado elegido.
+
 import { useMemo, useState } from "react";
 import type { Certificate } from "./signing/certificate";
 import type { VisibleSignature } from "./signing/visibleSignature";

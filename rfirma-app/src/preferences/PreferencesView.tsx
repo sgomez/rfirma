@@ -1,3 +1,5 @@
+//! La vista del cuerpo con los ajustes: el índice de cuatro secciones, el guardado al momento y el aviso del ajuste que el disco rechaza, en su sección.
+
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { classify, type NamedFailure } from "../errors/classify";

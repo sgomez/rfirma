@@ -1,3 +1,5 @@
+//! El diálogo Acerca de: identidad de la aplicación, estado de la versión, licencias y aviso de independencia.
+
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./AboutDialog.css";

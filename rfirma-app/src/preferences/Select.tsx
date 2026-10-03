@@ -1,3 +1,5 @@
+//! Un desplegable de la aplicación, no el `<select>` del sistema, con su teclado y su accesibilidad repuestos a mano.
+
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ChevronDownIcon } from "../design-system/icons";
 import "./Select.css";

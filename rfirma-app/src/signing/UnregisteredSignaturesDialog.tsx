@@ -1,3 +1,5 @@
+//! La pregunta, justo antes de firmar, por las firmas previas cuyo `/SubFilter` rFirma no sabe leer.
+
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon } from "../design-system/icons";

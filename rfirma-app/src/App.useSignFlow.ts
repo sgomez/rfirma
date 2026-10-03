@@ -1,3 +1,5 @@
+//! La vista previa del sello y la firma, con los tres avisos que pueden interponerse antes del PIN.
+
 import { useMemo, useState } from "react";
 import type { PageGeometry } from "./App.signingOrder";
 import { signingOrderFor } from "./App.signingOrder";

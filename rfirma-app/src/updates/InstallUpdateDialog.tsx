@@ -1,3 +1,5 @@
+//! La confirmación con la versión, la instalación y el mensaje de cada resultado fallido.
+
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./InstallUpdateDialog.css";

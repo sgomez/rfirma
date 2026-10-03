@@ -1,3 +1,5 @@
+//! El diálogo de progreso de la firma, con las tres etapas de la trifásica.
+
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { CheckIcon } from "../design-system/icons";

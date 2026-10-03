@@ -1,4 +1,4 @@
-/** Lo que la ventana manda a la barra de título nativa y a dónde lleva cada acción que vuelve. */
+//! El estado que se manda a la barra de título nativa y a dónde lleva cada acción que vuelve.
 
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";

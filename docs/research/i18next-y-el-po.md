@@ -473,7 +473,7 @@ de verdad. Tres pruebas:
 O sea que el tipo sigue haciendo su trabajo —la paridad de claves la comprueba
 `tsc`, no una prueba— y además **un catálogo a medio traducir sigue siendo un
 `Catalog` válido**, porque las hojas son `string` y `""` lo es. Esto encaja con
-una pieza que ya está puesta: `i18n.ts:35` fija **`returnEmptyString: false`**,
+una pieza que ya está puesta: `i18n.ts:37` fija **`returnEmptyString: false`**,
 y se midió lo que eso significa: con esa opción una cadena vacía cae al
 castellano, y **sin ella** i18next pinta la cadena vacía y se salta el respaldo.
 Es decir, **el respaldo al castellano de la decisión 6 del mapa ya está
@@ -674,7 +674,7 @@ Para el [#162](https://github.com/sgomez/rfirma/issues/162) y para el spec:
    huérfano **no** queda cubierto por el arnés. Hay que decir en el spec qué se
    hace con él, sabiendo que 89 de 205 claves no son visibles a un `grep`.
 8. **`returnEmptyString: false` pasa a ser normativo.** Hoy está puesto en
-   `i18n.ts:35` como detalle de implementación; con el `.po` en medio es la
+   `i18n.ts:37` como detalle de implementación; con el `.po` en medio es la
    pieza de la que depende que un `msgstr` vacío caiga al castellano en vez de
    pintar un hueco. Merece una prueba con su nombre.
 9. **La `Plural-Forms` del `.po` es decoración.** Quien reparte es

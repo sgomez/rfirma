@@ -1,3 +1,5 @@
+//! El tamaño del documento en la unidad que reconoce el usuario. Sin React.
+
 /** «2,4 MB». El tamaño en la unidad que el usuario reconoce, no en bytes. */
 export function formatSize(bytes: number, locale: string): string {
   const megabytes = bytes / 1_000_000;

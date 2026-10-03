@@ -1,3 +1,5 @@
+//! El marco de la ventana principal: la cabecera, el hueco de la franja de notificación y, debajo, el visor y el panel.
+
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Header } from "./Header";

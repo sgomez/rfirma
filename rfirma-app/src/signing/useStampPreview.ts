@@ -1,3 +1,5 @@
+//! Cuándo se compone el sello de la vista previa y qué se enseña mientras tanto; casi todo su trabajo es decidir cuándo no componer.
+
 import { useCallback, useEffect, useState } from "react";
 import type { PdfDocument } from "../viewer/pdf";
 import type { DocumentFailure } from "../viewer/source";

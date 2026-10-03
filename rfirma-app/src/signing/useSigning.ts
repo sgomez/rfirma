@@ -1,3 +1,5 @@
+//! El recorrido de firma etapa a etapa, y el acuse o el error que se enseñan solo mientras sigue delante su documento.
+
 import { useState } from "react";
 import type { Certificate } from "./certificate";
 import { refusalFor, type SigningFailure } from "./failure";

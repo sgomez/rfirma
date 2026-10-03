@@ -1,3 +1,5 @@
+//! El informe de firmas previas del documento activo, pedido al abrir o cargar.
+
 import { useEffect, useState } from "react";
 import type { SigningBackend } from "./signing/flow";
 import {

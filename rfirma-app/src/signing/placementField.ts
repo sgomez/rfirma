@@ -1,3 +1,5 @@
+//! Las situaciones del campo de páginas de «Varias», redactadas, y la forma del botón que pone o quita la firma de la página. Sin React.
+
 import type { useTranslation } from "react-i18next";
 import type { PageRangeError } from "./pageRange";
 

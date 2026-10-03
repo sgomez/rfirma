@@ -1,6 +1,5 @@
+//! Las tres etapas de la firma trifásica en el lado de la interfaz: la orden de firma, el puerto `SigningBackend` y su doble `unavailableSigningBackend` (ADR-0001).
 /**
- * Las tres etapas de la firma trifásica, en el lado de la interfaz.
- *
  * La clave privada **nunca** sale de la tarjeta: Java prepara (prefirma) y
  * ensambla (postfirma), y la única etapa que toca la clave es la de en medio,
  * que corre en Rust contra el módulo PKCS#11. La interfaz no firma nada; solo

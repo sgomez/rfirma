@@ -1,6 +1,5 @@
+//! Qué se estampa en el recuadro de la firma visible: el modelo, la frase de *Personalizada*, la regla de «Con rúbrica» y la última configuración recordada.
 /**
- * Qué se estampa en el recuadro de la firma visible.
- *
  * **Modelo, no comodines** (ID-19). El usuario no escribe `$$SUBJECTCN$$` ni
  * `$$SIGNDATE$$`: elige uno de los tres modelos, y el texto lo compone Rust en
  * `signing::layer2_text` con las etiquetas y la máscara del DNI de AutoFirma.

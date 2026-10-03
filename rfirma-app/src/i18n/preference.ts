@@ -1,3 +1,5 @@
+//! El puerto `LanguagePreference`, de dónde sale y a dónde vuelve el idioma, y su doble en memoria `inMemoryLanguagePreference`.
+
 import { FALLBACK_LANGUAGE, type LanguageTag } from "./languages";
 
 /**

@@ -1,6 +1,5 @@
+//! El tema de la ventana, lo que el usuario elige ver: los tres valores, el puerto `WindowTheme` de la ventana nativa y `applyTheme`.
 /**
- * El tema de la ventana: lo que el usuario elige ver.
- *
  * `system` **no es «claro»**: es no forzar nada y dejar que mande
  * `prefers-color-scheme`, que es lo que hacía la ventana antes de que el ajuste
  * existiera. Por eso son tres valores y no un interruptor: un booleano no

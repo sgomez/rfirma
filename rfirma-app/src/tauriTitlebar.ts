@@ -1,4 +1,4 @@
-/** El puerto de Tauri de la barra de título nativa: `apply_titlebar_state` y el evento `titlebar-action`. */
+//! El puerto de Tauri de la barra de título nativa: la orden `apply_titlebar_state` y el evento `titlebar-action`.
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";

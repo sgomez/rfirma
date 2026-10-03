@@ -1,3 +1,5 @@
+//! 4 · El desenlace: firmado, lote entregado, cancelado, guardado, cargado o rechazado, con el documento recién firmado y el detalle copiable del rechazo.
+
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import {

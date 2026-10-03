@@ -1,7 +1,5 @@
+//! Cómo hay que pedirle el secreto al almacén según la prefirma: sin sesión, tecleado en pantalla o en el teclado del lector. Sin React.
 /**
- * Cómo hay que pedirle el secreto al almacén, tal y como sale de la prefirma
- * (ID-189, ID-190).
- *
  * Es el espejo exacto de `SecretView` en Rust, con las mismas tres variantes:
  * la ventana lee `kind` y decide entre firmar directo y abrir el diálogo del
  * secreto. La tercera —`typedOnTheReaderKeypad`— no llega hoy a cruzar, porque

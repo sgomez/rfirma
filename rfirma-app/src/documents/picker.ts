@@ -1,3 +1,5 @@
+//! El puerto por el que entra un documento desde el selector del sistema, con su doble. Sin React.
+
 import type { DocumentInHand } from "./document";
 
 /**

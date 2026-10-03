@@ -1,3 +1,5 @@
+//! El pie fijo del panel, también tras firmar: el destino y, según el estado, «Firmar», «Reintentar» y «Volver», las salidas de sin certificados o las de abrir el firmado.
+
 import { useTranslation } from "react-i18next";
 import { AlertIcon, FileIcon, FolderIcon } from "../design-system/icons";
 import type { Certificate } from "./certificate";

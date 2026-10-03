@@ -1,3 +1,5 @@
+//! La colocación guardada, la geometría de la página y la orden de firma armada en un solo sitio, con el formato de la fecha del recuadro y el certificado que se elige de los encontrados. Sin React.
+
 import type { Certificate } from "./signing/certificate";
 import { isUsable } from "./signing/certificate";
 import type { SigningOrder } from "./signing/flow";

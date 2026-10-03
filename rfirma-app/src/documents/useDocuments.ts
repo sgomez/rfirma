@@ -1,3 +1,5 @@
+//! El estado de las pestañas abiertas, la activa y los recientes.
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Placement } from "../viewer/signatureBox";
 import type { DocumentInHand } from "./document";

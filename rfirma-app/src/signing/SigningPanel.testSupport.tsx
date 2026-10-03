@@ -1,3 +1,5 @@
+//! Los dobles y ayudas que comparten las pruebas de `SigningPanel`.
+
 import type { RenderResult } from "@testing-library/react";
 import { useState } from "react";
 import { renderWithCatalog } from "../testing/render";

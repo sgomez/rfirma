@@ -1,3 +1,5 @@
+//! La aritmética del zoom del visor: rango continuo, escalones, «ajustar» como modo, anclaje al puntero y el tope del mapa de bits. Sin React.
+
 import type { PageSize } from "./signatureBox";
 
 /**

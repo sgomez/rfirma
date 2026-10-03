@@ -1,6 +1,5 @@
+//! Las páginas del conjunto elegido que se quedan sin sello porque el recuadro no cabe en ellas. Sin React.
 /**
- * Las páginas del conjunto elegido donde el recuadro **no cabe** (ID-105).
- *
  * `correctPositionSignature` (`PdfUtil.java:607-632`, medido en
  * `docs/research/ancla-y-paginas-en-el-puente.md`) descarta en silencio, antes
  * de firmar, cualquier página del conjunto donde la esquina inferior izquierda

@@ -1,3 +1,5 @@
+//! El adaptador de `SiteErrandPort` sobre las órdenes del backend (`SiteCommands`): la suscripción y el recorrido de marcar, confirmar, consentir, firmar, guardar, cargar y cancelar. Sin React y sin Tauri.
+
 import type { Certificate } from "../signing/certificate";
 import type { StageResult } from "../signing/flow";
 import type { PreviousSignaturesReport } from "../signing/previousSignatures";

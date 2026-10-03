@@ -1,3 +1,5 @@
+//! 1 · La espera del canal y, cuando ya no va a abrirse, las dos recetas de navegador, que no diagnostican.
+
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CopyIcon } from "../design-system/icons";

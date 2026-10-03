@@ -1,3 +1,5 @@
+//! 2b · La pregunta que el validador del original obliga a hacer antes de consentir, con las palabras del original y sus dos salidas.
+
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

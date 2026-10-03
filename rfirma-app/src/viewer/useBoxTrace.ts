@@ -1,3 +1,5 @@
+//! Trazar el recuadro sobre la hoja, el gesto que lo hace nacer; hermano de `useBoxDrag.ts`, no un modo suyo.
+
 import { type PointerEvent as ReactPointerEvent, type RefObject, useRef } from "react";
 import { type PageSize, type PixelPoint, type PixelRect, tracedBox } from "./signatureBox";
 import type { BoxDragHandlers } from "./useBoxDrag";

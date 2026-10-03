@@ -1,3 +1,5 @@
+//! La frase de *Personalizada*: el campo con las pastillas de los datos y su menú «+ Dato».
+
 import {
   type ClipboardEvent,
   type DragEvent,

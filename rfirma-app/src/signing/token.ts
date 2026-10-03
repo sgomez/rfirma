@@ -1,6 +1,5 @@
+//! Lo que el token puede contestar cuando algo va mal: las siete situaciones que ya clasificó Rust y el detalle crudo. Sin React.
 /**
- * Lo que el token puede contestar cuando algo va mal.
- *
  * **La clasificación es de Rust** (`pkcs11::error`, ID-29): el `CKR_*` de
  * `cryptoki` se convierte allí en una situación nuestra, y aquí solo llega ya
  * clasificada, con el código crudo al lado. En este directorio no hay —ni debe

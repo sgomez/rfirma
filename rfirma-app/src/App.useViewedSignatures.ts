@@ -1,3 +1,5 @@
+//! El documento abierto para ver sus firmas (`verify --gui`) y lo que se lee de él.
+
 import { useEffect, useRef, useState } from "react";
 import { classify, type NamedFailure } from "./errors/classify";
 import type { SigningBackend } from "./signing/flow";

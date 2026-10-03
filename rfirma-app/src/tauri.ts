@@ -1,3 +1,4 @@
+//! El punto de import de los puertos que hablan con Tauri, para las dos ventanas: reexporta las fábricas de los `tauri*.ts`, salvo `tauriStage.ts`.
 /**
  * Los puertos que hablan con Tauri, reunidos aquí para que la ventana y
  * `main.tsx` sigan importando un solo módulo: cada familia vive en su propio

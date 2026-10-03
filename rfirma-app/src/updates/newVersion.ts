@@ -1,6 +1,5 @@
+//! El puerto que pregunta si hay versión nueva publicada y la instala, y su doble. Sin React.
 /**
- * Si hay una versión nueva publicada: el puerto que lo pregunta, el que la instala y su doble.
- *
  * Es **la única conexión saliente** de rFirma, y quien la hace es Rust:
  * pregunta a las Releases del repositorio y compara con la versión que
  * corre. La ventana no sabe nada de eso —ni URL, ni caché, ni comparación de

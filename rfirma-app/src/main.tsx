@@ -1,3 +1,5 @@
+//! El cableado de la ventana principal (`index.html`): quién implementa cada puerto.
+
 // El bundle del sistema de diseño va **antes** que cualquier componente: los
 // `import` de ES se evalúan en orden, y el CSS de cada pantalla baja a propósito
 // medidas de las clases `rf-*` (`.viewer__step` sobre `.rf-btn`, por ejemplo).
