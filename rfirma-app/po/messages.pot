@@ -578,12 +578,29 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-#. Etiqueta accesible del aviso de firmas previas cuando está plegado.
-msgid "panel.previousSignatures.show"
-msgstr ""
+#. Línea del aviso de firmas previas: con cuántas firmas se firma.
+msgid "panel.previousSignatures.alongside"
+msgid_plural "panel.previousSignatures.alongside"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
-#. Etiqueta accesible del aviso de firmas previas cuando está desplegado.
-msgid "panel.previousSignatures.hide"
+#. Coletilla del aviso de firmas previas: cuántas están caducadas, si ninguna es no válida.
+msgid "panel.previousSignatures.expired"
+msgid_plural "panel.previousSignatures.expired"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. Coletilla del aviso de firmas previas: cuántos problemas hay, con alguna no válida o un hallazgo.
+msgid "panel.previousSignatures.problems"
+msgid_plural "panel.previousSignatures.problems"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. Botón del aviso de firmas previas que abre el diálogo de fichas.
+msgid "panel.previousSignatures.view"
 msgstr ""
 
 #. Franja al pie del aviso de firmas previas: ya firmaste con el certificado elegido.
@@ -592,69 +609,6 @@ msgstr ""
 
 #. Franja al pie del aviso de firmas previas: ya firmaste, pero con otro certificado tuyo.
 msgid "panel.previousSignatures.otherCertificate"
-msgstr ""
-
-#. Coletilla de la línea plegada del aviso de firmas previas, en su propia línea fija.
-msgid "panel.previousSignatures.warnings"
-msgid_plural "panel.previousSignatures.warnings"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
-
-#. En la fila de la última firma previa, cuando el backend marca el documento como cambiado.
-msgid "panel.previousSignatures.changedAfterSignature"
-msgstr ""
-
-#. Veredicto de una fila del aviso de firmas previas: la firma se sostiene.
-msgid "panel.previousSignatures.status.valid"
-msgstr ""
-
-#. Veredicto de una fila del aviso de firmas previas: el certificado con el que se firmó ya caducó.
-msgid "panel.previousSignatures.status.certificateExpired"
-msgstr ""
-
-#. Veredicto de una fila del aviso de firmas previas: el certificado todavía no era válido al firmar.
-msgid "panel.previousSignatures.status.certificateNotYetValid"
-msgstr ""
-
-#. Veredicto de una fila del aviso de firmas previas: la firma no corresponde, está dañada o el PDF certificado no admitía más.
-msgid "panel.previousSignatures.status.broken"
-msgstr ""
-
-#. Veredicto de una fila del aviso de firmas previas: formato no reconocido.
-msgid "panel.previousSignatures.status.unverifiable"
-msgstr ""
-
-#. Veredicto de una fila del aviso de firmas previas: firma de perfil longevo con el certificado ya caducado.
-msgid "panel.previousSignatures.status.notFullyChecked"
-msgstr ""
-
-#. Motivo bajo el veredicto «Certificado caducado».
-msgid "panel.previousSignatures.reason.certificateExpired"
-msgstr ""
-
-#. Motivo bajo el veredicto «Certificado aún no válido».
-msgid "panel.previousSignatures.reason.certificateNotYetValid"
-msgstr ""
-
-#. Motivo bajo el veredicto «No se puede validar».
-msgid "panel.previousSignatures.reason.unverifiable"
-msgstr ""
-
-#. Motivo bajo el veredicto «No se ha podido comprobar del todo».
-msgid "panel.previousSignatures.reason.notFullyChecked"
-msgstr ""
-
-#. Motivo bajo el veredicto «Firma rota»: no corresponde con los datos del documento.
-msgid "panel.previousSignatures.reason.brokenDataMismatch"
-msgstr ""
-
-#. Motivo bajo el veredicto «Firma rota»: está dañada.
-msgid "panel.previousSignatures.reason.brokenCorrupted"
-msgstr ""
-
-#. Motivo bajo el veredicto «Firma rota»: el PDF estaba certificado y no admitía más firmas.
-msgid "panel.previousSignatures.reason.brokenCertifiedRevision"
 msgstr ""
 
 #. Nombre accesible del segmentado que elige en qué páginas va la firma visible.

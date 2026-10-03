@@ -2,7 +2,11 @@ import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
-import { previousSignatureOf, reportOf } from "../signing/SigningPanel.testSupport";
+import {
+  expectNoticeLine,
+  previousSignatureOf,
+  reportOf,
+} from "../signing/SigningPanel.testSupport";
 import { renderWithCatalog } from "../testing/render";
 import type { ErrandStage } from "./errand";
 import { SedeWindow } from "./SedeWindow";
@@ -249,8 +253,7 @@ describe("2 · consent", () => {
                   previousSignatureOf(),
                   previousSignatureOf({
                     certificateSerialNumber: "2",
-                    status: "broken",
-                    reason: null,
+                    validity: "invalid",
                   }),
                 ],
                 { warningCount: 1, tone: "attention" },
@@ -260,43 +263,11 @@ describe("2 · consent", () => {
         );
         renderWithCatalog(<SedeWindow errands={port} />);
 
-        expect(screen.getByText(/Firmarás junto a 2 firmas anteriores/)).toBeInTheDocument();
-        expect(screen.getByText(/1 aviso/)).toBeInTheDocument();
+        expectNoticeLine("Junto a 2 firmas", "1 problema");
       },
     );
 
-    it("folds the notice by default even with several signatures and warnings", () => {
-      const { port } = scriptedErrand(
-        consenting({
-          document: {
-            title: "Convenio",
-            pages: 12,
-            sizeBytes: 860_000,
-            round: { kind: "sign" },
-            hasUnregisteredSignatures: false,
-            previousSignatures: reportOf(
-              [
-                previousSignatureOf(),
-                previousSignatureOf({
-                  certificateSerialNumber: "2",
-                  status: "broken",
-                  reason: null,
-                }),
-              ],
-              { warningCount: 1, tone: "attention" },
-            ),
-          },
-        }),
-      );
-      renderWithCatalog(<SedeWindow errands={port} />);
-
-      expect(screen.getByRole("button", { name: "Ver firmas anteriores" })).toHaveAttribute(
-        "aria-expanded",
-        "false",
-      );
-    });
-
-    it("renders the site variant, where the stylesheet keeps count and warnings in one line", () => {
+    it("renders the site variant, where the stylesheet keeps the notice to one line", () => {
       const { port } = scriptedErrand(
         consenting({
           document: {
@@ -317,7 +288,8 @@ describe("2 · consent", () => {
       expect(document.querySelector(".panel__co-signature--site")).toBeInTheDocument();
     });
 
-    it("uses the certificate dropdown's chevron, not the split button's", () => {
+    it("opens the «Ver firmas» dialog from the site notice", async () => {
+      const user = userEvent.setup();
       const { port } = scriptedErrand(
         consenting({
           document: {
@@ -332,10 +304,9 @@ describe("2 · consent", () => {
       );
       renderWithCatalog(<SedeWindow errands={port} />);
 
-      const summary = screen.getByRole("button", { name: "Ver firmas anteriores" });
-      const chevron = summary.querySelector(".panel__co-signature-chevron svg");
-      expect(chevron).toHaveAttribute("width", "16");
-      expect(chevron).toHaveAttribute("stroke-width", "1.5");
+      await user.click(screen.getByRole("button", { name: "Ver firmas →" }));
+
+      expect(screen.getByRole("dialog", { name: "Firmas del documento" })).toBeInTheDocument();
     });
 
     it("signs with no intermediate dialogue when a previous signature is broken", async () => {
