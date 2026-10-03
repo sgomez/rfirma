@@ -35,7 +35,9 @@ fn every_output_type_is_either_built_from_a_document_or_declared_without_one() {
         assert!(
             built.contains(output.name) || without.contains(output.name),
             "«{}» ({}) no se construye desde un documento del portal ni esta declarado como \
-             tipo sin documento detras: la guarda de rutas no lo mira",
+             tipo sin documento detras: la guarda de rutas no lo mira; construyelo en \
+             `crossings_from_a_portal_document` o, si detras no puede haber documento, \
+             declaralo en `OUTPUTS_WITH_NO_DOCUMENT_BEHIND`",
             output.name,
             output.file
         );

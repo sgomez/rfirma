@@ -520,7 +520,12 @@ fn the_same_certificate_in_two_tokens_is_one_row() {
         .filter(|row| row.label == REPRESENTATIVE_LEGAL_ENTITY)
         .collect();
 
-    assert_eq!(found.len(), 1);
+    assert_eq!(
+        found.len(),
+        1,
+        "el certificado de los dos tokens no sale en una sola fila; con el kit desfasado \
+         sale ninguna: just certs install"
+    );
     assert_eq!(found[0].stores, vec![StoreClass::Card]);
 }
 
