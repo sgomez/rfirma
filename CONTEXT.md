@@ -228,7 +228,9 @@ el XML heredado que el original todavía acepta; y **no soporta tarjetas
 criptográficas ni el DNIe**, cuya fontanería PC/SC y PKCS#11 no se distribuye en
 ningún paquete (ADR-0004). Alcanza también a la **línea de órdenes** del
 original, con una desviación más propia de ella: **no acepta la contraseña como
-argumento** (ADR-0041).
+argumento** (ADR-0041). El `--json` de esa línea de órdenes es una **extensión**
+de rFirma, no una desviación: el original no lo tiene y nada que lo use deja de
+funcionar (ADR-0041).
 _Avoid_: equivalente, clon de AutoFirma, drop-in replacement
 
 **Petición de firma**:

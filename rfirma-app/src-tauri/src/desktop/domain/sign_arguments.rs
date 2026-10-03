@@ -16,7 +16,7 @@ const WITH_VALUE: [&str; 9] = [
     "-password-fd",
 ];
 
-const SWITCHES: [&str; 4] = ["-certtui", "-certgui", "-xml", "-gui"];
+const SWITCHES: [&str; 5] = ["-certtui", "-certgui", "-xml", "-json", "-gui"];
 
 /// Si es un parámetro de `sign` o `cosign`, en la forma `-opción`.
 pub fn is_an_option(argument: &str) -> bool {
@@ -92,7 +92,7 @@ impl fmt::Display for ArgumentsRefusal {
                 write!(formatter, "el parámetro {} necesita un valor", documented(parameter))
             }
             Self::MissingInput => write!(formatter, "falta -i <fichero>"),
-            Self::MissingOutput => write!(formatter, "falta -o <fichero>, salvo con --xml"),
+            Self::MissingOutput => write!(formatter, "falta -o <fichero>, salvo con --xml o --json"),
             Self::UnsupportedFormat(format) => {
                 write!(formatter, "el formato «{format}» no está soportado")
             }
@@ -226,7 +226,7 @@ pub fn parse_sign_arguments(arguments: &[String]) -> Result<SignArguments, Argum
         .ok_or(ArgumentsRefusal::MissingInput)?
         .to_owned();
     let hand_to_window = collected.has("-gui");
-    let xml = collected.has("-xml");
+    let document = collected.has("-xml") || collected.has("-json");
     let output = collected.value("-o").map(str::to_owned);
     let format = format_of(&collected)?;
     let algorithm = algorithm_of(&collected)?;
@@ -234,7 +234,7 @@ pub fn parse_sign_arguments(arguments: &[String]) -> Result<SignArguments, Argum
     let selection = if hand_to_window {
         None
     } else {
-        if output.is_none() && !xml {
+        if output.is_none() && !document {
             return Err(ArgumentsRefusal::MissingOutput);
         }
         Some(selection_of(&collected)?)
@@ -248,7 +248,7 @@ pub fn parse_sign_arguments(arguments: &[String]) -> Result<SignArguments, Argum
         store: collected.value("-store").map(str::to_owned),
         config: collected.value("-config").map(str::to_owned),
         password_fd,
-        xml,
+        xml: collected.has("-xml"),
         hand_to_window,
     })
 }

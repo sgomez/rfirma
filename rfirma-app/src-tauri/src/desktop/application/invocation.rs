@@ -111,7 +111,7 @@ esté abierta, y el proceso termina con ellas:
 Parámetros de las órdenes (rfirma <orden> --help da la sintaxis de cada una):
   -i <fichero>        Fichero de entrada.
   -o <fichero>        Fichero de salida, que se sobrescribe si existe.
-                      Obligatorio salvo con --xml.
+                      Obligatorio salvo con --xml o --json.
   --format <formato>  auto (por omisión), pades, cades o xades.
   --store <almacén>   Busca solo en ese almacén; sin él, en todos.
   --alias <alias>     Firma con ese certificado, sin preguntar.
@@ -125,6 +125,7 @@ Parámetros de las órdenes (rfirma <orden> --help da la sintaxis de cada una):
   --config <texto>    Propiedades clave=valor de la firma, una por línea, las
                       mismas que se aceptan de una sede.
   --xml               Responde en XML por la salida estándar.
+  --json              Responde lo mismo que --xml, en JSON. No va con --xml.
   --gui               Entrega el fichero de -i a la ventana de rFirma, sin
                       firmar ni verificar.
   --help              Muestra la sintaxis de la orden.
@@ -132,7 +133,7 @@ Parámetros de las órdenes (rfirma <orden> --help da la sintaxis de cada una):
 Salida de las órdenes:
   El código de salida es 0 si la orden termina bien y distinto de 0 si falla.
   Por la salida estándar solo sale lo que se consume: la sintaxis de --help y
-  el XML de --xml. Los mensajes y los registros van a la salida de errores.
+  el XML de --xml o el JSON de --json. Los mensajes y los registros van a la salida de errores.
 
 Desviaciones de la línea de órdenes de AutoFirma:
   --password          Se rechaza: la contraseña en la línea de órdenes la ve
