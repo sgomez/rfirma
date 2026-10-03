@@ -92,16 +92,8 @@ impl Terminal for ProcessTerminal {
     }
 
     fn chosen(&self, offered: &[OfferedCertificate], preselected: usize) -> Result<usize, String> {
-        let lines: Vec<String> = offered.iter().map(line_of).collect();
-        tty::chosen_on_tty(&lines, preselected)
+        tty::chosen_on_tty(offered, preselected)
     }
-}
-
-fn line_of(offered: &OfferedCertificate) -> String {
-    format!(
-        "{} · emitido por {} · caduca el {} · {}",
-        offered.holder, offered.issuer, offered.expires, offered.store
-    )
 }
 
 /// Los descriptores de este proceso: los que abrió quien lo lanzó.

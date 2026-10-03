@@ -1,6 +1,6 @@
 use super::{
     attribute, common_name_of, given_name_and_surname, holder_of, is_pseudonym, is_representative,
-    organization_identifier_of,
+    organization_identifier_of, without_semantics_prefix,
 };
 
 #[test]
@@ -163,4 +163,12 @@ fn a_der_that_does_not_parse_gives_no_holder_to_prompt_with() {
         None
     );
     assert_eq!(super::prompted_holder_of(&[]), None);
+}
+
+#[test]
+fn the_identifier_loses_its_semantics_prefix_and_nothing_else() {
+    assert_eq!(without_semantics_prefix("IDCES-00000000T"), "00000000T");
+    assert_eq!(without_semantics_prefix("VATES-B00000000"), "B00000000");
+    assert_eq!(without_semantics_prefix("00000000T"), "00000000T");
+    assert_eq!(without_semantics_prefix("ab-cdefg"), "ab-cdefg");
 }

@@ -126,7 +126,7 @@ fn chosen_among(
 }
 
 #[test]
-fn certtui_lists_only_the_usable_certificates_with_holder_issuer_expiry_and_store() {
+fn certtui_lists_only_the_usable_certificates_with_headline_capacity_issuer_expiry_and_stores() {
     let stores = StoresHolding::these(vec![
         a_usable_certificate("uno"),
         an_expired_certificate("caducado"),
@@ -143,10 +143,11 @@ fn certtui_lists_only_the_usable_certificates_with_holder_issuer_expiry_and_stor
     assert_eq!(offered.len(), 2);
     assert_eq!(*preselected, 0);
     for certificate in offered {
-        assert!(!certificate.holder.is_empty());
+        assert!(!certificate.headline.is_empty());
+        assert_eq!(certificate.capacity, "A título personal");
         assert!(!certificate.issuer.is_empty());
         assert_eq!(certificate.expires.len(), "2026-10-02".len());
-        assert_eq!(certificate.store, "tarjeta «rfirma-test»");
+        assert_eq!(certificate.stores, vec!["tarjeta «rfirma-test»".to_owned()]);
     }
     assert_eq!(signer.asked.borrow()[0].1, "dos");
     assert_eq!(*signer.remembered.borrow(), vec!["dos".to_owned()]);
@@ -299,4 +300,76 @@ fn each_store_class_is_named_in_the_list() {
     ] {
         assert_eq!(store_of(class, &reference), name);
     }
+}
+
+#[test]
+fn certtui_offers_one_row_for_the_copies_of_the_same_certificate() {
+    let twin = a_usable_certificate("uno");
+    let copy = crate::identity::application::tests::a_certificate("copia", twin.der());
+    let stores = StoresHolding::these(vec![twin, copy]);
+    let terminal = ChoosingTerminal::taking(Some(0));
+
+    chosen_among(&stores, &terminal, &RecordingSigner::default());
+
+    assert_eq!(terminal.shown.borrow()[0].0.len(), 1);
+}
+
+#[test]
+fn certtui_names_every_store_holding_a_copy_with_its_own_card() {
+    let twin = a_usable_certificate("uno");
+    let copy = TokenCertificate::new(
+        CertificateRef::new(
+            Store::module("/usr/lib/opensc-pkcs11.so"),
+            "DNIe",
+            "uno",
+            None,
+        ),
+        twin.der().to_vec(),
+    );
+    let stores = StoresHolding::these(vec![twin, copy]);
+    let terminal = ChoosingTerminal::taking(Some(0));
+
+    chosen_among(&stores, &terminal, &RecordingSigner::default());
+
+    assert_eq!(
+        terminal.shown.borrow()[0].0[0].stores,
+        vec![
+            "tarjeta «rfirma-test»".to_owned(),
+            "tarjeta «DNIe»".to_owned()
+        ]
+    );
+}
+
+#[test]
+fn certtui_says_on_whose_behalf_a_representative_certificate_signs() {
+    let representative =
+        crate::identity::application::tests::a_representative_certificate_of_a_natural_person(
+            "rep",
+            "PEREZ LOPEZ JUAN",
+            "JUAN",
+            "PEREZ LOPEZ",
+            "EMPRESA S.L.",
+            "VATES-B00000000",
+        );
+    let stores = StoresHolding::these(vec![representative]);
+    let terminal = ChoosingTerminal::taking(Some(0));
+
+    chosen_among(&stores, &terminal, &RecordingSigner::default());
+
+    let shown = terminal.shown.borrow();
+    assert_eq!(shown[0].0[0].headline, "EMPRESA S.L. · B00000000");
+    assert_eq!(shown[0].0[0].capacity, "Representante · JUAN PEREZ LOPEZ");
+}
+
+#[test]
+fn certtui_says_a_personal_certificate_signs_in_a_personal_capacity() {
+    let stores = StoresHolding::these(vec![a_usable_certificate("uno")]);
+    let terminal = ChoosingTerminal::taking(Some(0));
+
+    chosen_among(&stores, &terminal, &RecordingSigner::default());
+
+    assert_eq!(
+        terminal.shown.borrow()[0].0[0].capacity,
+        "A título personal"
+    );
 }

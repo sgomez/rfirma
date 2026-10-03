@@ -112,6 +112,8 @@ x509-cert = "0.3"
 # Memoria bloqueada y borrado seguro del PIN en el diálogo modal (ADR-0001, ADR-0014).
 libc = "0.2"
 zeroize = "1.9"
+# La lista de `-certtui`, en línea bajo el prompt y sobre `/dev/tty` (ADR-0042).
+ratatui = { version = "0.30", default-features = false, features = ["crossterm_0_29"] }
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 # El transporte del canal: un servidor WebSocket sobre TLS en 127.0.0.1
 # (ID-212). Las caracteristicas de TLS de este crate son SOLO de cliente, asi

@@ -132,6 +132,17 @@ pub fn is_representative(
     organization_identifier.is_some() && (!given_name.is_empty() || !surname.is_empty())
 }
 
+/// El identificador sin su prefijo semántico de ETSI EN 319 412-1 (`IDCES-`, `VATES-`).
+pub fn without_semantics_prefix(identifier: &str) -> &str {
+    let prefix = identifier.as_bytes().get(..6);
+    match prefix {
+        Some([a, b, c, d, e, b'-']) if [a, b, c, d, e].iter().all(|x| x.is_ascii_uppercase()) => {
+            &identifier[6..]
+        }
+        _ => identifier,
+    }
+}
+
 /// El titular tal y como lo nombra el diálogo del secreto: quién es y con qué número.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PromptedHolder {
