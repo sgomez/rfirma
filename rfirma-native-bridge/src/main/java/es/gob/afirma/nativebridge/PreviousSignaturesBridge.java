@@ -1,7 +1,10 @@
 package es.gob.afirma.nativebridge;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -14,6 +17,24 @@ import java.util.Map;
 import java.util.Properties;
 
 import javax.security.auth.x500.X500Principal;
+
+import org.spongycastle.asn1.cms.Attribute;
+import org.spongycastle.asn1.cms.CMSAttributes;
+import org.spongycastle.asn1.cms.Time;
+import org.spongycastle.cert.X509CertificateHolder;
+import org.spongycastle.cms.CMSException;
+import org.spongycastle.cms.CMSSignedData;
+import org.spongycastle.cms.CMSSignerDigestMismatchException;
+import org.spongycastle.cms.DefaultCMSSignatureAlgorithmNameGenerator;
+import org.spongycastle.cms.SignerInformation;
+import org.spongycastle.cms.SignerInformationStore;
+import org.spongycastle.cms.SignerInformationVerifier;
+import org.spongycastle.jce.provider.BouncyCastleProvider;
+import org.spongycastle.operator.DefaultSignatureAlgorithmIdentifierFinder;
+import org.spongycastle.operator.OperatorCreationException;
+import org.spongycastle.operator.bc.BcDigestCalculatorProvider;
+import org.spongycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
+import org.spongycastle.util.Store;
 
 import com.aowagie.text.pdf.AcroFields;
 import com.aowagie.text.pdf.PdfArray;
@@ -35,23 +56,26 @@ import es.gob.afirma.core.util.tree.AOTreeNode;
 import es.gob.afirma.signers.cades.AOCAdESSigner;
 import es.gob.afirma.signers.pades.PdfUtil;
 import es.gob.afirma.signers.xades.AOXAdESSigner;
+import es.gob.afirma.signvalidation.CertHolderBySignerIdSelector;
 import es.gob.afirma.signvalidation.DataAnalizerUtil;
 import es.gob.afirma.signvalidation.SignValidity;
 import es.gob.afirma.signvalidation.SignValidity.SIGN_DETAIL_TYPE;
 import es.gob.afirma.signvalidation.SignValidity.VALIDITY_ERROR;
 import es.gob.afirma.signvalidation.SignatureFormatDetectorPadesCades;
+import es.gob.afirma.signvalidation.ValidateBinarySignature;
 import es.gob.afirma.signvalidation.ValidatePdfSignature;
 
 /**
- * Las firmas que ya trae un PDF, un CAdES o un XAdES (FacturaE incluida), recorridas con el
- * {@code getSignersStructure} de AutoFirma 1.9.2; las de PDF, ademas,
- * validadas una a una con su validador, sin red y sin modo relajado.
+ * Las firmas que ya trae un PDF, un CAdES o un XAdES (FacturaE incluida); las de PDF y CAdES,
+ * validadas una a una con el validador por firma de AutoFirma 1.9.2, sin red y sin modo relajado.
  *
  * <p>En PDF salta los sellos de tiempo; una firma que iText no llega a leer, o
  * que no trae certificado de firma, sale no valida y danada (ADR-0043). Un PDF
- * ilegible o cifrado da un informe vacio en vez de un fallo. En CAdES y XAdES
- * solo lee la identidad de cada firmante y de sus contrafirmas, a cualquier
- * profundidad: su estado va nulo y su validez, valida, hasta que se juzguen.
+ * ilegible o cifrado da un informe vacio en vez de un fallo. En CAdES juzga cada
+ * SignerInfo y cada contrafirma, a cualquier profundidad, y comprueba su integridad
+ * aunque el certificado haya caducado (ADR-0043). En XAdES solo lee la identidad de
+ * cada firmante y de sus contrafirmas, recorridas con el {@code getSignersStructure}
+ * del original: su estado va nulo y su validez, valida, hasta que se juzguen.
  */
 final class PreviousSignaturesBridge {
 
@@ -179,7 +203,7 @@ final class PreviousSignaturesBridge {
     static Report read(final byte[] document) {
         final AOCAdESSigner cades = new AOCAdESSigner();
         if (cades.isSign(document)) {
-            return new Report(signersOf(cades, document, "CAdES"), false, List.of());
+            return new Report(cadesSigners(document), false, List.of());
         }
         final AOXAdESSigner xades = new AOXAdESSigner();
         if (xades.isSign(document)) {
@@ -213,13 +237,125 @@ final class PreviousSignaturesBridge {
             if (chain == null || chain.length == 0) {
                 continue;
             }
-            signers.add(identityOf(chain[0], info.getSigningTime(), signersUnder(node)));
+            signers.add(identityOf(chain[0], info.getSigningTime(), null, signersUnder(node)));
         }
         return signers;
     }
 
+    private static List<Signature> cadesSigners(final byte[] signature) {
+        final CMSSignedData signed;
+        try {
+            signed = new CMSSignedData(signature);
+        }
+        catch (final CMSException e) {
+            throw new IllegalStateException(e);
+        }
+        return judgedSigners(signed.getSignerInfos(), signed, signed.getSignedContent() != null);
+    }
+
+    private static List<Signature> judgedSigners(final SignerInformationStore signers,
+            final CMSSignedData signed, final boolean withContent) {
+        final List<Signature> judged = new ArrayList<>();
+        for (final SignerInformation signer : signers.getSigners()) {
+            judged.add(judged(signer, signed, withContent,
+                    judgedSigners(signer.getCounterSignatures(), signed, true)));
+        }
+        return judged;
+    }
+
+    private static Signature judged(final SignerInformation signer, final CMSSignedData signed,
+            final boolean withContent, final List<Signature> countersignatures) {
+        final Store<X509CertificateHolder> certificates = signed.getCertificates();
+        final X509Certificate certificate = certificateOf(signer, certificates);
+        if (certificate == null) {
+            return damaged(countersignatures);
+        }
+        final List<SignValidity> validities = new ArrayList<>(ValidateBinarySignature.verifySign(
+                signer, certificates, x509(), true,
+                SignatureFormatDetectorPadesCades.resolveASN1Format(signed, signer), withContent));
+        if (validities.stream().anyMatch(PreviousSignaturesBridge::isOutOfDate)) {
+            validities.add(integrityOf(signer, certificate, withContent));
+        }
+        return identityOf(certificate, signingTimeOf(signer),
+                worstReason(validities, certificate, false, null), countersignatures);
+    }
+
+    private static X509Certificate certificateOf(final SignerInformation signer,
+            final Store<X509CertificateHolder> certificates) {
+        try {
+            for (final X509CertificateHolder holder
+                    : certificates.getMatches(new CertHolderBySignerIdSelector(signer.getSID()))) {
+                return (X509Certificate) x509().generateCertificate(
+                        new ByteArrayInputStream(holder.getEncoded()));
+            }
+            return null;
+        }
+        catch (final IOException | CertificateException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static boolean isOutOfDate(final SignValidity validity) {
+        return validity.getError() == VALIDITY_ERROR.CERTIFICATE_EXPIRED
+            || validity.getError() == VALIDITY_ERROR.CERTIFICATE_NOT_VALID_YET;
+    }
+
+    /**
+     * La comprobacion criptografica que {@code verifySign} se salta con el certificado fuera de
+     * vigencia (ADR-0043). Verifica con la clave publica y no con el certificado, porque
+     * SpongyCastle rechaza un certificado que no estaba en vigor en el {@code signingTime}.
+     */
+    private static SignValidity integrityOf(final SignerInformation signer,
+            final X509Certificate certificate, final boolean withContent) {
+        try {
+            final boolean verified = signer.verify(new SignerInformationVerifier(
+                    new DefaultCMSSignatureAlgorithmNameGenerator(),
+                    new DefaultSignatureAlgorithmIdentifierFinder(),
+                    new JcaContentVerifierProviderBuilder()
+                            .setProvider(new BouncyCastleProvider())
+                            .build(certificate.getPublicKey()),
+                    new BcDigestCalculatorProvider()));
+            return verified
+                    ? new SignValidity(SIGN_DETAIL_TYPE.OK, null)
+                    : new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.CANT_VALIDATE_CERT);
+        }
+        catch (final CMSSignerDigestMismatchException e) {
+            return withContent
+                    ? new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.NO_MATCH_DATA)
+                    : new SignValidity(SIGN_DETAIL_TYPE.OK, null);
+        }
+        catch (final CMSException | OperatorCreationException | RuntimeException e) {
+            return new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.CANT_VALIDATE_CERT);
+        }
+    }
+
+    private static Date signingTimeOf(final SignerInformation signer) {
+        if (signer.getSignedAttributes() == null) {
+            return null;
+        }
+        final Attribute signingTime = signer.getSignedAttributes().get(CMSAttributes.signingTime);
+        if (signingTime == null || signingTime.getAttrValues().size() == 0) {
+            return null;
+        }
+        try {
+            return Time.getInstance(signingTime.getAttrValues().getObjectAt(0)).getDate();
+        }
+        catch (final RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static CertificateFactory x509() {
+        try {
+            return CertificateFactory.getInstance("X.509");
+        }
+        catch (final CertificateException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     private static Signature identityOf(final X509Certificate signer, final Date signingTime,
-            final List<Signature> countersignatures) {
+            final Reason worst, final List<Signature> countersignatures) {
         return new Signature(
                 readable(signer.getSubjectX500Principal()),
                 readable(signer.getIssuerX500Principal()),
@@ -229,8 +365,8 @@ final class PreviousSignaturesBridge {
                         : DateTimeFormatter.ISO_INSTANT.format(signingTime.toInstant()),
                 null,
                 null,
-                Validity.VALID,
-                null,
+                worst == null ? Validity.VALID : worst.problem().validity(),
+                worst,
                 countersignatures);
     }
 
@@ -254,7 +390,7 @@ final class PreviousSignaturesBridge {
             }
             final PdfPKCS7 pkcs7 = readableSignature(fields, name);
             if (pkcs7 == null || pkcs7.getSigningCertificate() == null) {
-                dated.add(new Dated(null, damaged()));
+                dated.add(new Dated(null, damaged(List.of())));
                 continue;
             }
             final X509Certificate signer = pkcs7.getSigningCertificate();
@@ -298,10 +434,10 @@ final class PreviousSignaturesBridge {
         }
     }
 
-    private static Signature damaged() {
+    private static Signature damaged(final List<Signature> countersignatures) {
         return new Signature("", "", "", null, Status.BROKEN,
                 VALIDITY_ERROR.CORRUPTED_SIGN.name(), Validity.INVALID,
-                Reason.of(Problem.DAMAGED), List.of());
+                Reason.of(Problem.DAMAGED), countersignatures);
     }
 
     /** El problema mas grave de una firma, o {@code null} si no tiene ninguno (ADR-0043). */
