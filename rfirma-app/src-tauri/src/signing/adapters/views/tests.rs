@@ -16,6 +16,8 @@ fn an_expired_signature() -> DocumentSignature {
             date: "2020-03-05T12:00:00Z".to_owned(),
             holder: None,
         }),
+        signing_date: None,
+        closes_document: false,
         countersignatures: Vec::new(),
     }
 }
