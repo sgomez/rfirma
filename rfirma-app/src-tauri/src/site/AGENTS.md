@@ -11,6 +11,10 @@ Cada módulo dice qué es en su cabecera `//!`, y `just outline
 rfirma-app/src-tauri/src/site/` las junta en un índice; acótalo a un
 subdirectorio (`site/domain/protocol/`) si ya sabes la capa.
 
+Cuatro módulos se leen antes que sus hermanos, porque reparten su carpeta:
+`adapters/channel/mod.rs`, `application/errand/mod.rs`,
+`domain/protocol/mod.rs` y `domain/trust.rs`.
+
 ## Al tocar lo que sale hacia la sede
 
 Todo lo que la sede recibe cuando no sale una firma pasa por
