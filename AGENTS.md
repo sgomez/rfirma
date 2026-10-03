@@ -53,20 +53,24 @@ Las decisiones están en `docs/adr/`; cada zona tiene su mapa con sus trampas. L
 
 ### Mapas: lee el índice antes que el código
 
-En el backend y en la interfaz cada módulo dice qué es en su primera línea `//!`, y `just outline <directorio>/` junta esas líneas en el índice de una carpeta, para que sepas cuál abrir sin explorar el árbol; su mapa guarda las carpetas y las trampas. Los demás mapas lo dicen en una fila por fichero. Es la primera lectura de cualquier trabajo. Cómo se escribe una cabecera o una fila, en `docs/AGENTS.md`.
+Antes de abrir código o hacer `grep`, en este orden:
 
-* `rfirma-app/src-tauri/src/AGENTS.md` — mapa del backend Rust.
-* `rfirma-app/src/AGENTS.md` — mapa de la interfaz.
-* `rfirma-native-bridge/AGENTS.md` — mapa del puente Java.
-* `scripts/AGENTS.md` — mapa de los arneses que llama el `justfile`.
-* `rfirma-conformance/AGENTS.md` — mapa de la suite de conformidad y su consola web.
-* `docs/AGENTS.md` — índice de ADR, research, fichas de diseño y contratos de proceso.
+1. Lee entero el mapa de tu zona (lista de abajo) y, en el backend, el de su contexto.
+2. Pide el índice de la carpeta que vas a tocar, sin `| head` ni `2>/dev/null` (unas 40 líneas): `just outline rfirma-app/src-tauri/src/signing/` en el backend (también `site`, `documents`, `identity`, `desktop`, `crossing`; `signing/domain/` si ya sabes la capa) o `just outline rfirma-app/src/signing/` en la interfaz.
+3. Abre el módulo cuya línea es el tuyo. `grep -n '<símbolo>'` queda para lo que el índice no cubre, como el puente Java.
+
+* `rfirma-app/src-tauri/src/AGENTS.md` — backend Rust.
+* `rfirma-app/src/AGENTS.md` — interfaz.
+* `rfirma-native-bridge/AGENTS.md` — puente Java.
+* `scripts/AGENTS.md` — los arneses del `justfile`.
+* `rfirma-conformance/AGENTS.md` — la suite de conformidad.
+* `docs/AGENTS.md` — ADR, research, fichas de diseño y contratos de proceso.
 
 ### Presupuesto de exploración
 
-Lo leído se queda en el contexto y se reenvía en cada turno: una lectura cuesta su tamaño por los turnos que vienen detrás, y la unidad de coste es el turno.
+Lo leído se reenvía en cada turno: una lectura cuesta su tamaño por los turnos que le siguen.
 
-* **Para situarte, `just outline <ruta>...`**: el esqueleto con números de línea (`.rs`, `.ts`, `.tsx`), de varios ficheros a la vez; para lo demás, `grep -n '<símbolo>'`.
+* **De un fichero, `just outline <fichero>...`**: el esqueleto con números de línea (`.rs`, `.ts`, `.tsx`), de varios a la vez.
 * **Abre los tramos de todos los ficheros en una llamada**: `just outline a.rs:10-40,80-120 b.tsx:5-30`.
 * **El fichero entero, solo si `just outline` marca menos de 300 líneas** y vas a tocarlo entero.
 * **De los tests, los nombres:** `grep -n 'fn \|it('`. Se abren para tocarlos.
