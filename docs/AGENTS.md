@@ -47,6 +47,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0040 | macOS en Apple Silicon como tercera plataforma: `.dylib` en `Contents/Frameworks`, `.dmg` sin notarizar y adaptadores pendientes |
 | 0041 | La línea de órdenes sigue a la de AutoFirma, sin la contraseña en argv |
 | 0042 | La lista de `-certtui` habla por `/dev/tty` y la pinta ratatui |
+| 0043 | La validez de una firma: tres valores, gana el peor problema y el sello de tiempo prueba la fecha |
 
 Los ADR que solo afectan a la suite de conformidad viven en `rfirma-conformance/docs/adr/` y
 comparten la numeración: el siguiente ADR, esté donde esté, toma el número libre más alto.

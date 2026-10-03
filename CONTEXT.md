@@ -40,7 +40,8 @@ _Avoid_: extraParams, opciones de firma, perfil de firma
 
 **Cofirma**:
 Firma de un PDF que ya lleva otras: la nueva se añade detrás y las anteriores
-siguen siendo válidas. Si alguna de las que ya tiene no la reconoce rFirma, la
+siguen siendo válidas, salvo que la primera no admita cofirmas, y entonces la
+nueva es no válida. Si alguna de las que ya tiene no la reconoce rFirma, la
 cofirma pide antes el consentimiento de la persona.
 _Avoid_: contrafirma (es otra cosa), multifirma, segunda firma
 
@@ -200,6 +201,18 @@ _Avoid_: apoderado, poder notarial, persona jurídica
 El titular del certificado de una firma que ya trae el documento, leído de ella;
 distinto del certificado con el que tú firmas.
 _Avoid_: firmador, autor
+
+**Validez**:
+El juicio sobre una firma que ya trae el documento, en una lista cerrada: válida,
+caducada o no válida. Es la misma dondequiera que se enseñe la firma; el motivo
+que la explica es detalle, no una validez más.
+_Avoid_: estado, veredicto, resultado, «no se ha podido comprobar del todo»
+
+**Hallazgo del documento**:
+Lo que la validación encuentra en el documento entero sin poder atribuirlo a una
+firma, como un cambio posterior a la última. Pesa como una firma no válida, pero
+no se cuelga de ninguna.
+_Avoid_: aviso, validez del documento
 
 ### Invocación
 
