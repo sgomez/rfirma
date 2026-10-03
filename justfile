@@ -351,7 +351,7 @@ test-site-driver:
 
 # Las de grada C en una sola pasada instrumentada, que mide ademas el adaptador FFI (ADR-0014).
 [group('ci')]
-test-native: (certs "install") check-native build-ts
+test-native: (certs "install") check-native build-ts llvm-cov-tag
     mkdir -p "{{ coverage_out }}/crap-ffi"
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ no_debuginfo }} cargo llvm-cov nextest --all-features --run-ignored only \
         --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info"
@@ -374,9 +374,15 @@ test-macos: build-ts
 # CRAP: solo en Rust (ADR-0014)
 # ---------------------------------------------------------------------------
 
+# Sin la marca de caché, `cargo llvm-cov` no limpia su árbol y mezcla los volcados de otros worktrees (ADR-0014).
+[private]
+llvm-cov-tag:
+    mkdir -p "{{ cargo_target }}/llvm-cov-target"
+    test -f "{{ cargo_target }}/llvm-cov-target/CACHEDIR.TAG" || printf 'Signature: 8a477f597d28d172789f06886806bc55\n' > "{{ cargo_target }}/llvm-cov-target/CACHEDIR.TAG"
+
 # Genera el lcov de toda la suite con cargo llvm-cov y no baja del suelo (ADR-0014).
 [private]
-coverage: (certs "install") build-ts
+coverage: (certs "install") build-ts llvm-cov-tag
     mkdir -p "{{ coverage_out }}/coverage"
     cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
         --fail-under-lines {{ coverage_floor }}
