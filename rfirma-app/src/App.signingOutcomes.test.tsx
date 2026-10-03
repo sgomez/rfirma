@@ -118,6 +118,7 @@ describe("App, firmando, firmado y error", () => {
       signingTime: "2026-09-14T10:32:05Z",
       status: "valid" as const,
       reason: null,
+      countersignatures: [],
     });
     const signer = aSigner({
       signedDocumentSignatures: async () => ({

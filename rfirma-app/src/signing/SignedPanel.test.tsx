@@ -20,6 +20,7 @@ function aSignature(overrides: Partial<PreviousSignature> = {}): PreviousSignatu
     signingTime: "2026-09-14T10:32:05Z",
     status: "valid",
     reason: null,
+    countersignatures: [],
     ...overrides,
   };
 }

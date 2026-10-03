@@ -56,3 +56,12 @@
 .signed-panel__field-value--signer {
   font-weight: 600;
 }
+
+.signed-panel__countersignature {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--rf-border-strong);
+}

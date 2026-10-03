@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { formatSignedAt, formatSignedTime } from "../App.signingOrder";
 import { AlertIcon, CheckCircleIcon, FileIcon } from "../design-system/icons";
@@ -114,9 +115,7 @@ export function SignedPanel({
                 {format !== "unrecognized" && (
                   <span className="rf-badge">{t(FORMAT_BADGES[format])}</span>
                 )}
-                <span className="rf-badge">
-                  {t("panel.signed.count", { count: signatures.length })}
-                </span>
+                <span className="rf-badge">{countBadge(signatures, t)}</span>
               </div>
             )}
             <ol className="signed-panel__cards">
@@ -124,7 +123,8 @@ export function SignedPanel({
                 <SignatureCard
                   // biome-ignore lint/suspicious/noArrayIndexKey: el orden es la identidad de la firma.
                   key={index}
-                  number={index + 1}
+                  label={t("panel.signed.signature", { number: index + 1 })}
+                  numbering={String(index + 1)}
                   signature={signature}
                   isNew={signedAt !== undefined && index === signatures.length - 1}
                   locale={locale}
@@ -158,13 +158,55 @@ export function SignedPanel({
 }
 
 interface SignatureCardProps {
-  number: number;
+  label: string;
+  numbering: string;
   signature: PreviousSignature;
   isNew: boolean;
   locale: string;
 }
 
-function SignatureCard({ number, signature, isNew, locale }: SignatureCardProps) {
+function SignatureCard({ label, numbering, signature, isNew, locale }: SignatureCardProps) {
+  return (
+    <li className="rf-card signed-panel__card">
+      <div className="rf-row signed-panel__card-head">
+        <span className="rf-label">{label}</span>
+        {isNew && <NewBadge />}
+      </div>
+      <SignatureRows signature={signature} locale={locale} />
+      <Countersignatures signature={signature} numbering={numbering} locale={locale} />
+    </li>
+  );
+}
+
+function NewBadge() {
+  const { t } = useTranslation();
+  return <span className="rf-badge rf-badge--primary">{t("panel.signed.new")}</span>;
+}
+
+function Countersignatures({
+  signature,
+  numbering,
+  locale,
+}: {
+  signature: PreviousSignature;
+  numbering: string;
+  locale: string;
+}) {
+  const { t } = useTranslation();
+  return signature.countersignatures.map((countersignature, index) => {
+    const path = `${numbering}.${index + 1}`;
+    return (
+      // biome-ignore lint/suspicious/noArrayIndexKey: el orden es la identidad de la firma.
+      <div className="signed-panel__countersignature" key={index}>
+        <span className="rf-label">{t("panel.signed.countersignature", { number: path })}</span>
+        <SignatureRows signature={countersignature} locale={locale} />
+        <Countersignatures signature={countersignature} numbering={path} locale={locale} />
+      </div>
+    );
+  });
+}
+
+function SignatureRows({ signature, locale }: { signature: PreviousSignature; locale: string }) {
   const { t } = useTranslation();
   const signer = t("panel.signed.field.signer");
   const rows: [string, string][] = [
@@ -177,29 +219,37 @@ function SignatureCard({ number, signature, isNew, locale }: SignatureCardProps)
     ],
   ];
 
-  return (
-    <li className="rf-card signed-panel__card">
-      <div className="rf-row signed-panel__card-head">
-        <span className="rf-label">{t("panel.signed.signature", { number })}</span>
-        {isNew && <span className="rf-badge rf-badge--primary">{t("panel.signed.new")}</span>}
+  return rows
+    .filter(([, value]) => value !== "")
+    .map(([label, value]) => (
+      <div className="rf-row signed-panel__field" key={label}>
+        <span className="rf-body rf-text-muted signed-panel__field-label">{label}</span>
+        <span
+          className={
+            "rf-body signed-panel__field-value" +
+            (label === signer ? " signed-panel__field-value--signer" : "")
+          }
+        >
+          {value}
+        </span>
       </div>
-      {rows
-        .filter(([, value]) => value !== "")
-        .map(([label, value]) => (
-          <div className="rf-row signed-panel__field" key={label}>
-            <span className="rf-body rf-text-muted signed-panel__field-label">{label}</span>
-            <span
-              className={
-                "rf-body signed-panel__field-value" +
-                (label === signer ? " signed-panel__field-value--signer" : "")
-              }
-            >
-              {value}
-            </span>
-          </div>
-        ))}
-    </li>
+    ));
+}
+
+function countersignaturesIn(signatures: readonly PreviousSignature[]): number {
+  return signatures.reduce(
+    (total, signature) =>
+      total + signature.countersignatures.length + countersignaturesIn(signature.countersignatures),
+    0,
   );
+}
+
+function countBadge(signatures: readonly PreviousSignature[], t: TFunction): string {
+  const signatureCount = t("panel.signed.count", { count: signatures.length });
+  const countersignatureCount = countersignaturesIn(signatures);
+  return countersignatureCount === 0
+    ? signatureCount
+    : `${signatureCount} · ${t("panel.signed.countersignatureCount", { count: countersignatureCount })}`;
 }
 
 function signerOf(signature: PreviousSignature): string {

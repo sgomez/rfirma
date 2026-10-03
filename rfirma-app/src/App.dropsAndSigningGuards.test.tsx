@@ -546,6 +546,7 @@ describe("App · firmas previas no válidas", () => {
     signingTime: "2024-01-01T10:00:00.000Z",
     status: "certificateExpired",
     reason: null,
+    countersignatures: [],
   };
 
   function signerWithPreviousSignatures(

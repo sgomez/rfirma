@@ -18,6 +18,7 @@ const aSignature = (name: string) => ({
   signingTime: "2026-09-14T10:32:05Z",
   status: "valid" as const,
   reason: null,
+  countersignatures: [],
 });
 
 function aSigner(overrides: Partial<SigningBackend> = {}): SigningBackend {
@@ -174,6 +175,47 @@ describe("App, con verify --gui", () => {
       expect(screen.queryByText("No se ha podido leer el documento")).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /zoom/i })).not.toBeInTheDocument();
       expect(globalThis.document.querySelector(".viewer__bar")).toBeNull();
+    });
+
+    it("nests each countersignature inside its signature, at any depth, and counts both", async () => {
+      const deep = { ...aSignature("DEEP SIGNER"), countersignatures: [] };
+      const child = { ...aSignature("CHILD SIGNER"), countersignatures: [deep] };
+      const sibling = aSignature("SIBLING SIGNER");
+      const first = { ...aSignature("FIRST SIGNER"), countersignatures: [child, sibling] };
+      renderNotAPdf(
+        aSigner({
+          previousSignatures: async () => ({
+            ...(await withSignatures()()),
+            signatures: [first, aSignature("SECOND SIGNER")],
+            format: "cades" as const,
+          }),
+        }),
+      );
+
+      expect(await screen.findByText("2 firmas · 3 contrafirmas")).toBeInTheDocument();
+      const firstCard = screen.getByText("Firma 1").closest("li") as HTMLElement;
+      expect(within(firstCard).getByText("FIRST SIGNER (00000000T)")).toBeInTheDocument();
+      expect(within(firstCard).getByText("Contrafirma 1.1")).toBeInTheDocument();
+      expect(within(firstCard).getByText("Contrafirma 1.1.1")).toBeInTheDocument();
+      expect(within(firstCard).getByText("Contrafirma 1.2")).toBeInTheDocument();
+      expect(within(firstCard).getByText("DEEP SIGNER (00000000T)")).toBeInTheDocument();
+      const secondCard = screen.getByText("Firma 2").closest("li") as HTMLElement;
+      expect(within(secondCard).queryByText(/Contrafirma/)).not.toBeInTheDocument();
+    });
+
+    it("says «1 contrafirma» in the singular", async () => {
+      const signed = { ...aSignature("FIRST SIGNER"), countersignatures: [aSignature("OTHER")] };
+      renderNotAPdf(
+        aSigner({
+          previousSignatures: async () => ({
+            ...(await withSignatures()()),
+            signatures: [signed],
+            format: "cades" as const,
+          }),
+        }),
+      );
+
+      expect(await screen.findByText("1 firma · 1 contrafirma")).toBeInTheDocument();
     });
 
     it("offers to open the file and disables Firmar with its reason", async () => {
