@@ -1,4 +1,4 @@
-//! Si WebKitGTK debe componer sin la GPU en esta sesión; no fija nada en el entorno ni elige nada más del webview.
+//! Si WebKitGTK debe componer sin la GPU en esta sesión (ADR-0007): solo la decisión, que fija `titlebar.rs`; no elige nada más del webview.
 
 /// La variable de WebKitGTK que apaga la composición acelerada.
 pub const COMPOSITING_SWITCH: &str = "WEBKIT_DISABLE_COMPOSITING_MODE";

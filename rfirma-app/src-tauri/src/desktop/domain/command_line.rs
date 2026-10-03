@@ -1,4 +1,4 @@
-//! Las órdenes de la línea de órdenes de AutoFirma que reconoce rFirma y lo que rechaza de ellas, no su ejecución.
+//! Las órdenes de la línea de órdenes de AutoFirma que reconoce rFirma y lo que rechaza de ellas, no su ejecución (ADR-0041).
 
 use std::fmt;
 

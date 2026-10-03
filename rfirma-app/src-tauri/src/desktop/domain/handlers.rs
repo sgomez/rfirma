@@ -1,4 +1,4 @@
-//! Quién atiende `afirma://` en el escritorio, tal como lo decide el caso de uso.
+//! Quién atiende `afirma://` en el escritorio, tal como lo decide el caso de uso, y el nombre de nuestro `.desktop`.
 
 /// Fichero .desktop con el que rFirma queda registrada en paquetes nativos.
 pub const OUR_DESKTOP_FILE: &str = "rfirma.desktop";

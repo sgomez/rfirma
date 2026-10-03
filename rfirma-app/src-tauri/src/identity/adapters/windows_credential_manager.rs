@@ -1,4 +1,4 @@
-//! El PIN del Almacén de rFirma en el Administrador de credenciales de Windows (ADR-0034, ADR-0035).
+//! `WindowsCredentialManager`: el PIN del Almacén de rFirma en una credencial genérica del Administrador de credenciales de Windows (ADR-0034, ADR-0035).
 
 use std::ptr;
 

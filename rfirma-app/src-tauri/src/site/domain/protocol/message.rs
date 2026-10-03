@@ -1,4 +1,4 @@
-//! Lo que llega por el canal ya abierto, leído como texto y sin efectos.
+//! Lo que llega por el canal ya abierto y con qué credencial viene, leído como texto y sin efectos.
 
 use crate::site::domain::protocol::AfirmaUrl;
 

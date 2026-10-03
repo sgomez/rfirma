@@ -1,4 +1,4 @@
-//! El `-config` de `sign`: las propiedades de la firma, leídas con las reglas de las `properties` de una sede.
+//! El `-config` de `sign`: las propiedades de la firma, leídas con las reglas de las `properties` de una sede, sin expandirlas.
 
 use std::collections::BTreeMap;
 

@@ -1,4 +1,4 @@
-//! El disco tras el puerto `DocumentBytes`: leer el PDF que se va a firmar.
+//! `RealDocumentBytes`, el disco tras el puerto `DocumentBytes`: leer el PDF que se va a firmar.
 
 use std::path::Path;
 

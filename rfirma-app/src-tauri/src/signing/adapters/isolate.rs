@@ -1,4 +1,4 @@
-//! El hilo dueño del isolate de GraalVM (ADR-0003, ADR-0004).
+//! El hilo dueño del isolate de GraalVM y el adaptador de `IsolateHost` (ADR-0003, ADR-0004).
 
 use std::sync::mpsc::{channel, Sender};
 use std::thread;

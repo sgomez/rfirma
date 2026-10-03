@@ -1,4 +1,4 @@
-//! Los tipos de identidad que cruzan a la ventana principal (ADR-0011).
+//! Los tipos de identidad que cruzan a la ventana: `CertificateView`, `StatusView` y `SecretView` (ADR-0011).
 
 use serde::Serialize;
 

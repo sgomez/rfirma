@@ -1,4 +1,4 @@
-//! Gestión del registro y renovación de la CA local en almacenes NSS (ADR-0005).
+//! Cuándo se instala la CA local en los almacenes de confianza, cómo se solapa con la siguiente y cómo se retira de todos ellos (ADR-0005).
 
 use std::path::{Path, PathBuf};
 

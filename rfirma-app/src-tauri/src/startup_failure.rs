@@ -1,4 +1,4 @@
-//! Clasificación de los fallos de arranque de los dos roles, sin instancia de webview donde pintarlos.
+//! `StartupFailure` y su `Situation`: los fallos de arranque de los dos roles, antes de que exista una ventana donde pintarlos; no es de ningún contexto.
 
 use std::fmt;
 

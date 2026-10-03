@@ -1,4 +1,4 @@
-//! El registro de manejadores del escritorio detrás del puerto `HandlerRegistry`: canal, GIO y `mimeapps.list`; en Windows, el registro.
+//! `DesktopRegistry`, el registro de manejadores detrás del puerto `HandlerRegistry`: canal, GIO y `mimeapps.list` en Linux, el registro en Windows y Launch Services, pendiente, en macOS.
 
 use std::path::PathBuf;
 

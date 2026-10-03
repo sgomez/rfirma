@@ -1,4 +1,4 @@
-//! Sesión local de firma trifásica: prefirma, firma en el token y postfirma (ADR-0001, ADR-0016).
+//! Sesión de firma trifásica —las prefirmas local y de sede, la firma en el token y la postfirma— y `CycleFailure`, lo que puede salir mal (ADR-0001, ADR-0016).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

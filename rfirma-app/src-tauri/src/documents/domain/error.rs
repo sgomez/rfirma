@@ -1,4 +1,4 @@
-//! Clasificación de situaciones de fallo del destino (ADR-0009, ADR-0011).
+//! Situaciones del destino y `DocumentError`: por qué un documento no se abre, no se lee o no se entrega (ADR-0009, ADR-0011).
 
 use std::fmt;
 use std::path::Path;

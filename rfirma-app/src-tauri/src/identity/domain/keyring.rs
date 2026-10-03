@@ -1,4 +1,4 @@
-//! El PIN del Almacén de rFirma: aleatorio y largo, y por qué el llavero no lo entregó (ADR-0034).
+//! El PIN del Almacén de rFirma, aleatorio y largo (`generate_pin`), y `KeyringError`, por qué el llavero no lo entregó (ADR-0034).
 
 use std::fmt;
 

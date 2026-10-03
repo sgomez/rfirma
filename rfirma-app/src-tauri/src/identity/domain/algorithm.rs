@@ -1,4 +1,4 @@
-//! El algoritmo de firma que se pide por su nombre y el mecanismo PKCS#11 con el que se cumple.
+//! El algoritmo de firma que se pide por su nombre, la clase de clave que exige y el mecanismo PKCS#11 con el que se cumple.
 
 use std::ffi::c_ulong;
 

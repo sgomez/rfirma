@@ -1,5 +1,4 @@
-//! Importación de ficheros PKCS#12 en el Almacén de rFirma, y los símbolos NSS de bajo nivel que
-//! también usa `super::removal` para borrar un certificado de la misma base (ADR-0034).
+//! Importación de ficheros PKCS#12 en el Almacén de rFirma, los símbolos NSS de bajo nivel que también usa `super::removal`, y `NssHost` y `RealNssHost`, para `site/adapters/nss.rs` (ADR-0034).
 
 use std::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CString};
 use std::path::Path;

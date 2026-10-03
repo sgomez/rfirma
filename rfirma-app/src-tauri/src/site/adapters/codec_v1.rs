@@ -1,4 +1,4 @@
-//! Códec del protocolo v1 para decodificar peticiones y codificar respuestas (ADR-0017).
+//! Códec del protocolo v1, el del transporte `service`, que delega en el de la v4 en vez de repetirlo (ADR-0017).
 
 use crate::site::domain::protocol::AfirmaUrl;
 

@@ -1,4 +1,4 @@
-//! Contexto `desktop` (ADR-0017): la raíz de composición.
+//! Contexto `desktop` (ADR-0017): la raíz de composición, `DesktopRoot`, con las rutas, la invocación pendiente y la memoria de la versión.
 
 pub mod adapters;
 pub mod application;

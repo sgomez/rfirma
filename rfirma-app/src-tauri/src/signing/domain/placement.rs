@@ -1,4 +1,4 @@
-//! Conversión geométrica del recuadro visual a coordenadas PAdES del puente nativo (ADR-0006).
+//! Conversión del recuadro arrastrado en el visor al `/Rect` PAdES del puente: `PageSet`, `VisibleBox`, `Spot`, `BoxSize` y `PlacementError` (ADR-0006).
 
 use super::config::PadesRect;
 use serde::{Deserialize, Serialize};

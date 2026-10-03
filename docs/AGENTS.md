@@ -135,6 +135,12 @@ vas a publicar un issue o una PR.**
 hace falta para saber si es el que se busca; y, cuando ayude a no confundirlo,
 qué **no** es. El *cómo* funciona lo dice el código, y el porqué un ADR, citado
 por número. Sin tamaños —los da `just outline` en el momento—, sin citas a
-identificadores de spec y sin números de PR o de issue. Lo vigila
-`rfirma-app/src-tauri/tests/agents_map_is_complete.rs`, que además exige que
-todo módulo esté en el mapa de su zona.
+identificadores de spec y sin números de PR o de issue.
+
+En el backend no hay filas: la misma regla vale para la primera línea `//!` de
+cada módulo, entera en una línea y de 300 caracteres como mucho, que
+`just outline <directorio>/` junta en el índice. El mapa de cada contexto se
+queda con lo que el código no confiesa: las trampas y las secciones «Al tocar…».
+Lo vigila `rfirma-app/src-tauri/tests/agents_map_is_complete.rs`, que exige
+además que todo módulo de la interfaz esté en el mapa de su zona y que todo
+módulo del backend que no sea de prueba abra con esa línea.

@@ -1,4 +1,4 @@
-//! Contexto `signing` (ADR-0017): la raíz de composición y lo que presta a los vecinos.
+//! Contexto `signing` (ADR-0017): la raíz de composición, `SigningRoot`, y lo que presta a los vecinos.
 
 pub mod adapters;
 pub mod application;

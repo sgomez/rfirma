@@ -1,4 +1,4 @@
-//! Lo que la sede pide por el canal ya abierto, leído de la URL.
+//! Lo que la sede pide por el canal ya abierto, leído de la URL: el verbo, el reparto de sus tipos entre los ficheros hermanos y `read_operation`, que los distingue.
 
 #[cfg(test)]
 use base64::Engine as _;

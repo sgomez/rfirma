@@ -1,4 +1,4 @@
-//! El canal local visto desde dentro: su cometido, sus situaciones de error y el asa del abierto (ADR-0005, ADR-0009).
+//! El canal local visto desde dentro y sin socket: su cometido, dónde escucha, cuántas operaciones atiende, sus situaciones de error y el asa del abierto (ADR-0005, ADR-0009, ADR-0024).
 
 use std::fmt;
 

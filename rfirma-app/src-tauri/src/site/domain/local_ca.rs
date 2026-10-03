@@ -1,4 +1,4 @@
-//! Autoridad de certificación (CA) local para firmar el certificado del servidor (ADR-0005).
+//! La CA local, pura, que firma el certificado del servidor: la genera y la lee de PEM sin tocar el disco (ADR-0005).
 
 use openssl::asn1::{Asn1Integer, Asn1Object, Asn1OctetString, Asn1Time};
 use openssl::bn::{BigNum, MsbOption};

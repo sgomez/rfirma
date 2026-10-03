@@ -1,4 +1,4 @@
-//! Quién abre un esquema de URL en Windows: `Software\Classes` del usuario, que manda sobre el de la máquina.
+//! Quién abre un esquema de URL en Windows: `Software\Classes` del usuario, que manda sobre el de la máquina y donde vive la rama de rFirma (ADR-0035).
 
 use std::path::{Path, PathBuf};
 use std::ptr;

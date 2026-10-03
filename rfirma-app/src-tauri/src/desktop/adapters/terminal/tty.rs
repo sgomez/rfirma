@@ -1,4 +1,4 @@
-//! El secreto tecleado y el certificado elegido en la terminal que controla el proceso, sin pasar por stdin ni stdout.
+//! El secreto tecleado y el certificado elegido en la lista de `-certtui`, en la terminal que controla el proceso y sin pasar por stdin ni stdout; solo Unix (ADR-0042).
 
 use crate::desktop::ports::OfferedCertificate;
 use crate::identity::domain::protected_secret::ProtectedSecret;

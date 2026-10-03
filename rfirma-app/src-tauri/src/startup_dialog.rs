@@ -1,4 +1,4 @@
-//! Diálogo nativo que enseña un fallo de arranque (GTK en Linux, `MessageBoxW` en Windows, pendiente en macOS); capa fina, sin pruebas.
+//! Diálogo nativo que enseña un fallo de arranque y sale del proceso (GTK en Linux, `MessageBoxW` en Windows, pendiente en macOS); capa fina, sin pruebas (ADR-0035, ADR-0040).
 
 use crate::startup_failure::StartupFailure;
 use crate::startup_failure::REPOSITORY_ADDRESS;

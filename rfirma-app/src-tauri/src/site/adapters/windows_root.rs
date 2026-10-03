@@ -1,4 +1,4 @@
-//! La CA local en el almacén raíz del usuario de Windows, con CryptoAPI (ADR-0035).
+//! `WindowsUserStores`, la CA local en el almacén raíz del usuario de Windows con CryptoAPI, detrás del puerto `TrustStores`; solo en Windows (ADR-0035).
 
 use std::ffi::c_void;
 use std::path::{Path, PathBuf};

@@ -1,4 +1,4 @@
-//! El origen `https://` del saludo de la sede, o su ausencia: se atribuye y nunca controla el acceso.
+//! `SiteOrigin`: el `host[:puerto]` del `Origin` `https://` del saludo de la sede, o su ausencia; se atribuye y nunca controla el acceso.
 
 #[cfg(test)]
 mod tests;

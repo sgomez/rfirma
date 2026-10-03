@@ -1,4 +1,4 @@
-//! La barra de título nativa de GTK de la ventana principal en Linux, y nada en el resto; solo se prueba cuándo aplicar un estado y qué dice cada reciente.
+//! La barra de título nativa de GTK de la ventana principal en Linux, con la composición de WebKitGTK que piden sus popovers, y nada en el resto; solo se prueba cuándo aplicar un estado y qué dice cada reciente.
 
 use super::views::TitlebarStateView;
 

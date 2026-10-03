@@ -1,4 +1,4 @@
-//! El elector gráfico de `-certgui`: levanta Tauri en el proceso de terminal solo para la ventana de sede con el origen «orden de terminal», y devuelve lo elegido en ella; no firma.
+//! `SiteWindowPicker`, el elector gráfico de `-certgui`: levanta Tauri en el proceso de terminal solo para la ventana de sede con el origen «orden de terminal», y devuelve lo elegido en ella; no firma.
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};

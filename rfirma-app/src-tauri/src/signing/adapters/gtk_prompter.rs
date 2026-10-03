@@ -1,4 +1,4 @@
-//! Adaptadores del puerto `SecretPrompter`: diálogo nativo GTK3 y adaptadores de pruebas (ADR-0001, ADR-0014).
+//! Adaptadores del puerto `SecretPrompter`: diálogo nativo GTK3, sus pendientes de Windows y macOS y los de pruebas (ADR-0001, ADR-0014, ADR-0035, ADR-0040).
 
 use std::sync::Mutex;
 #[cfg(target_os = "linux")]

@@ -1,4 +1,4 @@
-//! La expresión de filtro que manda la sede, que cruza entera al motor.
+//! La expresión de filtro que manda la sede, que cruza entera al motor, la biblioteca PKCS#11 a la que acota el listado y el catálogo de criterios medidos contra el original (ADR-0022).
 
 use super::key_store::StoreScope;
 

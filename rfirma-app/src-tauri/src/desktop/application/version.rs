@@ -1,4 +1,4 @@
-//! Comprobación y comparación de versiones nuevas publicadas (ADR-0015).
+//! Comprobación de versiones nuevas publicadas y su instalación, solo si es mayor que la que corre (ADR-0015).
 
 use std::time::{SystemTime, UNIX_EPOCH};
 

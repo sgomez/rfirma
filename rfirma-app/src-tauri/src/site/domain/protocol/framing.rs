@@ -1,5 +1,4 @@
-//! Framing artesanal del transporte `service`: lector y escritor puros, sin socket
-//! (`CommandProcessorThread.java`, ADR-0017).
+//! Framing artesanal del transporte `service`: lector y escritor puros, sin socket (`CommandProcessorThread.java`, ADR-0017).
 
 use base64::engine::general_purpose::URL_SAFE;
 use base64::Engine as _;

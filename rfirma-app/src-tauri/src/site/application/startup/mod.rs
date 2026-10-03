@@ -1,4 +1,4 @@
-//! Gestión del flujo de arranque de la aplicación y atención de invocaciones de sede (ADR-0005).
+//! El arranque: si se enseña la ventana principal o se atiende un trámite de sede, cuándo se abre la ventana de sede y cuándo se dispara la entrega (ADR-0005, ADR-0020).
 
 pub mod channel;
 pub mod repair;

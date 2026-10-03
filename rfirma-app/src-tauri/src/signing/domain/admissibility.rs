@@ -1,4 +1,4 @@
-//! Detección rápida de admisibilidad de documentos antes de solicitar el PIN.
+//! Lo que no se puede firmar en PAdES, decidido antes de pedir el PIN, lo que la petición levanta (`Waivers`) y el `/SubFilter` que el puente no lee; no es de ningún otro formato.
 
 use std::collections::BTreeMap;
 use std::fmt;

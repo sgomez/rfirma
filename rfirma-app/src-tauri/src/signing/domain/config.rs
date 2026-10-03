@@ -1,4 +1,4 @@
-//! Configuración de firma PAdES para el puente nativo.
+//! Los ajustes de firma PAdES para el puente nativo y ni uno más, y `SigningChoice`, lo que la persona decidió de esta firma, con `Placement` y `PadesRect`.
 
 use std::collections::BTreeMap;
 

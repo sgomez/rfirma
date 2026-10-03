@@ -1,4 +1,4 @@
-//! Material criptográfico del canal: CA local y certificado del servidor (ADR-0005).
+//! Material criptográfico del canal en el lado de los adaptadores: el certificado efímero del servidor local y las dos ranuras en disco de la CA local (ADR-0005).
 
 pub mod server;
 pub mod store;

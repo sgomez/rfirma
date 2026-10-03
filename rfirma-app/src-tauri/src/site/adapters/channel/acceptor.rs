@@ -1,4 +1,4 @@
-//! Saludo TLS del servidor local: `native-tls` en Linux, `rustls` en Windows y macOS (ADR-0036).
+//! Saludo TLS del servidor local que comparten el canal y `service`: `native-tls` en Linux, `rustls` en Windows y macOS (ADR-0036).
 
 use std::io;
 

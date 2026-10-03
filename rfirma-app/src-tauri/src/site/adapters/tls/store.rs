@@ -1,4 +1,4 @@
-//! Persistencia en disco de la CA local y su solape (ADR-0005).
+//! Las dos ranuras en disco de la CA local y su solape, detrás del puerto `LocalCaSlots` (ADR-0005).
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};

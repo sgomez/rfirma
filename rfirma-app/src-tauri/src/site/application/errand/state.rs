@@ -1,4 +1,4 @@
-//! Estado del trámite con la sede y gestión de su ciclo de vida (ADR-0016).
+//! Estado del trámite con la sede, con un solo dueño (`LiveErrand`), y gestión de su ciclo de vida (ADR-0016).
 
 mod area;
 mod chosen_document;

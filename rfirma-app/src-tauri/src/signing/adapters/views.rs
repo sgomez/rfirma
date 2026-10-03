@@ -1,4 +1,4 @@
-//! Los tipos de firma local que cruzan a la ventana principal (ADR-0011).
+//! Los tipos de firma local que cruzan a la ventana, `PlacementView` y `ConfigurationView`, con sus conversiones de ida y vuelta (ADR-0011).
 
 use std::collections::BTreeSet;
 

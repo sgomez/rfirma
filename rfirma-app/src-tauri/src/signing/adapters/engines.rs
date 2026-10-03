@@ -1,4 +1,4 @@
-//! Adaptadores del puente y de los motores de filtrado y políticas sobre la librería nativa (ADR-0017).
+//! Adaptadores del puente y de los motores que la sede declara en `site/ports.rs` —filtrado, políticas y validación— sobre la librería nativa (ADR-0017).
 
 use crate::signing::adapters::ffi::NativeBridge;
 use crate::signing::adapters::isolate::Isolate;

@@ -1,4 +1,4 @@
-//! El reloj de inactividad del canal `service`: vence cuando pasa su plazo sin una orden válida en curso.
+//! El reloj de inactividad del canal `service`, que lo cierra cuando pasa su plazo sin una orden válida en curso (ADR-0024).
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

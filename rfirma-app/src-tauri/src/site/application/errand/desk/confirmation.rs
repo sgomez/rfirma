@@ -1,4 +1,4 @@
-//! La confirmación que la firma de sede espera de la persona antes de seguir; no decide el consentimiento.
+//! La confirmación que la firma de sede espera de la persona antes de seguir —la de `checkSignatures` y la del PDF certificado—; no decide el consentimiento.
 
 use std::collections::BTreeMap;
 

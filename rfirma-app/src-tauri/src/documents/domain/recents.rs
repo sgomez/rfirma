@@ -1,4 +1,4 @@
-//! La bandeja de recientes: los diez últimos, por ruta canónica, con lo que quien firma quiera recordar de cada uno (ADR-0010, ADR-0011).
+//! La bandeja de recientes, `Recents<Spot>`: los diez últimos, por ruta canónica, con lo que quien firma quiera recordar de cada uno; no cruza a la ventana (ADR-0010, ADR-0011).
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};

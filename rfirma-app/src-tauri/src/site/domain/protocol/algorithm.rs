@@ -1,4 +1,4 @@
-//! El algoritmo de firma que nombra la sede, reducido a la huella que pide.
+//! El algoritmo de firma que nombra la sede, reducido a la huella que pide; no lo compone con la clave, eso es de `ports.rs`.
 
 /// La huella que pide la sede, sea cual sea el nombre con el que la escriba.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

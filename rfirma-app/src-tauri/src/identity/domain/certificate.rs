@@ -1,4 +1,4 @@
-//! Certificados leídos del token PKCS#11 y su clasificación (ADR-0010).
+//! Certificados leídos del token PKCS#11, su clasificación y `ListedCertificate`, la fila con su asa (ADR-0010).
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

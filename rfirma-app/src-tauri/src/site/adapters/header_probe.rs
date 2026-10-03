@@ -1,4 +1,4 @@
-//! Un servidor HTTP de una sola petición que devuelve el valor de `Authorization` que recibió.
+//! Los servidores HTTP de una petición con los que se prueban los cuatro clientes de sede: devuelven el `Authorization`, rechazan, tardan, ponen una cookie o presentan un certificado TLS sin CA de confianza; solo en pruebas.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;

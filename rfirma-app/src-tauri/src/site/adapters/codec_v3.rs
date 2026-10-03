@@ -1,4 +1,4 @@
-//! Códec del protocolo v3 para decodificar peticiones y codificar respuestas (ADR-0017).
+//! Códec del protocolo v3, que delega en el de la v4 y rechaza la operación que exige un `ver` posterior (ADR-0017).
 
 use crate::site::domain::protocol::{read_operation_within_the_protocol, AfirmaUrl};
 

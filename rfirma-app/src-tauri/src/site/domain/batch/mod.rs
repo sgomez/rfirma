@@ -1,4 +1,4 @@
-//! El lote sin trámite: `TriphaseData`, la prefirma con errores del remoto, la lectura del local y el resultado de los dos.
+//! El lote sin trámite: `TriphaseData`, la prefirma con errores del remoto, la lectura del local, el resultado de los dos y `BatchFormat`, si viaja en el XML heredado o en JSON.
 
 pub mod header;
 pub mod json;

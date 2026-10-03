@@ -1,4 +1,4 @@
-//! Las órdenes de firma local: el ciclo, la previsualización y la configuración.
+//! Las órdenes de firma local: el ciclo, la previsualización, la esquina PAdES, la configuración y las consultas de firmas del documento (no registradas, previas y de lo firmado).
 
 use tauri::{Manager as _, State};
 

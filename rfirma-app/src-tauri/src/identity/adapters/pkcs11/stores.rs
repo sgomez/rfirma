@@ -1,4 +1,4 @@
-//! Colección y descubrimiento de almacenes PKCS#11 y perfiles NSS.
+//! Dónde se buscan los certificados —almacenes PKCS#11, perfiles NSS y `.p12` instalados— y qué módulo descubierto es la biblioteca que nombra la sede (ADR-0022).
 
 use std::path::{Path, PathBuf};
 

@@ -1,4 +1,4 @@
-//! Almacén persistente de la rúbrica normalizada (ADR-0010, ADR-0012).
+//! Almacén persistente de la rúbrica normalizada, que se copia y no se referencia (ADR-0010, ADR-0012).
 
 use std::fs::{self, File};
 use std::io::Read as _;

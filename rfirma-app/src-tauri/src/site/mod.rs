@@ -1,4 +1,4 @@
-//! Contexto `site` (ADR-0017): la raíz de composición.
+//! Contexto `site` (ADR-0017): la raíz de composición, con sus adaptadores, su estado de proceso y sus puertos instanciados.
 
 pub mod adapters;
 pub mod application;

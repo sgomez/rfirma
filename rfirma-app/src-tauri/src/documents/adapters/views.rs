@@ -1,4 +1,4 @@
-//! Los tipos de documentos que cruzan a la ventana principal (ADR-0011).
+//! Los tipos de documentos que cruzan a la ventana —destino, destino de una sola firma, PDF firmado, documento abierto, soltado y reciente— y su `From` desde `domain/told.rs` (ADR-0011).
 
 use serde::Serialize;
 

@@ -1,4 +1,4 @@
-//! Lo que pide la sede, leído de una URL `afirma://` y sin efectos.
+//! Lo que pide la sede, leído de una URL `afirma://` y sin efectos, y dónde rFirma se aparta del original a propósito.
 //!
 //! Donde rFirma se aparta del original a propósito:
 //!

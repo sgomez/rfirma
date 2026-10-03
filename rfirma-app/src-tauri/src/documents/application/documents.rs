@@ -1,4 +1,4 @@
-//! Casos de uso para apertura y resolución de destino de documentos (ADR-0011).
+//! Casos de uso para apertura y resolución de destino de documentos, y lo abierto en esta sesión, `OpenedDocuments` (ADR-0011).
 
 use std::path::{Path, PathBuf};
 

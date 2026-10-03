@@ -1,4 +1,4 @@
-//! Contexto `documents` (ADR-0017): la raíz de composición y lo que presta a los vecinos.
+//! Contexto `documents` (ADR-0017): la raíz de composición, `DocumentsRoot`, y la fachada que presta a los vecinos.
 
 pub mod adapters;
 pub mod application;

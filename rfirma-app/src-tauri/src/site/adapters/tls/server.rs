@@ -1,4 +1,4 @@
-//! Certificado efímero del servidor local emitido por la CA local (ADR-0005).
+//! Certificado efímero del servidor local, en memoria, emitido por la CA local (ADR-0005).
 
 use openssl::asn1::Asn1Time;
 use openssl::hash::MessageDigest;

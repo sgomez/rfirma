@@ -1,4 +1,4 @@
-//! El documento en curso: por dónde entró, por dónde se lee y si de él queda rastro (ADR-0011).
+//! El documento en curso, el único (`Document`): por dónde entró (`Origin`), por dónde se lee y si de él queda rastro (`Remembrance`) (ADR-0011).
 
 use std::path::{Path, PathBuf};
 

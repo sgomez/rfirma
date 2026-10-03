@@ -1,4 +1,4 @@
-//! Los errores de la frontera con el puente nativo, sin la frontera.
+//! `BridgeError` y `DataRejection`: los errores de la frontera con el puente nativo, sin la frontera.
 
 use std::fmt;
 use std::os::raw::c_int;

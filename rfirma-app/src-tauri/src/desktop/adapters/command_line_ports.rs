@@ -1,4 +1,4 @@
-//! Los adaptadores de los puertos de la línea de órdenes que leen el disco y el puente nativo, no la terminal.
+//! Los adaptadores de los puertos de la línea de órdenes que leen el disco, la zona horaria y el puente nativo —validador, filtros y lectura de firmas—, no la terminal.
 
 use std::path::Path;
 

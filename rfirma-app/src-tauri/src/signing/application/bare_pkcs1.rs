@@ -1,4 +1,4 @@
-//! La firma NONE hecha en Rust: el token firma los datos tal cual y sale su PKCS#1, sin puente (ADR-0001).
+//! `BarePkcs1`, el `Bridge` de la firma NONE hecha en Rust: el token firma los datos tal cual y sale su PKCS#1, sin puente (ADR-0001).
 
 use base64::Engine;
 

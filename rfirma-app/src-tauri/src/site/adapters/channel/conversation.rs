@@ -1,4 +1,4 @@
-//! Evaluación y respuesta a los mensajes del canal local (ADR-0005).
+//! Qué se contesta a cada mensaje del canal local, sin socket delante (ADR-0005).
 
 use crate::site::domain::protocol::{
     AfirmaUrl, ChannelMessage, NegotiatedCredential, Parameter, SafCode, WireAnswer,

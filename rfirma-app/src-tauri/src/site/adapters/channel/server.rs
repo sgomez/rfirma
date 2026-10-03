@@ -1,4 +1,4 @@
-//! Servidor WebSocket local sobre TLS para operaciones con la sede (ADR-0005).
+//! Servidor WebSocket local sobre TLS para operaciones con la sede; no existe escuchador en claro (ADR-0005).
 
 use std::collections::VecDeque;
 use std::net::SocketAddr;

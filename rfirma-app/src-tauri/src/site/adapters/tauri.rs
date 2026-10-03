@@ -1,4 +1,4 @@
-//! Las órdenes del trámite de sede: desempaquetar, llamar a `app/errand/` y traducir.
+//! Las órdenes del trámite de sede, dos de ellas por el diálogo del portal: desempaquetar, llamar a `app/errand/` y traducir; ninguna decide ni guarda estado propio.
 
 use tauri::State;
 

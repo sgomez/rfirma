@@ -1,4 +1,4 @@
-//! Resolución de rutas del sistema y permisos de fichero entre sesiones (ADR-0010).
+//! Las rutas de la aplicación (configuración, estado y datos, rúbrica, CA local, certificados instalados) resueltas por plataforma, y el único sitio que crea un fichero `0600` de nacimiento (ADR-0010).
 
 use std::ffi::OsString;
 use std::fmt;

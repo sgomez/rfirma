@@ -1,4 +1,4 @@
-//! El formato que la sede nombra en `format=`, cerrado y con los alias de `AOSignConstants`.
+//! El formato que la sede nombra en `format=`, cerrado y con los alias de `AOSignConstants`; no es el `Format` del puente, al que lo traduce `ports.rs`.
 
 use super::detection::{shape_of, DetectedShape};
 

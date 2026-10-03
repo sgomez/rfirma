@@ -1,4 +1,4 @@
-//! El lote local leído del JSON que manda la sede (`JSONBatchManager.parseBatchConfig`, 1.9.2).
+//! El lote local leído del JSON que manda la sede, con lo que cada firma hereda del lote; no es el lote remoto (`JSONBatchManager.parseBatchConfig`, 1.9.2).
 
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::Engine as _;

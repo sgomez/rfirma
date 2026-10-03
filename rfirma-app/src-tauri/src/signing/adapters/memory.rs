@@ -1,4 +1,4 @@
-//! Las dos memorias entre sesiones, la configuración viva y los dos interruptores (ADR-0010).
+//! `Memory`: las dos memorias entre sesiones, la configuración viva, los dos interruptores y las rebanadas que cada vecino pide por su puerto (ADR-0010).
 
 use std::sync::Mutex;
 

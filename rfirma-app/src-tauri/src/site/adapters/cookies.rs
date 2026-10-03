@@ -1,4 +1,4 @@
-//! El almacén de cookies de la operación de sede en curso, que comparten los cuatro clientes HTTP (ADR-0038).
+//! El almacén de cookies de la operación de sede en curso, que comparten los cuatro clientes HTTP y que se vacía al contestar (ADR-0038).
 
 use std::sync::{Arc, OnceLock, RwLock};
 
