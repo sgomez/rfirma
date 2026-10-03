@@ -352,6 +352,10 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       UnknownSignatureType
       CosignNotAdmitted { closedBy: Option<String> }
 
+  pub enum SigningDateView   (serde: etiqueta "kind")
+      Declared { at: String }
+      Stamped { at: String, tsa: String }
+
   pub enum DocumentFindingView
       ModifiedAfterLastSignature
       FormFilledAfterSigning
@@ -368,6 +372,8 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       reason: Option<String>
       validity: ValidityView
       validityReason: Option<ValidityReasonView>
+      signingDate: Option<SigningDateView>
+      closesDocument: bool
       countersignatures: Vec<PreviousSignatureView>
 
   pub struct PreviousSignaturesReportView

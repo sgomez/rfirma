@@ -120,6 +120,8 @@ describe("App, firmando, firmado y error", () => {
       status: "valid" as const,
       validity: "valid" as const,
       validityReason: null,
+      signingDate: null,
+      closesDocument: false,
       reason: null,
       countersignatures: [],
     });

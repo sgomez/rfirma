@@ -455,6 +455,8 @@ describe("App · ¿Firmar de todos modos?", () => {
       reason: null,
       validity: "valid",
       validityReason: null,
+      signingDate: null,
+      closesDocument: false,
       countersignatures: [],
       ...overrides,
     };

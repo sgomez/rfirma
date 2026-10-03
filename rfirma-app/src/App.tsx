@@ -283,7 +283,7 @@ export function App({
     viewedSignatures.view,
   );
 
-  const { signedHere, signatures, openFailure, openSigned, signAgain } = useSignedSummary(
+  const { signedHere, signatures, findings, openFailure, openSigned, signAgain } = useSignedSummary(
     signing,
     activeId,
     documents.reopen,
@@ -462,6 +462,7 @@ export function App({
               documentName={signedHere.document.name}
               signedAt={signingInstant}
               signatures={signatures}
+              findings={findings}
               destination={
                 destination ?? { folder: settings?.destination ?? "", name: null, writable: true }
               }
@@ -477,6 +478,9 @@ export function App({
               documentName={documents.active.name}
               signatures={
                 viewedSignatures.reading.kind === "read" ? viewedSignatures.reading.signatures : []
+              }
+              findings={
+                viewedSignatures.reading.kind === "read" ? viewedSignatures.reading.findings : []
               }
               format={
                 viewedSignatures.reading.kind === "read" ? viewedSignatures.reading.format : "pades"
