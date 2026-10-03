@@ -1,0 +1,123 @@
+# Los carriles de Windows y macOS, un solo cuerpo para el PR que los pide y la nocturna (ADR-0014, ADR-0035, ADR-0040).
+name: Plataformas
+
+on:
+  workflow_call:
+    inputs:
+      windows:
+        type: boolean
+        required: true
+      macos:
+        type: boolean
+        required: true
+      save-cache:
+        type: boolean
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ==========================================================================
+  # CARRIL DE WINDOWS
+  # ==========================================================================
+  # Segunda plataforma (ADR-0035): sin grada B ni C, y sin vitest.
+  windows:
+    name: Windows
+    if: inputs.windows
+    runs-on: windows-latest
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # Sin esto el checkout deja los .sh con CRLF y bash no los lee.
+      - name: Fin de linea sin conversion
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-runner
+        with:
+          rust: lint
+          node: true
+          java: graalvm
+          tools: llvm-cov crap
+          save-cache: ${{ inputs.save-cache }}
+
+      # Restaurar y guardar por separado: la .dll se guarda en cuanto existe,
+      # aunque un paso posterior falle.
+      - name: Cache de rfirma_crypto.dll
+        id: cache-native-lib
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
+
+      - name: Construye la libreria nativa
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        run: just native
+      - name: Guarda rfirma_crypto.dll
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: ${{ steps.cache-native-lib.outputs.cache-primary-key }}
+
+      - name: Interfaz compilada
+        run: just build-ts
+
+      - name: rustfmt y clippy
+        run: just lint-rust
+
+      # El adaptador CNG solo compila aqui: Linux lo oculta de su puerta CRAP (ADR-0014, ADR-0035).
+      - name: Pruebas de --lib y del canal local, y CRAP del adaptador CNG
+        run: just test-windows
+
+  # ==========================================================================
+  # CARRIL DE MACOS
+  # ==========================================================================
+  # Tercera plataforma (ADR-0040): como Windows, sin grada B ni C, y sin vitest.
+  macos:
+    name: macOS
+    if: inputs.macos
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-runner
+        with:
+          rust: lint
+          node: true
+          java: graalvm
+          save-cache: ${{ inputs.save-cache }}
+
+      - name: Cache de librfirma_crypto.dylib
+        id: cache-native-lib
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
+
+      - name: Construye la libreria nativa
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        run: just native
+      - name: Guarda librfirma_crypto.dylib
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: ${{ steps.cache-native-lib.outputs.cache-primary-key }}
+
+      - name: Interfaz compilada
+        run: just build-ts
+
+      - name: rustfmt y clippy
+        run: just lint-rust
+
+      - name: Pruebas de --lib y del canal local
+        run: just test-macos

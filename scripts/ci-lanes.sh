@@ -1,7 +1,43 @@
 #!/usr/bin/env bash
-# Lee por stdin los ficheros de un PR y dice que carriles del CI corren (`java=true`...).
-# Un carril se salta solo si todos caen en su lista de ajenos; sin ficheros, corren todos.
+# Lee por stdin los ficheros de un PR o de un push y dice que carriles del CI corren (`java=true`...).
+# Un carril de Linux se salta solo si todos caen en su lista de ajenos; uno de plataforma corre
+# solo si alguno le concierne. Sin ficheros, corren todos.
+#
+# Uso: ci-lanes.sh [--platform-files FICHERO] [--no-platforms] [--force windows|macos]...
+#   --platform-files  la salida de scripts/platform-files.sh: rutas exactas y prefijos con '/'
+#   --no-platforms    windows y macos no corren, sean cuales sean los ficheros (push a main)
+#   --force           el carril corre, sean cuales sean los ficheros (etiqueta del PR)
 set -euo pipefail
+
+platform_files=()
+no_platforms=false
+forced=()
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --platform-files)
+            mapfile -t platform_files <"$2"
+            shift 2
+            ;;
+        --no-platforms)
+            no_platforms=true
+            shift
+            ;;
+        --force)
+            case "${2:-}" in
+                windows | macos) forced+=("$2") ;;
+                *)
+                    echo "ci-lanes.sh: --force admite windows o macos, no '${2:-}'" >&2
+                    exit 2
+                    ;;
+            esac
+            shift 2
+            ;;
+        *)
+            echo "ci-lanes.sh: opcion desconocida '$1'" >&2
+            exit 2
+            ;;
+    esac
+done
 
 inert() {
     case "$1" in
@@ -59,8 +95,45 @@ native_ignores() {
     return 1
 }
 
+only_one_platform_compiles() {
+    local entry
+    for entry in "${platform_files[@]}"; do
+        case "$entry" in
+            */) [[ "$1" == "$entry"* ]] && return 0 ;;
+            *) [ "$1" = "$entry" ] && return 0 ;;
+        esac
+    done
+    return 1
+}
+
+every_platform_needs() {
+    case "$1" in
+        rfirma-app/src-tauri/Cargo.toml | rfirma-app/src-tauri/Cargo.lock | rfirma-app/src-tauri/build.rs) return 0 ;;
+        rfirma-app/src-tauri/tauri.conf.json | rfirma-app/src-tauri/clippy.toml) return 0 ;;
+        justfile | versions.env | .github/*) return 0 ;;
+        scripts/ci-lanes.sh | scripts/platform-files.sh) return 0 ;;
+        scripts/bootstrap.sh | scripts/pinned-version.sh | scripts/install-tools.sh) return 0 ;;
+    esac
+    only_one_platform_compiles "$1"
+}
+
+windows_needs() {
+    case "$1" in
+        packaging/windows/* | rfirma-app/src-tauri/windows-app-manifest.xml) return 0 ;;
+    esac
+    every_platform_needs "$1"
+}
+
+macos_needs() {
+    case "$1" in
+        packaging/macos/*) return 0 ;;
+    esac
+    every_platform_needs "$1"
+}
+
 lanes=(java web rust native landing)
-declare -A runs=([java]=false [web]=false [rust]=false [native]=false [landing]=false)
+platforms=(windows macos)
+declare -A runs=([java]=false [web]=false [rust]=false [native]=false [landing]=false [windows]=false [macos]=false)
 seen=false
 
 while IFS= read -r file || [ -n "$file" ]; do
@@ -70,12 +143,25 @@ while IFS= read -r file || [ -n "$file" ]; do
     for lane in "${lanes[@]}"; do
         "${lane}_ignores" "$file" || runs[$lane]=true
     done
+    for lane in "${platforms[@]}"; do
+        ! "${lane}_needs" "$file" || runs[$lane]=true
+    done
 done
 
-for lane in "${lanes[@]}"; do
-    if [ "$seen" = false ]; then
-        echo "$lane=true"
-    else
-        echo "$lane=${runs[$lane]}"
-    fi
+if [ "$seen" = false ]; then
+    for lane in "${lanes[@]}" "${platforms[@]}"; do
+        runs[$lane]=true
+    done
+fi
+if [ "$no_platforms" = true ]; then
+    for lane in "${platforms[@]}"; do
+        runs[$lane]=false
+    done
+fi
+for lane in "${forced[@]}"; do
+    runs[$lane]=true
+done
+
+for lane in "${lanes[@]}" "${platforms[@]}"; do
+    echo "$lane=${runs[$lane]}"
 done

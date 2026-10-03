@@ -316,6 +316,18 @@ if [ -f "$PREVIEW" ]; then
     echo "OK  $PREVIEW no menciona ningun secreto"
 fi
 
+# ------------------------------------------------ permisos del codigo de un PR --
+escriben_issues="$(grep -lE '^  pull_request:' .github/workflows/*.yml \
+    | xargs -r grep -nHE 'issues:[[:space:]]*write|write-all' | sin_comentarios || true)"
+if [ -n "$escriben_issues" ]; then
+    printf '%s\n' "$escriben_issues" >&2
+    echo >&2
+    echo "un workflow que ejecuta codigo de un PR no puede escribir issues (ADR-0014)." >&2
+    echo "El aviso de un rojo va en un workflow de cron, como nightly.yml." >&2
+    exit 1
+fi
+echo "OK  ningun workflow de pull_request escribe issues"
+
 # ----------------------------------------------------------- Preview Comment --
 COMMENT=.github/workflows/preview-comment.yml
 if [ ! -f "$COMMENT" ]; then
