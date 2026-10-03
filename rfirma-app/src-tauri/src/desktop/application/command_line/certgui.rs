@@ -15,8 +15,8 @@ pub(super) fn the_certificate_chosen_in_the_window(
 ) -> Result<(TokenCertificate, Option<ProtectedSecret>), Outcome> {
     if !ports.window.has_a_display() {
         return Err(Outcome::failed(
-            "rfirma: -certgui necesita un entorno gráfico en el que abrir la ventana; \
-             sin él, usa -certtui, -alias o -filter"
+            "rfirma: --certgui necesita un entorno gráfico en el que abrir la ventana; \
+             sin él, usa --certtui, --alias o --filter"
                 .to_owned(),
         ));
     }

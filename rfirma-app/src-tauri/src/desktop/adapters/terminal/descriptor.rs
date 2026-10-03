@@ -19,7 +19,7 @@ pub fn read_from(descriptor: u32) -> Result<ProtectedSecret, String> {
 
 #[cfg(not(unix))]
 pub fn read_from(_descriptor: u32) -> Result<ProtectedSecret, String> {
-    Err("-password-fd todavía no está disponible en este sistema".to_owned())
+    Err("--password-fd todavía no está disponible en este sistema".to_owned())
 }
 
 #[cfg(any(unix, test))]

@@ -134,10 +134,29 @@ fn an_unknown_argument_a_missing_value_or_a_bad_descriptor_is_refused() {
         parsed(&["-i", "a", "-o"]),
         Err(ArgumentsRefusal::MissingValue("-o"))
     );
+    assert_eq!(
+        parsed(&["-i", "a", "-o", "b", "-alias"])
+            .unwrap_err()
+            .to_string(),
+        "el parámetro --alias necesita un valor"
+    );
     assert!(matches!(
         parsed(&["-i", "a", "-o", "b", "-alias", "yo", "-password-fd", "x"]),
         Err(ArgumentsRefusal::InvalidDescriptor(_))
     ));
+}
+
+#[test]
+fn an_unknown_argument_is_named_in_the_double_dash_form_only_when_it_is_a_known_option() {
+    let refused = |words: &[&str]| parsed(words).unwrap_err().to_string();
+    assert_eq!(
+        refused(&["-i", "a", "-o", "b", "-alias", "yo", "-preurl", "x"]),
+        "el argumento «--preurl» no se reconoce"
+    );
+    assert_eq!(
+        refused(&["-i", "a", "-zzz"]),
+        "el argumento «-zzz» no se reconoce"
+    );
 }
 
 #[test]

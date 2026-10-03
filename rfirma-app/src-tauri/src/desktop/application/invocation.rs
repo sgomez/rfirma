@@ -6,7 +6,7 @@ use std::sync::Mutex;
 
 use crate::desktop::domain::command_line::Command;
 use crate::documents::domain::dropped::invoked_paths;
-use crate::site::domain::protocol::AfirmaUrl;
+use crate::site::domain::protocol::{AfirmaUrl, IMPLEMENTED_AUTOFIRMA_VERSION};
 
 /// Invocación recibida con sus argumentos y carpeta de trabajo.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -72,7 +72,7 @@ where
     )
 }
 
-pub use crate::desktop::domain::command_line::HELP_FLAGS;
+pub use crate::desktop::domain::command_line::{HELP_FLAGS, VERSION_FLAGS};
 
 /// Texto informativo mostrado en la ayuda por consola.
 pub const HELP: &str = "\
@@ -82,8 +82,9 @@ Uso:
   rfirma [documento…]
   rfirma «afirma://…»
   rfirma <orden> [parámetros…]
-  rfirma <orden> -help
+  rfirma <orden> --help
   rfirma --help
+  rfirma --version
 
 Argumentos:
   documento           Ruta de un PDF: se abre en la ventana, listo para firmar.
@@ -95,7 +96,9 @@ Argumentos:
                       no abre nada. Si la hay, gana a cualquier orden.
 
 Opciones:
-  -h, -help, --help   Muestra esta ayuda y termina.
+  -h, --help          Muestra esta ayuda y termina.
+  --version           Muestra la versión de rFirma y la de AutoFirma de la que
+                      salen los validadores.
 
 Órdenes, las de AutoFirma, sin distinguir mayúsculas y siempre como primer
 argumento. Se atienden en la terminal, sin unirse a la ventana de rFirma que
@@ -105,51 +108,52 @@ esté abierta, y el proceso termina con ellas:
   listaliases         Lista los certificados de los almacenes.
   verify              Valida las firmas de un fichero.
 
-Parámetros de las órdenes (rfirma <orden> -help da la sintaxis de cada una):
+Parámetros de las órdenes (rfirma <orden> --help da la sintaxis de cada una):
   -i <fichero>        Fichero de entrada.
   -o <fichero>        Fichero de salida, que se sobrescribe si existe.
-                      Obligatorio salvo con -xml.
-  -format <formato>   auto (por omisión), pades, cades o xades.
-  -store <almacén>    Busca solo en ese almacén; sin él, en todos.
-  -alias <alias>      Firma con ese certificado, sin preguntar.
-  -filter <filtro>    Firma con el único certificado que cumple el filtro, o
-                      acota la lista de -certgui o -certtui.
-  -certgui            Elige certificado y PIN en la ventana de sede.
-  -certtui            Elige certificado en la terminal. Propio de rFirma.
-  -password-fd <N>    Lee el PIN del descriptor N, abierto por quien llama.
+                      Obligatorio salvo con --xml.
+  --format <formato>  auto (por omisión), pades, cades o xades.
+  --store <almacén>   Busca solo en ese almacén; sin él, en todos.
+  --alias <alias>     Firma con ese certificado, sin preguntar.
+  --filter <filtro>   Firma con el único certificado que cumple el filtro, o
+                      acota la lista de --certgui o --certtui.
+  --certgui           Elige certificado y PIN en la ventana de sede.
+  --certtui           Elige certificado en la terminal. Propio de rFirma.
+  --password-fd <N>   Lee el PIN del descriptor N, abierto por quien llama.
                       Propio de rFirma.
-  -algorithm <alg>    sha512 (por omisión), sha384 o sha256.
-  -config <texto>     Propiedades clave=valor de la firma, una por línea, las
+  --algorithm <alg>   sha512 (por omisión), sha384 o sha256.
+  --config <texto>    Propiedades clave=valor de la firma, una por línea, las
                       mismas que se aceptan de una sede.
-  -xml                Responde en XML por la salida estándar.
-  -gui                Entrega el fichero de -i a la ventana de rFirma, sin
+  --xml               Responde en XML por la salida estándar.
+  --gui               Entrega el fichero de -i a la ventana de rFirma, sin
                       firmar ni verificar.
-  -help               Muestra la sintaxis de la orden.
+  --help              Muestra la sintaxis de la orden.
 
 Salida de las órdenes:
   El código de salida es 0 si la orden termina bien y distinto de 0 si falla.
-  Por la salida estándar solo sale lo que se consume: la sintaxis de -help y
-  el XML de -xml. Los mensajes y los registros van a la salida de errores.
+  Por la salida estándar solo sale lo que se consume: la sintaxis de --help y
+  el XML de --xml. Los mensajes y los registros van a la salida de errores.
 
 Desviaciones de la línea de órdenes de AutoFirma:
-  -password           Se rechaza: la contraseña en la línea de órdenes la ve
+  --password          Se rechaza: la contraseña en la línea de órdenes la ve
                       cualquier usuario del equipo y queda en el historial. El
-                      PIN se pide en la terminal, se lee de -password-fd o se
-                      escribe en la ventana con -certgui.
+                      PIN se pide en la terminal, se lee de --password-fd o se
+                      escribe en la ventana con --certgui.
   countersign, batchsign
                       No existen.
-  -preurl, -posturl, -hformat, -halgorithm, -r, -operation
+  --preurl, --posturl, --hformat, --halgorithm, -r, --operation
                       No existen.
-  -algorithm sha1     Se rechaza.
-  -store              Un almacén que AutoFirma no reconoce se rechaza.
-  -certgui, -certtui  No listan certificados caducados ni cambian de almacén.
+  --algorithm sha1    Se rechaza.
+  --store             Un almacén que AutoFirma no reconoce se rechaza.
+  --certgui, --certtui
+                      No listan certificados caducados ni cambian de almacén.
   Salida estándar     No mezcla los mensajes con lo que se consume, al
                       contrario que AutoFirma.
 
 Ejemplo: firmar con el PIN guardado en el llavero del escritorio, sin que pase
 por la línea de órdenes ni por el historial:
-  rfirma sign -i contrato.pdf -o contrato-firmado.pdf -alias mi-certificado \\
-      -password-fd 3 3< <(secret-tool lookup service rfirma)
+  rfirma sign -i contrato.pdf -o contrato-firmado.pdf --alias mi-certificado \\
+      --password-fd 3 3< <(secret-tool lookup service rfirma)
 
 Ejemplo en el flatpak, con un fichero fuera de la carpeta de documentos:
   flatpak run --file-forwarding me.sgomez.rfirma sign -i @@ <fichero> @@ -o <salida>
@@ -173,6 +177,31 @@ where
         .into_iter()
         .skip(1)
         .any(|argument| HELP_FLAGS.contains(&argument.as_ref()))
+}
+
+/// Si los argumentos de ejecución piden la versión.
+pub fn version_was_asked_for<I, S>(arguments: I) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    arguments
+        .into_iter()
+        .skip(1)
+        .any(|argument| VERSION_FLAGS.contains(&argument.as_ref()))
+}
+
+/// La versión de rFirma y, en una segunda línea, la de AutoFirma de la que salen los validadores.
+pub fn version_text(rfirma_version: &str) -> String {
+    format!("rfirma {rfirma_version}\nAutoFirma {IMPLEMENTED_AUTOFIRMA_VERSION}")
+}
+
+/// Lo que se imprime en lugar de arrancar, si los argumentos piden la ayuda o la versión.
+pub fn informative_text(arguments: &[String], rfirma_version: &str) -> Option<String> {
+    if help_was_asked_for(arguments) {
+        return Some(HELP.to_owned());
+    }
+    version_was_asked_for(arguments).then(|| version_text(rfirma_version))
 }
 
 /// Las rutas que la invocación trae para la ventana principal: nada si es una llamada de sede.

@@ -6,7 +6,8 @@ use base64::Engine as _;
 
 use crate::desktop::application::store_scope::{within_the_scope, ScopeFailure};
 use crate::desktop::domain::command_line::{
-    command_of, file_for_the_window, is_a_help_flag, parameter_left_out, Command, Refusal,
+    command_of, file_for_the_window, is_a_help_flag, normalised, parameter_left_out, Command,
+    Refusal,
 };
 use crate::desktop::domain::sign_arguments::{
     parse_sign_arguments, Format, Selection, SignArguments,
@@ -127,6 +128,7 @@ impl Outcome {
 
 /// Atiende los argumentos que siguen al ejecutable, empezando por la orden.
 pub fn attend(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
+    let arguments = &normalised(arguments);
     let command = match command_of(arguments) {
         Ok(command) => command,
         Err(refusal) => return Outcome::refused(&refusal),
@@ -220,14 +222,14 @@ fn signed(
     let outcome = |outcome: Outcome| Signed(outcome, None);
     let Some(selection) = &parsed.selection else {
         return outcome(Outcome::not_yet_available(
-            "elegir el certificado sin -alias",
+            "elegir el certificado sin --alias",
         ));
     };
     let parameters = match config::parameters_of(parsed.config.as_deref()) {
         Ok(parameters) => parameters,
         Err(reason) => {
             return outcome(Outcome::failed(format!(
-                "rfirma: -config no se acepta ({reason})"
+                "rfirma: --config no se acepta ({reason})"
             )))
         }
     };
@@ -384,7 +386,7 @@ fn the_certificate_named(
     };
     one_copy_of(&named, first).ok_or_else(|| {
         Outcome::failed(format!(
-            "rfirma: hay varios certificados con el alias «{alias}»; acota el almacén con -store"
+            "rfirma: hay varios certificados con el alias «{alias}»; acota el almacén con --store"
         ))
     })
 }
@@ -418,7 +420,7 @@ fn the_only_certificate_accepted_by(
     one_copy_of(&accepted, first).ok_or_else(|| {
         Outcome::failed(format!(
             "rfirma: varios certificados cumplen el filtro «{expression}»; \
-             afínalo o acota el almacén con -store"
+             afínalo o acota el almacén con --store"
         ))
     })
 }

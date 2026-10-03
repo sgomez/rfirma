@@ -127,3 +127,37 @@ fn a_parameter_that_is_missing_or_last_has_no_value() {
     assert_eq!(value_of(&arguments(&["verify"]), INPUT), None);
     assert_eq!(value_of(&arguments(&["verify", "-i"]), INPUT), None);
 }
+
+#[test]
+fn a_known_option_in_double_dash_form_is_normalised_and_values_are_left_alone() {
+    let normalised = normalised(&arguments(&[
+        "sign",
+        "-i",
+        "--xml",
+        "--alias",
+        "--format",
+        "--i",
+        "--desconocida",
+        "--password",
+    ]));
+
+    assert_eq!(
+        normalised,
+        arguments(&[
+            "sign",
+            "-i",
+            "-xml",
+            "-alias",
+            "-format",
+            "--i",
+            "--desconocida",
+            "-password"
+        ])
+    );
+}
+
+#[test]
+fn the_documented_form_has_two_dashes_only_for_long_options() {
+    assert_eq!(documented("-store"), "--store");
+    assert_eq!(documented("-i"), "-i");
+}

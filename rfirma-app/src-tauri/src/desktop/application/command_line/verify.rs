@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use super::{CommandLinePorts, Outcome};
-use crate::desktop::domain::command_line::{value_of, Refusal, INPUT, XML};
+use crate::desktop::domain::command_line::{documented, value_of, Refusal, INPUT, XML};
 use crate::signing::domain::bridge::{Format, XadesVariant};
 use crate::site::domain::protocol::detection::{is_cms_signed_data, shape_of, DetectedShape};
 
@@ -14,7 +14,8 @@ pub const UNKNOWN_FORMAT: &str = "Firma no valida: los datos proporcionados no s
 pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
     if arguments.iter().any(|argument| argument == XML) {
         return Outcome::failed(format!(
-            "rfirma: el parámetro {XML} de «verify» todavía no está disponible en esta versión"
+            "rfirma: el parámetro {} de «verify» todavía no está disponible en esta versión",
+            documented(XML)
         ));
     }
     let Some(input) = value_of(arguments, INPUT) else {

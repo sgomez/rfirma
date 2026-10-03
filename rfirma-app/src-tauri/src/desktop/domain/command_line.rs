@@ -2,11 +2,14 @@
 
 use std::fmt;
 
-use super::sign_arguments::ArgumentsRefusal;
+use super::sign_arguments::{self, ArgumentsRefusal};
 use super::store_scope::StoreRefusal;
 
 /// Formas aceptadas del parámetro de ayuda.
 pub const HELP_FLAGS: [&str; 3] = ["--help", "-help", "-h"];
+
+/// Formas aceptadas del parámetro de la versión.
+pub const VERSION_FLAGS: [&str; 2] = ["--version", "-version"];
 
 /// El parámetro de la contraseña del original, que nunca se acepta en argv.
 pub const PASSWORD: &str = "-password";
@@ -81,6 +84,44 @@ impl Command {
     }
 }
 
+/// El parámetro con la forma que documenta rFirma: `--opción` si tiene más de una letra.
+pub fn documented(parameter: &str) -> String {
+    match parameter.strip_prefix('-') {
+        Some(name) if name.len() > 1 => format!("--{name}"),
+        _ => parameter.to_owned(),
+    }
+}
+
+/// El argumento en la forma documentada si es una opción conocida, o tal como llegó.
+pub fn as_documented(argument: &str) -> String {
+    match argument.strip_prefix('-') {
+        Some(name) if is_a_known_option(name) => documented(argument),
+        _ => argument.to_owned(),
+    }
+}
+
+/// Los argumentos con cada `--opción` conocida en la forma `-opción` que usa el resto del código.
+pub fn normalised(arguments: &[String]) -> Vec<String> {
+    arguments
+        .iter()
+        .map(|argument| match argument.strip_prefix("--") {
+            Some(name) if is_a_known_option(name) => format!("-{name}"),
+            _ => argument.clone(),
+        })
+        .collect()
+}
+
+fn is_a_known_option(name: &str) -> bool {
+    if name.len() < 2 {
+        return false;
+    }
+    let internal = format!("-{name}");
+    sign_arguments::is_an_option(&internal)
+        || internal.eq_ignore_ascii_case(PASSWORD)
+        || PARAMETERS_LEFT_OUT.contains(&internal.as_str())
+        || internal == "-help"
+}
+
 /// Si el argumento pide la ayuda.
 pub fn is_a_help_flag(argument: &str) -> bool {
     HELP_FLAGS.contains(&argument)
@@ -118,8 +159,10 @@ impl fmt::Display for Refusal {
             }
             Self::PasswordInArgv => write!(
                 formatter,
-                "{PASSWORD} no se acepta: la contraseña en la línea de órdenes la ve \
-                 cualquier usuario del equipo; usa {PASSWORD_FD} <N>, la terminal o -certgui"
+                "{} no se acepta: la contraseña en la línea de órdenes la ve \
+                 cualquier usuario del equipo; usa {} <N>, la terminal o --certgui",
+                documented(PASSWORD),
+                documented(PASSWORD_FD)
             ),
             Self::CommandLeftOut(command) => write!(
                 formatter,
@@ -128,17 +171,23 @@ impl fmt::Display for Refusal {
             ),
             Self::ParameterLeftOut(parameter) => write!(
                 formatter,
-                "el parámetro {parameter} de AutoFirma no está disponible en rfirma"
+                "el parámetro {} de AutoFirma no está disponible en rfirma",
+                documented(parameter)
             ),
             Self::InvalidArguments(refusal) => write!(formatter, "{refusal}"),
             Self::InvalidStore(refusal) => write!(formatter, "{refusal}"),
             Self::MissingParameter(parameter) => {
-                write!(formatter, "falta el parámetro {parameter} con su valor")
+                write!(
+                    formatter,
+                    "falta el parámetro {} con su valor",
+                    documented(parameter)
+                )
             }
             Self::GuiWithoutInput => {
                 write!(
                     formatter,
-                    "{GUI} necesita el fichero que se abre, con {INPUT} <fichero>"
+                    "{} necesita el fichero que se abre, con {INPUT} <fichero>",
+                    documented(GUI)
                 )
             }
         }
@@ -200,41 +249,41 @@ pub fn value_of<'a>(arguments: &'a [String], parameter: &str) -> Option<&'a str>
 }
 
 const SIGN_SYNTAX: &str = "\
-Uso: rfirma sign -i <fichero> (-o <fichero> | -xml)
-                 (-alias <alias> | -filter <filtro> | -certgui | -certtui)
-                 [-filter <filtro>] [-store <almacén>]
-                 [-format auto|pades|cades|xades] [-algorithm sha512|sha384|sha256]
-                 [-config <propiedades>] [-password-fd <N>]
-     rfirma sign -gui -i <fichero>
+Uso: rfirma sign -i <fichero> (-o <fichero> | --xml)
+                 (--alias <alias> | --filter <filtro> | --certgui | --certtui)
+                 [--filter <filtro>] [--store <almacén>]
+                 [--format auto|pades|cades|xades] [--algorithm sha512|sha384|sha256]
+                 [--config <propiedades>] [--password-fd <N>]
+     rfirma sign --gui -i <fichero>
 
 Firma el fichero de -i y escribe la firma en -o, que se sobrescribe si existe.
-Con -gui, entrega el fichero a la ventana de rFirma y no firma.
+Con --gui, entrega el fichero a la ventana de rFirma y no firma.
 ";
 
 const COSIGN_SYNTAX: &str = "\
-Uso: rfirma cosign -i <fichero> (-o <fichero> | -xml)
-                   (-alias <alias> | -filter <filtro> | -certgui | -certtui)
-                   [-filter <filtro>] [-store <almacén>]
-                   [-format auto|pades|cades|xades] [-algorithm sha512|sha384|sha256]
-                   [-config <propiedades>] [-password-fd <N>]
+Uso: rfirma cosign -i <fichero> (-o <fichero> | --xml)
+                   (--alias <alias> | --filter <filtro> | --certgui | --certtui)
+                   [--filter <filtro>] [--store <almacén>]
+                   [--format auto|pades|cades|xades] [--algorithm sha512|sha384|sha256]
+                   [--config <propiedades>] [--password-fd <N>]
 
 Añade una firma al fichero ya firmado de -i y escribe el resultado en -o, que se
 sobrescribe si existe.
 ";
 
 const LIST_ALIASES_SYNTAX: &str = "\
-Uso: rfirma listaliases [-store <almacén>] [-password-fd <N>] [-xml]
+Uso: rfirma listaliases [--store <almacén>] [--password-fd <N>] [--xml]
 
-Lista los certificados de los almacenes, o solo los de -store.
+Lista los certificados de los almacenes, o solo los de --store.
 ";
 
 const VERIFY_SYNTAX: &str = "\
-Uso: rfirma verify -i <fichero> [-xml]
-     rfirma verify -gui -i <fichero>
+Uso: rfirma verify -i <fichero> [--xml]
+     rfirma verify --gui -i <fichero>
 
 Valida las firmas del fichero de -i, con la caducidad del certificado del
 firmante y sin revocación ni red. Sale con 0 aunque la firma no sea válida,
-como AutoFirma. Con -gui, entrega el fichero a la ventana de rFirma.
+como AutoFirma. Con --gui, entrega el fichero a la ventana de rFirma.
 ";
 
 #[cfg(test)]

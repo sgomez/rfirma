@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use super::command_line::STORE;
+use super::command_line::{documented, STORE};
 
 const AUTO: &str = "auto";
 const MOZILLA: &str = "mozilla";
@@ -37,7 +37,11 @@ pub enum StoreRefusal {
 impl fmt::Display for StoreRefusal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Missing => write!(formatter, "{STORE} necesita el nombre de un almacén"),
+            Self::Missing => write!(
+                formatter,
+                "{} necesita el nombre de un almacén",
+                documented(STORE)
+            ),
             Self::NotSupported(name) => {
                 write!(formatter, "rfirma no soporta el almacén «{name}»")
             }

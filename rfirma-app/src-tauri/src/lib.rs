@@ -149,8 +149,7 @@ pub fn run() {
         std::process::exit(run_the_command_line(&invocation.command_line, context));
     }
 
-    if desktop::application::invocation::help_was_asked_for(&invocation.command_line) {
-        println!("{}", desktop::application::invocation::HELP);
+    if desktop::adapters::process::printed_the_informative_text(&invocation.command_line) {
         return;
     }
 

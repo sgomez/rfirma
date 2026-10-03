@@ -1,7 +1,7 @@
 //! Lo que este proceso sabe de sí mismo: su línea de órdenes, su carpeta y su relanzamiento.
 
 use crate::desktop::application::invocation::{
-    arguments_before_the_single_instance, delivered_urls, Arguments, Invocation,
+    arguments_before_the_single_instance, delivered_urls, informative_text, Arguments, Invocation,
 };
 
 /// La invocación con la que arrancó este proceso.
@@ -73,4 +73,10 @@ fn launch_a_site_process(url: &str) {
         }
         Err(error) => eprintln!("rfirma: no se puede abrir la llamada de sede ({error})"),
     }
+}
+
+/// Imprime la ayuda o la versión si la línea de órdenes las pide, y dice si lo hizo.
+pub fn printed_the_informative_text(command_line: &[String]) -> bool {
+    let text = informative_text(command_line, env!("CARGO_PKG_VERSION"));
+    text.inspect(|text| println!("{text}")).is_some()
 }

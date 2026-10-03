@@ -1973,9 +1973,9 @@ msgstr[2] "{{origin}} accepts none of your {{count}} certificates"
 
 msgid "sede.noCertificate.terminalExcludedTitle"
 msgid_plural "sede.noCertificate.terminalExcludedTitle"
-msgstr[0] "Your -filter leaves out your certificate"
-msgstr[1] "Your -filter leaves none of your {{count}} certificates"
-msgstr[2] "Your -filter leaves none of your {{count}} certificates"
+msgstr[0] "Your --filter leaves out your certificate"
+msgstr[1] "Your --filter leaves none of your {{count}} certificates"
+msgstr[2] "Your --filter leaves none of your {{count}} certificates"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Install another certificate, or close and carry on from the site."
