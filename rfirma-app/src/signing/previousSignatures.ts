@@ -38,7 +38,7 @@ export type SignatureStatus =
   | "notFullyChecked";
 
 /** La validez de una firma: la misma en el aviso, en «Ver firmas», en el resumen y al firmar. */
-export type Validity = "valid" | "expired" | "invalid";
+type Validity = "valid" | "expired" | "invalid";
 
 /** Por qué una firma está caducada o no es válida. */
 export type ValidityReason =
