@@ -6,6 +6,7 @@ guards=(
     files_stay_small
     agents_map_is_complete
     adr_citations_resolve
+    comments_cite_nothing_that_rots
     no_inline_test_modules
     module_directions
     single_cfg_os_site
