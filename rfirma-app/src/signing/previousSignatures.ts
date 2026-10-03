@@ -24,6 +24,10 @@ export interface PreviousSignature {
   validity: Validity;
   /** Por qué no es válida, o `null` si lo es. */
   validityReason: ValidityReason | null;
+  /** La fecha declarada o sellada, o `null` si la firma no trae ninguna. */
+  signingDate: SigningDate | null;
+  /** Si es la firma que cierra el documento a más firmas. */
+  closesDocument: boolean;
   /** Las contrafirmas de esta firma, a cualquier profundidad. */
   countersignatures: readonly PreviousSignature[];
 }
@@ -38,7 +42,7 @@ export type SignatureStatus =
   | "notFullyChecked";
 
 /** La validez de una firma: la misma en el aviso, en «Ver firmas», en el resumen y al firmar. */
-type Validity = "valid" | "expired" | "invalid";
+export type Validity = "valid" | "expired" | "invalid";
 
 /** Por qué una firma está caducada o no es válida. */
 export type ValidityReason =
@@ -48,6 +52,11 @@ export type ValidityReason =
   | { kind: "certificateNotYetValid"; date: string }
   | { kind: "unknownSignatureType" }
   | { kind: "cosignNotAdmitted"; closedBy: string | null };
+
+/** La fecha de una firma: la declara quien firma o la prueba el sello de una TSA. */
+export type SigningDate =
+  | { kind: "declared"; at: string }
+  | { kind: "stamped"; at: string; tsa: string };
 
 /** Lo que se encuentra en el documento entero y no es de ninguna firma. */
 export type DocumentFinding =

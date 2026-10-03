@@ -16,8 +16,11 @@ fn an_expired_signature() -> DocumentSignature {
             date: "2020-03-05T12:00:00Z".to_owned(),
             holder: None,
         }),
-        signing_date: None,
-        closes_document: false,
+        signing_date: Some(SigningDate::Stamped {
+            at: "2023-01-10T10:32:00Z".to_owned(),
+            tsa: "TSA FNMT".to_owned(),
+        }),
+        closes_document: true,
         countersignatures: Vec::new(),
     }
 }
@@ -39,5 +42,19 @@ fn the_report_view_carries_each_validity_reason_and_the_findings() {
             "date": "2020-03-05T12:00:00Z",
             "holder": null
         })
+    );
+}
+
+#[test]
+fn the_signature_view_carries_its_date_and_whether_it_closes_the_document() {
+    let report = DocumentSignatures::new(vec![an_expired_signature()], false);
+
+    let json = serde_json::to_value(PreviousSignaturesReportView::from(report))
+        .expect("la vista serializa");
+
+    assert_eq!(json["signatures"][0]["closesDocument"], true);
+    assert_eq!(
+        json["signatures"][0]["signingDate"],
+        serde_json::json!({"kind": "stamped", "at": "2023-01-10T10:32:00Z", "tsa": "TSA FNMT"})
     );
 }

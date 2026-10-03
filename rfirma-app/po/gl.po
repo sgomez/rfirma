@@ -1020,8 +1020,31 @@ msgstr "En nome de"
 msgid "panel.signed.field.issuer"
 msgstr "Emisor"
 
-msgid "panel.signed.field.declaredDate"
-msgstr "Data declarada"
+#. El rótulo de la fecha que declara quien firma, en la ficha de una firma.
+msgid "panel.signed.field.date"
+msgstr "Data"
+
+#. El rótulo de la fecha de una firma con sello de tiempo de una TSA.
+msgid "panel.signed.field.sealed"
+msgstr "Selada"
+
+#. El rótulo de la última fila de una ficha caducada o no válida.
+msgid "panel.signed.field.reason"
+msgstr "Motivo"
+
+#. La validez de una firma, a la derecha de la cabecera de su ficha.
+msgid "panel.signed.validity.valid"
+msgstr "Válida"
+
+msgid "panel.signed.validity.expired"
+msgstr "Caducada"
+
+msgid "panel.signed.validity.invalid"
+msgstr "Non válida"
+
+#. La marca de la firma que cierra el documento a más firmas.
+msgid "panel.signed.closesDocument"
+msgstr "Non admite máis sinaturas"
 
 #. El rótulo del pie del resumen, con el fichero firmado y «Cambiar».
 msgid "panel.signed.document"
@@ -1140,6 +1163,10 @@ msgstr "Cubriuse o formulario despois de asinar"
 #. Hallazgo del documento: se añadió contenido encima de lo firmado.
 msgid "documentFinding.contentAddedOnTop"
 msgstr "Engadiuse contido por riba do asinado"
+
+#. Hallazgo del documento tras firmar: el cambio es anterior a la firma propia.
+msgid "documentFinding.modifiedBeforeYourSignature"
+msgstr "Modificouse antes da túa sinatura"
 
 #. Motivo de una firma caducada. {{date}}: cuándo caducó el certificado.
 msgid "signatureReason.certificateExpired"

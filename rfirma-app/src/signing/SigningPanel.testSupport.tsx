@@ -30,6 +30,8 @@ export function previousSignatureOf(overrides: Partial<PreviousSignature> = {}):
     status: "valid",
     validity: "valid",
     validityReason: null,
+    signingDate: null,
+    closesDocument: false,
     reason: null,
     countersignatures: [],
     ...overrides,

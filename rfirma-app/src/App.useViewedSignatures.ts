@@ -3,11 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { classify, type NamedFailure } from "./errors/classify";
 import type { SigningBackend } from "./signing/flow";
-import type { PreviousSignature, SignatureFormat } from "./signing/previousSignatures";
+import type {
+  DocumentFinding,
+  PreviousSignature,
+  SignatureFormat,
+} from "./signing/previousSignatures";
 
 type Reading =
   | { kind: "reading" }
-  | { kind: "read"; signatures: readonly PreviousSignature[]; format: SignatureFormat }
+  | {
+      kind: "read";
+      signatures: readonly PreviousSignature[];
+      findings: readonly DocumentFinding[];
+      format: SignatureFormat;
+    }
   | { kind: "failed"; failure: NamedFailure };
 
 /** El documento abierto para ver sus firmas (`verify --gui`), con lo que se lee de él. */
@@ -39,6 +48,7 @@ export function useViewedSignatures(signer: SigningBackend, activeDocumentId: st
           setReading({
             kind: "read",
             signatures: report.signatures,
+            findings: report.findings,
             format: report.format ?? "pades",
           });
         }

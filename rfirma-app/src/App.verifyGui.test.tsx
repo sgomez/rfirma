@@ -19,6 +19,8 @@ const aSignature = (name: string) => ({
   status: "valid" as const,
   validity: "valid" as const,
   validityReason: null,
+  signingDate: null,
+  closesDocument: false,
   reason: null,
   countersignatures: [],
 });

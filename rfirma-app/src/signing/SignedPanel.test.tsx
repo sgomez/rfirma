@@ -1,7 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { formatSignedAt } from "../App.signingOrder";
 import { renderWithCatalog } from "../testing/render";
 import type { PreviousSignature } from "./previousSignatures";
 import { SignedPanel } from "./SignedPanel";
@@ -21,6 +20,8 @@ function aSignature(overrides: Partial<PreviousSignature> = {}): PreviousSignatu
     status: "valid",
     validity: "valid",
     validityReason: null,
+    signingDate: { kind: "declared", at: "2026-09-14T10:32:05Z" },
+    closesDocument: false,
     reason: null,
     countersignatures: [],
     ...overrides,
@@ -72,14 +73,74 @@ describe("SignedPanel", () => {
     expect(within(second).getByText("Nueva")).toBeInTheDocument();
   });
 
-  it("shows signer, issuer and declared date, and no serial number nor status", () => {
+  it("shows signer, issuer, validity and the date, and no serial number", () => {
     renderPanel();
 
     expect(screen.getByText("ADA LOVELACE (00000000T)")).toBeInTheDocument();
     expect(screen.getByText("AC FNMT Usuarios")).toBeInTheDocument();
-    expect(screen.getByText(formatSignedAt(new Date("2026-09-14T10:32:05Z"), "es"))).toBeVisible();
-    expect(screen.queryByText("Válida")).not.toBeInTheDocument();
+    expect(screen.getByText("Fecha")).toBeVisible();
+    expect(screen.getByText(/^14 sept 2026/)).toBeVisible();
+    expect(screen.getByText("Válida")).toBeVisible();
+    expect(screen.queryByText("Fecha declarada")).not.toBeInTheDocument();
     expect(screen.queryByText(/serie/i)).not.toBeInTheDocument();
+  });
+
+  it("labels the date Sellada with the TSA when the signature is time-stamped", () => {
+    renderPanel({
+      signatures: [
+        aSignature({
+          signingDate: { kind: "stamped", at: "2023-01-10T10:32:00Z", tsa: "TSA FNMT" },
+        }),
+      ],
+    });
+
+    expect(screen.getByText("Sellada")).toBeVisible();
+    expect(screen.getByText(/· TSA FNMT$/)).toBeVisible();
+    expect(screen.queryByText("Fecha")).not.toBeInTheDocument();
+  });
+
+  it("puts the validity in each header and the reason as the last row", () => {
+    renderPanel({
+      signatures: [
+        aSignature({
+          validity: "expired",
+          validityReason: {
+            kind: "certificateExpired",
+            date: "2020-03-05T12:00:00Z",
+            holder: null,
+          },
+        }),
+        aSignature({ validity: "invalid", validityReason: { kind: "damaged" } }),
+      ],
+    });
+
+    const [expired, invalid] = screen.getAllByRole("listitem") as [HTMLElement, HTMLElement];
+    expect(within(expired).getByText("Caducada")).toBeVisible();
+    expect(within(invalid).getByText("No válida")).toBeVisible();
+    const reasonRow = within(invalid).getByText("Motivo").parentElement;
+    expect(reasonRow).toHaveTextContent("La firma está dañada");
+    expect(reasonRow?.nextElementSibling).toBeNull();
+  });
+
+  it("marks the signature that closes the document", () => {
+    renderPanel({ signatures: [aSignature({ closesDocument: true }), aSignature()] });
+
+    expect(screen.getAllByText("No admite más firmas")).toHaveLength(1);
+  });
+
+  it("puts the findings above the cards and says the change came before your signature", () => {
+    renderPanel({ findings: ["modifiedAfterLastSignature", "contentAddedOnTop"] });
+
+    const finding = screen.getByText("Se modificó antes de tu firma");
+    const card = screen.getByText("Firma 1");
+    expect(finding.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText("Se ha añadido contenido encima de lo firmado")).toBeVisible();
+  });
+
+  it("keeps the plain wording of the finding when only viewing the signatures", () => {
+    renderPanel({ signedAt: undefined, findings: ["modifiedAfterLastSignature"] });
+
+    expect(screen.getByText("Se ha modificado después de la última firma")).toBeVisible();
   });
 
   it("shows on behalf of only when the certificate names an entity", () => {
@@ -95,9 +156,9 @@ describe("SignedPanel", () => {
   });
 
   it("does not paint a field that is absent", () => {
-    renderPanel({ signatures: [aSignature({ signingTime: null })] });
+    renderPanel({ signatures: [aSignature({ signingTime: null, signingDate: null })] });
 
-    expect(screen.queryByText("Fecha declarada")).not.toBeInTheDocument();
+    expect(screen.queryByText("Fecha")).not.toBeInTheDocument();
     expect(screen.queryByText("En nombre de")).not.toBeInTheDocument();
   });
 

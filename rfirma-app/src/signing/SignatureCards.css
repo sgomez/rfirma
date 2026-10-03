@@ -1,0 +1,113 @@
+/*
+ * Los hallazgos y las fichas de firma (docs/design/panel-de-firma.md, «El
+ * resumen»): monocromo, la validez se distingue por silueta, palabra y peso.
+ */
+
+.signature-cards__findings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signature-cards__finding {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rf-space-xs);
+  padding: 9px 12px;
+  border: 2px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-md);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.signature-cards__finding-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 18px;
+}
+
+.signature-cards {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signature-cards__card {
+  padding: 10px 12px;
+  gap: 8px;
+}
+
+.signature-cards__head {
+  align-items: center;
+  gap: var(--rf-space-xs);
+  min-height: 20px;
+}
+
+.signature-cards__label {
+  flex: 1;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.signature-cards__validity {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  color: var(--rf-text);
+  font-weight: 700;
+}
+
+.signature-cards__validity--valid {
+  color: var(--rf-text-muted);
+  font-weight: 400;
+}
+
+.signature-cards__validity .rf-body {
+  color: inherit;
+  font-weight: inherit;
+}
+
+.signature-cards__field {
+  align-items: baseline;
+  gap: 10px;
+}
+
+.signature-cards__field-label {
+  flex: none;
+  width: 104px;
+  line-height: 1.35;
+}
+
+.signature-cards__field-value {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.signature-cards__field-value--signer {
+  font-weight: 600;
+}
+
+.signature-cards__closes {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.signature-cards__countersignature {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--rf-border-strong);
+}
