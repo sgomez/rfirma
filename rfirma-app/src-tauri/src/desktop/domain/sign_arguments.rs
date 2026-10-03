@@ -41,6 +41,7 @@ pub enum Selection {
     Alias(String),
     Filter(String),
     Terminal { filter: Option<String> },
+    Window { filter: Option<String> },
 }
 
 /// Los argumentos de una orden de firma que pasan todas las comprobaciones.
@@ -72,7 +73,6 @@ pub enum ArgumentsRefusal {
     InvalidDescriptor(String),
     NoCertificateSelection,
     ConflictingSelection,
-    GraphicalSelectionNotAvailable,
 }
 
 impl fmt::Display for ArgumentsRefusal {
@@ -112,10 +112,6 @@ impl fmt::Display for ArgumentsRefusal {
             Self::ConflictingSelection => write!(
                 formatter,
                 "-alias, -certgui y -certtui se excluyen entre sí, y -alias tampoco admite -filter"
-            ),
-            Self::GraphicalSelectionNotAvailable => write!(
-                formatter,
-                "-certgui todavía no está disponible en esta versión; usa -certtui"
             ),
         }
     }
@@ -195,11 +191,9 @@ fn selection_of(collected: &Collected) -> Result<Selection, ArgumentsRefusal> {
     if chosen > 1 || (alias.is_some() && filter.is_some()) {
         return Err(ArgumentsRefusal::ConflictingSelection);
     }
-    if graphical {
-        return Err(ArgumentsRefusal::GraphicalSelectionNotAvailable);
-    }
     match (alias, terminal, filter) {
         (Some(alias), _, _) => Ok(Selection::Alias(alias.to_owned())),
+        (None, false, filter) if graphical => Ok(Selection::Window { filter }),
         (None, true, filter) => Ok(Selection::Terminal { filter }),
         (None, false, Some(filter)) => Ok(Selection::Filter(filter)),
         (None, false, None) => Err(ArgumentsRefusal::NoCertificateSelection),

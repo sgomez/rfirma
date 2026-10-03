@@ -143,7 +143,11 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
 pub fn run() {
     let invocation = desktop::adapters::process::this_invocation();
     let role = desktop::application::invocation::role_of(invocation.clone());
-    exit_if_a_terminal_command(&role, &invocation.command_line);
+    // Una sola expansión por crate (ADR-0040).
+    let context = tauri::generate_context!();
+    if let Role::Terminal(_) = role {
+        std::process::exit(run_the_command_line(&invocation.command_line, context));
+    }
 
     if desktop::application::invocation::help_was_asked_for(&invocation.command_line) {
         println!("{}", desktop::application::invocation::HELP);
@@ -161,15 +165,7 @@ pub fn run() {
         ))
     });
 
-    // Una sola expansión por crate (ADR-0040).
-    let context = tauri::generate_context!();
     run_the_window_role(role, paths, discarded, context);
-}
-
-fn exit_if_a_terminal_command(role: &Role, command_line: &[String]) {
-    if let Role::Terminal(_) = role {
-        std::process::exit(run_the_command_line(command_line));
-    }
 }
 
 fn run_the_window_role(

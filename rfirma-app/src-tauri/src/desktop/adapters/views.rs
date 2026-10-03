@@ -416,3 +416,72 @@ crossing! {
         pub recents: Vec<TitlebarRecentView>,
     }
 }
+
+use crate::desktop::ports::NoCertificateToOffer;
+use crate::identity::adapters::views::CertificateView;
+
+crossing! {
+    /// La ventana de sede de `-certgui`: el nombre del documento de la orden y lo que se enseña.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct TerminalChoiceView {
+        /// El nombre del fichero de `-i`, sin su carpeta.
+        pub document: String,
+        pub stage: TerminalStageView,
+    }
+}
+
+crossing! {
+    /// El momento de la ventana de `-certgui`: elegir certificado o saber por qué no hay ninguno.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    pub enum TerminalStageView {
+        AskingToSign {
+            certificates: Vec<CertificateView>,
+        },
+        NoCertificate {
+            reason: TerminalNoCertificateView,
+            /// Los certificados de la persona: los que el `-filter` deja fuera o los caducados.
+            owned: usize,
+        },
+    }
+}
+
+crossing! {
+    /// Por qué la ventana de `-certgui` no tiene ningún certificado que ofrecer.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum TerminalNoCertificateView {
+        None,
+        AllExpired,
+        Excluded,
+    }
+}
+
+impl From<NoCertificateToOffer> for TerminalStageView {
+    fn from(nothing: NoCertificateToOffer) -> Self {
+        let (reason, owned) = match nothing {
+            NoCertificateToOffer::None => (TerminalNoCertificateView::None, 0),
+            NoCertificateToOffer::AllExpired { owned } => {
+                (TerminalNoCertificateView::AllExpired, owned)
+            }
+            NoCertificateToOffer::Excluded { owned } => {
+                (TerminalNoCertificateView::Excluded, owned)
+            }
+        };
+        Self::NoCertificate { reason, owned }
+    }
+}
+
+impl TerminalChoiceView {
+    /// La vista de ese documento en ese momento, con el nombre y sin ninguna carpeta.
+    pub fn of(document: &std::path::Path, stage: TerminalStageView) -> Self {
+        Self {
+            document: document
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            stage,
+        }
+    }
+}

@@ -112,6 +112,7 @@ fn chosen_with(
         files: &FilesInMemory::with("doc.pdf", A_PDF),
         verifier: &Untouched,
         signer,
+        window: &Untouched,
     };
     attend(&arguments_of(words), &ports)
 }

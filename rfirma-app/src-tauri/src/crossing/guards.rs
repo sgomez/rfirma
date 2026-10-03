@@ -109,7 +109,7 @@ fn types_named_by(signature: &str) -> Vec<&str> {
 }
 
 /// Tipos de salida que no contienen información procedente de un documento.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 33] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 35] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
@@ -143,6 +143,8 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 33] = [
     "SignatureStatusView",
     "ToneView",
     "TitlebarActionView",
+    "TerminalStageView",
+    "TerminalNoCertificateView",
 ];
 
 /// Ruta de prueba simulando un enlace concedido por el portal.
@@ -337,6 +339,13 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
                 vec![a_previous_signature()],
                 false,
             )),
+        ),
+        Serialised::of(
+            "TerminalChoiceView",
+            &crate::desktop::adapters::views::TerminalChoiceView::of(
+                Path::new(A_PORTAL_HANDLE),
+                crate::desktop::ports::NoCertificateToOffer::None.into(),
+            ),
         ),
     ];
 

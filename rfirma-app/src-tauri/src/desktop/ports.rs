@@ -1,4 +1,4 @@
-//! Puertos del contexto de escritorio: el registro de manejadores, la memoria de la versión publicada, su instalador y lo que alcanza la línea de órdenes.
+//! Puertos del contexto de escritorio: el registro de manejadores, la memoria de la versión publicada, su instalador y lo que alcanza la línea de órdenes, ventana de `-certgui` incluida.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -141,6 +141,7 @@ pub struct CommandLineSigning<'a> {
     pub document_length: usize,
     pub password_fd: Option<u32>,
     pub descriptor: &'a dyn SecretDescriptor,
+    pub typed_in_the_window: Option<&'a ProtectedSecret>,
 }
 
 /// La firma por el camino de la sede, sin ventana ni AppHandle.
@@ -153,4 +154,36 @@ pub trait DocumentSigner {
 
     /// El certificado recordado, si la memoria guarda alguno.
     fn remembered(&self) -> Option<CertificateRef>;
+}
+
+/// Por qué la ventana de `-certgui` no tiene ningún certificado que ofrecer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NoCertificateToOffer {
+    None,
+    AllExpired { owned: usize },
+    Excluded { owned: usize },
+}
+
+/// Lo que enseña la ventana de `-certgui`: los certificados que se pueden elegir, o por qué no hay ninguno.
+pub enum WindowOffer<'a> {
+    Certificates(&'a [TokenCertificate]),
+    Nothing(NoCertificateToOffer),
+}
+
+/// Lo que devuelve la ventana de `-certgui`: el certificado y el PIN tecleado, o la cancelación.
+pub enum WindowChoice {
+    Chosen {
+        certificate: TokenCertificate,
+        secret: Option<ProtectedSecret>,
+    },
+    Cancelled,
+}
+
+/// El elector gráfico: la ventana de sede con el origen «orden de terminal».
+pub trait GraphicalPicker {
+    /// Si hay un entorno gráfico en el que abrir la ventana.
+    fn has_a_display(&self) -> bool;
+
+    /// Lo que la persona elige en la ventana para firmar ese documento, o por qué no se ha abierto.
+    fn chosen(&self, document: &Path, offer: WindowOffer<'_>) -> Result<WindowChoice, String>;
 }

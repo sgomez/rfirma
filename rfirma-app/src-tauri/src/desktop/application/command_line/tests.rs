@@ -4,7 +4,9 @@ use std::path::PathBuf;
 
 use super::*;
 use crate::desktop::domain::sign_arguments::Algorithm;
-use crate::desktop::ports::{AskedSecret, OfferedCertificate, SecretDescriptor};
+use crate::desktop::ports::{
+    AskedSecret, OfferedCertificate, SecretDescriptor, WindowChoice, WindowOffer,
+};
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
@@ -125,6 +127,7 @@ fn attended_in(
         files,
         verifier: &Untouched,
         signer,
+        window: &Untouched,
     };
     attend(&arguments_of(words), &ports)
 }
@@ -172,6 +175,7 @@ struct RecordingSigner {
     remembered: RefCell<Vec<String>>,
     parameters: RefCell<Vec<BTreeMap<String, String>>>,
     descriptors: RefCell<Vec<Option<u32>>>,
+    window_secrets: RefCell<Vec<Option<Vec<u8>>>>,
     operations: RefCell<Vec<SignatureOperation>>,
     fails: bool,
     recalled: Option<CertificateRef>,
@@ -180,6 +184,11 @@ struct RecordingSigner {
 impl DocumentSigner for RecordingSigner {
     fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
         self.descriptors.borrow_mut().push(request.password_fd);
+        self.window_secrets.borrow_mut().push(
+            request
+                .typed_in_the_window
+                .map(|secret| secret.as_bytes().to_vec()),
+        );
         self.asked.borrow_mut().push((
             request.input.to_path_buf(),
             request.certificate.reference().label().to_owned(),
@@ -244,8 +253,21 @@ impl CertificateFilter for Untouched {
     }
 }
 
-/// El validador que una orden distinta de `verify` no debería llegar a tocar.
+/// El validador y la ventana que una orden que no los necesita no debería llegar a tocar.
 struct Untouched;
+
+impl GraphicalPicker for Untouched {
+    fn has_a_display(&self) -> bool {
+        panic!("no debería abrir la ventana de sede")
+    }
+
+    fn chosen(&self, document: &Path, _offer: WindowOffer<'_>) -> Result<WindowChoice, String> {
+        panic!(
+            "no debería elegir en la ventana para {}",
+            document.display()
+        )
+    }
+}
 
 impl SignatureVerifier for Untouched {
     fn results_of(&self, _document: &[u8], format: Format) -> Result<Vec<String>, BridgeError> {
@@ -253,6 +275,7 @@ impl SignatureVerifier for Untouched {
     }
 }
 
+mod certgui;
 mod certtui;
 mod cosign;
 mod filter_and_xml;
@@ -441,20 +464,12 @@ fn invalid_sign_arguments_are_refused_before_anything_else_with_a_nonzero_code()
         &[
             "sign", "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo", "-certtui",
         ][..],
-        &["sign", "-i", "a.pdf", "-o", "b.pdf", "-certgui"][..],
     ] {
         let outcome = attended(words);
 
         assert_eq!(outcome.exit_code, REFUSED, "{words:?}");
         assert!(outcome.stdout.is_empty());
     }
-}
-
-#[test]
-fn certgui_is_refused_with_a_message_proposing_certtui() {
-    let outcome = attended(&["sign", "-i", "a.pdf", "-o", "b.pdf", "-certgui"]);
-
-    assert!(said(&outcome).contains("-certtui"), "{}", said(&outcome));
 }
 
 #[test]

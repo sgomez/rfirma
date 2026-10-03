@@ -5,8 +5,8 @@ use super::super::{attend, CommandLinePorts, Outcome, FAILED, REFUSED, SUCCEEDED
 use super::*;
 use crate::desktop::ports::{
     AskedSecret, CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning,
-    DesktopHandover, DocumentSigner, OfferedCertificate, SecretDescriptor, SignatureVerifier,
-    Terminal,
+    DesktopHandover, DocumentSigner, GraphicalPicker, OfferedCertificate, SecretDescriptor,
+    SignatureVerifier, Terminal, WindowChoice, WindowOffer,
 };
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
@@ -123,6 +123,16 @@ impl DesktopHandover for Untouched {
     }
 }
 
+impl GraphicalPicker for Untouched {
+    fn has_a_display(&self) -> bool {
+        panic!("verify no abre la ventana de sede")
+    }
+
+    fn chosen(&self, document: &Path, _offer: WindowOffer<'_>) -> Result<WindowChoice, String> {
+        panic!("verify no elige certificado para {}", document.display())
+    }
+}
+
 impl DocumentSigner for Untouched {
     fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
         panic!("verify no firma {}", request.input.display())
@@ -150,6 +160,7 @@ fn verified(words: &[&str], files: &dyn CommandLineFiles, verifier: &Answering) 
             files,
             verifier,
             signer: &Untouched,
+            window: &Untouched,
         },
     )
 }
