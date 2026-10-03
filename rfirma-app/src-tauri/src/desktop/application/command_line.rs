@@ -7,7 +7,7 @@ use base64::Engine as _;
 use crate::desktop::application::store_scope::{within_the_scope, ScopeFailure};
 use crate::desktop::domain::command_line::{
     command_of, handover_to_the_window, is_a_help_flag, normalised, parameter_left_out,
-    verbose_outside_verify, Command, Refusal, WindowHandover, PASSWORD_FD, XML,
+    verbose_outside_verify, Command, Refusal, WindowHandover, JSON, PASSWORD_FD, XML,
 };
 use crate::desktop::domain::sign_arguments::{
     parse_sign_arguments, Format, Selection, SignArguments,
@@ -30,7 +30,7 @@ mod certtui;
 mod config;
 mod response;
 mod verify;
-use response::{Field, Response};
+use response::{Document, Field, Response};
 pub use verify::{format_to_verify, UNKNOWN_FORMAT};
 
 /// El código de salida de una orden que termina bien.
@@ -157,6 +157,11 @@ pub fn attend(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
     if let Some(refusal) = verbose_outside_verify(command, arguments) {
         return Outcome::refused(&refusal);
     }
+    if arguments.iter().any(|argument| argument == XML)
+        && arguments.iter().any(|argument| argument == JSON)
+    {
+        return Outcome::refused(&Refusal::JsonWithXml);
+    }
     let signing = if matches!(command, Command::Sign | Command::Cosign) {
         match parse_sign_arguments(&arguments[1..]) {
             Ok(parsed) => Some(parsed),
@@ -197,15 +202,26 @@ fn carried_out(
 }
 
 fn list_aliases(arguments: &[String], stores: &dyn CertificateStores) -> Outcome {
-    let xml = arguments.iter().any(|argument| argument == XML);
-    match aliases_listed(arguments, stores) {
-        Ok(certificates) if xml => Outcome {
-            stdout: aliases_response(&certificates).to_xml(),
+    let document = document_asked_by(arguments);
+    match (aliases_listed(arguments, stores), document) {
+        (Ok(certificates), Some(document)) => Outcome {
+            stdout: aliases_response(&certificates).render(document),
             ..Outcome::aliases_of(&certificates)
         },
-        Ok(certificates) => Outcome::aliases_of(&certificates),
-        Err(failed) if xml => in_the_xml_response(failed, None),
-        Err(failed) => failed,
+        (Ok(certificates), None) => Outcome::aliases_of(&certificates),
+        (Err(failed), Some(document)) => in_the_response(document, failed, None),
+        (Err(failed), None) => failed,
+    }
+}
+
+fn document_asked_by(arguments: &[String]) -> Option<Document> {
+    let asks = |parameter: &str| arguments.iter().any(|argument| argument == parameter);
+    if asks(XML) {
+        Some(Document::Xml)
+    } else if asks(JSON) {
+        Some(Document::Json)
+    } else {
+        None
     }
 }
 
@@ -228,10 +244,10 @@ fn sign(
     ports: &CommandLinePorts,
 ) -> Outcome {
     let Signed(outcome, document) = signed(arguments, parsed, operation, ports);
-    if parsed.xml {
-        return in_the_xml_response(outcome, document.as_deref());
+    match document_asked_by(arguments) {
+        Some(asked) => in_the_response(asked, outcome, document.as_deref()),
+        None => outcome,
     }
-    outcome
 }
 
 /// El desenlace de firmar y, si no se escribió en `-o`, el documento firmado para la respuesta XML.
@@ -317,9 +333,9 @@ fn signed(
     })
 }
 
-fn in_the_xml_response(outcome: Outcome, signature: Option<&[u8]>) -> Outcome {
+fn in_the_response(document: Document, outcome: Outcome, signature: Option<&[u8]>) -> Outcome {
     Outcome {
-        stdout: response_of(&outcome, signature).to_xml(),
+        stdout: response_of(&outcome, signature).render(document),
         ..outcome
     }
 }

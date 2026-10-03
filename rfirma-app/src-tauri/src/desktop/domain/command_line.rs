@@ -31,6 +31,9 @@ pub const STORE: &str = "-store";
 /// El parámetro que pide el resultado en XML.
 pub const XML: &str = "-xml";
 
+/// El parámetro que pide el resultado en JSON.
+pub const JSON: &str = "-json";
+
 /// Las dos formas del parámetro que añade a `verify` la ficha de cada firma.
 pub const VERBOSE: [&str; 2] = ["-v", "-verbose"];
 
@@ -188,6 +191,8 @@ pub enum Refusal {
     InvalidStore(StoreRefusal),
     /// `listaliases` con `-password-fd`: listar no pide PIN.
     PasswordForListing,
+    /// `-json` junto a `-xml`: cada uno pide el documento entero.
+    JsonWithXml,
     /// Falta un parámetro que la orden necesita, o su valor.
     MissingParameter(&'static str),
 }
@@ -220,6 +225,12 @@ impl fmt::Display for Refusal {
                 formatter,
                 "el argumento «{}» no se reconoce",
                 as_documented(argument)
+            ),
+            Self::JsonWithXml => write!(
+                formatter,
+                "{} y {} no pueden usarse a la vez",
+                documented(JSON),
+                documented(XML)
             ),
             Self::InvalidArguments(refusal) => write!(formatter, "{refusal}"),
             Self::InvalidStore(refusal) => write!(formatter, "{refusal}"),
@@ -329,7 +340,7 @@ pub fn value_of<'a>(arguments: &'a [String], parameter: &str) -> Option<&'a str>
 }
 
 const SIGN_SYNTAX: &str = "\
-Uso: rfirma sign -i <fichero> (-o <fichero> | --xml)
+Uso: rfirma sign -i <fichero> (-o <fichero> | --xml | --json)
                  (--alias <alias> | --filter <filtro> | --certgui | --certtui)
                  [--filter <filtro>] [--store <almacén>]
                  [--format auto|pades|cades|xades] [--algorithm sha512|sha384|sha256]
@@ -341,7 +352,7 @@ Con --gui, entrega el fichero a la ventana de rFirma y no firma.
 ";
 
 const COSIGN_SYNTAX: &str = "\
-Uso: rfirma cosign -i <fichero> (-o <fichero> | --xml)
+Uso: rfirma cosign -i <fichero> (-o <fichero> | --xml | --json)
                    (--alias <alias> | --filter <filtro> | --certgui | --certtui)
                    [--filter <filtro>] [--store <almacén>]
                    [--format auto|pades|cades|xades] [--algorithm sha512|sha384|sha256]
@@ -352,7 +363,7 @@ sobrescribe si existe.
 ";
 
 const LIST_ALIASES_SYNTAX: &str = "\
-Uso: rfirma listaliases [--store <almacén>] [--xml]
+Uso: rfirma listaliases [--store <almacén>] [--xml | --json]
 
 Lista los certificados de los almacenes, o solo los de --store.
 ";

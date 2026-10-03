@@ -5,7 +5,9 @@ use std::path::Path;
 use chrono::{DateTime, Utc};
 
 use super::{CommandLinePorts, Outcome};
-use crate::desktop::domain::command_line::{documented, value_of, verbosity, Refusal, INPUT, XML};
+use crate::desktop::domain::command_line::{
+    documented, value_of, verbosity, Refusal, INPUT, JSON, XML,
+};
 use crate::desktop::ports::LocalTimeZone;
 use crate::identity::domain::holder::without_semantics_prefix;
 use crate::signing::domain::bridge::{Format, XadesVariant};
@@ -17,10 +19,13 @@ pub const UNKNOWN_FORMAT: &str = "Firma no valida: los datos proporcionados no s
                                   con ningún formato de firma reconocido";
 
 pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
-    if arguments.iter().any(|argument| argument == XML) {
+    if let Some(parameter) = [XML, JSON]
+        .into_iter()
+        .find(|parameter| arguments.iter().any(|argument| argument == parameter))
+    {
         return Outcome::failed(format!(
             "rfirma: el parámetro {} de «verify» todavía no está disponible en esta versión",
-            documented(XML)
+            documented(parameter)
         ));
     }
     let Some(input) = value_of(arguments, INPUT) else {

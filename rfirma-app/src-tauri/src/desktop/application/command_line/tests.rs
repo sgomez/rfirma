@@ -300,6 +300,7 @@ mod certgui;
 mod certtui;
 mod cosign;
 mod filter_and_xml;
+mod json;
 mod listaliases;
 mod sign_config;
 mod sign_formats;

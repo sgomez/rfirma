@@ -40,8 +40,18 @@ argv**.
    órdenes. Sin `--store` se busca en todos los almacenes. Un nombre que el
    original no reconoce **se rechaza**, porque así lo hace su línea de órdenes,
    al contrario que su protocolo.
-4. **stdout es solo para lo que se consume**: el XML de `--xml`. Los mensajes y
-   los registros van a stderr, al contrario que el original, que los mezcla.
+4. **stdout es solo para lo que se consume**: el XML de `--xml` o el JSON de
+   `--json`. Los mensajes y los registros van a stderr, al contrario que el
+   original, que los mezcla.
+   **`--json` es la traducción del `--xml` de la misma orden**: solo existe donde
+   existe `--xml`, se rechaza junto a él y no cambia los códigos de salida. La
+   regla de traducción es mecánica: un elemento con hijos es un objeto con una
+   clave por hijo; uno sin hijos, una cadena con su texto, sin adivinar tipos
+   (`<result>true</result>` es `"result": "true"`); uno que la respuesta de esa
+   orden puede repetir (como `alias`) es siempre una lista, con uno o ninguno; y
+   la raíz se mantiene como clave de primer nivel, para que sea reversible.
+   `<afirma><result>ok</result><response><alias>A</alias><alias>B</alias></response></afirma>`
+   es `{"afirma":{"result":"ok","response":{"alias":["A","B"]}}}`.
 5. **Es un tercer rol del proceso**, el proceso de terminal: no se une al
    proceso de escritorio, y la única ventana que abre es la de sede, con
    `--certgui`.
