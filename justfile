@@ -248,7 +248,7 @@ duplication: deps
 # Esqueleto de ficheros .rs/.ts/.tsx (ruta) o tramos de cualquiera (ruta:A-B,C-D), en una llamada.
 [group('checklist')]
 outline +paths:
-    {{ root }}/scripts/outline.sh {{ paths }}
+    @{{ root }}/scripts/outline.sh {{ paths }}
 
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
 [group('dev')]
