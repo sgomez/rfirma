@@ -477,6 +477,47 @@ Firma 2
 }
 
 #[test]
+fn verbose_nests_the_countersignatures_inside_the_signature_they_countersign() {
+    let mut deepest = a_signature("TERCERA PERSONA", "11111111H", None);
+    deepest.countersignatures = Vec::new();
+    let mut counter = a_signature("OTRA PERSONA", "00000000T", None);
+    counter.countersignatures = vec![deepest];
+    let mut signer = a_signature("UNA PERSONA", "99999999R", None);
+    signer.countersignatures = vec![counter];
+    let reader = Reading(Ok(vec![signer]));
+    let verifier = Answering::with(&["Firma valida"]);
+
+    let outcome = attended(
+        &["verify", "-v", "-i", "datos.csig"],
+        &OneFile(A_CMS),
+        &verifier,
+        &reader,
+        &SummerInMadrid,
+    );
+
+    assert_eq!(
+        printed(&outcome),
+        "\
+Firma valida
+
+Formato: CAdES
+
+Firma 1
+  Firmante:          UNA PERSONA (99999999R)
+  Emisor:            AC FNMT Usuarios
+
+    Contrafirma 1.1
+      Firmante:          OTRA PERSONA (00000000T)
+      Emisor:            AC FNMT Usuarios
+
+        Contrafirma 1.1.1
+          Firmante:          TERCERA PERSONA (11111111H)
+          Emisor:            AC FNMT Usuarios
+"
+    );
+}
+
+#[test]
 fn signatures_that_cannot_be_read_leave_the_validity_and_end_with_zero() {
     let reader = Reading(Err("el isolate no arranca".to_owned()));
 

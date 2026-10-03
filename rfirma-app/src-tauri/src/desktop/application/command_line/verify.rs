@@ -70,10 +70,39 @@ fn with_the_signatures(
         lines.extend([String::new(), "El documento no tiene firmas.".to_owned()]);
     }
     for (number, signature) in signatures.signatures().iter().enumerate() {
-        lines.extend([String::new(), format!("Firma {}", number + 1)]);
-        lines.extend(sheet_of(signature, verbosity, ports.time_zone));
+        let title = format!("Firma {}", number + 1);
+        lines.extend(tree_of(signature, &title, 0, verbosity, ports.time_zone));
     }
     Outcome::printed(&lines)
+}
+
+/// La ficha de una firma y, indentadas dentro, las de sus contrafirmas numeradas «N.M».
+fn tree_of(
+    signature: &DocumentSignature,
+    title: &str,
+    depth: usize,
+    verbosity: usize,
+    time_zone: &dyn LocalTimeZone,
+) -> Vec<String> {
+    let indent = " ".repeat(4 * depth);
+    let mut lines = vec![String::new(), format!("{indent}{title}")];
+    lines.extend(
+        sheet_of(signature, verbosity, time_zone)
+            .into_iter()
+            .map(|line| format!("{indent}{line}")),
+    );
+    let number = title.rsplit(' ').next().unwrap_or_default();
+    for (index, countersignature) in signature.countersignatures.iter().enumerate() {
+        let title = format!("Contrafirma {number}.{}", index + 1);
+        lines.extend(tree_of(
+            countersignature,
+            &title,
+            depth + 1,
+            verbosity,
+            time_zone,
+        ));
+    }
+    lines
 }
 
 fn sheet_of(

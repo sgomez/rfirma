@@ -43,7 +43,8 @@ import es.gob.afirma.signvalidation.ValidatePdfSignature;
  *
  * <p>En PDF salta los sellos de tiempo y las firmas que iText no llega a leer,
  * y un PDF ilegible o cifrado da un informe vacio en vez de un fallo. En CAdES
- * solo lee la identidad de cada SignerInfo: su estado va nulo.
+ * solo lee la identidad de cada SignerInfo y de sus contrafirmas, a cualquier
+ * profundidad: su estado va nulo.
  */
 final class PreviousSignaturesBridge {
 
@@ -112,20 +113,25 @@ final class PreviousSignaturesBridge {
         if (tree == null) {
             throw new IllegalStateException("no se ha podido leer el arbol de firmantes del CAdES");
         }
-        final AOTreeNode root = (AOTreeNode) tree.getRoot();
+        return signersUnder((AOTreeNode) tree.getRoot());
+    }
+
+    private static List<Signature> signersUnder(final AOTreeNode parent) {
         final List<Signature> signers = new ArrayList<>();
-        for (int i = 0; i < root.getChildCount(); i++) {
-            final AOSimpleSignInfo info = (AOSimpleSignInfo) root.getChildAt(i).getUserObject();
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            final AOTreeNode node = parent.getChildAt(i);
+            final AOSimpleSignInfo info = (AOSimpleSignInfo) node.getUserObject();
             final X509Certificate[] chain = info.getCerts();
             if (chain == null || chain.length == 0) {
                 continue;
             }
-            signers.add(identityOf(chain[0], info.getSigningTime()));
+            signers.add(identityOf(chain[0], info.getSigningTime(), signersUnder(node)));
         }
         return signers;
     }
 
-    private static Signature identityOf(final X509Certificate signer, final Date signingTime) {
+    private static Signature identityOf(final X509Certificate signer, final Date signingTime,
+            final List<Signature> countersignatures) {
         return new Signature(
                 readable(signer.getSubjectX500Principal()),
                 readable(signer.getIssuerX500Principal()),
@@ -135,7 +141,7 @@ final class PreviousSignaturesBridge {
                         : DateTimeFormatter.ISO_INSTANT.format(signingTime.toInstant()),
                 null,
                 null,
-                List.of());
+                countersignatures);
     }
 
     private static Report readPdf(final byte[] pdf) {
