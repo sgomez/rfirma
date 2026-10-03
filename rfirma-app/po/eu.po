@@ -1037,8 +1037,31 @@ msgstr "Honen izenean"
 msgid "panel.signed.field.issuer"
 msgstr "Jaulkitzailea"
 
-msgid "panel.signed.field.declaredDate"
-msgstr "Adierazitako data"
+#. El rótulo de la fecha que declara quien firma, en la ficha de una firma.
+msgid "panel.signed.field.date"
+msgstr "Data"
+
+#. El rótulo de la fecha de una firma con sello de tiempo de una TSA.
+msgid "panel.signed.field.sealed"
+msgstr "Zigilatua"
+
+#. El rótulo de la última fila de una ficha caducada o no válida.
+msgid "panel.signed.field.reason"
+msgstr "Arrazoia"
+
+#. La validez de una firma, a la derecha de la cabecera de su ficha.
+msgid "panel.signed.validity.valid"
+msgstr "Baliozkoa"
+
+msgid "panel.signed.validity.expired"
+msgstr "Iraungita"
+
+msgid "panel.signed.validity.invalid"
+msgstr "Baliogabea"
+
+#. La marca de la firma que cierra el documento a más firmas.
+msgid "panel.signed.closesDocument"
+msgstr "Ez du sinadura gehiagorik onartzen"
 
 #. El rótulo del pie del resumen, con el fichero firmado y «Cambiar».
 msgid "panel.signed.document"
@@ -1158,6 +1181,10 @@ msgstr "Inprimakia sinatu ondoren bete da"
 #. Hallazgo del documento: se añadió contenido encima de lo firmado.
 msgid "documentFinding.contentAddedOnTop"
 msgstr "Sinatutakoaren gainean edukia gehitu da"
+
+#. Hallazgo del documento tras firmar: el cambio es anterior a la firma propia.
+msgid "documentFinding.modifiedBeforeYourSignature"
+msgstr "Zure sinaduraren aurretik aldatu zen"
 
 #. Motivo de una firma caducada. {{date}}: cuándo caducó el certificado.
 msgid "signatureReason.certificateExpired"

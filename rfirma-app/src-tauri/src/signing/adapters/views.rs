@@ -12,7 +12,8 @@ use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
 use crate::signing::domain::{
     Datum, DocumentFinding, DocumentSignature, DocumentSignatures, PageSet, PhrasePart,
-    SignatureStandard, SignatureStatus, Tone, Validity, ValidityReason, VisibleBox, VisibleContent,
+    SignatureStandard, SignatureStatus, SigningDate, Tone, Validity, ValidityReason, VisibleBox,
+    VisibleContent,
 };
 
 crossing! {
@@ -322,6 +323,25 @@ impl From<ValidityReason> for ValidityReasonView {
 }
 
 crossing! {
+    /// La fecha de una firma previa: declarada por quien firma, o sellada por una TSA.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    pub enum SigningDateView {
+        Declared { at: String },
+        Stamped { at: String, tsa: String },
+    }
+}
+
+impl From<SigningDate> for SigningDateView {
+    fn from(date: SigningDate) -> Self {
+        match date {
+            SigningDate::Declared { at } => Self::Declared { at },
+            SigningDate::Stamped { at, tsa } => Self::Stamped { at, tsa },
+        }
+    }
+}
+
+crossing! {
     /// Lo que se ve en el documento entero y no es de ninguna firma.
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
     #[serde(rename_all = "camelCase")]
@@ -367,6 +387,10 @@ crossing! {
         pub validity: ValidityView,
         /// El motivo de la validez, si no es `Valid`.
         pub validity_reason: Option<ValidityReasonView>,
+        /// La fecha declarada o sellada, si la firma trae alguna.
+        pub signing_date: Option<SigningDateView>,
+        /// Si es la firma que cierra el documento a más firmas.
+        pub closes_document: bool,
         /// Las contrafirmas de esta firma, a cualquier profundidad.
         pub countersignatures: Vec<PreviousSignatureView>,
     }
@@ -387,6 +411,8 @@ impl From<DocumentSignature> for PreviousSignatureView {
             reason: signature.reason,
             validity: ValidityView::from(signature.validity),
             validity_reason: signature.validity_reason.map(ValidityReasonView::from),
+            signing_date: signature.signing_date.map(SigningDateView::from),
+            closes_document: signature.closes_document,
             countersignatures: signature
                 .countersignatures
                 .into_iter()

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { classify, type NamedFailure } from "./errors/classify";
 import type { SigningBackend } from "./signing/flow";
-import type { PreviousSignature } from "./signing/previousSignatures";
+import type { DocumentFinding, PreviousSignature } from "./signing/previousSignatures";
 import { acknowledgementFor, type Signing } from "./signing/useSigning";
 
 /**
@@ -34,15 +34,19 @@ export function useSignedSummary(
   // Un fallo al leerlas deja la lista vacía: el resumen sigue sirviendo para
   // llegar al fichero.
   const [signatures, setSignatures] = useState<readonly PreviousSignature[]>([]);
+  const [findings, setFindings] = useState<readonly DocumentFinding[]>([]);
   const readingSignatures = signedHere !== null;
   useEffect(() => {
     setSignatures([]);
+    setFindings([]);
     if (!readingSignatures) return;
     let current = true;
     signer
       .signedDocumentSignatures()
       .then((report) => {
-        if (current) setSignatures(report.signatures);
+        if (!current) return;
+        setSignatures(report.signatures);
+        setFindings(report.findings);
       })
       .catch(() => {});
     return () => {
@@ -80,5 +84,5 @@ export function useSignedSummary(
     reopenDocument();
   };
 
-  return { signedHere, signatures, openFailure, openSigned, signAgain };
+  return { signedHere, signatures, findings, openFailure, openSigned, signAgain };
 }

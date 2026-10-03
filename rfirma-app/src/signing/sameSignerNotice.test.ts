@@ -34,6 +34,8 @@ function aSignature(overrides: Partial<PreviousSignature> = {}): PreviousSignatu
     status: "valid",
     validity: "valid",
     validityReason: null,
+    signingDate: null,
+    closesDocument: false,
     reason: null,
     countersignatures: [],
     ...overrides,

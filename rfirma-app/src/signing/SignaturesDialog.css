@@ -1,0 +1,44 @@
+/*
+ * El diálogo «Ver firmas» (docs/design/dialogo-ver-firmas.md): 420 px sobre el
+ * velo, por encima de la cabecera, con la zona central como única que se
+ * desplaza.
+ */
+
+.signatures-dialog__scrim {
+  z-index: 20;
+}
+
+.signatures-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+  width: 420px;
+  max-height: calc(100vh - 48px);
+}
+
+.signatures-dialog__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.signatures-dialog__head p {
+  margin: 0;
+}
+
+.signatures-dialog__scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.signatures-dialog__actions {
+  justify-content: flex-end;
+}
+
+.signatures-dialog__actions .rf-btn {
+  min-width: 96px;
+}
