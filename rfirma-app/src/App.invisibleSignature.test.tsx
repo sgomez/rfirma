@@ -19,7 +19,6 @@ function recordingSigner(presigned: SigningOrder[]): SigningBackend {
       value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
     }),
     padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
-    unregisteredSignatures: async () => false,
     previousSignatures: async () => ({
       signatures: [],
       warningCount: 0,

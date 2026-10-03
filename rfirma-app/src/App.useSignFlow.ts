@@ -161,9 +161,8 @@ export function useSignFlow({
   };
 
   const showsUnknownSignatureType = (problem: SigningProblem) =>
-    problem.kind === "unregisteredSignatures" ||
-    (problem.kind === "signature" &&
-      problem.signature.validityReason?.kind === "unknownSignatureType");
+    problem.kind === "signature" &&
+    problem.signature.validityReason?.kind === "unknownSignatureType";
 
   const stampedPlacement = () => (signature.enabled ? placement : null);
 
@@ -189,14 +188,8 @@ export function useSignFlow({
     });
 
     // El permiso de cofirmar sobre firmas de tipo desconocido solo sale de un
-    // «Firmar igualmente» que enseñó esa fila; si no, se pregunta aquí. Si la
-    // orden que lo averigua falla, la prefirma dirá lo que pasa.
-    const unregistered = await signer.unregisteredSignatures(order.document).catch(() => false);
-    if (unregistered && !consented) {
-      setSignAnywayPrompt([{ kind: "unregisteredSignatures" }]);
-      return;
-    }
-    const permitted = unregistered ? { ...order, allowUnregisteredSignatures: true } : order;
+    // «Firmar igualmente» que enseñó esa fila.
+    const permitted = consented ? { ...order, allowUnregisteredSignatures: true } : order;
 
     await signUnlessTheSealFalls(chosen, permitted, pdf, stamped);
   };

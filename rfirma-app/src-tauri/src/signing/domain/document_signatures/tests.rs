@@ -1,6 +1,6 @@
-use super::{DocumentSignature, DocumentSignatures, SignatureStatus, Tone, Validity};
+use super::{DocumentSignature, DocumentSignatures, Tone, Validity};
 
-fn a_previous_signature_with_status(status: SignatureStatus) -> DocumentSignature {
+fn a_previous_signature_with_validity(validity: Validity) -> DocumentSignature {
     DocumentSignature {
         name: "LOVELACE BYRON ADA".to_owned(),
         id_number: "IDCES-00000000T".to_owned(),
@@ -13,9 +13,7 @@ fn a_previous_signature_with_status(status: SignatureStatus) -> DocumentSignatur
         signature_algorithm: None,
         profile: None,
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
-        status: Some(status),
-        reason: None,
-        validity: Validity::Valid,
+        validity,
         validity_reason: None,
         signing_date: None,
         closes_document: false,
@@ -24,30 +22,9 @@ fn a_previous_signature_with_status(status: SignatureStatus) -> DocumentSignatur
 }
 
 #[test]
-fn are_ko_the_certificate_expired_not_yet_valid_broken_and_unverifiable_statuses() {
-    let ko = [
-        SignatureStatus::CertificateExpired,
-        SignatureStatus::CertificateNotYetValid,
-        SignatureStatus::Broken,
-        SignatureStatus::Unverifiable,
-    ];
-    for status in ko {
-        assert!(status.is_ko(), "{status:?} debería ser KO");
-    }
-}
-
-#[test]
-fn are_not_ko_the_valid_and_not_fully_checked_statuses() {
-    let not_ko = [SignatureStatus::Valid, SignatureStatus::NotFullyChecked];
-    for status in not_ko {
-        assert!(!status.is_ko(), "{status:?} no debería ser KO");
-    }
-}
-
-#[test]
 fn a_report_with_every_signature_valid_and_no_change_has_no_warnings_and_is_informational() {
     let report = DocumentSignatures::new(
-        vec![a_previous_signature_with_status(SignatureStatus::Valid)],
+        vec![a_previous_signature_with_validity(Validity::Valid)],
         false,
     );
 
@@ -56,22 +33,20 @@ fn a_report_with_every_signature_valid_and_no_change_has_no_warnings_and_is_info
 }
 
 #[test]
-fn a_report_with_a_signature_not_fully_checked_and_no_change_warns_once_and_is_indeterminate() {
+fn a_report_with_an_expired_signature_warns_once_and_is_of_attention() {
     let report = DocumentSignatures::new(
-        vec![a_previous_signature_with_status(
-            SignatureStatus::NotFullyChecked,
-        )],
+        vec![a_previous_signature_with_validity(Validity::Expired)],
         false,
     );
 
     assert_eq!(report.warning_count(), 1);
-    assert_eq!(report.tone(), Tone::Indeterminate);
+    assert_eq!(report.tone(), Tone::Attention);
 }
 
 #[test]
-fn a_report_with_a_ko_signature_warns_once_and_is_of_attention() {
+fn a_report_with_an_invalid_signature_warns_once_and_is_of_attention() {
     let report = DocumentSignatures::new(
-        vec![a_previous_signature_with_status(SignatureStatus::Broken)],
+        vec![a_previous_signature_with_validity(Validity::Invalid)],
         false,
     );
 
@@ -82,7 +57,7 @@ fn a_report_with_a_ko_signature_warns_once_and_is_of_attention() {
 #[test]
 fn a_document_changed_after_the_last_signature_warns_once_and_is_of_attention_on_its_own() {
     let report = DocumentSignatures::new(
-        vec![a_previous_signature_with_status(SignatureStatus::Valid)],
+        vec![a_previous_signature_with_validity(Validity::Valid)],
         true,
     );
 
@@ -91,21 +66,15 @@ fn a_document_changed_after_the_last_signature_warns_once_and_is_of_attention_on
 }
 
 #[test]
-fn ko_not_fully_checked_and_a_change_all_add_up_and_attention_wins() {
+fn bad_signatures_and_a_change_all_add_up() {
     let report = DocumentSignatures::new(
         vec![
-            a_previous_signature_with_status(SignatureStatus::CertificateExpired),
-            a_previous_signature_with_status(SignatureStatus::NotFullyChecked),
+            a_previous_signature_with_validity(Validity::Expired),
+            a_previous_signature_with_validity(Validity::Invalid),
         ],
         true,
     );
 
     assert_eq!(report.warning_count(), 3);
     assert_eq!(report.tone(), Tone::Attention);
-}
-
-#[test]
-fn the_tone_order_is_information_then_indeterminate_then_attention() {
-    assert!(Tone::Information < Tone::Indeterminate);
-    assert!(Tone::Indeterminate < Tone::Attention);
 }

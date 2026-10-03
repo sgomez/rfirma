@@ -13,8 +13,6 @@ fn an_expired_signature() -> DocumentSignature {
         signature_algorithm: None,
         profile: None,
         signing_time: None,
-        status: None,
-        reason: None,
         validity: Validity::Expired,
         validity_reason: Some(ValidityReason::CertificateExpired {
             date: "2020-03-05T12:00:00Z".to_owned(),

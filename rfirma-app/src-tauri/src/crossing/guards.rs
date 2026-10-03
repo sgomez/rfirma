@@ -109,7 +109,7 @@ fn types_named_by(signature: &str) -> Vec<&str> {
 }
 
 /// Tipos de salida que no contienen información procedente de un documento.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 40] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 39] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
@@ -140,7 +140,6 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 40] = [
     "WithdrawalReportView",
     "StoreWithdrawalView",
     "WithdrawalView",
-    "SignatureStatusView",
     "ToneView",
     "SignatureStandardView",
     "ValidityView",
@@ -211,8 +210,6 @@ fn a_previous_signature() -> crate::signing::domain::DocumentSignature {
         signature_algorithm: None,
         profile: None,
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
-        status: Some(crate::signing::domain::SignatureStatus::Valid),
-        reason: None,
         validity: crate::signing::domain::Validity::Valid,
         validity_reason: None,
         signing_date: None,

@@ -29,12 +29,10 @@ export function previousSignatureOf(overrides: Partial<PreviousSignature> = {}):
     issuer: "AC FNMT Usuarios",
     certificateSerialNumber: "1",
     signingTime: "2024-01-01T10:00:00Z",
-    status: "valid",
     validity: "valid",
     validityReason: null,
     signingDate: null,
     closesDocument: false,
-    reason: null,
     countersignatures: [],
     ...overrides,
   };

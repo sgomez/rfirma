@@ -12,8 +12,7 @@ use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
 use crate::signing::domain::{
     Datum, DocumentFinding, DocumentSignature, DocumentSignatures, PageSet, PhrasePart,
-    SignatureStandard, SignatureStatus, SigningDate, Tone, Validity, ValidityReason, VisibleBox,
-    VisibleContent,
+    SignatureStandard, SigningDate, Tone, Validity, ValidityReason, VisibleBox, VisibleContent,
 };
 
 crossing! {
@@ -198,39 +197,11 @@ impl From<VisibleSignatureMemory> for RememberedVisibleSignatureView {
 }
 
 crossing! {
-    /// El estado de una firma previa, con el nombre con el que cruza el puente.
-    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    pub enum SignatureStatusView {
-        Valid,
-        CertificateExpired,
-        CertificateNotYetValid,
-        Broken,
-        Unverifiable,
-        NotFullyChecked,
-    }
-}
-
-impl From<SignatureStatus> for SignatureStatusView {
-    fn from(status: SignatureStatus) -> Self {
-        match status {
-            SignatureStatus::Valid => Self::Valid,
-            SignatureStatus::CertificateExpired => Self::CertificateExpired,
-            SignatureStatus::CertificateNotYetValid => Self::CertificateNotYetValid,
-            SignatureStatus::Broken => Self::Broken,
-            SignatureStatus::Unverifiable => Self::Unverifiable,
-            SignatureStatus::NotFullyChecked => Self::NotFullyChecked,
-        }
-    }
-}
-
-crossing! {
     /// El tono del peor aviso, de menor a mayor gravedad.
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub enum ToneView {
         Information,
-        Indeterminate,
         Attention,
     }
 }
@@ -239,7 +210,6 @@ impl From<Tone> for ToneView {
     fn from(tone: Tone) -> Self {
         match tone {
             Tone::Information => Self::Information,
-            Tone::Indeterminate => Self::Indeterminate,
             Tone::Attention => Self::Attention,
         }
     }
@@ -379,10 +349,6 @@ crossing! {
         pub certificate_serial_number: String,
         /// Instante de la firma en ISO-8601, si el puente lo devolvió.
         pub signing_time: Option<String>,
-        /// El estado de la firma.
-        pub status: SignatureStatusView,
-        /// Motivo del original, si el estado no es `Valid`.
-        pub reason: Option<String>,
         /// La validez de la firma.
         pub validity: ValidityView,
         /// El motivo de la validez, si no es `Valid`.
@@ -405,10 +371,6 @@ impl From<DocumentSignature> for PreviousSignatureView {
             issuer: signature.issuer,
             certificate_serial_number: signature.certificate_serial_number,
             signing_time: signature.signing_time,
-            status: signature
-                .status
-                .map_or(SignatureStatusView::Unverifiable, SignatureStatusView::from),
-            reason: signature.reason,
             validity: ValidityView::from(signature.validity),
             validity_reason: signature.validity_reason.map(ValidityReasonView::from),
             signing_date: signature.signing_date.map(SigningDateView::from),

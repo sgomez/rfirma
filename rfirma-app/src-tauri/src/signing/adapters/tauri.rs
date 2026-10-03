@@ -212,22 +212,6 @@ pub fn forget_activity(signing: State<'_, SigningRoot>) -> Result<(), Failure> {
     Ok(signing.memory.forget_activity()?)
 }
 
-/// Comprueba si el documento contiene firmas previas no registradas.
-#[tauri::command(async)]
-pub fn unregistered_signatures(
-    document: String,
-    documents: State<'_, DocumentsRoot>,
-    signing: State<'_, SigningRoot>,
-) -> Result<bool, Failure> {
-    let document = documents.opened_document(&document)?;
-    Ok(
-        crate::signing::application::session::unregistered_signatures_in(
-            signing.files.as_ref(),
-            &document,
-        )?,
-    )
-}
-
 /// Firmas que ya trae el documento, con quién firmó y cuándo.
 #[tauri::command(async)]
 pub fn previous_signatures(

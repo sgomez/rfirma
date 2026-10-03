@@ -45,14 +45,6 @@ export interface SiteDocument {
    * dice antes de consentir.
    */
   round: SignatureRound;
-  /**
-   * Si alguna de las firmas que ya trae el PDF es de un `/SubFilter` que
-   * rFirma no sabe leer. No es un rechazo — el PDF certificado sí
-   * invalida con certeza y por eso se rechaza sin preguntar; esto es
-   * desconocimiento nuestro. Se dice con una frase de información,
-   * dentro del mismo consentimiento: no hay un sexto momento.
-   */
-  hasUnregisteredSignatures: boolean;
   /** Las firmas que ya trae el documento, calculadas sobre el PDF real. */
   previousSignatures: PreviousSignaturesReport;
 }

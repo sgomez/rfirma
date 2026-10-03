@@ -66,8 +66,6 @@ function problemKey(problem: SigningProblem): string {
       return problem.finding;
     case "signature":
       return `signature-${problem.number}`;
-    case "unregisteredSignatures":
-      return "unregistered-signatures";
   }
 }
 
@@ -79,16 +77,6 @@ function ProblemRow({ problem, locale }: { problem: SigningProblem; locale: stri
         <div className="sign-anyway-dialog__heading">
           <CrossCircleIcon size={15} />
           <span>{findingText(t, problem.finding)}</span>
-        </div>
-      </li>
-    );
-  }
-  if (problem.kind === "unregisteredSignatures") {
-    return (
-      <li className="sign-anyway-dialog__row">
-        <div className="sign-anyway-dialog__heading">
-          <CrossCircleIcon size={15} />
-          <span>{validityReasonText(t, { kind: "unknownSignatureType" }, locale)}</span>
         </div>
       </li>
     );

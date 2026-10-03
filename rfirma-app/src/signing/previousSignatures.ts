@@ -16,10 +16,6 @@ export interface PreviousSignature {
   certificateSerialNumber: string;
   /** Instante de la firma en ISO-8601, o `null` si el puente no lo trajo. */
   signingTime: string | null;
-  /** El estado de la firma. */
-  status: SignatureStatus;
-  /** Motivo del original, o `null` si el estado es `valid`. */
-  reason: string | null;
   /** La validez de la firma (ADR-0043). */
   validity: Validity;
   /** Por qué no es válida, o `null` si lo es. */
@@ -31,15 +27,6 @@ export interface PreviousSignature {
   /** Las contrafirmas de esta firma, a cualquier profundidad. */
   countersignatures: readonly PreviousSignature[];
 }
-
-/** El estado de una firma previa. */
-type SignatureStatus =
-  | "valid"
-  | "certificateExpired"
-  | "certificateNotYetValid"
-  | "broken"
-  | "unverifiable"
-  | "notFullyChecked";
 
 /** La validez de una firma: la misma en el aviso, en «Ver firmas», en el resumen y al firmar. */
 export type Validity = "valid" | "expired" | "invalid";
@@ -65,7 +52,7 @@ export type DocumentFinding =
   | "contentAddedOnTop";
 
 /** El tono del peor aviso, de menor a mayor gravedad. */
-type Tone = "information" | "indeterminate" | "attention";
+type Tone = "information" | "attention";
 
 /** El formato de firma del documento, o que no se reconoce. */
 export type SignatureFormat = "pades" | "cades" | "xades" | "unrecognized";
@@ -85,11 +72,10 @@ export interface PreviousSignaturesReport {
   findings: readonly DocumentFinding[];
 }
 
-/** Un problema que «¿Firmar de todos modos?» enseña: un hallazgo, una firma que no es válida o el permiso de cofirmar firmas de tipo desconocido. */
+/** Un problema que «¿Firmar de todos modos?» enseña: un hallazgo, o una firma que no es válida. */
 export type SigningProblem =
   | { kind: "finding"; finding: DocumentFinding }
-  | { kind: "signature"; number: number; signature: PreviousSignature }
-  | { kind: "unregisteredSignatures" };
+  | { kind: "signature"; number: number; signature: PreviousSignature };
 
 /**
  * Los problemas del informe, los hallazgos primero y luego cada firma

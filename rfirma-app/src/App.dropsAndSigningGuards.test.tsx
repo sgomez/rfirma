@@ -174,7 +174,6 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
-      unregisteredSignatures: async () => false,
       previousSignatures: async () => ({
         signatures: [],
         warningCount: 0,
@@ -239,7 +238,6 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
-      unregisteredSignatures: async () => false,
       previousSignatures: async () => ({
         signatures: [],
         warningCount: 0,
@@ -290,7 +288,6 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
-      unregisteredSignatures: async () => false,
       previousSignatures: async () => ({
         signatures: [],
         warningCount: 0,
@@ -396,7 +393,6 @@ describe("App, con un documento que no se recuerda", () => {
         value: { name: "de-la-sede-firmado.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
-      unregisteredSignatures: async () => false,
       previousSignatures: async () => ({
         signatures: [],
         warningCount: 0,
@@ -451,8 +447,6 @@ describe("App · ¿Firmar de todos modos?", () => {
       issuer: "AC FNMT Usuarios",
       certificateSerialNumber: "1",
       signingTime: "2024-01-01T10:00:00.000Z",
-      status: "valid",
-      reason: null,
       validity: "valid",
       validityReason: null,
       signingDate: null,
@@ -465,13 +459,11 @@ describe("App · ¿Firmar de todos modos?", () => {
   const validSignature = aSignature({ name: "Alfred Pennyworth" });
   const expiredSignature = aSignature({
     name: "Bruce Wayne",
-    status: "certificateExpired",
     validity: "expired",
     validityReason: { kind: "certificateExpired", date: "2020-03-05T12:00:00Z", holder: null },
   });
   const unknownTypeSignature = aSignature({
     name: "Notaría XYZ",
-    status: "unverifiable",
     validity: "invalid",
     validityReason: { kind: "unknownSignatureType" },
   });
@@ -479,7 +471,6 @@ describe("App · ¿Firmar de todos modos?", () => {
   function signerOver(
     report: Partial<PreviousSignaturesReport>,
     presign: SigningBackend["presign"],
-    unregistered = false,
   ): SigningBackend {
     return {
       presign,
@@ -489,7 +480,6 @@ describe("App · ¿Firmar de todos modos?", () => {
         value: { name: "cofirmado-firmado.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
-      unregisteredSignatures: async () => unregistered,
       previousSignatures: async () => ({
         ...NO_PREVIOUS_SIGNATURES,
         tone: "attention",
@@ -582,7 +572,7 @@ describe("App · ¿Firmar de todos modos?", () => {
 
   it("shows a signature of an unknown type as one more row, with no dialog of its own", async () => {
     const { user, sign } = await readyToSign(
-      signerOver({ signatures: [unknownTypeSignature] }, recordingPresign([]), true),
+      signerOver({ signatures: [unknownTypeSignature] }, recordingPresign([])),
     );
 
     await user.click(sign);
@@ -598,7 +588,7 @@ describe("App · ¿Firmar de todos modos?", () => {
   it("lets the bridge cosign once the unknown-type row is accepted", async () => {
     const presigned: SigningOrder[] = [];
     const { user, sign } = await readyToSign(
-      signerOver({ signatures: [unknownTypeSignature] }, recordingPresign(presigned), true),
+      signerOver({ signatures: [unknownTypeSignature] }, recordingPresign(presigned)),
     );
 
     await user.click(sign);
@@ -608,38 +598,6 @@ describe("App · ¿Firmar de todos modos?", () => {
     await waitFor(() => expect(presigned).toHaveLength(1));
     expect(presigned[0]?.allowUnregisteredSignatures).toBe(true);
     expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("asks before cosigning over unknown signatures when the report shows no such row", async () => {
-    const presigned: SigningOrder[] = [];
-    const { user, sign } = await readyToSign(
-      signerOver({ signatures: [validSignature] }, recordingPresign(presigned), true),
-    );
-
-    await user.click(sign);
-
-    expect(presigned).toHaveLength(0);
-    const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
-    expect(within(dialog).getByText("rFirma no conoce este tipo de firma")).toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "Firmar igualmente" }));
-
-    await waitFor(() => expect(presigned).toHaveLength(1));
-    expect(presigned[0]?.allowUnregisteredSignatures).toBe(true);
-  });
-
-  it("asks again for the unknown signatures when the dialog shown did not carry that row", async () => {
-    const presigned: SigningOrder[] = [];
-    const { user, sign } = await readyToSign(
-      signerOver({ signatures: [expiredSignature] }, recordingPresign(presigned), true),
-    );
-
-    await user.click(sign);
-    const first = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
-    await user.click(within(first).getByRole("button", { name: "Firmar igualmente" }));
-
-    const second = await screen.findByText("rFirma no conoce este tipo de firma");
-    expect(second).toBeInTheDocument();
-    expect(presigned).toHaveLength(0);
   });
 
   it("signs nothing when it is cancelled", async () => {
@@ -671,12 +629,11 @@ describe("App · ¿Firmar de todos modos?", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("signs directly when every signature is valid or only unchecked", async () => {
+  it("signs directly when every signature is valid", async () => {
     const presigned: SigningOrder[] = [];
-    const unchecked = aSignature({ name: "Selene", status: "notFullyChecked" });
     const { user, sign } = await readyToSign(
       signerOver(
-        { signatures: [validSignature, unchecked], tone: "indeterminate" },
+        { signatures: [validSignature, aSignature({ name: "Selene" })], tone: "information" },
         recordingPresign(presigned),
       ),
     );

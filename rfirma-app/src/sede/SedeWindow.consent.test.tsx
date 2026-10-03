@@ -23,7 +23,6 @@ describe("2 · consent", () => {
         pages: 27,
         sizeBytes: 2_400_000,
         round: { kind: "sign" },
-        hasUnregisteredSignatures: false,
         previousSignatures: NO_PREVIOUS_SIGNATURES,
       },
       signs: null,
@@ -136,7 +135,6 @@ describe("2 · consent", () => {
           pages: 8,
           sizeBytes: 310_000,
           round: { kind: "sign" },
-          hasUnregisteredSignatures: false,
           previousSignatures: NO_PREVIOUS_SIGNATURES,
         },
       }),
@@ -154,7 +152,6 @@ describe("2 · consent", () => {
           pages: 12,
           sizeBytes: 860_000,
           round: { kind: "cosign" },
-          hasUnregisteredSignatures: false,
           previousSignatures: NO_PREVIOUS_SIGNATURES,
         },
       }),
@@ -177,7 +174,6 @@ describe("2 · consent", () => {
             pages: 12,
             sizeBytes: 860_000,
             round: { kind: "counter", target },
-            hasUnregisteredSignatures: false,
             previousSignatures: NO_PREVIOUS_SIGNATURES,
           },
         }),
@@ -191,51 +187,6 @@ describe("2 · consent", () => {
     },
   );
 
-  it("warns with an information note, not an alert, when the PDF carries a signature rFirma cannot read", () => {
-    const { port } = scriptedErrand(
-      consenting({
-        document: {
-          title: "Convenio",
-          pages: 12,
-          sizeBytes: 860_000,
-          round: { kind: "cosign" },
-          hasUnregisteredSignatures: true,
-          previousSignatures: NO_PREVIOUS_SIGNATURES,
-        },
-      }),
-    );
-    renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
-
-    expect(
-      screen.getByText(
-        "rFirma no reconoce alguna de las firmas que ya tiene este documento, y al añadir la tuya podrían dejar de verse como válidas",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/firmas sin registrar/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Firmar" })).toBeInTheDocument();
-  });
-
-  it("cancels the errand from the unrecognized-signatures note like any other consent", async () => {
-    const user = userEvent.setup();
-    const { port, calls } = scriptedErrand(
-      consenting({
-        document: {
-          title: "Convenio",
-          pages: 12,
-          sizeBytes: 860_000,
-          round: { kind: "cosign" },
-          hasUnregisteredSignatures: true,
-          previousSignatures: NO_PREVIOUS_SIGNATURES,
-        },
-      }),
-    );
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
-
-    expect(calls.cancel).toHaveBeenCalled();
-  });
-
   describe("previous signatures of the document", () => {
     it.each(["sign", "cosign"] as const)(
       "shows the notice with the right count and states for a %s",
@@ -247,7 +198,6 @@ describe("2 · consent", () => {
               pages: 12,
               sizeBytes: 860_000,
               round: { kind },
-              hasUnregisteredSignatures: false,
               previousSignatures: reportOf(
                 [
                   previousSignatureOf(),
@@ -275,7 +225,6 @@ describe("2 · consent", () => {
             pages: 12,
             sizeBytes: 860_000,
             round: { kind: "sign" },
-            hasUnregisteredSignatures: false,
             previousSignatures: reportOf([previousSignatureOf()], {
               warningCount: 1,
               tone: "attention",
@@ -297,7 +246,6 @@ describe("2 · consent", () => {
             pages: 12,
             sizeBytes: 860_000,
             round: { kind: "sign" },
-            hasUnregisteredSignatures: false,
             previousSignatures: reportOf([previousSignatureOf()]),
           },
         }),
@@ -318,9 +266,8 @@ describe("2 · consent", () => {
             pages: 12,
             sizeBytes: 860_000,
             round: { kind: "sign" },
-            hasUnregisteredSignatures: false,
             previousSignatures: reportOf(
-              [previousSignatureOf({ status: "broken", reason: null })],
+              [previousSignatureOf({ validity: "invalid", validityReason: { kind: "damaged" } })],
               {
                 warningCount: 1,
                 tone: "attention",
@@ -344,7 +291,6 @@ describe("2 · consent", () => {
             pages: 12,
             sizeBytes: 860_000,
             round: { kind: "sign" },
-            hasUnregisteredSignatures: false,
             previousSignatures: reportOf([
               previousSignatureOf({
                 issuer: certificate().issuer,

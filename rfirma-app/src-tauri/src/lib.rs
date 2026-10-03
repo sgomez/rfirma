@@ -263,7 +263,6 @@ fn with_the_five_roots(
             desktop::adapters::tauri::install_local_ca_certificate,
             desktop::adapters::tauri::choose_site_signature_handler,
             desktop::adapters::tauri::withdraw_rfirma,
-            signing::adapters::tauri::unregistered_signatures,
             signing::adapters::tauri::previous_signatures,
             signing::adapters::tauri::signed_document_signatures,
             identity::adapters::tauri::install_certificate,

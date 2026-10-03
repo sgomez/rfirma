@@ -44,7 +44,6 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
         remembered_visible_signature() -> RememberedVisibleSignatureView
   async write_configuration(configuration: ConfigurationView) -> Result<(), Failure>
   async forget_activity() -> Result<(), Failure>
-  async unregistered_signatures(document: String) -> Result<bool, Failure>
   async previous_signatures(document: String) -> Result<PreviousSignaturesReportView, Failure>
   async signed_document_signatures() -> Result<PreviousSignaturesReportView, Failure>
   async close_site_window()
@@ -320,17 +319,8 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       content: Option<VisibleContentView>
       withRubric: bool
 
-  pub enum SignatureStatusView
-      Valid
-      CertificateExpired
-      CertificateNotYetValid
-      Broken
-      Unverifiable
-      NotFullyChecked
-
   pub enum ToneView
       Information
-      Indeterminate
       Attention
 
   pub enum SignatureStandardView
@@ -368,8 +358,6 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       issuer: String
       certificateSerialNumber: String
       signingTime: Option<String>
-      status: SignatureStatusView
-      reason: Option<String>
       validity: ValidityView
       validityReason: Option<ValidityReasonView>
       signingDate: Option<SigningDateView>
@@ -412,7 +400,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Waiting
       AskingForConsent { certificates: Vec<CertificateView> }
       MarkingTheArea { document: String }
-      AskingToSign { document: String, signing: SigningKindView, round: SignatureRoundView, certificates: Vec<CertificateView>, unregisteredSignatures: bool, alreadyChosen: Option<String>, withoutAsking: bool }
+      AskingToSign { document: String, signing: SigningKindView, round: SignatureRoundView, certificates: Vec<CertificateView>, alreadyChosen: Option<String>, withoutAsking: bool }
       AskingToConfirm { messageCode: String }
       AskingToSignTheBatch { signs: usize, certificates: Vec<CertificateView>, alreadyChosen: Option<String>, withoutAsking: bool }
       AskingToSignTheLocalBatch { items: Vec<LocalBatchItemView>, certificates: Vec<CertificateView>, alreadyChosen: Option<String>, withoutAsking: bool }

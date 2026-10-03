@@ -1619,13 +1619,6 @@ msgstr ""
 "Your name, your ID number, the certificate issuer and its serial number will "
 "be sent."
 
-#. Situación 5 (ID-302): información y no alarma. «Firmas sin registrar» no
-#. aparece en la interfaz, y no se dice cuántas hay ni si son válidas.
-msgid "sede.consent.unrecognizedSignatures"
-msgstr ""
-"rFirma doesn't recognize some of the signatures already on this document, "
-"and adding yours could make them stop showing as valid"
-
 #. Contrafirma: se firma sobre las firmas que el documento ya trae, y el
 #. objetivo dice sobre cuáles.
 msgid "sede.consent.counterSignatureTree"

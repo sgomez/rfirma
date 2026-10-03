@@ -29,7 +29,6 @@ export type SiteStageView =
       signing: SigningKind;
       round: SignatureRound;
       certificates: readonly Certificate[];
-      unregisteredSignatures: boolean;
       /** El asa preseleccionada: la fijada en la sesión o la única fila que pasó el filtro. */
       alreadyChosen: string | null;
       /** La ventana consiente sola con `alreadyChosen`, sin esperar a la persona. */

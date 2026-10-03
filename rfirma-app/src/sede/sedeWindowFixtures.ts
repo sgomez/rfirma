@@ -79,7 +79,6 @@ export const signedDocument: SiteDocument = {
   pages: 27,
   sizeBytes: 2_400_000,
   round: { kind: "sign" },
-  hasUnregisteredSignatures: false,
   previousSignatures: NO_PREVIOUS_SIGNATURES,
 };
 
