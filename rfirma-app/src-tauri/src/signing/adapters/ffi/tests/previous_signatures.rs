@@ -111,7 +111,7 @@ fn a_signature_the_bridge_did_not_validate_crosses_without_a_status_and_with_its
                 "signingTime":null,
                 "status":null,
                 "reason":null,
-            "validity":"valid",
+                "validity":"valid",
                 "countersignatures":[]
             }]
         }],"changedAfterLastSignature":false,"findings":[]}"#,

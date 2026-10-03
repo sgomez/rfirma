@@ -181,7 +181,10 @@ fn latest_body_of(pdf: &[u8], number: u32) -> String {
 /// Una revisión incremental sin firma, con una tabla de referencias en flujo como la de la firma.
 fn with_a_revision_after_signing(pdf: &[u8], objects: &[(u32, String)]) -> Vec<u8> {
     let previous = last_number_after(pdf, "startxref");
-    let table = last_number_after(pdf, "/Size");
+    let table = objects
+        .iter()
+        .map(|(number, _)| number + 1)
+        .fold(last_number_after(pdf, "/Size"), u32::max);
     let root = last_number_after(pdf, "/Root");
     let mut out = pdf.to_vec();
     out.push(b'\n');
@@ -361,27 +364,68 @@ fn a_form_filled_after_signing_is_a_finding_of_the_document_only() {
     assert_eq!(report.signatures()[0].validity, Validity::Valid);
 }
 
+const A_WIDGET: &str = "<< /Type /Annot /Subtype /Widget /Rect [0 0 200 100] /F 4 >>";
+
+const OVER_THE_WIDGET: &str = "<< /Type /Annot /Subtype /Square /Rect [100 50 300 150] /F 4 >>";
+
+/// El objeto de la página con `annotation` añadida al final de su `/Annots`.
+fn with_an_annotation_on_the_page(pdf: &[u8], annotation: u32) -> (u32, String) {
+    let (page, body) = object_containing(pdf, "/MediaBox");
+    let annots = body.find("/Annots").expect("la página trae /Annots");
+    let close = annots
+        + body[annots..]
+            .find(']')
+            .expect("/Annots es un array directo");
+    let mut updated = body.clone();
+    updated.insert_str(close, &format!(" {annotation} 0 R"));
+    (page, updated)
+}
+
 #[test]
 #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
 fn content_laid_over_another_after_signing_is_a_finding_of_the_document_only() {
-    let overlapping = a_pdf_with(
-        "/Annots [6 0 R 7 0 R]",
-        "",
-        &[
-            "<< /Type /Annot /Subtype /Widget /Rect [0 0 200 100] /F 4 >>",
-            "<< /Type /Annot /Subtype /Widget /Rect [100 50 300 150] /F 4 >>",
-        ],
-    );
-    let signed = signed(&overlapping);
-    let (content, _) = object_containing(&signed, "rfirma: validez");
+    let signed = signed(&a_pdf_with("/Annots [6 0 R]", "", &[A_WIDGET]));
+    let added = last_number_after(&signed, "/Size");
 
     let report = report_of(&with_a_revision_after_signing(
         &signed,
-        &[(content, a_content_stream(CONTENT))],
+        &[
+            with_an_annotation_on_the_page(&signed, added),
+            (added, OVER_THE_WIDGET.to_owned()),
+        ],
     ));
 
     assert_eq!(report.findings(), [DocumentFinding::ContentAddedOnTop]);
     assert_eq!(report.signatures()[0].validity, Validity::Valid);
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn annotations_already_overlapping_when_signed_are_not_content_added_after_a_dss() {
+    let overlapping = a_pdf_with("/Annots [6 0 R 7 0 R]", "", &[A_WIDGET, OVER_THE_WIDGET]);
+
+    let report = report_of(&with_a_dss(&signed(&overlapping)));
+
+    assert_eq!(report.findings(), []);
+    assert!(!report.changed_after_last_signature());
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn annotations_touching_only_at_an_edge_are_not_content_added_on_top() {
+    let signed = signed(&a_pdf_with("/Annots [6 0 R]", "", &[A_WIDGET]));
+    let added = last_number_after(&signed, "/Size");
+    let beside = "<< /Type /Annot /Subtype /Square /Rect [200 0 400 100] /F 4 >>";
+
+    let report = report_of(&with_a_revision_after_signing(
+        &signed,
+        &[
+            with_an_annotation_on_the_page(&signed, added),
+            (added, beside.to_owned()),
+        ],
+    ));
+
+    assert_eq!(report.findings(), []);
 }
 
 #[test]

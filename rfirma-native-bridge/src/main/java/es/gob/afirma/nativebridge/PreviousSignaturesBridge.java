@@ -18,6 +18,7 @@ import javax.security.auth.x500.X500Principal;
 import com.aowagie.text.pdf.AcroFields;
 import com.aowagie.text.pdf.PdfArray;
 import com.aowagie.text.pdf.PdfDictionary;
+import com.aowagie.text.pdf.PdfIndirectReference;
 import com.aowagie.text.pdf.PdfName;
 import com.aowagie.text.pdf.PdfNumber;
 import com.aowagie.text.pdf.PdfObject;
@@ -70,6 +71,10 @@ final class PreviousSignaturesBridge {
 
     /** El mismo tope por defecto que trae el original en {@code pagesToCheckShadowAttack}. */
     private static final int PAGES_TO_COMPARE = 10;
+
+    private static final int HIDDEN = 1 << 1;
+
+    private static final int NO_VIEW = 1 << 5;
 
     private PreviousSignaturesBridge() { }
 
@@ -342,8 +347,8 @@ final class PreviousSignaturesBridge {
     /**
      * El PDF Shadow Attack del original sin pintar las paginas: su {@code checkPdfShadowAttack}
      * las rasteriza con AWT, que no entra en la imagen nativa (ADR-0004). Aqui, pagina a pagina,
-     * dos anotaciones visibles que se solapan son contenido encima, y un flujo de contenido
-     * distinto del de la ultima revision firmada es una modificacion.
+     * una anotacion nueva o movida que se solapa con otra visible es contenido encima, y un flujo
+     * de contenido distinto del de la ultima revision firmada es una modificacion.
      */
     private static Finding changedAfterLastSignature(final PdfReader current,
             final AcroFields fields) {
@@ -355,11 +360,14 @@ final class PreviousSignaturesBridge {
             final PdfReader signed = new PdfReader(lastSignedRevision);
             final int pages = Math.min(current.getNumberOfPages(), PAGES_TO_COMPARE);
             for (int page = 1; page <= pages; page++) {
-                if (hasOverlappingAnnotations(current, page)) {
+                if (page > signed.getNumberOfPages()) {
+                    return Finding.MODIFIED_AFTER_LAST_SIGNATURE;
+                }
+                if (laysNewAnnotationOverAnother(visibleAnnotations(signed, page),
+                        visibleAnnotations(current, page))) {
                     return Finding.CONTENT_ADDED_ON_TOP;
                 }
-                if (page > signed.getNumberOfPages() || !Arrays.equals(
-                        signed.getPageContent(page, signed.getSafeFile()),
+                if (!Arrays.equals(signed.getPageContent(page, signed.getSafeFile()),
                         current.getPageContent(page, current.getSafeFile()))) {
                     return Finding.MODIFIED_AFTER_LAST_SIGNATURE;
                 }
@@ -371,34 +379,64 @@ final class PreviousSignaturesBridge {
         }
     }
 
-    private static boolean hasOverlappingAnnotations(final PdfReader reader, final int page) {
-        final PdfArray annotations = reader.getPageN(page).getAsArray(PdfName.ANNOTS);
-        if (annotations == null) {
-            return false;
-        }
-        final List<float[]> visible = new ArrayList<>();
-        for (int i = 0; i < annotations.size(); i++) {
-            final PdfObject annotation = PdfReader.getPdfObject(annotations.getPdfObject(i));
-            if (!(annotation instanceof PdfDictionary)) {
-                continue;
-            }
-            final float[] box = boxOf(((PdfDictionary) annotation).getAsArray(PdfName.RECT));
-            if (box == null) {
-                continue;
-            }
-            for (final float[] other : visible) {
-                if (box[0] <= other[2] && other[0] <= box[2]
-                        && box[1] <= other[3] && other[1] <= box[3]) {
+    private static boolean laysNewAnnotationOverAnother(final List<Annotation> signed,
+            final List<Annotation> current) {
+        for (int i = 0; i < current.size(); i++) {
+            for (int j = i + 1; j < current.size(); j++) {
+                final Annotation one = current.get(i);
+                final Annotation other = current.get(j);
+                final boolean involvesANewOne = !signed.contains(one) || !signed.contains(other);
+                if (involvesANewOne && one.overlaps(other)) {
                     return true;
                 }
             }
-            visible.add(box);
         }
         return false;
     }
 
-    /** El recuadro normalizado de una anotacion, o {@code null} si no tiene area (invisible). */
-    private static float[] boxOf(final PdfArray rect) {
+    /** Una anotacion visible: su referencia (vacia si es directa) y su recuadro normalizado. */
+    private record Annotation(String reference, float left, float bottom, float right,
+            float top) {
+
+        boolean overlaps(final Annotation other) {
+            return left < other.right && other.left < right
+                && bottom < other.top && other.bottom < top;
+        }
+    }
+
+    private static List<Annotation> visibleAnnotations(final PdfReader reader, final int page) {
+        final PdfArray annotations = reader.getPageN(page).getAsArray(PdfName.ANNOTS);
+        final List<Annotation> visible = new ArrayList<>();
+        if (annotations == null) {
+            return visible;
+        }
+        for (int i = 0; i < annotations.size(); i++) {
+            final PdfObject raw = annotations.getPdfObject(i);
+            final PdfObject annotation = PdfReader.getPdfObject(raw);
+            if (annotation instanceof PdfDictionary dictionary && !isHidden(dictionary)) {
+                final Annotation box = annotationOf(referenceOf(raw),
+                        dictionary.getAsArray(PdfName.RECT));
+                if (box != null) {
+                    visible.add(box);
+                }
+            }
+        }
+        return visible;
+    }
+
+    private static boolean isHidden(final PdfDictionary annotation) {
+        final PdfNumber flags = annotation.getAsNumber(PdfName.F);
+        return flags != null && (flags.intValue() & (HIDDEN | NO_VIEW)) != 0;
+    }
+
+    private static String referenceOf(final PdfObject raw) {
+        return raw instanceof PdfIndirectReference reference
+            ? reference.getNumber() + " " + reference.getGeneration()
+            : "";
+    }
+
+    /** La anotacion con su recuadro normalizado, o {@code null} si no tiene area (invisible). */
+    private static Annotation annotationOf(final String reference, final PdfArray rect) {
         if (rect == null || rect.size() != 4) {
             return null;
         }
@@ -410,10 +448,10 @@ final class PreviousSignaturesBridge {
             }
             corners[i] = number.floatValue();
         }
-        final float[] box = {
+        final Annotation box = new Annotation(reference,
             Math.min(corners[0], corners[2]), Math.min(corners[1], corners[3]),
-            Math.max(corners[0], corners[2]), Math.max(corners[1], corners[3])};
-        return box[2] - box[0] == 0 || box[3] - box[1] == 0 ? null : box;
+            Math.max(corners[0], corners[2]), Math.max(corners[1], corners[3]));
+        return box.right() - box.left() == 0 || box.top() - box.bottom() == 0 ? null : box;
     }
 
     /** Como en el validador del original, el formulario cambiado tapa al PDF Shadow Attack. */
