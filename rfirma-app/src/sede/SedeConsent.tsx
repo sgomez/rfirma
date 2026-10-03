@@ -3,7 +3,7 @@
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileIcon, InfoIcon } from "../design-system/icons";
+import { FileIcon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
 import type { Certificate } from "../signing/certificate";
 import { sitePreselection } from "../signing/certificate";
@@ -137,19 +137,6 @@ export function SedeConsent({
             {stage.signs !== null && <BatchCard signs={stage.signs} />}
 
             {stage.items !== null && <LocalBatchItemsList items={stage.items} />}
-
-            {/* Situación 5: información, no alarma — mismo icono
-            y mismo borde de 1 px que el aviso de firmas previas. No hay un
-            sexto momento: se pregunta aquí, dentro del mismo
-            consentimiento. */}
-            {stage.document?.hasUnregisteredSignatures && (
-              <div className="rf-row rf-gap-xs sede-consent__unrecognized-signatures">
-                <span className="sede-consent__icon">
-                  <InfoIcon size={18} />
-                </span>
-                <p className="rf-hint">{t("sede.consent.unrecognizedSignatures")}</p>
-              </div>
-            )}
 
             {identity && (
               <div className="sede-consent__sends">

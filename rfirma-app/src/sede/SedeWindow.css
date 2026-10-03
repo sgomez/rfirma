@@ -128,7 +128,6 @@
   color: var(--rf-text-muted);
 }
 
-.sede-consent__unrecognized-signatures,
 .sede-consent__document,
 .sede-consent__sends {
   align-items: flex-start;
@@ -136,14 +135,6 @@
   border: 1px solid var(--rf-border-subtle);
   border-radius: var(--rf-radius-md);
   background: var(--rf-surface);
-}
-
-/*
- * Etiqueta serena y no advertencia: borde de 1 px y el mismo icono de
- * información del resto de la aplicación, nunca un triángulo.
- */
-.sede-consent__unrecognized-signatures {
-  border-color: var(--rf-border-strong);
 }
 
 .sede-consent__document-text {

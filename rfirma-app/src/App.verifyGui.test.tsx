@@ -16,12 +16,10 @@ const aSignature = (name: string) => ({
   issuer: "AC FNMT Usuarios",
   certificateSerialNumber: "1",
   signingTime: "2026-09-14T10:32:05Z",
-  status: "valid" as const,
   validity: "valid" as const,
   validityReason: null,
   signingDate: null,
   closesDocument: false,
-  reason: null,
   countersignatures: [],
 });
 
@@ -34,7 +32,6 @@ function aSigner(overrides: Partial<SigningBackend> = {}): SigningBackend {
       value: { name: "factura-firmado.pdf", folder: "Documentos", sizeBytes: 1200 },
     }),
     padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
-    unregisteredSignatures: async () => false,
     previousSignatures: async () => NO_PREVIOUS_SIGNATURES,
     signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
     discard: async () => {},

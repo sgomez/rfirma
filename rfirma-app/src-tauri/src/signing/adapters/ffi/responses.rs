@@ -9,8 +9,7 @@ use crate::signing::domain::bridge::{
     BridgeError, DataRejection, PreSignBlock, PreSignature, SealedPreSignature, SignatureVerdict,
 };
 use crate::signing::domain::document_signatures::{
-    DocumentFinding, DocumentSignature, DocumentSignatures, SignatureStatus, SigningDate, Validity,
-    ValidityReason,
+    DocumentFinding, DocumentSignature, DocumentSignatures, SigningDate, Validity, ValidityReason,
 };
 use crate::signing::domain::SessionSeal;
 
@@ -264,15 +263,6 @@ fn previous_signature_of(entry: &serde_json::Value) -> Result<DocumentSignature,
             .get("signingTime")
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned),
-        status: entry
-            .get("status")
-            .and_then(serde_json::Value::as_str)
-            .map(status_of)
-            .transpose()?,
-        reason: entry
-            .get("reason")
-            .and_then(serde_json::Value::as_str)
-            .map(str::to_owned),
         validity: validity_of(field(entry, "validity")?)?,
         validity_reason: validity_reason_of(entry)?,
         signing_date: signing_date_of(entry)?,
@@ -320,22 +310,6 @@ fn countersignatures_of(entry: &serde_json::Value) -> Result<Vec<DocumentSignatu
         .iter()
         .map(previous_signature_of)
         .collect()
-}
-
-fn status_of(wire_name: &str) -> Result<SignatureStatus, BridgeError> {
-    Ok(match wire_name {
-        "valid" => SignatureStatus::Valid,
-        "certificateExpired" => SignatureStatus::CertificateExpired,
-        "certificateNotYetValid" => SignatureStatus::CertificateNotYetValid,
-        "broken" => SignatureStatus::Broken,
-        "unverifiable" => SignatureStatus::Unverifiable,
-        "notFullyChecked" => SignatureStatus::NotFullyChecked,
-        other => {
-            return Err(BridgeError::MalformedResponse(format!(
-                "estado de firma previa desconocido «{other}»"
-            )))
-        }
-    })
 }
 
 fn parse_response(json: &str) -> Result<serde_json::Value, BridgeError> {

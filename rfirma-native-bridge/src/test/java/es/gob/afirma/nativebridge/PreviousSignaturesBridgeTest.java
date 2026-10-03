@@ -21,11 +21,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -119,9 +115,8 @@ class PreviousSignaturesBridgeTest {
                 signed(TestFixtures.samplePdf(), TestFixtures.certificateChain(),
                         TestFixtures.privateKey())).signatures().get(0);
 
-        assertEquals(PreviousSignaturesBridge.Status.VALID, signature.status(),
-                "motivo: " + signature.reason());
-        assertNull(signature.reason());
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signature.validity());
+        assertNull(signature.validityReason());
     }
 
     @Test
@@ -131,25 +126,13 @@ class PreviousSignaturesBridgeTest {
                 signed(TestFixtures.samplePdf(), TestFixtures.expiredCertificateChain(),
                         TestFixtures.expiredPrivateKey())).signatures().get(0);
 
-        assertEquals(PreviousSignaturesBridge.Status.CERTIFICATE_EXPIRED, signature.status());
-        assertEquals("CERTIFICATE_EXPIRED", signature.reason());
+        assertEquals(PreviousSignaturesBridge.Validity.EXPIRED, signature.validity());
+        assertEquals(PreviousSignaturesBridge.Problem.CERTIFICATE_EXPIRED,
+                signature.validityReason().problem());
     }
 
     @Test
-    void a_long_standing_signature_with_the_expired_certificate_is_not_fully_checked()
-            throws Exception {
-        final byte[] pdf = Files.readAllBytes(
-                Path.of("..", "testdata", "previous-signatures", "pades-long-term-expired.pdf"));
-
-        final PreviousSignaturesBridge.Signature signature =
-                PreviousSignaturesBridge.read(pdf).signatures().get(0);
-
-        assertEquals(PreviousSignaturesBridge.Status.NOT_FULLY_CHECKED, signature.status(),
-                "motivo: " + signature.reason());
-    }
-
-    @Test
-    void a_signature_whose_signed_bytes_were_altered_is_broken_with_its_reason() throws Exception {
+    void a_signature_whose_signed_bytes_were_altered_is_invalid_with_its_reason() throws Exception {
         final byte[] altered = TestFixtures.withOneByteChangedInsideTheSignedRange(
                 signed(TestFixtures.samplePdf(), TestFixtures.certificateChain(),
                         TestFixtures.privateKey()));
@@ -158,20 +141,22 @@ class PreviousSignaturesBridgeTest {
                 PreviousSignaturesBridge.read(altered).signatures();
 
         assertEquals(1, signatures.size());
-        assertEquals(PreviousSignaturesBridge.Status.BROKEN, signatures.get(0).status());
-        assertEquals("NO_MATCH_DATA", signatures.get(0).reason());
+        assertEquals(PreviousSignaturesBridge.Validity.INVALID, signatures.get(0).validity());
+        assertEquals(PreviousSignaturesBridge.Problem.MODIFIED_AFTER_SIGNING,
+                signatures.get(0).validityReason().problem());
     }
 
     @Test
-    void a_signature_added_after_a_certified_pdf_is_broken_with_its_reason() throws Exception {
+    void a_signature_added_after_a_certified_pdf_is_invalid_with_its_reason() throws Exception {
         final List<PreviousSignaturesBridge.Signature> signatures = PreviousSignaturesBridge.read(
                 TestFixtures.certifiedPdfWithSignatureInALaterRevision()).signatures();
 
         assertEquals(2, signatures.size());
-        assertEquals(PreviousSignaturesBridge.Status.VALID, signatures.get(0).status(),
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signatures.get(0).validity(),
                 "la firma que certifica el PDF sigue siendo valida");
-        assertEquals(PreviousSignaturesBridge.Status.BROKEN, signatures.get(1).status());
-        assertEquals("CERTIFIED_SIGN_REVISION", signatures.get(1).reason());
+        assertEquals(PreviousSignaturesBridge.Validity.INVALID, signatures.get(1).validity());
+        assertEquals(PreviousSignaturesBridge.Problem.COSIGN_NOT_ADMITTED,
+                signatures.get(1).validityReason().problem());
     }
 
     @Test
@@ -295,19 +280,6 @@ class PreviousSignaturesBridgeTest {
     }
 
     @Test
-    void a_signature_with_an_unrecognized_subfilter_cannot_be_validated() throws Exception {
-        final byte[] pdf = TestFixtures.signedWithUnrecognizedSubFilter(TestFixtures.samplePdf(),
-                TestFixtures.certificateChain(), TestFixtures.privateKey());
-
-        final List<PreviousSignaturesBridge.Signature> signatures =
-                PreviousSignaturesBridge.read(pdf).signatures();
-
-        assertEquals(1, signatures.size());
-        assertEquals(PreviousSignaturesBridge.Status.UNVERIFIABLE, signatures.get(0).status());
-        assertEquals("UNKOWN_SIGNATURE_FORMAT", signatures.get(0).reason());
-    }
-
-    @Test
     void a_signature_with_an_unrecognized_subfilter_is_invalid_of_unknown_type() throws Exception {
         // El ciclo de rFirma fija el /SubFilter: el .so no puede fabricar esta muestra.
         final PreviousSignaturesBridge.Signature signature = PreviousSignaturesBridge.read(
@@ -333,34 +305,10 @@ class PreviousSignaturesBridgeTest {
                 PreviousSignaturesBridge.read(twice).signatures();
 
         assertEquals(2, signatures.size());
-        assertEquals(PreviousSignaturesBridge.Status.NOT_FULLY_CHECKED, signatures.get(0).status(),
-                "motivo: " + signatures.get(0).reason());
-        assertEquals(PreviousSignaturesBridge.Status.UNVERIFIABLE, signatures.get(1).status());
-        assertEquals("UNKOWN_SIGNATURE_FORMAT", signatures.get(1).reason());
-    }
-
-    @Test
-    void each_verdict_of_the_original_validator_maps_to_its_status() {
-        assertEquals(Map.of(
-                VALIDITY_ERROR.CERTIFICATE_EXPIRED, PreviousSignaturesBridge.Status.CERTIFICATE_EXPIRED,
-                VALIDITY_ERROR.CERTIFICATE_NOT_VALID_YET,
-                        PreviousSignaturesBridge.Status.CERTIFICATE_NOT_YET_VALID,
-                VALIDITY_ERROR.NO_MATCH_DATA, PreviousSignaturesBridge.Status.BROKEN,
-                VALIDITY_ERROR.CORRUPTED_SIGN, PreviousSignaturesBridge.Status.BROKEN,
-                VALIDITY_ERROR.CERTIFIED_SIGN_REVISION, PreviousSignaturesBridge.Status.BROKEN,
-                VALIDITY_ERROR.ALGORITHM_NOT_SUPPORTED, PreviousSignaturesBridge.Status.UNVERIFIABLE,
-                VALIDITY_ERROR.UNKOWN_SIGNATURE_FORMAT, PreviousSignaturesBridge.Status.UNVERIFIABLE,
-                VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED,
-                        PreviousSignaturesBridge.Status.NOT_FULLY_CHECKED),
-                Stream.of(VALIDITY_ERROR.CERTIFICATE_EXPIRED, VALIDITY_ERROR.CERTIFICATE_NOT_VALID_YET,
-                        VALIDITY_ERROR.NO_MATCH_DATA, VALIDITY_ERROR.CORRUPTED_SIGN,
-                        VALIDITY_ERROR.CERTIFIED_SIGN_REVISION, VALIDITY_ERROR.ALGORITHM_NOT_SUPPORTED,
-                        VALIDITY_ERROR.UNKOWN_SIGNATURE_FORMAT, VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED)
-                        .collect(Collectors.toMap(Function.identity(), error ->
-                                PreviousSignaturesBridge.statusOf(
-                                        new SignValidity(SIGN_DETAIL_TYPE.KO, error)))));
-        assertEquals(PreviousSignaturesBridge.Status.VALID,
-                PreviousSignaturesBridge.statusOf(new SignValidity(SIGN_DETAIL_TYPE.OK, null)));
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signatures.get(0).validity());
+        assertEquals(PreviousSignaturesBridge.Validity.INVALID, signatures.get(1).validity());
+        assertEquals(PreviousSignaturesBridge.Problem.UNKNOWN_SIGNATURE_TYPE,
+                signatures.get(1).validityReason().problem());
     }
 
     @Test

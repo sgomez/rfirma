@@ -97,10 +97,6 @@ fn an_expired_ca_in_the_key_info_makes_the_signature_expired_naming_it() {
         "{:?}",
         signature.validity_reason
     );
-    assert_eq!(
-        signature.status, None,
-        "el estado viejo sigue nulo en XAdES"
-    );
 }
 
 #[test]

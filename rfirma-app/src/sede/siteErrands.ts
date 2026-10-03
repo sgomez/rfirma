@@ -262,17 +262,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       commands.previousSignatures(view.stage.document),
     ]);
     if (arrival !== arrivals) return;
-    publish(
-      errandOf(
-        view,
-        documentOf(
-          described,
-          view.stage.round,
-          view.stage.unregisteredSignatures,
-          previousSignatures,
-        ),
-      ),
-    );
+    publish(errandOf(view, documentOf(described, view.stage.round, previousSignatures)));
     consentWithoutAsking(view.stage);
   };
 

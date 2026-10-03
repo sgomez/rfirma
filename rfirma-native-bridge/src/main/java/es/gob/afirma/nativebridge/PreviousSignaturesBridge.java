@@ -123,26 +123,6 @@ final class PreviousSignaturesBridge {
 
     private PreviousSignaturesBridge() { }
 
-    /** El estado de una firma previa, con el nombre con el que cruza a Rust. */
-    enum Status {
-        VALID("valid"),
-        CERTIFICATE_EXPIRED("certificateExpired"),
-        CERTIFICATE_NOT_YET_VALID("certificateNotYetValid"),
-        BROKEN("broken"),
-        UNVERIFIABLE("unverifiable"),
-        NOT_FULLY_CHECKED("notFullyChecked");
-
-        private final String wireName;
-
-        Status(final String wireName) {
-            this.wireName = wireName;
-        }
-
-        String wireName() {
-            return wireName;
-        }
-    }
-
     /** La validez de una firma (ADR-0043), con el nombre con el que cruza a Rust. */
     enum Validity {
         VALID("valid"),
@@ -222,12 +202,11 @@ final class PreviousSignaturesBridge {
 
     /**
      * Titular, emisor, numero de serie, vigencia del certificado, algoritmo y perfil de la firma,
-     * fecha, estado y motivo viejos, validez, motivo, fecha declarada o sellada, si cierra el
-     * documento y contrafirmas.
+     * fecha, validez, motivo, fecha declarada o sellada, si cierra el documento y contrafirmas.
      */
     record Signature(String subject, String issuer, String serialNumber, String validFrom,
             String validUntil, String signatureAlgorithm, String profile, String signingTime,
-            Status status, String reason, Validity validity, Reason validityReason,
+            Validity validity, Reason validityReason,
             SigningDate signingDate, boolean closesDocument, List<Signature> countersignatures) { }
 
     /** Las firmas en orden cronologico, si el documento cambio despues de la ultima, y sus hallazgos. */
@@ -374,8 +353,6 @@ final class PreviousSignaturesBridge {
                 signingTime == null
                         ? null
                         : DateTimeFormatter.ISO_INSTANT.format(signingTime.toInstant()),
-                null,
-                null,
                 worst == null ? Validity.VALID : worst.problem().validity(),
                 worst,
                 SigningDate.declared(signingTime),
@@ -437,7 +414,7 @@ final class PreviousSignaturesBridge {
                     ? null
                     : elements.get(HexFormat.of().formatHex(info.getPkcs1()));
             if (chain == null || chain.length == 0 || element == null) {
-                signers.add(new Signature("", "", "", null, null, null, null, null, null, null,
+                signers.add(new Signature("", "", "", null, null, null, null, null,
                         Validity.INVALID, Reason.of(Problem.DAMAGED), null, false,
                         countersignatures));
                 continue;
@@ -560,8 +537,6 @@ final class PreviousSignaturesBridge {
                         VALIDITY_ERROR.CERTIFIED_SIGN_REVISION));
             }
             final boolean unrecognizedSubFilter = hasUnrecognizedSubFilter(fields, name);
-            final SignValidity validity = withUnrecognizedFormat(
-                    unrecognizedSubFilter, decisive(validities));
             final Reason worst = worstReason(
                     stamp == null ? validities : atStampTime(validities, signer, stamp.at()),
                     signer, unrecognizedSubFilter, certification.closedBy());
@@ -574,8 +549,6 @@ final class PreviousSignaturesBridge {
                     pkcs7.getDigestAlgorithm(),
                     name.equals(latestName) ? profile : null,
                     signingTime == null ? null : DateTimeFormatter.ISO_INSTANT.format(signingTime),
-                    statusOf(validity),
-                    reasonOf(validity),
                     worst == null ? Validity.VALID : worst.problem().validity(),
                     worst,
                     stamp == null
@@ -612,8 +585,7 @@ final class PreviousSignaturesBridge {
     }
 
     private static Signature damaged(final List<Signature> countersignatures) {
-        return new Signature("", "", "", null, null, null, null, null, Status.BROKEN,
-                VALIDITY_ERROR.CORRUPTED_SIGN.name(), Validity.INVALID,
+        return new Signature("", "", "", null, null, null, null, null, Validity.INVALID,
                 Reason.of(Problem.DAMAGED), null, false, countersignatures);
     }
 
@@ -896,19 +868,6 @@ final class PreviousSignaturesBridge {
         return name.getName(X500Principal.RFC2253, READABLE_KEYWORDS);
     }
 
-    static Status statusOf(final SignValidity validity) {
-        if (validity.getError() == null) {
-            return Status.VALID;
-        }
-        return switch (validity.getError()) {
-            case CERTIFICATE_EXPIRED -> Status.CERTIFICATE_EXPIRED;
-            case CERTIFICATE_NOT_VALID_YET -> Status.CERTIFICATE_NOT_YET_VALID;
-            case NO_MATCH_DATA, CORRUPTED_SIGN, CERTIFIED_SIGN_REVISION -> Status.BROKEN;
-            case SIGN_PROFILE_NOT_CHECKED -> Status.NOT_FULLY_CHECKED;
-            default -> Status.UNVERIFIABLE;
-        };
-    }
-
     private record Dated(Instant signingTime, Signature signature) { }
 
     private static Properties headless() {
@@ -986,49 +945,5 @@ final class PreviousSignaturesBridge {
         catch (final IOException | RuntimeConfigNeededException e) {
             return List.of(new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.UNKOWN_ERROR));
         }
-    }
-
-    /**
-     * Un {@code KO} pesa mas que un {@code UNKNOWN}, como en el validador del original, salvo
-     * cuando el unico {@code KO} es de certificado caducado y hay un aviso de perfil longevo:
-     * ese aviso pesa mas ({@code SignValider#checkLongStandingValiditySign} del original).
-     */
-    private static SignValidity decisive(final List<SignValidity> validities) {
-        SignValidity decisive = new SignValidity(SIGN_DETAIL_TYPE.OK, null);
-        SignValidity expiredCertificateKo = null;
-        SignValidity longStandingWarning = null;
-        for (final SignValidity validity : validities) {
-            if (SIGN_DETAIL_TYPE.KO == validity.getValidity()) {
-                if (VALIDITY_ERROR.CERTIFICATE_EXPIRED != validity.getError()) {
-                    return validity;
-                }
-                expiredCertificateKo = validity;
-            }
-            else if (SIGN_DETAIL_TYPE.UNKNOWN == validity.getValidity()) {
-                if (VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED == validity.getError()) {
-                    longStandingWarning = validity;
-                }
-                else {
-                    decisive = validity;
-                }
-            }
-        }
-        if (expiredCertificateKo != null) {
-            return longStandingWarning != null ? longStandingWarning : expiredCertificateKo;
-        }
-        return longStandingWarning != null ? longStandingWarning : decisive;
-    }
-
-    /** El original confunde el {@code /SubFilter} no reconocido con una firma longeva sin comprobar. */
-    private static SignValidity withUnrecognizedFormat(final boolean unrecognizedSubFilter,
-            final SignValidity validity) {
-        if (unrecognizedSubFilter && validity.getError() == VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED) {
-            return new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.UNKOWN_SIGNATURE_FORMAT);
-        }
-        return validity;
-    }
-
-    private static String reasonOf(final SignValidity validity) {
-        return validity.getError() == null ? null : validity.getError().name();
     }
 }

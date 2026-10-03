@@ -7,7 +7,7 @@ use base64::Engine;
 use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 use rfirma_lib::signing::domain::document_signatures::{
-    DocumentFinding, DocumentSignatures, SignatureStatus, SigningDate, Validity, ValidityReason,
+    DocumentFinding, DocumentSignatures, SigningDate, Validity, ValidityReason,
 };
 
 use support::{a_cycle_of, bridge, PAGE_HEIGHT, PAGE_WIDTH};
@@ -261,11 +261,6 @@ fn a_long_term_signature_with_its_certificate_in_force_is_valid() {
     let signature = &report.signatures()[0];
     assert_eq!(signature.validity, Validity::Valid);
     assert_eq!(signature.validity_reason, None);
-    assert_eq!(
-        signature.status,
-        Some(SignatureStatus::NotFullyChecked),
-        "el estado viejo sigue igual hasta su retirada"
-    );
     assert_eq!(report.findings(), []);
 }
 
@@ -282,7 +277,6 @@ fn a_signature_with_several_problems_takes_the_worst() {
         signature.validity_reason,
         Some(ValidityReason::ModifiedAfterSigning)
     );
-    assert_eq!(signature.status, Some(SignatureStatus::Broken));
 }
 
 #[test]

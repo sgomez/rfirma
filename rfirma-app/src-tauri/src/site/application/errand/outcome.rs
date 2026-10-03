@@ -161,7 +161,6 @@ impl SigningConsent {
             format: self.format,
             round: self.round,
             certificates: self.certificates.clone(),
-            unregistered_signatures: self.unregistered_signatures,
             already_chosen: self.already_chosen.clone(),
             without_asking: self.without_asking,
         }
@@ -413,8 +412,6 @@ pub enum Moment {
         round: SignatureRound,
         /// Filas ya cribadas en orden de presentación.
         certificates: Vec<ListedCertificate>,
-        /// Si el documento contiene firmas que no se pueden interpretar.
-        unregistered_signatures: bool,
         /// El asa del certificado que ya está resuelto, si lo está.
         already_chosen: Option<String>,
         /// Si la ventana consiente sola con `already_chosen`.

@@ -1633,13 +1633,6 @@ msgstr ""
 "Se enviarán tu nombre, tu NIF, el emisor del certificado y su número de "
 "serie."
 
-#. Situación 5 (ID-302): información y no alarma. «Firmas sin registrar» no
-#. aparece en la interfaz, y no se dice cuántas hay ni si son válidas.
-msgid "sede.consent.unrecognizedSignatures"
-msgstr ""
-"rFirma no reconoce alguna de las firmas que ya tiene este documento, y al "
-"añadir la tuya podrían dejar de verse como válidas"
-
 #. Contrafirma: se firma sobre las firmas que el documento ya trae, y el
 #. objetivo dice sobre cuáles.
 msgid "sede.consent.counterSignatureTree"

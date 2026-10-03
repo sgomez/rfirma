@@ -15,8 +15,7 @@ use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::{
-    DocumentFinding, DocumentSignature, DocumentSignatures, SignatureStatus, SigningDate, Validity,
-    ValidityReason,
+    DocumentFinding, DocumentSignature, DocumentSignatures, SigningDate, Validity, ValidityReason,
 };
 use crate::site::domain::protocol::SiteFilter;
 
@@ -260,8 +259,6 @@ fn a_signature(name: &str, id_number: &str, signing_time: Option<&str>) -> Docum
         signature_algorithm: None,
         profile: None,
         signing_time: signing_time.map(str::to_owned),
-        status: Some(SignatureStatus::Valid),
-        reason: None,
         validity: Validity::Valid,
         validity_reason: None,
         signing_date: None,

@@ -107,7 +107,6 @@ fn a_relay_launch_with_fileid_and_stservlet_in_url_preserves_the_delivered_momen
         format: crate::signing::domain::bridge::Format::Pades,
         round: crate::site::domain::protocol::SignatureRound::First,
         certificates: Vec::new(),
-        unregistered_signatures: false,
         already_chosen: None,
         without_asking: false,
     };
@@ -159,7 +158,6 @@ fn a_relay_launch_with_fileid_and_parameters_xml_preserves_the_delivered_moment(
         format: crate::signing::domain::bridge::Format::Pades,
         round: crate::site::domain::protocol::SignatureRound::First,
         certificates: Vec::new(),
-        unregistered_signatures: false,
         already_chosen: None,
         without_asking: false,
     };

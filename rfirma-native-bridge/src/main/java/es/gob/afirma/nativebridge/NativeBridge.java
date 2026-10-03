@@ -63,16 +63,13 @@ import org.graalvm.word.PointerBase;
  *              "issuer":"&lt;DN RFC 2253&gt;","serialNumber":"&lt;decimal&gt;",
  *              "validFrom":"&lt;ISO-8601&gt;","validUntil":"&lt;ISO-8601&gt;",
  *              "signatureAlgorithm":"&lt;SHA256withRSA&gt;","profile":"&lt;perfil&gt;",
- *              "signingTime":"&lt;instante ISO-8601&gt;","status":"&lt;estado&gt;",
- *              "reason":"&lt;VALIDITY_ERROR&gt;","validity":"&lt;validez&gt;",
+ *              "signingTime":"&lt;instante ISO-8601&gt;","validity":"&lt;validez&gt;",
  *              "validityReason":{"kind":"&lt;motivo&gt;","date":"&lt;ISO-8601&gt;",
  *              "holder":"&lt;DN&gt;","closedBy":"&lt;DN&gt;"},
  *              "signingDate":{"kind":"declared|stamped","at":"&lt;ISO-8601&gt;",
  *              "tsa":"&lt;DN&gt;"},"closesDocument":false,"countersignatures":[...]}, ...],
  *              "changedAfterLastSignature":false,"findings":["&lt;hallazgo&gt;", ...]}
- *              estado: valid, certificateExpired, certificateNotYetValid, broken,
- *              unverifiable o notFullyChecked, y null fuera de PDF; reason es null
- *              en valid; validez: valid, expired o invalid (ADR-0043); motivo:
+ *              validez: valid, expired o invalid (ADR-0043); motivo:
  *              certificateExpired, modifiedAfterSigning, damaged,
  *              certificateNotYetValid, unknownSignatureType o cosignNotAdmitted,
  *              y validityReason es null en valid; signingDate es null sin fecha, y
@@ -556,9 +553,6 @@ public final class NativeBridge {
             field(json, "signatureAlgorithm", signature.signatureAlgorithm());
             field(json, "profile", signature.profile());
             field(json, "signingTime", signature.signingTime());
-            field(json, "status",
-                    signature.status() == null ? null : signature.status().wireName());
-            field(json, "reason", signature.reason());
             field(json, "validity", signature.validity().wireName());
             json.append(",\"validityReason\":");
             validityReasonJson(json, signature.validityReason());

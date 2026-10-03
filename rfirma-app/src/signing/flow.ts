@@ -154,7 +154,6 @@ export interface SigningBackend {
    * frontera, y se pregunta **antes** del PIN para que el aviso quepa delante
    * de él. No dice cuántas hay ni de quién son, y no las valida.
    */
-  unregisteredSignatures(document: string): Promise<boolean>;
   /**
    * Las firmas que ya trae el documento, con quién firmó y cuándo.
    *
@@ -204,7 +203,6 @@ export function unavailableSigningBackend(): SigningBackend {
     sign: missing,
     postsign: missing,
     padesLowerLeft: () => Promise.reject(new Error("no hay orden de firma expuesta todavia")),
-    unregisteredSignatures: async () => false,
     previousSignatures: async () => ({
       signatures: [],
       warningCount: 0,

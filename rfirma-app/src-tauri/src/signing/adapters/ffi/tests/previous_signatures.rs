@@ -1,6 +1,6 @@
 use super::*;
 use crate::signing::domain::document_signatures::{
-    DocumentFinding, DocumentSignature, SignatureStatus, SigningDate, Validity, ValidityReason,
+    DocumentFinding, DocumentSignature, SigningDate, Validity, ValidityReason,
 };
 
 #[test]
@@ -22,8 +22,6 @@ fn a_previous_signature_translates_the_subject_and_the_issuer_with_the_holder_ut
             "issuer":"CN=AC FNMT Usuarios, OU=Ceres, O=FNMT-RCM, C=ES",
             "serialNumber":"1234567890",
             "signingTime":"2024-01-01T10:00:00Z",
-            "status":"valid",
-            "reason":null,
             "validity":"valid","closesDocument":false
         }],"changedAfterLastSignature":false,"findings":[]}"#,
     )
@@ -43,8 +41,6 @@ fn a_previous_signature_translates_the_subject_and_the_issuer_with_the_holder_ut
             signature_algorithm: None,
             profile: None,
             signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
-            status: Some(SignatureStatus::Valid),
-            reason: None,
             validity: Validity::Valid,
             validity_reason: None,
             signing_date: None,
@@ -62,8 +58,6 @@ fn a_previous_signature_without_a_signing_time_crosses_as_nothing_and_not_a_fail
             "issuer":"CN=AC FNMT Usuarios",
             "serialNumber":"1",
             "signingTime":null,
-            "status":"valid",
-            "reason":null,
             "validity":"valid","closesDocument":false
         }],"changedAfterLastSignature":false,"findings":[]}"#,
     )
@@ -73,50 +67,19 @@ fn a_previous_signature_without_a_signing_time_crosses_as_nothing_and_not_a_fail
 }
 
 #[test]
-fn a_previous_signature_carries_its_status_and_the_reason_of_the_original() {
+fn a_signature_crosses_with_its_countersignatures() {
     let report = parse_previous_signatures(
         r#"{"ok":true,"signatures":[{
             "subject":"CN=LOVELACE BYRON ADA",
             "issuer":"CN=AC FNMT Usuarios",
             "serialNumber":"1",
             "signingTime":null,
-            "status":"certificateExpired",
-            "reason":"CERTIFICATE_EXPIRED",
-            "validity":"valid","closesDocument":false
-        }],"changedAfterLastSignature":true,"findings":[]}"#,
-    )
-    .expect("es valida");
-
-    assert_eq!(
-        report.signatures()[0].status,
-        Some(SignatureStatus::CertificateExpired)
-    );
-    assert_eq!(
-        report.signatures()[0].reason.as_deref(),
-        Some("CERTIFICATE_EXPIRED")
-    );
-    assert!(report.changed_after_last_signature());
-}
-
-#[test]
-fn a_signature_the_bridge_did_not_validate_crosses_without_a_status_and_with_its_countersignatures()
-{
-    let report = parse_previous_signatures(
-        r#"{"ok":true,"signatures":[{
-            "subject":"CN=LOVELACE BYRON ADA",
-            "issuer":"CN=AC FNMT Usuarios",
-            "serialNumber":"1",
-            "signingTime":null,
-            "status":null,
-            "reason":null,
             "validity":"valid","closesDocument":false,
             "countersignatures":[{
                 "subject":"CN=BABBAGE CHARLES",
                 "issuer":"CN=AC FNMT Usuarios",
                 "serialNumber":"2",
                 "signingTime":null,
-                "status":null,
-                "reason":null,
                 "validity":"valid","closesDocument":false,
                 "countersignatures":[]
             }]
@@ -125,7 +88,6 @@ fn a_signature_the_bridge_did_not_validate_crosses_without_a_status_and_with_its
     .expect("es valida");
 
     let signature = &report.signatures()[0];
-    assert_eq!(signature.status, None);
     assert_eq!(signature.countersignatures.len(), 1);
     assert_eq!(signature.countersignatures[0].name, "BABBAGE CHARLES");
     assert_eq!(report.warning_count(), 0);
@@ -144,22 +106,6 @@ fn a_previous_signatures_answer_missing_the_changed_flag_is_a_malformed_answer()
     assert!(parse_previous_signatures(r#"{"ok":true,"signatures":[],"findings":[]}"#).is_err());
 }
 
-#[test]
-fn a_previous_signature_with_a_status_this_binary_does_not_know_is_a_malformed_answer() {
-    assert!(parse_previous_signatures(
-        r#"{"ok":true,"signatures":[{
-            "subject":"CN=LOVELACE BYRON ADA",
-            "issuer":"CN=AC FNMT Usuarios",
-            "serialNumber":"1",
-            "signingTime":null,
-            "status":"quiza",
-            "reason":null,
-            "validity":"valid","closesDocument":false
-        }],"changedAfterLastSignature":false,"findings":[]}"#
-    )
-    .is_err());
-}
-
 fn a_report_with_one_signature(validity: &str) -> String {
     format!(
         r#"{{"ok":true,"signatures":[{{
@@ -167,8 +113,6 @@ fn a_report_with_one_signature(validity: &str) -> String {
             "issuer":"CN=AC FNMT Usuarios",
             "serialNumber":"1",
             "signingTime":null,
-            "status":null,
-            "reason":null,
             "closesDocument":false,
             {validity}
         }}],"changedAfterLastSignature":false,"findings":[]}}"#
@@ -285,8 +229,6 @@ fn a_valid_signature_with(fields: &str) -> String {
             "issuer":"CN=AC FNMT Usuarios",
             "serialNumber":"1",
             "signingTime":null,
-            "status":null,
-            "reason":null,
             "validity":"valid",
             {fields}
         }}],"changedAfterLastSignature":false,"findings":[]}}"#

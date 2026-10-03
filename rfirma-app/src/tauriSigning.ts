@@ -43,7 +43,6 @@ export function tauriSigningBackend(): SigningBackend {
     postsign: (singleDestinationId = null) =>
       stage(() => invoke<SignedDocument>("finish_signing", { destination: singleDestinationId })),
     padesLowerLeft: (placement) => invoke<[number, number]>("pades_lower_left", { placement }),
-    unregisteredSignatures: (document) => invoke<boolean>("unregistered_signatures", { document }),
     previousSignatures: (document) =>
       invoke<PreviousSignaturesReport>("previous_signatures", { document }),
     signedDocumentSignatures: () => invoke<PreviousSignaturesReport>("signed_document_signatures"),

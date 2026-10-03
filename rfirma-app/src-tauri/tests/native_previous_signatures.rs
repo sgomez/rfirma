@@ -6,7 +6,7 @@ mod support;
 use base64::Engine;
 use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
-use rfirma_lib::signing::domain::document_signatures::{SignatureStatus, Tone};
+use rfirma_lib::signing::domain::document_signatures::{Tone, Validity};
 
 use support::{a_cycle_of, a_one_page_pdf, bridge};
 
@@ -47,7 +47,7 @@ fn the_bridge_reports_the_signer_and_the_signing_time_of_a_pades_signature() {
         signature.signing_time.is_some(),
         "el puente debería devolver el instante de la firma"
     );
-    assert_eq!(signature.status, Some(SignatureStatus::Valid));
+    assert_eq!(signature.validity, Validity::Valid);
     assert_eq!(report.warning_count(), 0);
     assert_eq!(report.tone(), Tone::Information);
 }
@@ -70,7 +70,7 @@ fn a_pades_signature_broken_after_signing_is_ko_and_warns_with_attention() {
 
     assert_eq!(report.count(), 1);
     let signature = &report.signatures()[0];
-    assert_eq!(signature.status, Some(SignatureStatus::Broken));
+    assert_eq!(signature.validity, Validity::Invalid);
     assert_eq!(report.warning_count(), 1);
     assert_eq!(report.tone(), Tone::Attention);
 }

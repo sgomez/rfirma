@@ -13,12 +13,10 @@ function aSignature(overrides: Partial<PreviousSignature> = {}): PreviousSignatu
     issuer: "AC FNMT Usuarios",
     certificateSerialNumber: "1",
     signingTime: "2026-09-14T10:32:05Z",
-    status: "valid",
     validity: "valid",
     validityReason: null,
     signingDate: { kind: "declared", at: "2026-09-14T10:32:05Z" },
     closesDocument: false,
-    reason: null,
     countersignatures: [],
     ...overrides,
   };

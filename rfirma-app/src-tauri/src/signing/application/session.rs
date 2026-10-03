@@ -399,15 +399,6 @@ fn waivers_of(from_the_site: &BTreeMap<String, String>) -> Waivers {
     )
 }
 
-/// Comprueba si el documento contiene firmas previas no reconocibles.
-pub fn unregistered_signatures_in(
-    files: &dyn DocumentBytes,
-    document: &Document,
-) -> Result<bool, CycleFailure> {
-    let bytes = admitted_bytes(files, document, Format::Pades, Waivers::NONE)?;
-    Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
-}
-
 /// Firmas que ya trae el documento, con quién firmó y cuándo.
 pub fn previous_signatures_in(
     files: &dyn DocumentBytes,

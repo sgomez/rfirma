@@ -57,7 +57,6 @@ fn a_freshly_signed_cades_has_a_valid_signature() {
     let signature = &report.signatures()[0];
     assert_eq!(signature.validity, Validity::Valid);
     assert_eq!(signature.validity_reason, None);
-    assert_eq!(signature.status, None);
 }
 
 #[test]

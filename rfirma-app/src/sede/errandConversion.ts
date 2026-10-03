@@ -208,14 +208,12 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
 export function documentOf(
   described: DescribedDocument | null,
   round: SignatureRound,
-  unregisteredSignatures: boolean,
   previousSignatures: PreviousSignaturesReport,
 ): SiteDocument | null {
   if (described === null) return null;
   return {
     ...described,
     round,
-    hasUnregisteredSignatures: unregisteredSignatures,
     previousSignatures,
   };
 }

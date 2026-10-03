@@ -1,46 +1,5 @@
 //! Las firmas de un documento, en árbol, y el aviso previo a firmar que componen; no las valida.
 
-/// El estado de una firma previa.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SignatureStatus {
-    /// Se sostiene.
-    Valid,
-    /// El certificado con el que se firmó ya ha caducado.
-    CertificateExpired,
-    /// El certificado con el que se firmó todavía no era válido al firmar.
-    CertificateNotYetValid,
-    /// No corresponde con los datos, está dañada, o el PDF certificado no admitía firmas.
-    Broken,
-    /// Formato no reconocido: no se puede validar.
-    Unverifiable,
-    /// Perfil longevo con el certificado caducado (`SIGN_PROFILE_NOT_CHECKED` en el original).
-    NotFullyChecked,
-}
-
-impl SignatureStatus {
-    /// Son KO el certificado caducado, aún no válido, rota y no se puede validar.
-    pub fn is_ko(self) -> bool {
-        matches!(
-            self,
-            Self::CertificateExpired
-                | Self::CertificateNotYetValid
-                | Self::Broken
-                | Self::Unverifiable
-        )
-    }
-
-    /// El tono que aporta este estado por sí solo.
-    fn tone(self) -> Tone {
-        if self.is_ko() {
-            Tone::Attention
-        } else if self == Self::NotFullyChecked {
-            Tone::Indeterminate
-        } else {
-            Tone::Information
-        }
-    }
-}
-
 /// La validez de una firma, la misma en todas partes (ADR-0043).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Validity {
@@ -93,9 +52,7 @@ pub enum DocumentFinding {
 pub enum Tone {
     /// Todo bien.
     Information,
-    /// Alguna firma no se ha podido comprobar del todo.
-    Indeterminate,
-    /// Alguna firma es KO, o el documento cambió después de la última.
+    /// Alguna firma está caducada o no es válida, o el documento cambió después de la última.
     Attention,
 }
 
@@ -124,10 +81,6 @@ pub struct DocumentSignature {
     pub profile: Option<String>,
     /// Instante de la firma en ISO-8601, si el puente lo devolvió.
     pub signing_time: Option<String>,
-    /// El estado de la firma, si el puente la validó: solo valida las de PDF.
-    pub status: Option<SignatureStatus>,
-    /// Motivo del original, tal como lo nombra, si el estado no es `Valid`.
-    pub reason: Option<String>,
     /// La validez de la firma (ADR-0043).
     pub validity: Validity,
     /// El motivo de la validez, si no es `Valid`.
@@ -211,30 +164,22 @@ impl DocumentSignatures {
         self.changed_after_last_signature
     }
 
-    /// Avisos: firmas KO + firmas sin comprobar del todo + 1 si el documento cambió.
+    /// Avisos: firmas caducadas o no válidas + 1 si el documento cambió.
     pub fn warning_count(&self) -> usize {
-        let from_signatures = self
-            .signatures
+        self.signatures
             .iter()
-            .filter_map(|s| s.status)
-            .filter(|status| status.is_ko() || *status == SignatureStatus::NotFullyChecked)
-            .count();
-        from_signatures + usize::from(self.changed_after_last_signature)
+            .filter(|s| s.validity != Validity::Valid)
+            .count()
+            + usize::from(self.changed_after_last_signature)
     }
 
     /// El tono del peor aviso.
     pub fn tone(&self) -> Tone {
-        let changed_tone = if self.changed_after_last_signature {
+        if self.warning_count() > 0 {
             Tone::Attention
         } else {
             Tone::Information
-        };
-        self.signatures
-            .iter()
-            .map(|s| s.status.map_or(Tone::Information, SignatureStatus::tone))
-            .chain(std::iter::once(changed_tone))
-            .max()
-            .unwrap_or(Tone::Information)
+        }
     }
 }
 

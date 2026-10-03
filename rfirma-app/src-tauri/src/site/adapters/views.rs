@@ -153,7 +153,6 @@ impl SiteErrandView {
         format: Format,
         round: SignatureRound,
         certificates: &[ListedCertificate],
-        unregistered_signatures: bool,
         already_chosen: Option<&str>,
         without_asking: bool,
     ) -> Self {
@@ -164,7 +163,6 @@ impl SiteErrandView {
                 signing: format.into(),
                 round: round.into(),
                 certificates: rows_of(certificates),
-                unregistered_signatures,
                 already_chosen: already_chosen.map(str::to_owned),
                 without_asking,
             },
@@ -200,7 +198,6 @@ impl From<&Moment> for SiteErrandView {
                 format,
                 round,
                 certificates,
-                unregistered_signatures,
                 already_chosen,
                 without_asking,
             } => Self::asking_to_sign(
@@ -208,7 +205,6 @@ impl From<&Moment> for SiteErrandView {
                 *format,
                 *round,
                 certificates,
-                *unregistered_signatures,
                 already_chosen.as_deref(),
                 *without_asking,
             ),
@@ -388,8 +384,7 @@ crossing! {
             /// Certificados disponibles para la selección.
             certificates: Vec<CertificateView>,
             /// Si el documento incluye firmas no reconocidas.
-            unregistered_signatures: bool,
-            /// Asa del certificado que ya está resuelto, si lo está.
+                /// Asa del certificado que ya está resuelto, si lo está.
             already_chosen: Option<String>,
             /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
             without_asking: bool,
