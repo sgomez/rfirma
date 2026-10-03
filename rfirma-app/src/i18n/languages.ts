@@ -18,7 +18,7 @@ import { LANGUAGES } from "./locales";
  * `many` que `es` y `ca` sí usan —cuántas categorías devuelve exactamente
  * depende del CLDR del intérprete—, así que ese catálogo estaba roto para
  * plurales en cuanto los plurales entraron. Las
- * etiquetas son las de `Language::tag` del backend (`signing/language.rs`); si
+ * etiquetas son las de `Language::tag` del backend (`signing/domain/language.rs`); si
  * cambia una, cambia en los dos sitios.
  */
 export type LanguageTag = (typeof LANGUAGES)[number];

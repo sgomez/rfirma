@@ -74,7 +74,7 @@ Material, todo generado en el borrador y fuera del repositorio:
 Para pintar, `pdfjs-dist` **6.3.289**, la misma versión que declara
 `rfirma-app/package.json`, sobre `@napi-rs/canvas` en Node, y con la misma
 llamada que hace la aplicación: `page.render({ canvas, viewport })`, sin tocar
-`annotationMode` (`rfirma-app/src/viewer/pdfjsLoader.ts:42`).
+`annotationMode` (`rfirma-app/src/viewer/pdfjsLoader.ts:63`).
 
 ### Cómo se compara el sello con el recuadro
 

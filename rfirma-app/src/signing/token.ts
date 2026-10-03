@@ -1,6 +1,6 @@
 //! El fallo del token: su situación traducible, una de las siete que este tipo declara de entre las que clasifica Rust, y el detalle crudo. Sin React.
 /**
- * **La clasificación es de Rust** (`pkcs11::error`, ID-29): el `CKR_*` de
+ * **La clasificación es de Rust** (`identity::domain::error`): el `CKR_*` de
  * `cryptoki` se convierte allí en una situación nuestra, y aquí solo llega ya
  * clasificada, con el código crudo al lado. En este directorio no hay —ni debe
  * haber— una tabla de `CKR_*`: sería una segunda clasificación de lo mismo, que
@@ -8,7 +8,8 @@
  */
 
 /**
- * Las siete situaciones de `pkcs11::error::Situation`, con los mismos nombres.
+ * Las siete de `identity::domain::error::Situation` que esta capa declara, con los
+ * mismos nombres.
  *
  * El diálogo modal nativo del sistema operativo gestiona la solicitud
  * interactiva del secreto y los reintentos; los fallos definitivos se cuentan

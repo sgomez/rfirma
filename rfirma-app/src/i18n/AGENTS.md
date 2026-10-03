@@ -42,7 +42,7 @@ Si tocas el mecanismo, el comentario de bloque es la fuente de verdad y este
 
 | Bloque | Qué decide |
 |---|---|
-| L7-23 (bloque sobre `LanguageTag`) | Los idiomas son cinco y ni la lista ni los catálogos se escriben aquí: salen de `locales/index.ts`. El valencià salió en v0.3 porque `Intl.PluralRules("va")` no da la categoría `many` que `es` y `ca` sí usan. Las etiquetas son las de `Language::tag` del backend (`signing/language.rs`): cambia una, cambian las dos. |
+| L7-23 (bloque sobre `LanguageTag`) | Los idiomas son cinco y ni la lista ni los catálogos se escriben aquí: salen de `locales/index.ts`. El valencià salió en v0.3 porque `Intl.PluralRules("va")` no da la categoría `many` que `es` y `ca` sí usan. Las etiquetas son las de `Language::tag` del backend (`signing/domain/language.rs`): cambia una, cambian las dos. |
 
 ## `LanguageProvider.tsx`
 

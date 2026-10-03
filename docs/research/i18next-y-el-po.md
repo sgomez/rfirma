@@ -563,8 +563,9 @@ se quiere cazar los `fuzzy`, se añade una comprobación aparte sobre los `.po`
 publicación.
 
 Y el desplegable de idiomas se deriva igual que hoy, con `completeLanguages()`
-en `languages.ts:43`: sale el idioma que no esté al 0 %. Esa función **no hay
-que tocarla**.
+(hoy ya no existe: `LANGUAGES`, que `tools/po-import.mjs` genera en `locales/index.ts`
+con los idiomas al 100 %, ocupa su lugar): sale el idioma que no esté al 0 %. Esa
+función **no hay que tocarla**.
 
 ### La consecuencia que la decisión 7 no tiene
 

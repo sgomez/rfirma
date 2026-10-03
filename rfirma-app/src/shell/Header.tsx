@@ -34,8 +34,7 @@ interface HeaderProps {
  * la zona de soltar de la bandeja y guardar tiene la fila «Guardar en» del
  * panel; repetirlos en un menú sería un segundo camino para lo mismo.
  *
- * En macOS las dos entradas se registran en el menú de aplicación nativo, así
- * que el botón de menú **se oculta** en vez de quedarse vacío. En Linux todo
+ * En Windows y macOS el menú es el botón de esta cabecera. En Linux todo
  * menos las pestañas va en la barra de título GTK, y sin pestañas no hay cabecera.
  *
  * El menú **arranca cerrado**. El artboard del estado vacío lo dibuja
