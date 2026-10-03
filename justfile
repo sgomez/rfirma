@@ -245,10 +245,10 @@ duplication: deps
     echo "== TypeScript: *.test.ts(x) =="
     pnpm exec jscpd --pattern '**/*.{test.ts,test.tsx}' src --reporters console
 
-# Esqueleto de un fichero .rs, .ts o .tsx (ruta relativa a la raiz).
+# Esqueleto de ficheros .rs/.ts/.tsx (ruta) o tramos de cualquiera (ruta:A-B,C-D), en una llamada.
 [group('checklist')]
-outline path:
-    {{ root }}/scripts/outline.sh {{ path }}
+outline +paths:
+    {{ root }}/scripts/outline.sh {{ paths }}
 
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
 [group('dev')]
