@@ -1,17 +1,20 @@
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 
+use chrono::{DateTime, FixedOffset, Utc};
+
 use super::super::{attend, CommandLinePorts, Outcome, FAILED, REFUSED, SUCCEEDED};
 use super::*;
 use crate::desktop::ports::{
     AskedSecret, CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning,
-    DesktopHandover, DocumentSigner, GraphicalPicker, OfferedCertificate, SecretDescriptor,
-    SignatureVerifier, Terminal, WindowChoice, WindowOffer,
+    DesktopHandover, DocumentSigner, GraphicalPicker, LocalTimeZone, OfferedCertificate,
+    SecretDescriptor, SignatureReader, SignatureVerifier, Terminal, WindowChoice, WindowOffer,
 };
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::bridge::BridgeError;
+use crate::signing::domain::{DocumentSignature, DocumentSignatures, SignatureStatus};
 use crate::site::domain::protocol::SiteFilter;
 
 const A_PDF: &[u8] = b"%PDF-1.7\n1 0 obj\n<< >>\nendobj\n";
@@ -71,6 +74,27 @@ impl SignatureVerifier for Answering {
     fn results_of(&self, _document: &[u8], format: Format) -> Result<Vec<String>, BridgeError> {
         self.asked.borrow_mut().push(format);
         self.answer.clone().map_err(BridgeError::Failed)
+    }
+}
+
+/// La lectura de firmas que contesta siempre lo mismo.
+struct Reading(Result<Vec<DocumentSignature>, String>);
+
+impl SignatureReader for Reading {
+    fn signatures_in(&self, _document: &[u8]) -> Result<DocumentSignatures, BridgeError> {
+        self.0
+            .clone()
+            .map(|signatures| DocumentSignatures::new(signatures, false))
+            .map_err(BridgeError::Failed)
+    }
+}
+
+/// La zona horaria de Madrid en verano.
+struct SummerInMadrid;
+
+impl LocalTimeZone for SummerInMadrid {
+    fn offset_at(&self, _instant: DateTime<Utc>) -> FixedOffset {
+        FixedOffset::east_opt(2 * 3600).expect("+02:00 es un desplazamiento")
     }
 }
 
@@ -137,6 +161,21 @@ impl GraphicalPicker for Untouched {
     }
 }
 
+impl SignatureReader for Untouched {
+    fn signatures_in(&self, document: &[u8]) -> Result<DocumentSignatures, BridgeError> {
+        panic!(
+            "verify sin -v no lee las firmas de {} bytes",
+            document.len()
+        )
+    }
+}
+
+impl LocalTimeZone for Untouched {
+    fn offset_at(&self, instant: DateTime<Utc>) -> FixedOffset {
+        panic!("verify sin -v no pasa a hora local {instant}")
+    }
+}
+
 impl DocumentSigner for Untouched {
     fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
         panic!("verify no firma {}", request.input.display())
@@ -152,6 +191,21 @@ impl DocumentSigner for Untouched {
 }
 
 fn verified(words: &[&str], files: &dyn CommandLineFiles, verifier: &Answering) -> Outcome {
+    attended(words, files, verifier, &Untouched, &Untouched)
+}
+
+fn verified_reading(words: &[&str], reader: &Reading) -> Outcome {
+    let verifier = Answering::with(&["Firma valida"]);
+    attended(words, &OneFile(A_PDF), &verifier, reader, &SummerInMadrid)
+}
+
+fn attended(
+    words: &[&str],
+    files: &dyn CommandLineFiles,
+    verifier: &Answering,
+    reader: &dyn SignatureReader,
+    time_zone: &dyn LocalTimeZone,
+) -> Outcome {
     let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
     attend(
         &arguments,
@@ -163,10 +217,26 @@ fn verified(words: &[&str], files: &dyn CommandLineFiles, verifier: &Answering) 
             filter: &Untouched,
             files,
             verifier,
+            reader,
+            time_zone,
             signer: &Untouched,
             window: &Untouched,
         },
     )
+}
+
+fn a_signature(name: &str, id_number: &str, signing_time: Option<&str>) -> DocumentSignature {
+    DocumentSignature {
+        name: name.to_owned(),
+        id_number: id_number.to_owned(),
+        organization_identifier: None,
+        issuer: "AC FNMT Usuarios".to_owned(),
+        certificate_serial_number: "0123ABCD".to_owned(),
+        signing_time: signing_time.map(str::to_owned),
+        status: SignatureStatus::Valid,
+        reason: None,
+        countersignatures: Vec::new(),
+    }
 }
 
 fn printed(outcome: &Outcome) -> String {
@@ -291,4 +361,116 @@ fn verify_in_xml_is_not_available_yet() {
 
     assert_eq!(outcome.exit_code, FAILED);
     assert!(outcome.stdout.is_empty());
+}
+
+#[test]
+fn verbose_prints_the_validity_then_the_format_and_one_sheet_per_signature() {
+    let reader = Reading(Ok(vec![
+        a_signature(
+            "NOMBRE APELLIDO1 APELLIDO2",
+            "99999999R",
+            Some("2026-09-14T08:32:05Z"),
+        ),
+        a_signature(
+            "OTRA PERSONA PRUEBA",
+            "00000000T",
+            Some("2026-09-20T16:01:44.250Z"),
+        ),
+    ]));
+
+    let outcome = verified_reading(&["verify", "-i", "firmado.pdf", "-v"], &reader);
+
+    assert_eq!(outcome.exit_code, SUCCEEDED);
+    assert_eq!(
+        printed(&outcome),
+        "\
+Firma valida
+
+Formato: PAdES
+
+Firma 1
+  Firmante:          NOMBRE APELLIDO1 APELLIDO2 (99999999R)
+  Emisor:            AC FNMT Usuarios
+  Fecha declarada:   2026-09-14 10:32:05 +02:00
+
+Firma 2
+  Firmante:          OTRA PERSONA PRUEBA (00000000T)
+  Emisor:            AC FNMT Usuarios
+  Fecha declarada:   2026-09-20 18:01:44 +02:00
+"
+    );
+    assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
+}
+
+#[test]
+fn the_long_form_of_verbose_prints_the_same() {
+    let reader = Reading(Ok(vec![a_signature("UNA PERSONA", "99999999R", None)]));
+
+    let short = verified_reading(&["verify", "-i", "firmado.pdf", "-v"], &reader);
+    let long = verified_reading(&["verify", "--verbose", "-i", "firmado.pdf"], &reader);
+
+    assert_eq!(long, short);
+}
+
+#[test]
+fn a_field_the_signature_does_not_have_is_not_printed() {
+    let mut signature = a_signature("UNA PERSONA", "", None);
+    signature.issuer = String::new();
+
+    let outcome = verified_reading(
+        &["verify", "-v", "-i", "firmado.pdf"],
+        &Reading(Ok(vec![signature])),
+    );
+
+    assert_eq!(
+        printed(&outcome),
+        "Firma valida\n\nFormato: PAdES\n\nFirma 1\n  Firmante:          UNA PERSONA\n"
+    );
+}
+
+#[test]
+fn a_document_without_signatures_says_so_in_verbose() {
+    let outcome = verified_reading(
+        &["verify", "-v", "-i", "firmado.pdf"],
+        &Reading(Ok(Vec::new())),
+    );
+
+    assert_eq!(
+        printed(&outcome),
+        "Firma valida\n\nFormato: PAdES\n\nEl documento no tiene firmas.\n"
+    );
+}
+
+#[test]
+fn signatures_that_cannot_be_read_leave_the_validity_and_end_with_zero() {
+    let reader = Reading(Err("el isolate no arranca".to_owned()));
+
+    let outcome = verified_reading(&["verify", "-v", "-i", "firmado.pdf"], &reader);
+
+    assert_eq!(outcome.exit_code, SUCCEEDED);
+    assert_eq!(printed(&outcome), "Firma valida\n");
+    assert_eq!(
+        outcome.stderr,
+        ["rfirma: no se han podido leer las firmas del documento: el puente ha fallado: el isolate no arranca"]
+    );
+}
+
+#[test]
+fn the_signer_is_named_once_with_the_id_number_without_its_semantics_prefix() {
+    let signature = a_signature(
+        "EIDAS CERTIFICADO PRUEBAS - 99999999R",
+        "IDCES-99999999R",
+        None,
+    );
+
+    let outcome = verified_reading(
+        &["verify", "-v", "-i", "firmado.pdf"],
+        &Reading(Ok(vec![signature])),
+    );
+
+    assert!(
+        printed(&outcome).contains("  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)\n"),
+        "{}",
+        printed(&outcome)
+    );
 }

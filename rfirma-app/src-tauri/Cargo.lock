@@ -3971,6 +3971,7 @@ name = "rfirma"
 version = "0.13.0"
 dependencies = [
  "base64 0.22.1",
+ "chrono",
  "cipher 0.5.2",
  "cryptoki",
  "des",

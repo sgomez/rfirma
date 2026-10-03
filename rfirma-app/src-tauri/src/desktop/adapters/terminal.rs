@@ -5,7 +5,9 @@ use std::io::{IsTerminal, Write};
 use std::path::PathBuf;
 
 use crate::crossing::Failure;
-use crate::desktop::adapters::command_line_ports::{DiskFiles, NativeFilter, NativeVerifier};
+use crate::desktop::adapters::command_line_ports::{
+    DiskFiles, NativeFilter, NativeReader, NativeVerifier, SystemTimeZone,
+};
 use crate::desktop::adapters::handover::SpawnedDesktop;
 use crate::desktop::adapters::paths::Paths;
 use crate::desktop::adapters::site_window_picker::SiteWindowPicker;
@@ -332,6 +334,8 @@ pub fn run_the_command_line(argv: &[String], context: tauri::Context<tauri::Wry>
         filter: &NativeFilter,
         files: &DiskFiles,
         verifier: &NativeVerifier,
+        reader: &NativeReader,
+        time_zone: &SystemTimeZone,
         signer: match &signer {
             Some(signer) => signer,
             None => &Homeless,

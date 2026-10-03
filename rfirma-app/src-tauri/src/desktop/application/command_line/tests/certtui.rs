@@ -111,6 +111,8 @@ fn chosen_with(
         filter,
         files: &FilesInMemory::with("doc.pdf", A_PDF),
         verifier: &Untouched,
+        reader: &Untouched,
+        time_zone: &Untouched,
         signer,
         window: &Untouched,
     };

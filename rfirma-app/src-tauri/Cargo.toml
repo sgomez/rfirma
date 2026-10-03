@@ -157,6 +157,8 @@ cipher = "0.5.2"
 ecb = "0.2.1"
 # Sin idioma guardado, la interfaz sale en el del sistema (ADR-0010).
 sys-locale = "0.3"
+# La fecha declarada de `verify -v`, en hora local y con su desplazamiento.
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 # Lo que solo existe en un escritorio Linux; Windows y macOS llevan en su lugar
 # sus adaptadores o los pendientes (ADR-0035).

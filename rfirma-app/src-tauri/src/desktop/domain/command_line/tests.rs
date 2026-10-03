@@ -161,3 +161,13 @@ fn the_documented_form_has_two_dashes_only_for_long_options() {
     assert_eq!(documented("-store"), "--store");
     assert_eq!(documented("-i"), "-i");
 }
+
+#[test]
+fn verbose_is_asked_for_with_v_or_with_its_long_form() {
+    let verbosity_of = |words: &[&str]| verbosity(&normalised(&arguments(words)));
+
+    assert_eq!(verbosity_of(&["verify", "-i", "a.pdf"]), 0);
+    assert_eq!(verbosity_of(&["verify", "-v", "-i", "a.pdf"]), 1);
+    assert_eq!(verbosity_of(&["verify", "--verbose"]), 1);
+    assert_eq!(verbosity_of(&["verify", "-verbose"]), 1);
+}

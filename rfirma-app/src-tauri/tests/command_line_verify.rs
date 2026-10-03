@@ -5,14 +5,17 @@ mod support;
 
 use std::path::{Path, PathBuf};
 
-use rfirma_lib::desktop::adapters::command_line_ports::{DiskFiles, NativeFilter, NativeVerifier};
+use chrono::{DateTime, FixedOffset, Utc};
+use rfirma_lib::desktop::adapters::command_line_ports::{
+    DiskFiles, NativeFilter, NativeReader, NativeVerifier,
+};
 use rfirma_lib::desktop::adapters::handover::SpawnedDesktop;
 use rfirma_lib::desktop::adapters::terminal::{ProcessDescriptors, ProcessTerminal, SeenStores};
 use rfirma_lib::desktop::application::command_line::{
     attend, CommandLinePorts, Outcome, SUCCEEDED, UNKNOWN_FORMAT,
 };
 use rfirma_lib::desktop::ports::{
-    CommandLineSigning, DocumentSigner, GraphicalPicker, WindowChoice, WindowOffer,
+    CommandLineSigning, DocumentSigner, GraphicalPicker, LocalTimeZone, WindowChoice, WindowOffer,
 };
 use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use rfirma_lib::signing::application::cycle::ALGORITHM;
@@ -52,12 +55,21 @@ impl DocumentSigner for NeverSigns {
     }
 }
 
+/// La hora de Madrid en verano, para que la fecha declarada no dependa de la máquina.
+struct SummerInMadrid;
+
+impl LocalTimeZone for SummerInMadrid {
+    fn offset_at(&self, _instant: DateTime<Utc>) -> FixedOffset {
+        FixedOffset::east_opt(2 * 3600).expect("+02:00 es un desplazamiento")
+    }
+}
+
 fn verified(path: &Path) -> Outcome {
-    let arguments = [
-        "verify".to_owned(),
-        "-i".to_owned(),
-        path.display().to_string(),
-    ];
+    attended(&["verify", "-i", &path.display().to_string()])
+}
+
+fn attended(words: &[&str]) -> Outcome {
+    let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
     attend(
         &arguments,
         &CommandLinePorts {
@@ -68,6 +80,8 @@ fn verified(path: &Path) -> Outcome {
             filter: &NativeFilter,
             files: &DiskFiles,
             verifier: &NativeVerifier,
+            reader: &NativeReader,
+            time_zone: &SummerInMadrid,
             signer: &NeverSigns,
             window: &NeverSigns,
         },
@@ -174,4 +188,74 @@ fn a_file_of_no_signature_format_prints_its_result() {
     let lines = printed_lines(&verified(&sample("reference/challenge.bin")));
 
     assert_eq!(lines, [UNKNOWN_FORMAT]);
+}
+
+fn a_pdf_signed_twice_with_the_token() -> PathBuf {
+    let signed = a_cycle_of(
+        Format::Pades,
+        ALGORITHM,
+        &a_one_page_pdf(),
+        SignatureOperation::Sign,
+        &[],
+    );
+    let twice = a_cycle_of(
+        Format::Pades,
+        ALGORITHM,
+        &signed,
+        SignatureOperation::Sign,
+        &[],
+    );
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("verify-signed-twice.pdf");
+    std::fs::write(&path, twice).expect("el PDF firmado dos veces se escribe");
+    path
+}
+
+/// Las líneas con la fecha declarada, que es la de una firma recién hecha, comprobada y con un marcador.
+fn with_the_declared_time_checked(lines: Vec<String>, since: DateTime<Utc>) -> Vec<String> {
+    const DECLARED: &str = "  Fecha declarada:   ";
+    lines
+        .into_iter()
+        .map(|line| match line.strip_prefix(DECLARED) {
+            None => line,
+            Some(declared) => {
+                let instant = DateTime::parse_from_str(declared, "%Y-%m-%d %H:%M:%S %:z")
+                    .unwrap_or_else(|error| panic!("«{declared}» no es una fecha local: {error}"));
+                assert_eq!(instant.offset().local_minus_utc(), 2 * 3600, "{declared}");
+                assert!(
+                    instant >= since - chrono::Duration::seconds(1) && instant <= Utc::now(),
+                    "{declared} no es el instante de la firma"
+                );
+                format!("{DECLARED}<instante de la firma>")
+            }
+        })
+        .collect()
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn verbose_prints_the_validity_the_format_and_a_sheet_per_signature_of_a_pdf() {
+    let since = Utc::now();
+    let path = a_pdf_signed_twice_with_the_token();
+
+    let outcome = attended(&["verify", "-i", &path.display().to_string(), "--verbose"]);
+
+    assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
+    assert_eq!(
+        with_the_declared_time_checked(printed_lines(&outcome), since),
+        [
+            "Firma valida",
+            "",
+            "Formato: PAdES",
+            "",
+            "Firma 1",
+            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
+            "  Emisor:            AC FNMT Usuarios",
+            "  Fecha declarada:   <instante de la firma>",
+            "",
+            "Firma 2",
+            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
+            "  Emisor:            AC FNMT Usuarios",
+            "  Fecha declarada:   <instante de la firma>",
+        ]
+    );
 }

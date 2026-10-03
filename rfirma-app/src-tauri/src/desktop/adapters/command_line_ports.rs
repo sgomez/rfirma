@@ -3,11 +3,15 @@
 use std::path::Path;
 
 use base64::Engine;
+use chrono::{DateTime, FixedOffset, Local, Offset, Utc};
 
-use crate::desktop::ports::{CertificateFilter, CommandLineFiles, SignatureVerifier};
+use crate::desktop::ports::{
+    CertificateFilter, CommandLineFiles, LocalTimeZone, SignatureReader, SignatureVerifier,
+};
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::adapters::ffi::NativeBridge;
 use crate::signing::domain::bridge::{BridgeError, Format};
+use crate::signing::domain::DocumentSignatures;
 use crate::site::domain::protocol::SiteFilter;
 use crate::site::ports::FilterEngine;
 
@@ -31,6 +35,24 @@ impl SignatureVerifier for NativeVerifier {
     fn results_of(&self, document: &[u8], format: Format) -> Result<Vec<String>, BridgeError> {
         let document_b64 = base64::engine::general_purpose::STANDARD.encode(document);
         NativeBridge::open()?.verify_signatures(&document_b64, format)
+    }
+}
+
+/// La lectura de firmas de la raíz de `signing`, que carga el puente solo cuando se le pregunta.
+pub struct NativeReader;
+
+impl SignatureReader for NativeReader {
+    fn signatures_in(&self, document: &[u8]) -> Result<DocumentSignatures, BridgeError> {
+        crate::signing::signatures_in(document)
+    }
+}
+
+/// La zona horaria del sistema, la que dice `TZ` si está puesta.
+pub struct SystemTimeZone;
+
+impl LocalTimeZone for SystemTimeZone {
+    fn offset_at(&self, instant: DateTime<Utc>) -> FixedOffset {
+        instant.with_timezone(&Local).offset().fix()
     }
 }
 
