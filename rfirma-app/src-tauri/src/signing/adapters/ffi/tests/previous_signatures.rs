@@ -1,6 +1,6 @@
 use super::*;
 use crate::signing::domain::document_signatures::{
-    DocumentFinding, DocumentSignature, SignatureStatus, Validity, ValidityReason,
+    DocumentFinding, DocumentSignature, SignatureStatus, SigningDate, Validity, ValidityReason,
 };
 
 #[test]
@@ -24,7 +24,7 @@ fn a_previous_signature_translates_the_subject_and_the_issuer_with_the_holder_ut
             "signingTime":"2024-01-01T10:00:00Z",
             "status":"valid",
             "reason":null,
-            "validity":"valid"
+            "validity":"valid","closesDocument":false
         }],"changedAfterLastSignature":false,"findings":[]}"#,
     )
     .expect("es valida");
@@ -43,6 +43,8 @@ fn a_previous_signature_translates_the_subject_and_the_issuer_with_the_holder_ut
             reason: None,
             validity: Validity::Valid,
             validity_reason: None,
+            signing_date: None,
+            closes_document: false,
             countersignatures: Vec::new(),
         }]
     );
@@ -58,7 +60,7 @@ fn a_previous_signature_without_a_signing_time_crosses_as_nothing_and_not_a_fail
             "signingTime":null,
             "status":"valid",
             "reason":null,
-            "validity":"valid"
+            "validity":"valid","closesDocument":false
         }],"changedAfterLastSignature":false,"findings":[]}"#,
     )
     .expect("es valida");
@@ -76,7 +78,7 @@ fn a_previous_signature_carries_its_status_and_the_reason_of_the_original() {
             "signingTime":null,
             "status":"certificateExpired",
             "reason":"CERTIFICATE_EXPIRED",
-            "validity":"valid"
+            "validity":"valid","closesDocument":false
         }],"changedAfterLastSignature":true,"findings":[]}"#,
     )
     .expect("es valida");
@@ -103,7 +105,7 @@ fn a_signature_the_bridge_did_not_validate_crosses_without_a_status_and_with_its
             "signingTime":null,
             "status":null,
             "reason":null,
-            "validity":"valid",
+            "validity":"valid","closesDocument":false,
             "countersignatures":[{
                 "subject":"CN=BABBAGE CHARLES",
                 "issuer":"CN=AC FNMT Usuarios",
@@ -111,7 +113,7 @@ fn a_signature_the_bridge_did_not_validate_crosses_without_a_status_and_with_its
                 "signingTime":null,
                 "status":null,
                 "reason":null,
-                "validity":"valid",
+                "validity":"valid","closesDocument":false,
                 "countersignatures":[]
             }]
         }],"changedAfterLastSignature":false,"findings":[]}"#,
@@ -148,7 +150,7 @@ fn a_previous_signature_with_a_status_this_binary_does_not_know_is_a_malformed_a
             "signingTime":null,
             "status":"quiza",
             "reason":null,
-            "validity":"valid"
+            "validity":"valid","closesDocument":false
         }],"changedAfterLastSignature":false,"findings":[]}"#
     )
     .is_err());
@@ -163,6 +165,7 @@ fn a_report_with_one_signature(validity: &str) -> String {
             "signingTime":null,
             "status":null,
             "reason":null,
+            "closesDocument":false,
             {validity}
         }}],"changedAfterLastSignature":false,"findings":[]}}"#
     )
@@ -268,5 +271,72 @@ fn a_previous_signatures_answer_missing_the_findings_is_a_malformed_answer() {
     assert!(parse_previous_signatures(
         r#"{"ok":true,"signatures":[],"changedAfterLastSignature":false}"#
     )
+    .is_err());
+}
+
+fn a_valid_signature_with(fields: &str) -> String {
+    format!(
+        r#"{{"ok":true,"signatures":[{{
+            "subject":"CN=LOVELACE BYRON ADA",
+            "issuer":"CN=AC FNMT Usuarios",
+            "serialNumber":"1",
+            "signingTime":null,
+            "status":null,
+            "reason":null,
+            "validity":"valid",
+            {fields}
+        }}],"changedAfterLastSignature":false,"findings":[]}}"#
+    )
+}
+
+#[test]
+fn the_signing_date_says_whether_it_is_declared_or_stamped_and_by_which_tsa() {
+    let declared = parse_previous_signatures(&a_valid_signature_with(
+        r#""closesDocument":false,
+            "signingDate":{"kind":"declared","at":"2026-09-26T10:00:00Z","tsa":null}"#,
+    ))
+    .expect("es valida");
+    let stamped = parse_previous_signatures(&a_valid_signature_with(
+        r#""closesDocument":false,
+            "signingDate":{"kind":"stamped","at":"2019-01-01T00:00:00Z","tsa":"CN=TSA"}"#,
+    ))
+    .expect("es valida");
+
+    assert_eq!(
+        declared.signatures()[0].signing_date,
+        Some(SigningDate::Declared {
+            at: "2026-09-26T10:00:00Z".to_owned()
+        })
+    );
+    assert_eq!(
+        stamped.signatures()[0].signing_date,
+        Some(SigningDate::Stamped {
+            at: "2019-01-01T00:00:00Z".to_owned(),
+            tsa: "CN=TSA".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn the_certification_that_closes_the_document_crosses_marked() {
+    let report = parse_previous_signatures(&a_valid_signature_with(
+        r#""closesDocument":true,"signingDate":null"#,
+    ))
+    .expect("es valida");
+
+    assert!(report.signatures()[0].closes_document);
+    assert_eq!(report.signatures()[0].signing_date, None);
+}
+
+#[test]
+fn a_signature_without_the_closing_mark_or_with_an_unknown_kind_of_date_is_a_malformed_answer() {
+    assert!(parse_previous_signatures(&a_valid_signature_with(r#""signingDate":null"#)).is_err());
+    assert!(parse_previous_signatures(&a_valid_signature_with(
+        r#""closesDocument":false,"signingDate":{"kind":"quiza","at":"2019-01-01T00:00:00Z"}"#
+    ))
+    .is_err());
+    assert!(parse_previous_signatures(&a_valid_signature_with(
+        r#""closesDocument":false,"signingDate":{"kind":"stamped","at":"2019-01-01T00:00:00Z"}"#
+    ))
     .is_err());
 }

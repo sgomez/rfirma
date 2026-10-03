@@ -484,6 +484,8 @@ fn previous_signatures_in_returns_what_the_engine_reports() {
         reason: None,
         validity: Validity::Valid,
         validity_reason: None,
+        signing_date: None,
+        closes_document: false,
         countersignatures: Vec::new(),
     };
     let engine = AnEngineThatReports::default()

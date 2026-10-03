@@ -1,19 +1,54 @@
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.KeyStore;
+import java.security.MessageDigest;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Properties;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.DERSet;
+import org.bouncycastle.asn1.cms.Attribute;
+import org.bouncycastle.asn1.cms.AttributeTable;
+import org.bouncycastle.asn1.oiw.OIWObjectIdentifiers;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.KeyPurposeId;
+import org.bouncycastle.cert.jcajce.JcaCertStore;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.cms.CMSSignedData;
+import org.bouncycastle.cms.SignerInformation;
+import org.bouncycastle.cms.SignerInformationStore;
+import org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoGeneratorBuilder;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
+import org.bouncycastle.tsp.TSPAlgorithms;
+import org.bouncycastle.tsp.TimeStampRequestGenerator;
+import org.bouncycastle.tsp.TimeStampToken;
+import org.bouncycastle.tsp.TimeStampTokenGenerator;
 import org.spongycastle.asn1.ASN1InputStream;
 
 import com.aowagie.text.Document;
@@ -44,7 +79,9 @@ public final class ReferenceSigner {
             case "xades-extra-certificate" -> xadesExtraCertificate(args);
             case "facturae" -> facturae(args);
             case "pdf" -> pdf(args);
+            case "pades" -> pades(args);
             case "pades-timestamped" -> padesTimestamped(args);
+            case "pades-stamped-at" -> padesStampedAt(args);
             case "cosign" -> cosign(args);
             case "countersign" -> countersign(args);
             default -> usageAndExit();
@@ -59,7 +96,9 @@ public final class ReferenceSigner {
                   ReferenceSigner xades-extra-certificate <entrada.xml> <p12> <pin> <cert.pem> <salida>
                   ReferenceSigner facturae <invoice.xml> <p12> <pin> <salida>
                   ReferenceSigner pdf <salida>
+                  ReferenceSigner pades <entrada.pdf> <p12> <pin> <salida> [clave=valor ...]
                   ReferenceSigner pades-timestamped <entrada.pdf> <p12> <pin> <tsaURL> <salida>
+                  ReferenceSigner pades-stamped-at <entrada.pdf> <p12> <pin> <instante ISO-8601> <salida>
                   ReferenceSigner cosign <cades|xades> <firma-origen> <p12> <pin> <salida>
                   ReferenceSigner countersign <cades|xades> <tree|leafs> <firma-origen> <p12> <pin> <salida>
                 """);
@@ -145,9 +184,94 @@ public final class ReferenceSigner {
         Files.write(Path.of(args[5]), withSignatureTimestamp(signed, new TsaParams(tsaParams)));
     }
 
+    private static void pades(String[] args) throws Exception {
+        byte[] data = Files.readAllBytes(Path.of(args[1]));
+        KeyStore.PrivateKeyEntry pke = loadKey(args[2], args[3]);
+        Properties extraParams = new Properties();
+        extraParams.setProperty("headless", "true");
+        for (int i = 5; i < args.length; i++) {
+            String[] pair = args[i].split("=", 2);
+            extraParams.setProperty(pair[0], pair[1]);
+        }
+        Files.write(Path.of(args[4]), new AOPDFSigner().sign(
+                data, ALGORITHM, pke.getPrivateKey(), pke.getCertificateChain(), extraParams));
+    }
+
+    private static void padesStampedAt(String[] args) throws Exception {
+        byte[] data = Files.readAllBytes(Path.of(args[1]));
+        KeyStore.PrivateKeyEntry pke = loadKey(args[2], args[3]);
+        Properties extraParams = new Properties();
+        extraParams.setProperty("headless", "true");
+        byte[] signed = new AOPDFSigner().sign(
+                data, ALGORITHM, pke.getPrivateKey(), pke.getCertificateChain(), extraParams);
+        Date genTime = Date.from(Instant.parse(args[4]));
+        Files.write(Path.of(args[5]),
+                withContainerReplaced(signed, cms -> stampedAt(cms, genTime)));
+    }
+
+    // Un sello con la fecha que se le pida, firmado por una TSA de un solo uso en vigor en esa fecha.
+    private static byte[] stampedAt(byte[] cms, Date genTime) {
+        try {
+            CMSSignedData signed = new CMSSignedData(cms);
+            SignerInformation signer = signed.getSignerInfos().getSigners().iterator().next();
+            byte[] imprint = MessageDigest.getInstance("SHA-256").digest(signer.getSignature());
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2048);
+            KeyPair keys = generator.generateKeyPair();
+            X509Certificate authority = timestampingCertificate(keys, genTime);
+            TimeStampTokenGenerator tokens = new TimeStampTokenGenerator(
+                    new JcaSimpleSignerInfoGeneratorBuilder()
+                            .build(ALGORITHM, keys.getPrivate(), authority),
+                    new JcaDigestCalculatorProviderBuilder().build()
+                            .get(new AlgorithmIdentifier(OIWObjectIdentifiers.idSHA1)),
+                    new ASN1ObjectIdentifier("0.4.0.2023.1.1"));
+            tokens.addCertificates(new JcaCertStore(List.of(authority)));
+            TimeStampRequestGenerator request = new TimeStampRequestGenerator();
+            request.setCertReq(true);
+            TimeStampToken token = tokens.generate(
+                    request.generate(TSPAlgorithms.SHA256, imprint), BigInteger.ONE, genTime);
+            ASN1EncodableVector unsigned = new ASN1EncodableVector();
+            unsigned.add(new Attribute(PKCSObjectIdentifiers.id_aa_signatureTimeStampToken,
+                    new DERSet(token.toCMSSignedData().toASN1Structure())));
+            SignerInformation stamped =
+                    SignerInformation.replaceUnsignedAttributes(signer, new AttributeTable(unsigned));
+            return CMSSignedData.replaceSigners(signed, new SignerInformationStore(stamped))
+                    .getEncoded("DER");
+        }
+        catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static X509Certificate timestampingCertificate(KeyPair keys, Date genTime)
+            throws Exception {
+        X500Name name = new X500Name("CN=rfirma backdated TSA");
+        Instant at = genTime.toInstant();
+        JcaX509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(name, BigInteger.ONE,
+                Date.from(at.minus(Duration.ofDays(1))), Date.from(at.plus(Duration.ofDays(3650))),
+                name, keys.getPublic());
+        builder.addExtension(Extension.extendedKeyUsage, true,
+                new ExtendedKeyUsage(KeyPurposeId.id_kp_timeStamping));
+        return new JcaX509CertificateConverter().getCertificate(
+                builder.build(new JcaContentSignerBuilder(ALGORITHM).build(keys.getPrivate())));
+    }
+
     // El PdfTimestamper del 1.9.2 devuelve la firma sin sello: se sella el CMS en su
     // hueco de /Contents, fuera del ByteRange.
     private static byte[] withSignatureTimestamp(byte[] pdf, TsaParams tsa) throws Exception {
+        return withContainerReplaced(pdf, cms -> {
+            try {
+                return new CMSTimestamper(tsa)
+                        .addTimestamp(cms, tsa.getTsaHashAlgorithm(), new GregorianCalendar());
+            }
+            catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        });
+    }
+
+    private static byte[] withContainerReplaced(byte[] pdf, UnaryOperator<byte[]> replacement)
+            throws Exception {
         String text = new String(pdf, StandardCharsets.ISO_8859_1);
         Matcher byteRange = Pattern
                 .compile("/ByteRange\\s*\\[\\s*(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s*\\]")
@@ -162,8 +286,7 @@ public final class ReferenceSigner {
         try (ASN1InputStream in = new ASN1InputStream(container)) {
             cms = in.readObject().getEncoded("DER");
         }
-        byte[] stamped = new CMSTimestamper(tsa)
-                .addTimestamp(cms, tsa.getTsaHashAlgorithm(), new GregorianCalendar());
+        byte[] stamped = replacement.apply(cms);
         String hex = HexFormat.of().formatHex(stamped);
         int room = close - open - 1;
         if (hex.length() > room) {

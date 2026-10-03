@@ -3,6 +3,7 @@ package es.gob.afirma.nativebridge;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.MessageDigest;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateExpiredException;
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -33,11 +35,14 @@ import org.spongycastle.cms.DefaultCMSSignatureAlgorithmNameGenerator;
 import org.spongycastle.cms.SignerInformation;
 import org.spongycastle.cms.SignerInformationStore;
 import org.spongycastle.cms.SignerInformationVerifier;
+import org.spongycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.spongycastle.operator.DefaultSignatureAlgorithmIdentifierFinder;
 import org.spongycastle.operator.OperatorCreationException;
 import org.spongycastle.operator.bc.BcDigestCalculatorProvider;
 import org.spongycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
+import org.spongycastle.tsp.TimeStampToken;
+import org.spongycastle.tsp.TimeStampTokenInfo;
 import org.spongycastle.util.Store;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -97,6 +102,8 @@ final class PreviousSignaturesBridge {
     private static final PdfName ETSI_RFC3161 = new PdfName("ETSI.RFC3161");
 
     private static final PdfName DOC_TIMESTAMP = new PdfName("DocTimeStamp");
+
+    private static final PdfName DOC_MDP = new PdfName("DocMDP");
 
     /** Los {@code /SubFilter} que {@link SignatureFormatDetectorPadesCades#isPDF} reconoce como PAdES/CAdES. */
     private static final List<PdfName> RECOGNIZED_SUBFILTERS = List.of(
@@ -202,10 +209,21 @@ final class PreviousSignaturesBridge {
         }
     }
 
-    /** Titular, emisor, numero de serie, fecha, estado y motivo viejos, validez, motivo y contrafirmas. */
+    /** La fecha de una firma: sellada si trae la TSA que la sello, declarada si {@code tsa} es nulo. */
+    record SigningDate(String at, String tsa) {
+
+        static SigningDate declared(final Date at) {
+            return at == null ? null : new SigningDate(instant(at), null);
+        }
+    }
+
+    /**
+     * Titular, emisor, numero de serie, fecha, estado y motivo viejos, validez, motivo, fecha
+     * declarada o sellada, si cierra el documento y contrafirmas.
+     */
     record Signature(String subject, String issuer, String serialNumber, String signingTime,
             Status status, String reason, Validity validity, Reason validityReason,
-            List<Signature> countersignatures) { }
+            SigningDate signingDate, boolean closesDocument, List<Signature> countersignatures) { }
 
     /** Las firmas en orden cronologico, si el documento cambio despues de la ultima, y sus hallazgos. */
     record Report(List<Signature> signatures, boolean changedAfterLastSignature,
@@ -348,6 +366,8 @@ final class PreviousSignaturesBridge {
                 null,
                 worst == null ? Validity.VALID : worst.problem().validity(),
                 worst,
+                SigningDate.declared(signingTime),
+                false,
                 countersignatures);
     }
 
@@ -406,7 +426,7 @@ final class PreviousSignaturesBridge {
                     : elements.get(HexFormat.of().formatHex(info.getPkcs1()));
             if (chain == null || chain.length == 0 || element == null) {
                 signers.add(new Signature("", "", "", null, null, null, Validity.INVALID,
-                        Reason.of(Problem.DAMAGED), countersignatures));
+                        Reason.of(Problem.DAMAGED), null, false, countersignatures));
                 continue;
             }
             signers.add(identityOf(chain[0], info.getSigningTime(),
@@ -517,17 +537,18 @@ final class PreviousSignaturesBridge {
             final X509Certificate signer = pkcs7.getSigningCertificate();
             final Instant signingTime =
                     pkcs7.getSignDate() == null ? null : pkcs7.getSignDate().toInstant();
+            final Stamp stamp = stampOf(pkcs7);
             final List<SignValidity> validities = new ArrayList<>(validate(name, fields, profile));
-            if (certification.revision() > 0
-                    && fields.getRevision(name) > certification.revision()) {
+            if (certification.forbids(fields.getRevision(name))) {
                 validities.add(new SignValidity(SIGN_DETAIL_TYPE.KO,
                         VALIDITY_ERROR.CERTIFIED_SIGN_REVISION));
             }
             final boolean unrecognizedSubFilter = hasUnrecognizedSubFilter(fields, name);
             final SignValidity validity = withUnrecognizedFormat(
                     unrecognizedSubFilter, decisive(validities));
-            final Reason worst = worstReason(validities, signer, unrecognizedSubFilter,
-                    certification.closedBy());
+            final Reason worst = worstReason(
+                    stamp == null ? validities : atStampTime(validities, signer, stamp.at()),
+                    signer, unrecognizedSubFilter, certification.closedBy());
             dated.add(new Dated(signingTime, new Signature(
                     readable(signer.getSubjectX500Principal()),
                     readable(signer.getIssuerX500Principal()),
@@ -537,6 +558,10 @@ final class PreviousSignaturesBridge {
                     reasonOf(validity),
                     worst == null ? Validity.VALID : worst.problem().validity(),
                     worst,
+                    stamp == null
+                            ? SigningDate.declared(signingTime == null ? null : Date.from(signingTime))
+                            : new SigningDate(instant(stamp.at()), stamp.tsa()),
+                    name.equals(certification.name()),
                     List.of())));
         }
         dated.sort(Comparator.comparing(Dated::signingTime,
@@ -558,7 +583,7 @@ final class PreviousSignaturesBridge {
     private static Signature damaged(final List<Signature> countersignatures) {
         return new Signature("", "", "", null, Status.BROKEN,
                 VALIDITY_ERROR.CORRUPTED_SIGN.name(), Validity.INVALID,
-                Reason.of(Problem.DAMAGED), countersignatures);
+                Reason.of(Problem.DAMAGED), null, false, countersignatures);
     }
 
     /** El problema mas grave de una firma, o {@code null} si no tiene ninguno (ADR-0043). */
@@ -608,6 +633,62 @@ final class PreviousSignaturesBridge {
 
     private static String instant(final Date date) {
         return DateTimeFormatter.ISO_INSTANT.format(date.toInstant());
+    }
+
+    /** El sello de tiempo de una firma: cuando la sello la TSA y quien es la TSA. */
+    private record Stamp(Date at, String tsa) { }
+
+    /**
+     * El sello de tiempo de los atributos sin firmar, o {@code null} si no trae ninguno, si no es
+     * integro o si no sella esta firma (ADR-0043). No comprueba que la TSA sea de confianza.
+     */
+    private static Stamp stampOf(final PdfPKCS7 pkcs7) {
+        final TimeStampToken token = pkcs7.getTimeStampToken();
+        if (token == null) {
+            return null;
+        }
+        try {
+            final TimeStampTokenInfo info = token.getTimeStampInfo();
+            final byte[] imprint = MessageDigest.getInstance(info.getMessageImprintAlgOID().getId())
+                    .digest(pkcs7.getPkcs1());
+            final X509CertificateHolder authority = authorityOf(token);
+            if (authority == null || !MessageDigest.isEqual(imprint, info.getMessageImprintDigest())) {
+                return null;
+            }
+            token.validate(new JcaSimpleSignerInfoVerifierBuilder().build(authority));
+            return new Stamp(info.getGenTime(),
+                    readable(new X500Principal(authority.getSubject().getEncoded())));
+        }
+        catch (final Exception e) {
+            return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static X509CertificateHolder authorityOf(final TimeStampToken token) {
+        final Collection<X509CertificateHolder> matches =
+                token.getCertificates().getMatches(token.getSID());
+        return matches.isEmpty() ? null : matches.iterator().next();
+    }
+
+    /** Los veredictos con la vigencia del certificado medida en la fecha del sello (ADR-0043). */
+    static List<SignValidity> atStampTime(final List<SignValidity> validities,
+            final X509Certificate signer, final Date stampedAt) {
+        final List<SignValidity> atStamp = new ArrayList<>();
+        for (final SignValidity validity : validities) {
+            if (validity.getError() != VALIDITY_ERROR.CERTIFICATE_EXPIRED
+                    && validity.getError() != VALIDITY_ERROR.CERTIFICATE_NOT_VALID_YET) {
+                atStamp.add(validity);
+            }
+        }
+        if (stampedAt.after(signer.getNotAfter())) {
+            atStamp.add(new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.CERTIFICATE_EXPIRED));
+        }
+        else if (stampedAt.before(signer.getNotBefore())) {
+            atStamp.add(new SignValidity(SIGN_DETAIL_TYPE.KO,
+                    VALIDITY_ERROR.CERTIFICATE_NOT_VALID_YET));
+        }
+        return atStamp;
     }
 
     /**
@@ -768,31 +849,55 @@ final class PreviousSignaturesBridge {
         return options;
     }
 
-    /** La revision que certifico el PDF «sin cambios permitidos» y quien la firmo, o 0 y nadie. */
-    private record Certification(int revision, String closedBy) { }
+    /**
+     * La firma que certifico el PDF «sin cambios permitidos»: su campo, su revision y quien la
+     * firmo; sin campo y con la revision 0 si el PDF no esta cerrado.
+     */
+    private record Certification(String name, int revision, String closedBy) {
 
+        static final Certification NONE = new Certification(null, 0, null);
+
+        /** Sin firma de certificacion localizada no se prohibe nada: el {@code rev <= 0} del original. */
+        boolean forbids(final int signatureRevision) {
+            return revision > 0 && signatureRevision > revision;
+        }
+    }
+
+    /** Con varias firmas de certificacion cuenta la ultima, la de la revision mas alta (ADR-0043). */
     private static Certification certification(final PdfReader reader, final AcroFields fields) {
         if (reader.getCertificationLevel()
                 != PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED) {
-            return new Certification(0, null);
+            return Certification.NONE;
         }
+        String last = null;
         for (final String name : fields.getSignatureNames()) {
-            final PdfDictionary signature = fields.getSignatureDictionary(name);
-            final Object reference = signature.get(PdfName.REFERENCE);
-            if (!(reference instanceof PdfArray)) {
-                continue;
-            }
-            final Object first = ((PdfArray) reference).getArrayList().get(0);
-            if (first instanceof PdfDictionary
-                    && ((PdfDictionary) first).get(PdfName.TRANSFORMMETHOD) != null) {
-                final PdfPKCS7 closer = readableSignature(fields, name);
-                return new Certification(fields.getRevision(name),
-                        closer == null || closer.getSigningCertificate() == null
-                                ? null
-                                : readable(closer.getSigningCertificate().getSubjectX500Principal()));
+            if (isCertification(fields.getSignatureDictionary(name))
+                    && (last == null || fields.getRevision(name) > fields.getRevision(last))) {
+                last = name;
             }
         }
-        return new Certification(0, null);
+        if (last == null) {
+            return Certification.NONE;
+        }
+        final PdfPKCS7 closer = readableSignature(fields, last);
+        return new Certification(last, fields.getRevision(last),
+                closer == null || closer.getSigningCertificate() == null
+                        ? null
+                        : readable(closer.getSigningCertificate().getSubjectX500Principal()));
+    }
+
+    private static boolean isCertification(final PdfDictionary signature) {
+        final PdfArray references = signature.getAsArray(PdfName.REFERENCE);
+        if (references == null) {
+            return false;
+        }
+        for (int i = 0; i < references.size(); i++) {
+            if (PdfReader.getPdfObject(references.getPdfObject(i)) instanceof PdfDictionary reference
+                    && DOC_MDP.equals(reference.get(PdfName.TRANSFORMMETHOD))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isTimestamp(final AcroFields fields, final String name) {

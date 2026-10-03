@@ -23,7 +23,7 @@ pub use config::{
 };
 pub use document_signatures::{
     DocumentFinding, DocumentSignature, DocumentSignatures, SignatureStandard, SignatureStatus,
-    Tone, Validity, ValidityReason,
+    SigningDate, Tone, Validity, ValidityReason,
 };
 pub use language::Language;
 pub use layer2_text::{
