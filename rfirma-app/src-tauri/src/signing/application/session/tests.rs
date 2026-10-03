@@ -551,6 +551,34 @@ fn a_file_of_an_unrecognized_format_has_no_signatures_and_does_not_reach_the_eng
 }
 
 #[test]
+fn the_signatures_of_a_certified_pdf_reach_the_engine() {
+    let files = DocumentsInMemory::default().with(
+        "/tmp/certificado.pdf",
+        b"%PDF-1.7\n9 0 obj\n<< /Type /Sig /Reference [ << /TransformMethod /DocMDP >> ] >>\nendobj",
+    );
+    let engine = AnEngineThatReports::default();
+
+    previous_signatures_in(&files, &engine, &Document::opened("/tmp/certificado.pdf"))
+        .expect("leer las firmas no las rompe");
+
+    assert!(engine.was_asked());
+}
+
+#[test]
+fn the_signatures_of_an_encrypted_pdf_are_not_read() {
+    let files = DocumentsInMemory::default().with(
+        "/tmp/cifrado.pdf",
+        b"%PDF-1.7\ntrailer\n<< /Root 1 0 R /Encrypt 5 0 R >>",
+    );
+    let engine = AnEngineThatReports::default();
+
+    assert!(
+        previous_signatures_in(&files, &engine, &Document::opened("/tmp/cifrado.pdf")).is_err()
+    );
+    assert!(!engine.was_asked());
+}
+
+#[test]
 fn previous_signatures_in_does_not_reach_the_engine_for_a_document_that_is_not_there() {
     let files = DocumentsInMemory::default();
     let document = Document::opened("/tmp/no-existe.pdf");

@@ -414,7 +414,7 @@ pub fn previous_signatures_in(
             return Ok(DocumentSignatures::default().in_format(format))
         }
         SignatureStandard::Pades => {
-            AdmissibleDocument::check_for(Format::Pades, &bytes, Waivers::NONE)
+            AdmissibleDocument::check_for(Format::Pades, &bytes, Waivers::READING)
                 .map_err(CycleError::from)?;
         }
         SignatureStandard::Cades | SignatureStandard::Xades => {}
