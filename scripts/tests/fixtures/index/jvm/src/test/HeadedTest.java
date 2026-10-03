@@ -1,0 +1,3 @@
+package fixtures;
+
+class HeadedTest { }

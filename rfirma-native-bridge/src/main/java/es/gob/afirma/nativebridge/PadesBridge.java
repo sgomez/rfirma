@@ -1,3 +1,4 @@
+//! Prefirma y postfirma PAdES en Java puro, con el preprocesador del original; la firma del hash no está aquí (ADR-0001).
 package es.gob.afirma.nativebridge;
 
 import java.io.ByteArrayInputStream;
@@ -26,6 +27,11 @@ import es.gob.afirma.triphase.signer.processors.PAdESTriPhasePreProcessor;
  * privada no entra nunca en el isolate de Java: el PKCS#1 sobre los atributos
  * firmados lo calcula Rust contra el PKCS#11 del sistema. Java hace la prefirma
  * y la postfirma, y nada mas.
+ *
+ * <p>Se instancia {@code PAdESTriPhasePreProcessor} directamente y NO
+ * {@code PreProcessorFactory}, que referencia los preprocesadores XAdES,
+ * FacturaE, ASiC y PKCS1 y haria alcanzable todo el arbol de formatos dentro de
+ * la imagen.
  */
 public final class PadesBridge {
 
@@ -58,7 +64,7 @@ public final class PadesBridge {
      * Prefirma PAdES.
      *
      * <p>El {@code preSignB64} son los <b>atributos firmados CAdES en ASN.1
-     * DER</b> (ID-15), no un hash y no un {@code DigestInfo}: Rust recibe un
+     * DER</b>, no un hash y no un {@code DigestInfo}: Rust recibe un
      * bloque que debe hashear y firmar como cualquier PKCS#1 sobre bytes
      * arbitrarios.
      *
@@ -74,7 +80,7 @@ public final class PadesBridge {
 
         // La zona horaria se captura AQUI porque preProcessPreSign construye su
         // GregorianCalendar con la de por defecto, y el desfase entra dentro del
-        // rango firmado (#23). Fuera del sello se heredaria del entorno de la
+        // rango firmado. Fuera del sello se heredaria del entorno de la
         // postfirma, que puede no ser el mismo.
         //
         // Captura y prefirma van dentro del MISMO cerrojo que la postfirma, y no

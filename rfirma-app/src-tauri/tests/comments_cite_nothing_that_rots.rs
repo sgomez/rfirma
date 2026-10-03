@@ -3,11 +3,10 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Language {
-    Rust,
-    TypeScript,
-}
+#[path = "comments_cite_nothing_that_rots/lexer.rs"]
+mod lexer;
+
+use lexer::{comments_of, is_word_char, Language};
 
 /// Zona de código cuyos comentarios se vigilan.
 struct Zone {
@@ -18,7 +17,7 @@ struct Zone {
     extensions: &'static [&'static str],
 }
 
-const ZONES: [Zone; 2] = [
+const ZONES: [Zone; 3] = [
     Zone {
         root: "rfirma-app/src-tauri/src",
         language: Language::Rust,
@@ -28,6 +27,11 @@ const ZONES: [Zone; 2] = [
         root: "rfirma-app/src",
         language: Language::TypeScript,
         extensions: &["ts", "tsx"],
+    },
+    Zone {
+        root: "rfirma-native-bridge/src/main/java",
+        language: Language::Java,
+        extensions: &["java"],
     },
 ];
 
@@ -54,13 +58,6 @@ const FIXED_JAVA_LINE_REFERENCES: [&str; 2] = [
     "rfirma-app/src-tauri/src/site/adapters/service/mod.rs",
 ];
 
-/// Un comentario, o una línea de un comentario de bloque, con su número de línea.
-#[derive(Debug, PartialEq, Eq)]
-struct CommentLine {
-    line: usize,
-    text: String,
-}
-
 /// Lo que está mal en una línea de comentario y qué hacer.
 #[derive(Debug, PartialEq, Eq)]
 struct Finding {
@@ -76,193 +73,6 @@ fn is_a_test_file(relative: &str) -> bool {
             || rooted.ends_with("_tests.rs")
             || rooted.contains("/tests/"));
     a_rust_test || relative.ends_with(".test.ts") || relative.ends_with(".test.tsx")
-}
-
-fn is_word_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
-}
-
-/// Los comentarios del código, una entrada por línea, sin confundir un `//` de una cadena con uno.
-fn comments_of(source: &str, language: Language) -> Vec<CommentLine> {
-    let chars: Vec<char> = source.chars().collect();
-    let mut comments = Vec::new();
-    let mut line = 1;
-    let mut i = 0;
-    let mut last_significant = None;
-
-    while i < chars.len() {
-        let c = chars[i];
-        let next = chars.get(i + 1).copied();
-        match (c, next) {
-            ('/', Some('/')) => {
-                let start = i;
-                while i < chars.len() && chars[i] != '\n' {
-                    i += 1;
-                }
-                comments.push(CommentLine {
-                    line,
-                    text: chars[start..i].iter().collect(),
-                });
-                continue;
-            }
-            ('/', Some('*')) => {
-                let mut depth = 1;
-                let mut text = String::from("/*");
-                i += 2;
-                while i < chars.len() && depth > 0 {
-                    let (here, after) = (chars[i], chars.get(i + 1).copied());
-                    if here == '/' && after == Some('*') && language == Language::Rust {
-                        depth += 1;
-                    } else if here == '*' && after == Some('/') {
-                        depth -= 1;
-                    }
-                    if here == '\n' {
-                        comments.push(CommentLine {
-                            line,
-                            text: std::mem::take(&mut text),
-                        });
-                        line += 1;
-                    } else {
-                        text.push(here);
-                    }
-                    i += 1;
-                }
-                comments.push(CommentLine { line, text });
-                continue;
-            }
-            ('"', _) => {
-                i = skip_quoted(&chars, i, '"', language == Language::Rust, &mut line);
-                last_significant = Some('"');
-                continue;
-            }
-            ('`', _) if language == Language::TypeScript => {
-                i = skip_quoted(&chars, i, '`', true, &mut line);
-                last_significant = Some('`');
-                continue;
-            }
-            ('\'', _) => {
-                i = if language == Language::Rust {
-                    skip_rust_char_or_lifetime(&chars, i)
-                } else {
-                    skip_quoted(&chars, i, '\'', false, &mut line)
-                };
-                last_significant = Some('\'');
-                continue;
-            }
-            ('r', Some('"' | '#'))
-                if language == Language::Rust
-                    && !(i > 0 && is_word_char(chars[i - 1]))
-                    && raw_string_hashes(&chars, i).is_some() =>
-            {
-                let hashes = raw_string_hashes(&chars, i).unwrap_or(0);
-                i = skip_raw_string(&chars, i, hashes, &mut line);
-                last_significant = Some('"');
-                continue;
-            }
-            ('/', _)
-                if language == Language::TypeScript
-                    && last_significant.is_none_or(|p| "(,=:[!&|?{};>".contains(p)) =>
-            {
-                i = skip_regex(&chars, i);
-                last_significant = Some('/');
-                continue;
-            }
-            _ => {}
-        }
-        if c == '\n' {
-            line += 1;
-        } else if !c.is_whitespace() {
-            last_significant = Some(c);
-        }
-        i += 1;
-    }
-    comments
-}
-
-/// Posición tras la cadena que abre `chars[start]`; las de una línea se cortan al llegar al salto.
-fn skip_quoted(
-    chars: &[char],
-    start: usize,
-    quote: char,
-    multiline: bool,
-    line: &mut usize,
-) -> usize {
-    let mut i = start + 1;
-    while i < chars.len() {
-        match chars[i] {
-            '\\' => {
-                i += 1;
-                if chars.get(i) == Some(&'\n') {
-                    *line += 1;
-                }
-            }
-            c if c == quote => return i + 1,
-            '\n' if !multiline => return i,
-            '\n' => *line += 1,
-            _ => {}
-        }
-        i += 1;
-    }
-    chars.len()
-}
-
-/// Posición tras un literal de carácter de Rust; un apóstrofo de lifetime solo avanza uno.
-fn skip_rust_char_or_lifetime(chars: &[char], start: usize) -> usize {
-    match (chars.get(start + 1), chars.get(start + 2)) {
-        (Some('\\'), _) => {
-            let mut i = start + 2;
-            while i < chars.len() && chars[i] != '\'' {
-                i += 1;
-            }
-            i + 1
-        }
-        (Some(_), Some('\'')) => start + 3,
-        _ => start + 1,
-    }
-}
-
-/// Cuántas almohadillas abren la cadena cruda que empieza en `chars[start]`, si es una.
-fn raw_string_hashes(chars: &[char], start: usize) -> Option<usize> {
-    let hashes = chars[start + 1..].iter().take_while(|c| **c == '#').count();
-    (chars.get(start + 1 + hashes) == Some(&'"')).then_some(hashes)
-}
-
-fn skip_raw_string(chars: &[char], start: usize, hashes: usize, line: &mut usize) -> usize {
-    let mut i = start + 2 + hashes;
-    while i < chars.len() {
-        if chars[i] == '\n' {
-            *line += 1;
-        }
-        let closes = chars[i] == '"'
-            && chars[i + 1..]
-                .iter()
-                .take(hashes)
-                .filter(|c| **c == '#')
-                .count()
-                == hashes;
-        if closes {
-            return i + 1 + hashes;
-        }
-        i += 1;
-    }
-    chars.len()
-}
-
-/// Posición tras un literal de expresión regular de TypeScript, que no cruza el salto de línea.
-fn skip_regex(chars: &[char], start: usize) -> usize {
-    let mut i = start + 1;
-    let mut in_class = false;
-    while i < chars.len() && chars[i] != '\n' {
-        match chars[i] {
-            '\\' => i += 1,
-            '[' => in_class = true,
-            ']' => in_class = false,
-            '/' if !in_class => return i + 1,
-            _ => {}
-        }
-        i += 1;
-    }
-    i
 }
 
 fn starts_a_word_at(text: &str, at: usize) -> bool {
@@ -524,6 +334,10 @@ fn rust_findings(source: &str) -> Vec<Finding> {
     findings_in("a.rs", source, Language::Rust, &tree(), &[])
 }
 
+fn java_findings(source: &str) -> Vec<Finding> {
+    findings_in("A.java", source, Language::Java, &tree(), &[])
+}
+
 fn ts_findings(source: &str) -> Vec<Finding> {
     findings_in("a.ts", source, Language::TypeScript, &tree(), &[])
 }
@@ -634,4 +448,28 @@ fn generated_files_and_autofirma_java_are_exempt() {
     assert!(ts_findings("// `Launcher.java`.").is_empty());
     assert!(!ts_findings("// `src/Launcher.java`.").is_empty());
     assert!(ts_findings("// `pdf.js`, `Cargo.lock`, `latest.json`.").is_empty());
+}
+
+#[test]
+fn a_citation_in_a_java_comment_is_caught_but_not_in_a_string_or_a_text_block() {
+    assert_eq!(
+        java_findings("class A {\n    // ver ID-63\n}\n").len(),
+        1,
+        "un comentario de linea Java con una cita"
+    );
+    assert_eq!(
+        java_findings("/**\n * Falla (#12).\n */\nclass A { }\n").len(),
+        1,
+        "un Javadoc con una cita"
+    );
+    assert!(java_findings("class A { String s = \"#12 ID-63\"; }\n").is_empty());
+    assert!(
+        java_findings("class A { String s = \"\"\"\n  #12 // ID-63\n  \"\"\"; }\n").is_empty(),
+        "un bloque de texto no es un comentario"
+    );
+    assert!(
+        java_findings("class A { int c = a / b; // ID-63\n}\n").len() == 1,
+        "una division no abre una expresion regular que se coma el comentario"
+    );
+    assert!(java_findings("class A { char q = '\\''; char h = '#'; }\n").is_empty());
 }

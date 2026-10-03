@@ -1,3 +1,4 @@
+//! Los filtros de certificado de la sede, evaluados por `CertFilterManager` del original sobre los certificados que da Rust; sin estado y sin sello.
 package es.gob.afirma.nativebridge;
 
 import java.io.ByteArrayInputStream;
@@ -12,11 +13,11 @@ import es.gob.afirma.keystores.CertificateFilter;
 import es.gob.afirma.keystores.filters.CertFilterManager;
 
 /**
- * El motor de filtros de certificado del original, prestado (ID-252).
+ * El motor de filtros de certificado del original, prestado.
  *
  * <p><b>Aqui no se decide nada</b>, igual que en {@link PadesBridge}: quien
  * decide que certificados pasan es {@code CertFilterManager}, que es el codigo
- * de AutoFirma sin tocar. Reescribirlo en Rust quedo descartado (ID-253) porque
+ * de AutoFirma sin tocar. Reescribirlo en Rust quedo descartado porque
  * rompe las dos reglas de composicion que se reimplementan mal —dentro de una
  * expresion {@code ;} es <b>Y</b>, entre {@code filters.N=} es <b>O</b>— y el
  * {@code nonexpired} implicito de la ETSI cuando la sede no manda ningun filtro.
@@ -33,7 +34,7 @@ import es.gob.afirma.keystores.filters.CertFilterManager;
  *
  * {@code CertFilterManager} anade un filtro que oculta los caducados cuando la
  * sede no declara ninguno, citando la ETSI TS 119 102-1. Ese comportamiento se
- * hereda tal cual, y <b>solo llega hasta donde llega esta llamada</b> (ID-254):
+ * hereda tal cual, y <b>solo llega hasta donde llega esta llamada</b>:
  * el listado local de rFirma no pasa por aqui y sigue enseñando el certificado
  * caducado con su estado.
  */
@@ -54,7 +55,7 @@ public final class FilterBridge {
      *
      * @param filterProperties las claves {@code filter=} / {@code filters=} /
      *                         {@code filters.N=} tal y como vinieron, sin
-     *                         reinterpretar (ID-256).
+     *                         reinterpretar.
      * @param certificates     los certificados a acotar, en su orden.
      * @return los indices que pasan, en orden ascendente.
      */

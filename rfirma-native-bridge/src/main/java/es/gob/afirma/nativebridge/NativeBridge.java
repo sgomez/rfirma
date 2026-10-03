@@ -1,3 +1,4 @@
+//! La frontera FFI del puente: los `@CEntryPoint` que Rust llama, que convierten cadenas C, delegan en los `*Bridge` y devuelven JSON en memoria reservada a mano (ADR-0003); ninguno firma (ADR-0001).
 package es.gob.afirma.nativebridge;
 
 import java.nio.charset.StandardCharsets;
@@ -17,26 +18,23 @@ import org.graalvm.nativeimage.c.type.CTypeConversion;
 import org.graalvm.word.PointerBase;
 
 /**
- * La frontera FFI del puente: las prefirmas y postfirmas vistas desde Rust.
+ * La frontera FFI del puente: las entradas que Rust llama, de firma y de consulta.
  *
  * <p>Aqui no se decide nada. Esta clase convierte cadenas C a Java, delega en
- * {@link PadesBridge}, en {@link CadesBridge} o en {@link XadesBridge} y devuelve
- * JSON; lo que hace la firma vive alli, donde se puede probar sin construir la
- * imagen nativa.
+ * el {@code *Bridge} que corresponde (firma, filtros, extraParams, validacion o
+ * firmas previas) y devuelve JSON; lo que hace cada uno vive alli, donde se
+ * puede probar sin construir la imagen nativa.
  *
- * <p><b>Once entradas y ni una mas</b>: {@code autofirma_pades_presign},
+ * <p><b>Doce entradas y ni una mas</b>: {@code autofirma_pades_presign},
  * {@code autofirma_pades_postsign}, {@code autofirma_cades_presign},
  * {@code autofirma_cades_postsign}, {@code autofirma_xades_presign},
  * {@code autofirma_xades_postsign}, {@code autofirma_filter_certificates},
  * {@code autofirma_expand_extra_params}, {@code autofirma_validate_signatures},
- * {@code autofirma_previous_signatures} y {@code autofirma_free_string}.
+ * {@code autofirma_verify_signatures}, {@code autofirma_previous_signatures} y {@code autofirma_free_string}.
  * <b>Ninguna firma</b>, y esa es la invariante:
- * la clave privada no entra al isolate (ADR-0001). Se instancia
- * {@code PAdESTriPhasePreProcessor} directamente y NO {@code PreProcessorFactory},
- * que referencia los preprocesadores XAdES, FacturaE, ASiC y PKCS1 y haria
- * alcanzable todo el arbol de formatos dentro de la imagen.
+ * la clave privada no entra al isolate (ADR-0001).
  *
- * <h2>La memoria (ADR-0003, ID-11)</h2>
+ * <h2>La memoria (ADR-0003)</h2>
  *
  * Todo lo que sale por un valor de retorno se reserva <b>a mano</b> con
  * {@link UnmanagedMemory#malloc(int)} y lo libera <b>Rust</b> llamando a
@@ -89,10 +87,10 @@ public final class NativeBridge {
     static {
         // AWT headless antes de que ninguna ruta de firma visible toque java.awt.
         //
-        // Ya no se toca java.library.path: al excluir afirma-ui-utils (ID-08) la
+        // Ya no se toca java.library.path: al excluir afirma-ui-utils la
         // libreria es UN SOLO fichero y no hay auxiliares de AWT que localizar.
         // Volver a ponerlos "por si acaso" es lo que hace que un JPEG con perfil
-        // ICC aborte el proceso en vez de dar un error recuperable (ID-09).
+        // ICC aborte el proceso en vez de dar un error recuperable.
         System.setProperty("java.awt.headless", "true");
     }
 
@@ -351,11 +349,11 @@ public final class NativeBridge {
     /**
      * Acota un listado de certificados con la expresion de filtro de la sede.
      *
-     * <p><b>Sin estado y sin sello</b> (ADR-0016, ID-252): no abre sesion
+     * <p><b>Sin estado y sin sello</b> (ADR-0016): no abre sesion
      * trifasica ninguna, asi que no hay nada que atar entre dos llamadas. El
      * DER ya viaja en cada certificado.
      *
-     * <p>La expresion cruza <b>literal</b> (ID-256): quien decide es el motor,
+     * <p>La expresion cruza <b>literal</b>: quien decide es el motor,
      * y la lista blanca de criterios de Rust decide <i>si se llama</i>, no
      * <i>que se aplica</i>.
      *
@@ -392,7 +390,7 @@ public final class NativeBridge {
     }
 
     /**
-     * Expande la politica de firma que declara la sede (ID-266).
+     * Expande la politica de firma que declara la sede.
      *
      * <p>La expansion es del original: {@code ExtraParamsProcessor} vive dentro
      * de {@code afirma-core} y sabe en que se convierte
@@ -594,7 +592,7 @@ public final class NativeBridge {
     }
 
     /**
-     * La clase de fallo que Rust distingue de un fallo cualquiera (ID-296).
+     * La clase de fallo que Rust distingue de un fallo cualquiera.
      *
      * <p>Un PDF con firmas no registradas no es un error del puente: es una
      * situacion que la sede tiene que confirmar, y sin nombre propio aqui no se
@@ -604,7 +602,7 @@ public final class NativeBridge {
 
     /**
      * La otra clase con nombre propio: la politica que la sede declara no se
-     * puede aplicar al formato pedido (ID-266).
+     * puede aplicar al formato pedido.
      *
      * <p>Sin nombre propio se colapsaria en «la firma no ha salido», y lo que
      * ha pasado es que la sede pidio una politica que no existe o que no case

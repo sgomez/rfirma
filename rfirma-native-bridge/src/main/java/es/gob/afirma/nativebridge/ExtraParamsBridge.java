@@ -1,3 +1,4 @@
+//! La expansión de `extraParams` que hace `ExtraParamsProcessor` del original: la política `expPolicy` y, con ella, el `mode` de CAdES según el tamaño y el subfiltro de PAdES; sin estado y sin sello.
 package es.gob.afirma.nativebridge;
 
 import java.util.Enumeration;
@@ -7,7 +8,7 @@ import java.util.TreeSet;
 import es.gob.afirma.core.signers.ExtraParamsProcessor;
 
 /**
- * El expansor de {@code expPolicy} del original, prestado (ID-266).
+ * El expansor de {@code expPolicy} del original, prestado.
  *
  * <p><b>Aqui no se decide nada</b>, igual que en {@link FilterBridge}: quien
  * sabe en que se convierte {@code expPolicy=FirmaAGE} es

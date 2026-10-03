@@ -1,4 +1,4 @@
-//! Cada `ADR-NNNN` citado en un `.rs` del backend o en un `.ts`/`.tsx` de la interfaz tiene su fichero en `docs/adr/`, y esta guarda lo comprueba leyendo el código como texto.
+//! Cada `ADR-NNNN` citado en un `.rs` del backend, en un `.ts`/`.tsx` de la interfaz o en un `.java` del puente tiene su fichero en `docs/adr/`, y esta guarda lo comprueba leyendo el código como texto.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -107,7 +107,7 @@ fn dangling_citations(sources: &[Source], existing: &BTreeSet<String>) -> Vec<St
         .collect()
 }
 
-/// Los `.ts` y `.tsx` **versionados** de la interfaz, con la ruta desde la raíz del repositorio.
+/// Los `.ts` y `.tsx` **versionados** de la interfaz y los `.java` del puente, con la ruta desde la raíz del repositorio.
 fn tracked_interface_files() -> Vec<String> {
     let listing = Command::new("git")
         .args([
@@ -116,6 +116,7 @@ fn tracked_interface_files() -> Vec<String> {
             "--",
             "rfirma-app/src/*.ts",
             "rfirma-app/src/*.tsx",
+            "rfirma-native-bridge/src/main/java/*.java",
         ])
         .current_dir(repository_root())
         .env_remove("GIT_DIR")
@@ -132,7 +133,7 @@ fn tracked_interface_files() -> Vec<String> {
         .collect()
 }
 
-/// Ruta y texto de cada `.ts` y `.tsx` versionado de la interfaz.
+/// Ruta y texto de cada `.ts`, `.tsx` y `.java` versionado de la interfaz y del puente.
 fn interface_sources() -> Vec<(String, String)> {
     let files = tracked_interface_files();
     assert!(
@@ -176,7 +177,7 @@ fn as_sources(owned: &[(String, String)]) -> Vec<Source<'_>> {
 }
 
 #[test]
-fn every_adr_cited_in_the_backend_and_the_interface_has_a_file() {
+fn every_adr_cited_in_the_backend_the_interface_and_the_bridge_has_a_file() {
     let existing = adr_numbers_in(&repository_root().join("docs/adr"));
     assert!(
         existing.len() >= 18,

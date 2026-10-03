@@ -1,3 +1,4 @@
+//! El sello de sesión que la prefirma devuelve, Rust transporta sin leer y la postfirma vuelve a comprobar (ADR-0016).
 package es.gob.afirma.nativebridge;
 
 import java.io.StringReader;
@@ -18,7 +19,7 @@ import java.util.TimeZone;
  * rFirma transporta <b>sin leer</b> y la postfirma vuelve a imponer.
  *
  * <p>La postfirma PAdES <b>regenera el PDF entero</b>, asi que exige recibir lo
- * mismo que la prefirma en tres cosas a la vez (ID-17): los {@code extraParams}
+ * mismo que la prefirma en tres cosas a la vez: los {@code extraParams}
  * <b>efectivos</b>, el instante de firma y la zona horaria. Si algo difiere, la
  * postfirma <b>no falla</b>: completa, y el PDF sale con {@code Digest
  * Mismatch}. La firma se invalida en silencio.

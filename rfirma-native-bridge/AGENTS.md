@@ -1,26 +1,26 @@
 # Mapa del puente Java (GraalVM Native Image)
 
-El puente es lo que AutoFirma hace en Java y rfirma no reescribe: preproceso y
-postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
-—`rfirma_crypto.dll` en Windows (ADR-0035, ADR-0040) y `librfirma_crypto.dylib` en macOS— con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
+El puente es el preproceso y el postproceso del ciclo trifásico (ADR-0001) que
+rfirma no reescribe, compilado con `native-image` a la biblioteca compartida
+de ADR-0004.
 
-| Fichero | Qué es |
-|---|---|
-| `pom.xml` | Las dependencias de AutoFirma, consumidas desde `~/.m2` (ADR-0002), y la exclusión de `afirma-ui-utils` (ADR-0012). |
-| `src/main/java/.../NativeBridge.java` | Los `@CEntryPoint`: la frontera con Rust y la reserva manual de las cadenas devueltas (ADR-0003). |
-| `src/main/java/.../PadesBridge.java` | Preproceso y postproceso PAdES, incluida la firma visible. |
-| `src/main/java/.../CadesBridge.java` | Preproceso y postproceso CAdES: firma, cofirma y contrafirma, y el contenedor ASiC-S, que entra por aquí con su propio procesador. |
-| `src/main/java/.../XadesBridge.java` | Preproceso y postproceso XAdES: firma en las variantes Enveloping, Detached, Enveloped y ASiC-S, cofirma y contrafirma con `target=tree\|leafs`, y la factura electrónica, que entra por aquí con su propio procesador. |
-| `src/main/java/.../SignatureTimestamp.java` | El sello de tiempo que pide `tsaURL` en CAdES y XAdES (ADR-0030); no toca PAdES. |
-| `src/main/java/.../TimestampFailedException.java` | El fallo con el que una firma que pidió sello y no se pudo sellar no sale. |
-| `src/main/java/.../ValidationBridge.java` | El veredicto del validador del original sobre las firmas que ya trae un documento —valida, invalida o pendiente de que la persona confirme— y lo que su orden `verify` imprime de cada una. No firma nada. |
-| `src/main/java/.../PreviousSignaturesBridge.java` | Las firmas que ya trae un PDF, un CAdES o un XAdES (FacturaE incluida), una a una: quién firmó y cuándo, y su validez con el motivo (ADR-0043). No es el veredicto de conjunto de `ValidationBridge`. |
-| `src/main/java/.../FilterBridge.java` | Los filtros de certificado que pide la sede. |
-| `src/main/java/.../ExtraParamsBridge.java` | La traducción de `extraParams` de AutoFirma. |
-| `src/main/java/.../SessionStamp.java` | El sello de sesión (ADR-0016). |
-| `src/main/java/.../SessionStampMismatchException.java` | El fallo con el que una postfirma rechaza un sello que no es el de su prefirma. |
-| `src/main/resources/META-INF/native-image/` | Los metadatos con los que se construye la imagen: las banderas de `native-image.properties` y los tipos que solo se alcanzan por reflexión, en `reachability-metadata.json`. No es un `resource-config.json` generado dentro del build. |
-| `testbench/` | El validador y el firmante de referencia de la grada C, con los generadores de muestras y la TSA de pruebas. Se abre por su `README.md`. |
+## Dónde mirar
+
+* **Qué es cada clase:** `just outline rfirma-native-bridge/src/main/java/es/gob/afirma/nativebridge/`
+  da el índice con la cabecera `//!` de cada fichero (ADR-0017). Un `.java`
+  suelto no tiene esqueleto: sus tramos, con `fichero.java:A-B`.
+  `tests/comments_cite_nothing_that_rots.rs` rechaza en sus comentarios los
+  `ID-NN`, `#NNN`, los números de línea y las rutas que no existen; quien
+  toca un fichero recorta sus comentarios a las formas de la regla 6 de
+  `CLAUDE.md`.
+* **Orden de lectura:** `NativeBridge.java` primero, que es la frontera con Rust
+  y lista los `@CEntryPoint`; cada `*Bridge.java` es lo que esa frontera
+  delega, y se abre solo el del formato que tocas.
+* `src/main/resources/META-INF/native-image/`: las banderas de la imagen
+  (`native-image.properties`) y los tipos que solo se alcanzan por reflexión
+  (`reachability-metadata.json`).
+* `testbench/`: el validador y el firmante de referencia de la grada C. Se
+  abre por su `README.md`.
 
 ## Trampas al construir
 

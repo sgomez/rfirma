@@ -122,6 +122,8 @@ END { flushdoc() }
 is_a_test_module() {
     case "/$1" in
         *.test.ts|*.test.tsx) return 0 ;;
+        */src/test/*.java) return 0 ;;
+        *.java) return 1 ;;
         *.rs) ;;
         *) return 1 ;;
     esac
@@ -132,11 +134,12 @@ is_a_test_module() {
 }
 
 index() {
-    local requested="$1" dir="$1" module count=0
+    local requested="$1" dir="$1" module count=0 with_skeleton=0
     [ -d "$dir" ] || dir="$root/$1"
     while IFS= read -r module; do
         is_a_test_module "$module" && continue
         count=$((count + 1))
+        case "$module" in *.java) ;; *) with_skeleton=1 ;; esac
         awk -v name="$module" '
             /^\/\/!/ {
                 text = $0; sub(/^\/\/![ \t]?/, "", text)
@@ -150,14 +153,19 @@ index() {
                 printf "%s  %s\n", name, header
             }
         ' "$dir/$module"
-    done < <(git -C "$dir" ls-files -- '*.rs' '*.ts' '*.tsx' | LC_ALL=C sort)
+    done < <(git -C "$dir" ls-files -- '*.rs' '*.ts' '*.tsx' '*.java' | LC_ALL=C sort)
     if [ "$count" = 0 ]; then
-        echo "outline: $requested no contiene ningun .rs, .ts ni .tsx versionado que no sea de prueba" >&2
+        echo "outline: $requested no contiene ningun .rs, .ts, .tsx ni .java versionado que no sea de prueba" >&2
         status=1
         return
     fi
-    printf "\n-- %s: %d modulos. El esqueleto de uno: just outline %s<ruta> --\n" \
-        "$requested" "$count" "${requested%/}/"
+    if [ "$with_skeleton" = 1 ]; then
+        printf "\n-- %s: %d modulos. El esqueleto de uno: just outline %s<ruta> --\n" \
+            "$requested" "$count" "${requested%/}/"
+    else
+        printf "\n-- %s: %d modulos. Un .java no tiene esqueleto: abre sus tramos con just outline %s<ruta>:A-B --\n" \
+            "$requested" "$count" "${requested%/}/"
+    fi
 }
 
 ranges() {
