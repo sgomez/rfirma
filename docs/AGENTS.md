@@ -134,8 +134,8 @@ vas a publicar un issue o una PR.**
 **Una fila de un mapa dice qué es el fichero, y se para ahí.** Una frase, la que
 hace falta para saber si es el que se busca; y, cuando ayude a no confundirlo,
 qué **no** es. El *cómo* funciona lo dice el código, y el porqué un ADR, citado
-por número. Sin tamaños —los da `just outline` en el momento—, sin citas a
-identificadores de spec y sin números de PR o de issue.
+por número. Sin tamaños ni números de línea —los da `just outline` en el momento—, sin
+citas a identificadores de spec y sin números de PR o de issue.
 
 En el backend y en la interfaz no hay filas: la misma regla vale para la primera
 línea `//!` de cada módulo —`.rs`, `.ts` o `.tsx`—, entera en una línea y de 300

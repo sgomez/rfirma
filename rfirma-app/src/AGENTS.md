@@ -10,6 +10,12 @@ partirla: **una frase, qué es y, si ayuda, qué no es**, de 300 caracteres como
 mucho y sin citas a la spec ni a issues. **Un módulo nuevo trae su cabecera en
 la misma PR que lo crea**, o el PR sale en rojo.
 
+`src-tauri/tests/comments_cite_nothing_that_rots.rs` rechaza en un comentario
+los `ID-NN`, `#NNN`, los números de línea y las rutas entre comillas invertidas
+que no acaban en un fichero versionado (`locales/index.ts`, `locales/es.ts` y
+`i18n/resources.d.ts`, generados, están exentos). Quien toca un fichero recorta
+sus comentarios a las formas que admite la regla 6 de `CLAUDE.md`.
+
 ## Presupuesto de lectura
 
 - **Para saber qué puede pedirle la ventana al backend, `just contract`. No abras
