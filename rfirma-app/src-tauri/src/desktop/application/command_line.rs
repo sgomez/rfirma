@@ -28,7 +28,9 @@ use crate::site::domain::protocol::{site_filter, SiteFilter};
 mod certgui;
 mod certtui;
 mod config;
+mod response;
 mod verify;
+use response::{Field, Response};
 pub use verify::{format_to_verify, UNKNOWN_FORMAT};
 
 /// El código de salida de una orden que termina bien.
@@ -195,39 +197,28 @@ fn carried_out(
 }
 
 fn list_aliases(arguments: &[String], stores: &dyn CertificateStores) -> Outcome {
-    let outcome = aliases_listed(arguments, stores);
-    if !arguments.iter().any(|argument| argument == XML) {
-        return outcome;
-    }
-    if outcome.exit_code != SUCCEEDED {
-        return in_the_xml_response(outcome, None);
-    }
-    Outcome {
-        stdout: xml_aliases(&outcome.stdout).into_bytes(),
-        ..outcome
-    }
-}
-
-fn xml_aliases(text: &[u8]) -> String {
-    let aliases: String = String::from_utf8_lossy(text)
-        .lines()
-        .map(|alias| format!("<alias>{}</alias>", escaped_for_xml(alias)))
-        .collect();
-    format!("<afirma><result>ok</result><response>{aliases}</response></afirma>\n")
-}
-
-fn aliases_listed(arguments: &[String], stores: &dyn CertificateStores) -> Outcome {
-    if arguments.iter().any(|argument| argument == PASSWORD_FD) {
-        return Outcome::refused(&Refusal::PasswordForListing);
-    }
-    let scope = match scope_named_by(arguments) {
-        Ok(scope) => scope,
-        Err(refusal) => return Outcome::refused(&Refusal::InvalidStore(refusal)),
-    };
-    match within_the_scope(&scope, stores) {
+    let xml = arguments.iter().any(|argument| argument == XML);
+    match aliases_listed(arguments, stores) {
+        Ok(certificates) if xml => Outcome {
+            stdout: aliases_response(&certificates).to_xml(),
+            ..Outcome::aliases_of(&certificates)
+        },
         Ok(certificates) => Outcome::aliases_of(&certificates),
-        Err(failure) => failure_of_the_scope(&failure),
+        Err(failed) if xml => in_the_xml_response(failed, None),
+        Err(failed) => failed,
     }
+}
+
+fn aliases_listed(
+    arguments: &[String],
+    stores: &dyn CertificateStores,
+) -> Result<Vec<TokenCertificate>, Outcome> {
+    if arguments.iter().any(|argument| argument == PASSWORD_FD) {
+        return Err(Outcome::refused(&Refusal::PasswordForListing));
+    }
+    let scope = scope_named_by(arguments)
+        .map_err(|refusal| Outcome::refused(&Refusal::InvalidStore(refusal)))?;
+    within_the_scope(&scope, stores).map_err(|failure| failure_of_the_scope(&failure))
 }
 
 fn sign(
@@ -327,37 +318,40 @@ fn signed(
 }
 
 fn in_the_xml_response(outcome: Outcome, signature: Option<&[u8]>) -> Outcome {
+    Outcome {
+        stdout: response_of(&outcome, signature).to_xml(),
+        ..outcome
+    }
+}
+
+fn response_of(outcome: &Outcome, signature: Option<&[u8]>) -> Response {
     let message = outcome
         .stderr
         .iter()
         .map(|line| line.strip_prefix("rfirma: ").unwrap_or(line))
         .collect::<Vec<_>>()
         .join(" ");
-    Outcome {
-        stdout: xml_response(outcome.exit_code == SUCCEEDED, &message, signature).into_bytes(),
-        ..outcome
+    let mut fields = vec![Field::One("msg", message)];
+    if let Some(bytes) = signature {
+        fields.push(Field::One(
+            "sign",
+            base64::engine::general_purpose::STANDARD.encode(bytes),
+        ));
     }
+    let result = if outcome.exit_code == SUCCEEDED {
+        "true"
+    } else {
+        "false"
+    };
+    Response::new(result, fields)
 }
 
-fn xml_response(succeeded: bool, message: &str, signature: Option<&[u8]>) -> String {
-    let sign = signature
-        .map(|bytes| {
-            format!(
-                "<sign>{}</sign>",
-                base64::engine::general_purpose::STANDARD.encode(bytes)
-            )
-        })
-        .unwrap_or_default();
-    format!(
-        "<afirma><result>{succeeded}</result><response><msg>{}</msg>{sign}</response></afirma>\n",
-        escaped_for_xml(message)
-    )
-}
-
-fn escaped_for_xml(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
+fn aliases_response(certificates: &[TokenCertificate]) -> Response {
+    let aliases = certificates
+        .iter()
+        .map(|certificate| certificate.reference().label().to_owned())
+        .collect();
+    Response::new("ok", vec![Field::Many("alias", aliases)])
 }
 
 fn the_certificate_chosen_by(

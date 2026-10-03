@@ -38,6 +38,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `application/command_line/certgui.rs` | El certificado y el PIN de `-certgui`: lo que se ofrece a la ventana, o por qué no hay nada, y lo que vuelve de ella; no abre la ventana. Pruebas en `application/command_line/tests/certgui.rs`. |
 | `application/command_line/certtui.rs` | El certificado de `-certtui`: las filas de la lista, una por certificado como en el panel, con el recordado preseleccionado; no pinta la lista. Pruebas en `application/command_line/tests/certtui.rs`. |
 | `application/command_line/config.rs` | El `-config` de `sign`: sus propiedades, con las reglas de las `properties` de una sede. No las expande. Pruebas en `application/command_line/config/tests.rs`. |
+| `application/command_line/response.rs` | La respuesta de `sign`, `cosign` y `listaliases` como estructura, y el XML de `-xml` que sale de ella; no decide qué lleva. Sin pruebas propias: se prueba por `attend`. |
 | `application/command_line/tests/certgui.rs` | Las pruebas de `-certgui` en el caso de uso, con un doble del elector gráfico. |
 | `application/command_line/tests/certtui.rs` | Las pruebas de `-certtui` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/cosign.rs` | Las pruebas de `cosign` en el caso de uso, partidas de `application/command_line/tests.rs`. |
