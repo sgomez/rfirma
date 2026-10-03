@@ -479,7 +479,7 @@ fn previous_signatures_in_returns_what_the_engine_reports() {
         issuer: "AC FNMT Usuarios".to_owned(),
         certificate_serial_number: "1".to_owned(),
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
-        status: SignatureStatus::Valid,
+        status: Some(SignatureStatus::Valid),
         reason: None,
         countersignatures: Vec::new(),
     };

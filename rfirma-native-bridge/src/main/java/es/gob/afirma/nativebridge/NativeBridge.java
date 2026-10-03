@@ -62,9 +62,11 @@ import org.graalvm.word.PointerBase;
  * previous ok  {"ok":true,"signatures":[{"subject":"&lt;DN RFC 2253&gt;",
  *              "issuer":"&lt;DN RFC 2253&gt;","serialNumber":"&lt;decimal&gt;",
  *              "signingTime":"&lt;instante ISO-8601&gt;","status":"&lt;estado&gt;",
- *              "reason":"&lt;VALIDITY_ERROR&gt;"}, ...],"changedAfterLastSignature":false}
+ *              "reason":"&lt;VALIDITY_ERROR&gt;","countersignatures":[...]}, ...],
+ *              "changedAfterLastSignature":false}
  *              estado: valid, certificateExpired, certificateNotYetValid, broken,
- *              unverifiable o notFullyChecked; reason es null en valid
+ *              unverifiable o notFullyChecked, y null fuera de PDF; reason es null
+ *              en valid; countersignatures repite la forma de signatures
  * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
  * </pre>
  *
@@ -491,9 +493,9 @@ public final class NativeBridge {
     }
 
     /**
-     * Firmas que ya trae un PDF, con quien firmo y cuando.
+     * Firmas que ya trae un PDF o un CAdES, con quien firmo y cuando.
      *
-     * @param documentB64 PDF de entrada en Base64.
+     * @param documentB64 PDF o CAdES de entrada en Base64.
      * @return JSON con la lista de firmas. Propiedad del llamante: se libera
      *         con {@code autofirma_free_string}.
      */
@@ -511,8 +513,17 @@ public final class NativeBridge {
     }
 
     static String previousSignaturesJson(final PreviousSignaturesBridge.Report report) {
-        final StringBuilder json = new StringBuilder("{\"ok\":true,\"signatures\":[");
-        final List<PreviousSignaturesBridge.Signature> signatures = report.signatures();
+        final StringBuilder json = new StringBuilder("{\"ok\":true,\"signatures\":");
+        signaturesJson(json, report.signatures());
+        return json.append(",\"changedAfterLastSignature\":")
+                .append(report.changedAfterLastSignature())
+                .append('}')
+                .toString();
+    }
+
+    private static void signaturesJson(final StringBuilder json,
+            final List<PreviousSignaturesBridge.Signature> signatures) {
+        json.append('[');
         for (int i = 0; i < signatures.size(); i++) {
             if (i > 0) {
                 json.append(',');
@@ -523,14 +534,14 @@ public final class NativeBridge {
             field(json, "issuer", signature.issuer());
             field(json, "serialNumber", signature.serialNumber());
             field(json, "signingTime", signature.signingTime());
-            field(json, "status", signature.status().wireName());
+            field(json, "status",
+                    signature.status() == null ? null : signature.status().wireName());
             field(json, "reason", signature.reason());
+            json.append(",\"countersignatures\":");
+            signaturesJson(json, signature.countersignatures());
             json.append('}');
         }
-        return json.append("],\"changedAfterLastSignature\":")
-                .append(report.changedAfterLastSignature())
-                .append('}')
-                .toString();
+        json.append(']');
     }
 
     /**

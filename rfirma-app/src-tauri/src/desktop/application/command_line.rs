@@ -15,7 +15,8 @@ use crate::desktop::domain::sign_arguments::{
 use crate::desktop::domain::store_scope::scope_named_by;
 use crate::desktop::ports::{
     CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning, DesktopHandover,
-    DocumentSigner, GraphicalPicker, SecretDescriptor, SignatureVerifier, Terminal,
+    DocumentSigner, GraphicalPicker, LocalTimeZone, SecretDescriptor, SignatureReader,
+    SignatureVerifier, Terminal,
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::protected_secret::ProtectedSecret;
@@ -55,6 +56,10 @@ pub struct CommandLinePorts<'a> {
     pub files: &'a dyn CommandLineFiles,
     /// El validador del original.
     pub verifier: &'a dyn SignatureVerifier,
+    /// La lectura de las firmas que enseña `verify -v`.
+    pub reader: &'a dyn SignatureReader,
+    /// La zona horaria en la que se enseña la fecha declarada.
+    pub time_zone: &'a dyn LocalTimeZone,
     /// Quien firma por el camino de la sede.
     pub signer: &'a dyn DocumentSigner,
     /// La ventana de sede en la que se elige con `-certgui`.

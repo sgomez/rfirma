@@ -128,6 +128,8 @@ fn chosen_with(
         filter,
         files: &files,
         verifier: &Untouched,
+        reader: &Untouched,
+        time_zone: &Untouched,
         signer,
         window,
     };

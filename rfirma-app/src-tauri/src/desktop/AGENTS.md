@@ -10,11 +10,11 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 |---|---|
 | `mod.rs` | La raíz: `DesktopRoot`, con las rutas, la invocación pendiente y la memoria de la versión. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
-| `ports.rs` | **Los puertos**: `HandlerRegistry`, `VersionMemory`, `UpdateInstaller` y los de la línea de órdenes: `CertificateStores`, `CertificateFilter`, `Terminal`, `SecretDescriptor`, `DesktopHandover`, `CommandLineFiles`, `SignatureVerifier`, `DocumentSigner` y `GraphicalPicker`. |
+| `ports.rs` | **Los puertos**: `HandlerRegistry`, `VersionMemory`, `UpdateInstaller` y los de la línea de órdenes, del almacén y la terminal a la lectura de firmas y la zona horaria de `verify -v`. |
 | `adapters/process.rs` | Lo que este proceso sabe de sí mismo: su línea de órdenes, su carpeta, el relanzamiento cuando los argumentos no son UTF-8 y el proceso de sede de cada URL que macOS entrega por Apple Event. No decide el rol. |
 | `adapters/channel.rs` | El canal de distribución (`/.flatpak-info`) y quién dice el escritorio que atiende `afirma://`. Léelo antes que sus hermanos. Pruebas en `adapters/channel/tests.rs`. |
 | `adapters/choice.rs` | Elegir, leer o retirar el manejador, en el `mimeapps.list` del `$HOME` y con todo lo demás intacto. Firefox guarda la suya aparte. Pruebas en `adapters/choice/tests.rs`. |
-| `adapters/command_line_ports.rs` | Los adaptadores de los puertos de la línea de órdenes: `DiskFiles`, el disco, y `NativeVerifier` y `NativeFilter`, el validador y el motor de filtros del original en la librería nativa, que no se cargan hasta que se les pregunta. Sin pruebas propias. |
+| `adapters/command_line_ports.rs` | Los adaptadores de los puertos de la línea de órdenes sobre el disco, la zona horaria del sistema y la librería nativa —validador, filtros y lectura de firmas—, que no se carga hasta que se le pregunta. Sin pruebas propias. |
 | `adapters/failures.rs` | La única traducción de las situaciones del escritorio a lo que ve la ventana (ADR-0009); ninguna llega a la sede. Pruebas en `adapters/failures/tests.rs`. |
 | `adapters/firefox_lock.rs` | Si Firefox tiene abierto un perfil: el bloqueo POSIX de `.parentlock`, o `parent.lock` sin compartir en Windows. Pruebas en `adapters/firefox_lock/tests.rs` y `adapters/firefox_lock/windows_tests.rs`. |
 | `adapters/handover.rs` | `SpawnedDesktop`: entrega un fichero al escritorio lanzando otro proceso de rFirma, que la instancia única reenvía si ya hay uno. Sin pruebas propias. |
@@ -42,9 +42,10 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `application/command_line/tests/certtui.rs` | Las pruebas de `-certtui` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/cosign.rs` | Las pruebas de `cosign` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/filter_and_xml.rs` | Las pruebas de `-filter` y de la respuesta de `-xml`, partidas de `application/command_line/tests.rs`. |
+| `application/command_line/tests/listaliases.rs` | Las pruebas de `listaliases` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/sign_config.rs` | Las pruebas de `sign -config` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/sign_formats.rs` | Las pruebas de `sign -format` en el caso de uso, partidas de `application/command_line/tests.rs`. |
-| `application/command_line/verify.rs` | La orden `verify`: el formato que detecta `-format auto` y un resultado de validez por línea, como el original. No el XML de `-xml`. Pruebas en `application/command_line/verify/tests.rs`. |
+| `application/command_line/verify.rs` | La orden `verify`: el formato que detecta `-format auto`, un resultado de validez por línea, como el original, y con `-v` la ficha de cada firma. No el XML de `-xml`. Pruebas en `application/command_line/verify/tests.rs`. |
 | `application/destination.rs` | Abrir un destino externo conocido en el navegador. Pruebas en `application/destination/tests.rs`. |
 | `application/handlers.rs` | Quién atiende `afirma://`, del escritorio a Preferencias y de vuelta. Devuelve dominio, nunca una vista. Pruebas en `application/handlers/tests.rs`. |
 | `application/invocation.rs` | La invocación desde fuera, `rfirma documento.pdf`: qué trae, qué hace la segunda —solo del escritorio (ADR-0024)— el rol de proceso que decide `role_of`, terminal incluido, y el de las URL entregadas por Apple Event. Pruebas en `application/invocation/tests.rs`. |

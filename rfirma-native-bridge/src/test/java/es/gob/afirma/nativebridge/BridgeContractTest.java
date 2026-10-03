@@ -66,7 +66,8 @@ class BridgeContractTest {
         for (final PreviousSignaturesBridge.Status status : PreviousSignaturesBridge.Status.values()) {
             signatures.add(new PreviousSignaturesBridge.Signature("CN=A", "CN=B", "7",
                     "2026-09-26T10:00:00Z", status,
-                    status == PreviousSignaturesBridge.Status.VALID ? null : "NO_MATCH_DATA"));
+                    status == PreviousSignaturesBridge.Status.VALID ? null : "NO_MATCH_DATA",
+                    List.of()));
         }
 
         final String json = NativeBridge.previousSignaturesJson(
@@ -74,7 +75,7 @@ class BridgeContractTest {
 
         assertEquals("{\"ok\":true,\"signatures\":["
                 + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
-                + "\"signingTime\":\"2026-09-26T10:00:00Z\",\"status\":\"valid\",\"reason\":null},"
+                + "\"signingTime\":\"2026-09-26T10:00:00Z\",\"status\":\"valid\",\"reason\":null,\"countersignatures\":[]},"
                 + entryWith("certificateExpired") + "," + entryWith("certificateNotYetValid") + ","
                 + entryWith("broken") + "," + entryWith("unverifiable") + ","
                 + entryWith("notFullyChecked")
@@ -83,10 +84,29 @@ class BridgeContractTest {
                 "Rust lee estos nombres: cambiar uno rompe el enlace sin que falle la compilacion");
     }
 
+    @Test
+    void the_previous_signatures_report_nests_each_countersignature_and_crosses_no_status_as_null() {
+        final PreviousSignaturesBridge.Signature counter = new PreviousSignaturesBridge.Signature(
+                "CN=C", "CN=B", "8", null, null, null, List.of());
+        final PreviousSignaturesBridge.Signature signer = new PreviousSignaturesBridge.Signature(
+                "CN=A", "CN=B", "7", null, null, null, List.of(counter));
+
+        final String json = NativeBridge.previousSignaturesJson(
+                new PreviousSignaturesBridge.Report(List.of(signer), false));
+
+        assertEquals("{\"ok\":true,\"signatures\":["
+                + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
+                + "\"signingTime\":null,\"status\":null,\"reason\":null,\"countersignatures\":["
+                + "{\"subject\":\"CN=C\",\"issuer\":\"CN=B\",\"serialNumber\":\"8\","
+                + "\"signingTime\":null,\"status\":null,\"reason\":null,\"countersignatures\":[]}"
+                + "]}],\"changedAfterLastSignature\":false}",
+                json);
+    }
+
     private static String entryWith(final String status) {
         return "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
                 + "\"signingTime\":\"2026-09-26T10:00:00Z\",\"status\":\"" + status
-                + "\",\"reason\":\"NO_MATCH_DATA\"}";
+                + "\",\"reason\":\"NO_MATCH_DATA\",\"countersignatures\":[]}";
     }
 
     @Test

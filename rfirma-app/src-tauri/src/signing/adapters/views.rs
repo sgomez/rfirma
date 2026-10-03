@@ -300,7 +300,9 @@ impl From<DocumentSignature> for PreviousSignatureView {
             issuer: signature.issuer,
             certificate_serial_number: signature.certificate_serial_number,
             signing_time: signature.signing_time,
-            status: SignatureStatusView::from(signature.status),
+            status: signature
+                .status
+                .map_or(SignatureStatusView::Unverifiable, SignatureStatusView::from),
             reason: signature.reason,
         }
     }

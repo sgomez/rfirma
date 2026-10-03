@@ -8,7 +8,7 @@ fn a_previous_signature_with_status(status: SignatureStatus) -> DocumentSignatur
         issuer: "AC FNMT Usuarios".to_owned(),
         certificate_serial_number: "1".to_owned(),
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
-        status,
+        status: Some(status),
         reason: None,
         countersignatures: Vec::new(),
     }
