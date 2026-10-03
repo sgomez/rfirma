@@ -1537,6 +1537,9 @@ msgstr "an electronic invoice"
 msgid "sede.consent.unknownOriginSignature"
 msgstr "An unidentified page asks for your signature."
 
+msgid "sede.consent.terminalTitle"
+msgstr "Sign {{name}}"
+
 msgid "sede.consent.unknownOriginIdentity"
 msgstr "An unidentified page asks for your identity data."
 
@@ -1967,6 +1970,12 @@ msgid_plural "sede.noCertificate.excludedTitle"
 msgstr[0] "{{origin}} does not accept your certificate"
 msgstr[1] "{{origin}} accepts none of your {{count}} certificates"
 msgstr[2] "{{origin}} accepts none of your {{count}} certificates"
+
+msgid "sede.noCertificate.terminalExcludedTitle"
+msgid_plural "sede.noCertificate.terminalExcludedTitle"
+msgstr[0] "Your -filter leaves out your certificate"
+msgstr[1] "Your -filter leaves none of your {{count}} certificates"
+msgstr[2] "Your -filter leaves none of your {{count}} certificates"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Install another certificate, or close and carry on from the site."

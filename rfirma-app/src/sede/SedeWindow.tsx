@@ -128,6 +128,7 @@ function SedeDialog({
         {stage.kind === "consent" && (
           <SedeConsent
             origin={errand.origin}
+            terminalOrder={errand.terminalOrder ?? null}
             operation={errand.operation}
             stage={stage}
             countdown={consentCountdown}
@@ -173,6 +174,7 @@ function SedeDialog({
         {stage.kind === "noCertificate" && (
           <SedeNoCertificate
             origin={errand.origin}
+            terminal={errand.terminalOrder !== undefined}
             reason={stage.reason}
             owned={stage.owned}
             failure={installFailure}
