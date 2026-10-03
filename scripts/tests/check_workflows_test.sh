@@ -115,6 +115,9 @@ dir="$(tree secret-in-preview-job)"
 sed -i -E '0,/^    steps:$/s||    env:\n      X: ${{ secrets.X }}\n    steps:|' "$dir/.github/workflows/preview.yml"
 fails_naming "secreto en un job de Preview que no es build" "$dir" ".github/workflows/preview.yml:"
 
+breaks issues-write-on-pull-request "no puede escribir issues" .github/workflows/ci.yml \
+    '0,/^      pull-requests: read$/s//      pull-requests: read\n      issues: write/'
+
 breaks missing-local-action "accion local que no existe" .github/workflows/ci.yml \
     '0,/uses: \.\/\.github\/actions\/setup-runner/s//uses: .\/.github\/actions\/setup-just/'
 

@@ -17,11 +17,15 @@ Los arneses que llaman las recetas del `justfile` (ADR-0013).
 | `check-glibc.sh` | Comprueba el suelo de glibc de la librería nativa. |
 | `flatpak-sources.sh` | Regenera las fuentes de cargo vendorizadas del manifiesto flatpak y el sello de `Cargo.lock`. |
 | `token-per-test.sh` | Envoltorio de nextest que da a cada proceso de prueba su propia copia del almacén de SoftHSM. Lo llama `.config/nextest.toml` de `rfirma-app/src-tauri`, no una receta. |
-| `ci-lanes.sh` | Dice, a partir de los ficheros de un PR, qué carriles del CI tienen que correr. Lo llama el job `scope` de `ci.yml`, no una receta. |
+| `ci-lanes.sh` | Dice, a partir de los ficheros de un PR o de un push a `main`, qué carriles del CI tienen que correr, los de Linux y los de Windows y macOS. Lo llama el job `scope` de `ci.yml`, no una receta. |
+| `platform-files.sh` | Lista los `.rs` de `rfirma-app/src-tauri` con un `cfg` de plataforma y los módulos que ese `cfg` declara, para `ci-lanes.sh`. Lo llama el job `scope` de `ci.yml`. |
+| `main-moved.sh` | Dice, a partir de las ejecuciones de un workflow, si `main` se ha movido desde la anterior. Lo llaman las puertas de `nightly.yml` y `warm-release-cache.yml`. |
 | `packages-manifest.sh` | Escribe y lee el `paquetes.json` de una entrega: una fila por paquete con plataforma, fichero, formato, si es firmable y su aviso; también genera las notas del borrador de la Release. Lo llama la receta `packages-manifest` y lo leen `release.yml`, `preview.yml`, `packaging/verify-packages.sh` y `packaging/repo/`. |
 | `preview-comment.sh` | Compone el Markdown del comentario fijo de la preview de una PR a partir de los artefactos, el manifiesto y el contexto de la ejecución; no imprime nada si no hay nada que comentar. Lo llama `preview-comment.yml`. |
 | `tests/outline_test.sh` | Prueba el esqueleto, los tramos y el índice que produce `outline.sh` sobre los fixtures de `tests/fixtures/`. |
-| `tests/ci_lanes_test.sh` | Prueba qué carriles enciende `ci-lanes.sh` para cada clase de fichero. |
+| `tests/ci_lanes_test.sh` | Prueba qué carriles enciende `ci-lanes.sh` para cada clase de fichero, con la lista de plataforma, en un push y con etiquetas. |
+| `tests/platform_files_test.sh` | Prueba `platform-files.sh` sobre un árbol temporal y, contra el repositorio, que el adaptador CNG cuenta como de Windows. |
+| `tests/main_moved_test.sh` | Prueba `main-moved.sh` con respuestas de la API hechas a mano: primera ejecución, sin cambios, canceladas, otro título y API caída. |
 | `tests/packages_manifest_test.sh` | Prueba el manifiesto de paquetes (entrega completa, candidata, extensión desconocida, firmable, plataformas). |
 | `tests/preview_comment_test.sh` | Prueba el comentario de la preview: filas por artefacto, avisos del manifiesto, fallo, salida vacía y marcador en la primera línea. |
 | `tests/check_versions_test.sh` | Prueba la guarda de `versions.env` sobre árboles temporales: literales, pom, formato y el fichero viejo de GraalVM. |

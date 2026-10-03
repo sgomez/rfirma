@@ -22,7 +22,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0011 | Dónde cae el documento firmado |
 | 0012 | La rúbrica la normaliza Rust, no Java |
 | 0013 | Estructura del repositorio y cadena de compilación (el `justfile`, el *bundler*) |
-| 0014 | Gradas de prueba y puerta de calidad (CRAP) |
+| 0014 | Gradas de prueba y puerta de calidad (CRAP), y qué carriles del CI corren en cada evento |
 | 0015 | Canal propio: repositorios y canal de Windows en `rfirma.sgomez.me`, y Releases |
 | 0016 | El sello de sesión: una sola invariante |
 | 0017 | La arquitectura de los dos lados: puertos en la ventana, contextos con capas en el backend |

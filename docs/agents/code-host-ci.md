@@ -119,7 +119,7 @@ It lands in the test's `CARGO_TARGET_TMPDIR`
 (`rfirma-app/src-tauri/target/llvm-cov-target/tmp/manual-gate.pdf` today, because the run is instrumented), the test prints its
 absolute path, and the slow lane uploads it as the workflow artifact
 **`pdf-puerta-manual`**. So closing the gate is: take that artifact from any
-`Imagen nativa` run — every PR and every push to `main` has one — and upload it
+`Imagen nativa` run — every PR and every push to `main` whose files affect it has one — and upload it
 to VALIDe. If the maximal case validates, the other three are subsets of it.
 
 **The fast lane does not build the native library, deliberately.** It no longer
@@ -140,20 +140,31 @@ to be fast.
 
 | Lane | Job | When |
 | --- | --- | --- |
-| scope | `Alcance` | every run; the four jobs below wait for it |
-| fast | `Cadena Java`, `Cadena TypeScript`, `Cadena Rust` (parallel) | every push to `main`; a PR only if its files affect the chain |
-| native | `Imagen nativa` (parallel) | every push to `main`, tags `v*`, manual dispatch, weekly cron; a PR only if its files affect it |
-| warm | `Calienta la cache de la entrega` (`warm-release-cache.yml`) | Linux on every push to `main`; Windows on the weekly cron and manual dispatch; never a PR |
+| scope | `Alcance` | every run; every job below in `ci.yml` waits for it |
+| fast | `Cadena Java`, `Cadena TypeScript`, `Cadena Rust` (parallel) | a PR or a push to `main` only if its files affect the chain; weekly cron and manual dispatch always |
+| native | `Imagen nativa` (parallel) | a PR or a push to `main` only if its files affect it; tags `v*`, weekly cron and manual dispatch always |
+| platforms | `Plataformas / Windows`, `Plataformas / macOS` (`platforms.yml`) | a PR only if its files concern the platform or it carries `ci-windows`, `ci-macos` or `ci-full`; never a push; weekly cron and manual dispatch always |
+| nightly | `Nocturna` (`nightly.yml`) | Windows and macOS on `main` once a day if `main` moved since the last one; a red opens or comments one `needs-triage` issue |
+| warm | `Calienta la cache de la entrega` (`warm-release-cache.yml`) | Linux daily if `main` moved; Windows on the weekly cron; both on manual dispatch; never a PR |
 | cron | `Caducidad del kit FNMT` (`fnmt-kit-expiry.yml`) | weekly cron and manual dispatch only |
 
 **Carriles por ficheros.** En un PR, `Alcance` pasa la lista de ficheros a
-`scripts/ci-lanes.sh`, y un carril se salta —queda `skipped`, que el run
-cuenta como verde— solo si todos los ficheros están en su lista de ajenos.
-Ante la duda corre: el `justfile`, `.github/`, una ruta nueva o un fallo de la
-API los encienden todos. Las guardas de `rfirma-app/src-tauri/tests` leen
-`rfirma-app/src`, `docs/adr`, `testdata/` y el `justfile`, así que un PR solo
-de interfaz sigue pagando `Cadena Rust`. La etiqueta `ci-full` los fuerza
-todos en el siguiente push; el resumen de `Alcance` dice cuáles se omitieron.
+`scripts/ci-lanes.sh`, y en un push a `main` la del intervalo `before...sha`. Un
+carril de Linux se salta —queda `skipped`, que el run cuenta como verde— solo
+si todos los ficheros están en su lista de ajenos. Ante la duda corre: el
+`justfile`, `.github/`, una ruta nueva o un fallo de la API los encienden
+todos. Las guardas de `rfirma-app/src-tauri/tests` leen `rfirma-app/src`,
+`docs/adr`, `testdata/` y el `justfile`, así que un PR solo de interfaz sigue
+pagando `Cadena Rust`. Windows y macOS van al revés: corren solo si algún
+fichero les concierne —los `.rs` con un `cfg` de plataforma y los módulos que
+ese `cfg` declara, que `scripts/platform-files.sh` calcula en cada ejecución,
+más `Cargo.toml`, `Cargo.lock`, `build.rs`, la configuración de Tauri, su
+`packaging/`, el `justfile`, `versions.env` y `.github/`—, y en un push nunca:
+los cubre la nocturna (ADR-0014). Las etiquetas `ci-full`, `ci-windows` y
+`ci-macos` fuerzan sus carriles en el siguiente push; el resumen de `Alcance`
+dice qué corre, qué se omitió y por qué. **Un rojo de Windows o macOS en
+`main` llega por la nocturna**, como una issue `needs-triage` con título «La
+nocturna de Windows y macOS sale en rojo».
 La etiqueta `preview` es de otro workflow, `Preview`: construye los paquetes del head
 de la PR y los sube como artefactos `rfirma-preview-<plataforma>`; no toca los carriles.
 Solo se dispara al poner la etiqueta: un push no reconstruye, y para rehacer un preview se quita la etiqueta y se vuelve a poner.
@@ -180,18 +191,18 @@ gap between a cold run and that warm number.
 
 **Only `main` writes Rust caches** (`save-if`, only inside `setup-runner`, which
 `check-workflows.sh` guards): a PR restores `main`'s and saves none, and `Limpieza de caches` deletes what a
-closed PR left, and the `Caches de Rust superadas` run (`stale-rust-caches.yml`) — after the CI of every push to `main` that changes `Cargo.lock` or `versions.env`, and once a day — deletes every Rust cache of `main` but the newest of its profile, so the 10 GB quota does not evict `main`'s Windows cache.
+closed PR left, and the `Caches de Rust superadas` run (`stale-rust-caches.yml`) — after the CI of every push to `main` that changes `Cargo.lock` or `versions.env`, and once a day after the nightly, which is what saves the Windows and macOS caches — deletes every Rust cache of `main` but the newest of its profile, so the 10 GB quota does not evict `main`'s Windows cache.
 
 The `native` lane runs `just test-native` (tier C and the FFI CRAP gate in one instrumented pass)
-on **every push to `main` and every PR its files can affect**. The native library `librfirma_crypto.so` is
+on **every PR and every push to `main` its files can affect**. The native library `librfirma_crypto.so` is
 cached by hash of the Java bridge and `bootstrap.sh`, so PRs that do not touch Java
 restore it in seconds and run tier C tests without rebuilding the GraalVM image.
 This ensures regressions in tier C tests or FFI compatibility are caught at PR time
 instead of escaping to `main`. Rebuilding `native-image` only happens when the Java
 bridge actually changes.
 
-The release caches are warmed by `Calienta la cache de la entrega`: Linux on
-every push to `main`, Windows on the weekly cron and manual dispatch. No PR
+The release caches are warmed by `Calienta la cache de la entrega`: Linux daily
+when `main` moved, Windows on the weekly cron, both on manual dispatch. No PR
 starts it, and the `release` label no longer triggers anything.
 
 **A job's conclusion does not distinguish "passed" from "skipped every step".**
@@ -206,7 +217,7 @@ gh api "repos/{owner}/{repo}/actions/runs/<run-id>/jobs" \
 This is the same `steps > 0` test that tells a code-red from an infra-red
 above, applied to a *green* job.
 
-The weekly cron does triple duty: it keeps the `~/.m2` cache from expiring
+The weekly cron runs every lane, Windows and macOS included, so their caches on `main` outlive a week without merges. It also keeps the `~/.m2` cache from expiring
 (GitHub evicts after 7 days unused, and refilling it means compiling all of
 AutoFirma), it is the safety net for the warm lane, and it is the **watchman
 for the FNMT test kit** — 90 days before `testdata/fnmt/active-rsa.p12`

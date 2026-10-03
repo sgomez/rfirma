@@ -1,0 +1,102 @@
+# Windows y macOS sobre main, una vez al dia y solo si main se ha movido. Un rojo abre o actualiza una sola issue (ADR-0014).
+name: Nocturna
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7 2 * * *'
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: main se ha movido
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      moved: ${{ steps.gate.outputs.moved }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts/main-moved.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Compara con la nocturna anterior
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            printf 'moved=true\nreason=lanzada a mano\n' > gate
+          else
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/nightly.yml/runs?branch=main&per_page=30" > runs.json || : > runs.json
+            scripts/main-moved.sh "$GITHUB_SHA" "$GITHUB_RUN_ID" < runs.json > gate
+          fi
+          cat gate >> "$GITHUB_OUTPUT"
+          if grep -qx 'moved=true' gate; then
+            verdict="corren Windows y macOS"
+          else
+            verdict="no corre nada"
+          fi
+          printf '### Nocturna: %s\n\n%s.\n' "$verdict" "$(sed -n 's/^reason=//p' gate)" >> "$GITHUB_STEP_SUMMARY"
+
+  # main es quien guarda las caches de Windows y macOS que restauran los PR.
+  platforms:
+    name: Plataformas
+    needs: gate
+    if: needs.gate.outputs.moved == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/platforms.yml
+    with:
+      windows: true
+      macos: true
+      save-cache: ${{ github.ref == 'refs/heads/main' }}
+
+  report:
+    name: Avisa del rojo
+    needs: [gate, platforms]
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Abre o actualiza la issue de la nocturna
+        run: |
+          set -euo pipefail
+          title="La nocturna de Windows y macOS sale en rojo"
+          # Una sola issue viva: cada noche roja la comenta en vez de abrir otra.
+          number=$(gh issue list --state open --search "$title in:title" --json number,title \
+            --jq "[.[] | select(.title == \"$title\")][0].number // empty")
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "Sigue en rojo en \`${GITHUB_SHA:0:7}\`: $RUN_URL"
+            echo "Comentada la issue #$number." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          body=$(mktemp)
+          {
+            printf 'La nocturna de `main` (`%s`) ha salido en rojo: %s\n\n' "${GITHUB_SHA:0:7}" "$RUN_URL"
+            printf 'Los carriles de Windows y macOS ya no corren en cada PR: solo en los que tocan\n'
+            printf 'algo de su plataforma o llevan la etiqueta `ci-windows`, `ci-macos` o `ci-full`.\n'
+            printf 'Este rojo lo ha traido algun merge desde la nocturna verde anterior.\n\n'
+            printf '## Que hay que hacer\n\n'
+            printf '1. Abrir la ejecucion y ver que job y que paso fallan.\n'
+            printf '2. Reproducirlo en una PR con la etiqueta de la plataforma.\n'
+            printf '3. Cerrar esta issue cuando la nocturna vuelva a salir verde.\n\n'
+            printf 'Abierta automaticamente por `.github/workflows/nightly.yml` (ADR-0014).\n'
+          } > "$body"
+          gh issue create --title "$title" --label needs-triage --body-file "$body"

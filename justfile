@@ -119,6 +119,8 @@ check-repo: check-version fmt-check
     ruff check {{ root }}
     {{ root }}/scripts/tests/outline_test.sh
     {{ root }}/scripts/tests/ci_lanes_test.sh
+    {{ root }}/scripts/tests/platform_files_test.sh
+    {{ root }}/scripts/tests/main_moved_test.sh
     {{ root }}/scripts/tests/packages_manifest_test.sh
     {{ root }}/scripts/tests/preview_comment_test.sh
     {{ root }}/scripts/tests/check_versions_test.sh

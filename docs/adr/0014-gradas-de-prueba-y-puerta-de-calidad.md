@@ -455,6 +455,72 @@ vez lo nota el disco. El cerrojo cuesta, en el peor caso, la espera de una pasad
 **Serializar los agentes** (`execution: sequential`), que era el supuesto anterior: resolvía la
 colisión renunciando al paralelismo entero por un problema que solo tiene la pasada instrumentada.
 
+## Qué carriles corren en cada evento: Windows y macOS, fuera del camino del PR
+
+El job «Alcance» de `ci.yml` decide los carriles con `scripts/ci-lanes.sh`, que lee una lista
+de ficheros y es una función pura con sus pruebas. Los **carriles de Linux** (Java,
+TypeScript, Rust, imagen nativa y landing) corren salvo que todos los ficheros estén en su lista
+de ajenos. Los **carriles de plataforma** (Windows y macOS, en `platforms.yml`) son al revés:
+corren solo si algún fichero les concierne.
+
+| Evento | Linux | Windows y macOS |
+| --- | --- | --- |
+| PR | por ficheros del PR | por ficheros del PR, o con la etiqueta `ci-windows`, `ci-macos` o `ci-full` |
+| push a `main` | por ficheros del intervalo `before...sha` | nunca |
+| nocturna (`nightly.yml`) | — | los dos, si `main` se ha movido desde la anterior |
+| cron semanal y a mano | todos | todos |
+
+Sin lista de ficheros —la etiqueta `ci-full`, más ficheros de los que lista la API (3000 en un
+PR, 300 en la comparación de un push), un push sin commit anterior o un fallo de la API— corren
+todos los carriles de Linux. Un PR sin lista corre también los de plataforma; un push, no.
+
+**Qué concierne a una plataforma** es lo que solo ella compila o lo que cambia cómo se compila
+allí: `Cargo.toml`, `Cargo.lock`, `build.rs`, `tauri.conf.json`, `clippy.toml`, el `justfile`,
+`versions.env`, `.github/`, los scripts que corren sus jobs (`bootstrap.sh`, `pinned-version.sh`,
+`install-tools.sh`) y las reglas mismas; `packaging/windows/` y el manifiesto de Windows solo a
+Windows, y `packaging/macos/` solo a macOS. Los ficheros con un `cfg` de plataforma no se
+escriben a mano: «Alcance» los calcula en cada ejecución con `scripts/platform-files.sh` sobre un
+*sparse checkout* de los `.rs` y se los pasa a `ci-lanes.sh`. Cuenta un `cfg` de `windows`,
+`unix`, `target_os` o `target_family` —también `target_os = "linux"`, porque tocar una rama deja
+huérfana la otra— y cuenta **el módulo entero** que un `cfg` de plataforma declara con `mod`:
+`identity/adapters/windows_store/cng.rs` no lleva ningún `cfg`, y solo compila en Windows. Un
+cambio solo en el puente Java no enciende las plataformas: su `.dll` y su `.dylib` las compilan
+la nocturna y la entrega.
+
+**La nocturna es la red.** Una vez al día, si `main` ha cambiado desde la nocturna anterior,
+corre Windows y macOS enteros sobre `main`. Si sale roja, abre una issue con `needs-triage`, o
+comenta la que ya esté abierta: un rojo que solo ve otra plataforma se conoce al día siguiente, y
+se acepta. Como corre sobre `refs/heads/main`, es también quien guarda las cachés de Rust y de la
+biblioteca nativa de Windows y macOS que restauran los PR. El cron semanal de `ci.yml` las
+mantiene vivas cuando `main` pasa más de siete días sin moverse.
+
+**El aviso no lo da el CI de un PR.** El job que abre la issue escribe issues y vive en
+`nightly.yml`, que no ejecuta código de nadie; `check-workflows.sh` falla si un workflow de
+`pull_request` pide `issues: write`.
+
+### Considered Options
+
+**Windows y macOS en todo PR que toque Rust o la imagen nativa, y en cada push a `main`**, que era
+lo anterior. Medido el 3 de octubre de 2026: eran el 51 % de los segundos de runner de un PR y el
+42 % de un push. De las 119 últimas ejecuciones rojas del CI (del 23 de septiembre al 3 de
+octubre), Windows fue el único job en rojo en 7 —3 por clippy, 3 por las pruebas o la CRAP del
+adaptador CNG entre las 6 que se examinaron— y macOS en ninguna; el `.dmg` ni siquiera se publica
+(ADR-0040). Pagar ese coste en cada PR para atrapar un rojo por semana no compensaba.
+
+**Correr todos los carriles en cada push a `main`**, que era lo anterior: cada merge repetía la
+puerta entera, unos 1 450 s de runner, 38 veces en un día, tocara lo que tocara. Lo que el PR ya
+probó con el mismo alcance no gana nada repitiéndose entero.
+
+**Una lista versionada de ficheros de plataforma con una guarda que la compare con el grep**: la
+lista de `AUTHORISED_SITES` de `tests/single_cfg_os_site.rs` ya existe, pero no recoge los
+módulos que un `cfg` declara, como el adaptador CNG, que es justo el que más ha fallado. Calcular
+la lista en cada ejecución no se queda vieja y no pide mantener nada.
+
+**Un segundo cron en `ci.yml` en lugar de `nightly.yml`**: el job que abre la issue quedaría
+como un check `skipped` en cada PR por un `if:` de evento que en un PR nunca se cumple, y
+compartiría workflow con jobs que ejecutan código de un PR. El cuerpo de los dos carriles vive
+una sola vez en `platforms.yml`, que llaman `ci.yml` y `nightly.yml`.
+
 ## La bomba de relojería del kit FNMT
 
 `testdata/fnmt/` con los tres `.p12`, sus contraseñas publicadas y sus huellas al lado, más la
@@ -584,3 +650,5 @@ testbench, y si el valor por defecto de un pom no coincide con el fichero.
 - `coverage` deja de ser solo informativa: falla si la cobertura de líneas baja de
   `coverage_floor`. `diff-coverage`, que sí pide red, corre aparte en el CI y no entra en
   `check-rust` ni en `just check`.
+- Un rojo que solo se ve en Windows o en macOS puede llegar a `main` y lo avisa la nocturna al día
+  siguiente, y el PR que lo quiera ver antes lleva `ci-windows` o `ci-macos`.

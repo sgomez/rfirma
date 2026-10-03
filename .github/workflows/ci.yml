@@ -1,4 +1,5 @@
 # Puerta automatica del repositorio: `just check` repartido en un job por cadena (ADR-0014).
+# El PR y el push a main corren lo que sus ficheros afectan; Windows y macOS, en main, los corre nightly.yml.
 name: CI
 
 on:
@@ -7,7 +8,7 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Mantiene calientes las caches de los carriles.
+    # Todos los carriles, Windows y macOS incluidos: mantiene calientes sus caches aunque main no se mueva.
     - cron: '17 4 * * 1'
 
 permissions:
@@ -29,8 +30,9 @@ jobs:
   # la espera es la del mas lento (Rust) y no la suma.
 
   # --------------------------------------------------------------------------
-  # Solo en un PR sin la etiqueta 'ci-full' puede saltarse un carril, y solo si
-  # scripts/ci-lanes.sh prueba que ningun fichero del PR lo afecta.
+  # En un PR sin 'ci-full' y en un push a main, un carril de Linux se salta solo
+  # si scripts/ci-lanes.sh prueba que ningun fichero lo afecta. Windows y macOS
+  # corren en un PR solo si algun fichero les concierne, y nunca en un push.
   scope:
     name: Alcance
     runs-on: ubuntu-latest
@@ -43,10 +45,15 @@ jobs:
       rust: ${{ steps.lanes.outputs.rust }}
       native: ${{ steps.lanes.outputs.native }}
       landing: ${{ steps.lanes.outputs.landing }}
+      windows: ${{ steps.lanes.outputs.windows }}
+      macos: ${{ steps.lanes.outputs.macos }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          sparse-checkout: scripts/ci-lanes.sh
+          sparse-checkout: |
+            scripts/ci-lanes.sh
+            scripts/platform-files.sh
+            rfirma-app/src-tauri/**/*.rs
           sparse-checkout-cone-mode: false
 
       - name: Decide que carriles corren
@@ -57,28 +64,56 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
           FULL: ${{ contains(github.event.pull_request.labels.*.name, 'ci-full') }}
+          WINDOWS: ${{ contains(github.event.pull_request.labels.*.name, 'ci-windows') }}
+          MACOS: ${{ contains(github.event.pull_request.labels.*.name, 'ci-macos') }}
+          BEFORE: ${{ github.event.before }}
         run: |
           : > files
-          if [ "$EVENT" != pull_request ]; then
-            reason="evento $EVENT"
-          elif [ "$FULL" = true ]; then
-            reason="etiqueta ci-full"
-          elif [ "$CHANGED_FILES" -ge 3000 ]; then
-            reason="$CHANGED_FILES ficheros, mas de los que lista la API"
-          elif ! gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
-              --jq '.[] | .filename, (.previous_filename // empty)' > files; then
-            : > files
-            reason="la API no dio la lista de ficheros"
-          else
-            reason="ficheros del PR"
-          fi
-          scripts/ci-lanes.sh < files | tee -a "$GITHUB_OUTPUT" > lanes
+          scripts/platform-files.sh > platform-files
+          options=(--platform-files platform-files)
+          platform_skip="omitido, ningun fichero toca esta plataforma"
+          labels=""
+          case "$EVENT" in
+            pull_request)
+              [ "$WINDOWS" != true ] || { options+=(--force windows); labels="$labels ci-windows"; }
+              [ "$MACOS" != true ] || { options+=(--force macos); labels="$labels ci-macos"; }
+              if [ "$FULL" = true ]; then
+                reason="etiqueta ci-full"
+              elif [ "$CHANGED_FILES" -ge 3000 ]; then
+                reason="$CHANGED_FILES ficheros, mas de los que lista la API"
+              elif ! gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+                  --jq '.[] | .filename, (.previous_filename // empty)' > files; then
+                : > files
+                reason="la API no dio la lista de ficheros"
+              else
+                reason="ficheros del PR"
+              fi
+              ;;
+            push)
+              options+=(--no-platforms)
+              platform_skip="omitido en un push, lo cubre la nocturna (nightly.yml)"
+              if [[ "$BEFORE" =~ ^0*$ ]]; then
+                reason="push sin commit anterior"
+              elif ! gh api "repos/$GITHUB_REPOSITORY/compare/$BEFORE...$GITHUB_SHA" > compare.json; then
+                reason="la API no dio la comparacion"
+              elif [ "$(jq '.files // [] | length' compare.json)" -ge 300 ]; then
+                reason="300 ficheros o mas, mas de los que lista la API"
+              else
+                jq -r '.files // [] | .[] | .filename, (.previous_filename // empty)' compare.json > files
+                reason="ficheros del push"
+              fi
+              ;;
+            *)
+              reason="evento $EVENT"
+              ;;
+          esac
+          scripts/ci-lanes.sh "${options[@]}" < files | tee -a "$GITHUB_OUTPUT" > lanes
           {
-            echo "### Carriles ($reason)"
+            echo "### Carriles ($reason${labels:+, etiquetas$labels})"
             echo
-            sed 's/=true$/: corre/; s/=false$/: omitido, ningun fichero del PR lo afecta/; s/^/- /' lanes
+            sed -E "s/^(windows|macos)=false$/\1: $platform_skip/; s/=true$/: corre/; s/=false$/: omitido, ningun fichero lo afecta/; s/^/- /" lanes
             echo
-            echo "Pon la etiqueta \`ci-full\` en el PR y empuja para correrlos todos."
+            echo "Sin lista de ficheros corren todos, salvo Windows y macOS en un push. En un PR, las etiquetas \`ci-windows\`, \`ci-macos\` y \`ci-full\` fuerzan sus carriles en el siguiente push."
           } >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------
@@ -176,104 +211,18 @@ jobs:
           save-cache: ${{ github.ref == 'refs/heads/main' }}
 
   # ==========================================================================
-  # CARRIL DE WINDOWS
+  # CARRILES DE WINDOWS Y MACOS
   # ==========================================================================
-  # Segunda plataforma (ADR-0035): sin grada B ni C, y sin vitest.
-  windows:
-    name: Windows
+  # Segunda y tercera plataforma (ADR-0035, ADR-0040). En main los corre nightly.yml.
+  platforms:
+    name: Plataformas
     needs: scope
-    if: needs.scope.outputs.rust == 'true' || needs.scope.outputs.native == 'true'
-    runs-on: windows-latest
-    timeout-minutes: 150
-    defaults:
-      run:
-        shell: bash
-    steps:
-      # Sin esto el checkout deja los .sh con CRLF y bash no los lee.
-      - name: Fin de linea sin conversion
-        run: git config --global core.autocrlf false
+    if: needs.scope.outputs.windows == 'true' || needs.scope.outputs.macos == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/platforms.yml
+    with:
+      windows: ${{ needs.scope.outputs.windows == 'true' }}
+      macos: ${{ needs.scope.outputs.macos == 'true' }}
+      save-cache: ${{ github.ref == 'refs/heads/main' }}
 
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: ./.github/actions/setup-runner
-        with:
-          rust: lint
-          node: true
-          java: graalvm
-          tools: llvm-cov crap
-          save-cache: ${{ github.ref == 'refs/heads/main' }}
-
-      # Restaurar y guardar por separado: la .dll se guarda en cuanto existe,
-      # aunque un paso posterior falle.
-      - name: Cache de rfirma_crypto.dll
-        id: cache-native-lib
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: rfirma-native-bridge/target/lib/rfirma
-          key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
-
-      - name: Construye la libreria nativa
-        if: steps.cache-native-lib.outputs.cache-hit != 'true'
-        run: just native
-      - name: Guarda rfirma_crypto.dll
-        if: steps.cache-native-lib.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: rfirma-native-bridge/target/lib/rfirma
-          key: ${{ steps.cache-native-lib.outputs.cache-primary-key }}
-
-      - name: Interfaz compilada
-        run: just build-ts
-
-      - name: rustfmt y clippy
-        run: just lint-rust
-
-      # El adaptador CNG solo compila aqui: Linux lo oculta de su puerta CRAP (ADR-0014, ADR-0035).
-      - name: Pruebas de --lib y del canal local, y CRAP del adaptador CNG
-        run: just test-windows
-
-  # ==========================================================================
-  # CARRIL DE MACOS
-  # ==========================================================================
-  # Tercera plataforma (ADR-0040): como Windows, sin grada B ni C, y sin vitest.
-  macos:
-    name: macOS
-    needs: scope
-    if: needs.scope.outputs.rust == 'true' || needs.scope.outputs.native == 'true'
-    runs-on: macos-14
-    timeout-minutes: 120
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: ./.github/actions/setup-runner
-        with:
-          rust: lint
-          node: true
-          java: graalvm
-          save-cache: ${{ github.ref == 'refs/heads/main' }}
-
-      - name: Cache de librfirma_crypto.dylib
-        id: cache-native-lib
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: rfirma-native-bridge/target/lib/rfirma
-          key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
-
-      - name: Construye la libreria nativa
-        if: steps.cache-native-lib.outputs.cache-hit != 'true'
-        run: just native
-      - name: Guarda librfirma_crypto.dylib
-        if: steps.cache-native-lib.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: rfirma-native-bridge/target/lib/rfirma
-          key: ${{ steps.cache-native-lib.outputs.cache-primary-key }}
-
-      - name: Interfaz compilada
-        run: just build-ts
-
-      - name: rustfmt y clippy
-        run: just lint-rust
-
-      - name: Pruebas de --lib y del canal local
-        run: just test-macos

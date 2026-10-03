@@ -1,12 +1,14 @@
 # Una etiqueta solo lee las caches de `main`: cada sistema compila aqui la misma receta que
-# build.yml. Ninguna PR lo arranca (ADR-0035).
+# build.yml. Linux a diario si main se ha movido, Windows cada semana, los dos a mano.
+# Ninguna PR lo arranca (ADR-0035).
 name: Calentador de caches de la entrega
+run-name: ${{ github.event.schedule == '37 2 * * *' && 'Calentador diario de Linux' || 'Calentador de caches de la entrega' }}
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
   schedule:
+    # El valor lo comparan run-name, el gate y la matriz.
+    - cron: '37 2 * * *'
     - cron: '17 4 * * 1'
 
 permissions:
@@ -16,12 +18,44 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  gate:
+    name: main se ha movido
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      moved: ${{ steps.gate.outputs.moved }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts/main-moved.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Compara con el calentador diario anterior
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ "$SCHEDULE" != '37 2 * * *' ]; then
+            printf 'moved=true\nreason=solo el calentador diario de Linux espera a que main se mueva\n' > gate
+          else
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/warm-release-cache.yml/runs?branch=main&event=schedule&per_page=30" > runs.json || : > runs.json
+            scripts/main-moved.sh "$GITHUB_SHA" "$GITHUB_RUN_ID" 'Calentador diario de Linux' < runs.json > gate
+          fi
+          cat gate >> "$GITHUB_OUTPUT"
+          sed -n 's/^reason=//p' gate >> "$GITHUB_STEP_SUMMARY"
+
   warm:
     name: Calienta la cache de la entrega
+    needs: gate
+    if: needs.gate.outputs.moved == 'true'
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(github.event_name == 'push' && '[{"runner":"ubuntu-latest","timeout":60,"apt":"tauri","java":"none","native":false,"recipe":"build-rust"}]' || '[{"runner":"windows-latest","timeout":90,"apt":"none","java":"graalvm","native":true,"recipe":"bundle"}]') }}
+        include: ${{ fromJSON(github.event.schedule == '37 2 * * *' && '[{"runner":"ubuntu-latest","timeout":60,"apt":"tauri","java":"none","native":false,"recipe":"build-rust"}]' || github.event_name == 'schedule' && '[{"runner":"windows-latest","timeout":90,"apt":"none","java":"graalvm","native":true,"recipe":"bundle"}]' || '[{"runner":"ubuntu-latest","timeout":60,"apt":"tauri","java":"none","native":false,"recipe":"build-rust"},{"runner":"windows-latest","timeout":90,"apt":"none","java":"graalvm","native":true,"recipe":"bundle"}]') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ matrix.timeout }}
     defaults:
