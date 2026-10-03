@@ -34,7 +34,7 @@ pub(super) fn the_certificate_chosen_in_the_window(
         WindowChoice::Chosen {
             certificate,
             secret,
-        } => Ok((certificate, secret)),
+        } => Ok((*certificate, secret)),
         WindowChoice::Cancelled if offered.is_err() => Err(Outcome::failed(
             "rfirma: no hay ningún certificado vigente que elegir".to_owned(),
         )),

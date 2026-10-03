@@ -39,7 +39,7 @@ impl GraphicalPicker for ChoosingTheActiveCertificate {
             .find(|certificate| certificate.reference().label() == CARD_ACTIVE)
             .ok_or("el certificado activo del kit deberia ofrecerse")?;
         Ok(WindowChoice::Chosen {
-            certificate: active.clone(),
+            certificate: Box::new(active.clone()),
             secret: Some(ProtectedSecret::from(self.pin)),
         })
     }

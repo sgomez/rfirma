@@ -76,7 +76,7 @@ impl GraphicalPicker for ScriptedWindow {
             return Ok(WindowChoice::Cancelled);
         };
         Ok(WindowChoice::Chosen {
-            certificate: offered[position].clone(),
+            certificate: Box::new(offered[position].clone()),
             secret: pin.map(ProtectedSecret::from),
         })
     }

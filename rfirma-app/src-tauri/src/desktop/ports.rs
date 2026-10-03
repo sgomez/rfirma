@@ -173,7 +173,7 @@ pub enum WindowOffer<'a> {
 /// Lo que devuelve la ventana de `-certgui`: el certificado y el PIN tecleado, o la cancelación.
 pub enum WindowChoice {
     Chosen {
-        certificate: TokenCertificate,
+        certificate: Box<TokenCertificate>,
         secret: Option<ProtectedSecret>,
     },
     Cancelled,

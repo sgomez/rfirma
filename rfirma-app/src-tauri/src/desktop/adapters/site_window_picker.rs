@@ -181,7 +181,7 @@ impl TerminalChoice {
             *lock(&self.pending) = Some(certificate);
         } else {
             self.decide(WindowChoice::Chosen {
-                certificate,
+                certificate: Box::new(certificate),
                 secret: None,
             });
         }
@@ -197,7 +197,7 @@ impl TerminalChoice {
             ))
         })?;
         self.decide(WindowChoice::Chosen {
-            certificate,
+            certificate: Box::new(certificate),
             secret: Some(secret),
         });
         Ok(())
