@@ -24,11 +24,13 @@ import com.aowagie.text.pdf.PdfSignatureAppearance;
 
 import es.gob.afirma.core.AOException;
 import es.gob.afirma.core.RuntimeConfigNeededException;
+import es.gob.afirma.core.signers.AOSigner;
 import es.gob.afirma.core.signers.AOSimpleSignInfo;
 import es.gob.afirma.core.util.tree.AOTreeModel;
 import es.gob.afirma.core.util.tree.AOTreeNode;
 import es.gob.afirma.signers.cades.AOCAdESSigner;
 import es.gob.afirma.signers.pades.PdfUtil;
+import es.gob.afirma.signers.xades.AOXAdESSigner;
 import es.gob.afirma.signvalidation.DataAnalizerUtil;
 import es.gob.afirma.signvalidation.SignValidity;
 import es.gob.afirma.signvalidation.SignValidity.SIGN_DETAIL_TYPE;
@@ -37,13 +39,13 @@ import es.gob.afirma.signvalidation.SignatureFormatDetectorPadesCades;
 import es.gob.afirma.signvalidation.ValidatePdfSignature;
 
 /**
- * Las firmas que ya trae un PDF o un CAdES, recorridas con el
+ * Las firmas que ya trae un PDF, un CAdES o un XAdES (FacturaE incluida), recorridas con el
  * {@code getSignersStructure} de AutoFirma 1.9.2; las de PDF, ademas,
  * validadas una a una con su validador, sin red y sin modo relajado.
  *
  * <p>En PDF salta los sellos de tiempo y las firmas que iText no llega a leer,
  * y un PDF ilegible o cifrado da un informe vacio en vez de un fallo. En CAdES
- * solo lee la identidad de cada SignerInfo y de sus contrafirmas, a cualquier
+ * y XAdES solo lee la identidad de cada firmante y de sus contrafirmas, a cualquier
  * profundidad: su estado va nulo.
  */
 final class PreviousSignaturesBridge {
@@ -97,21 +99,27 @@ final class PreviousSignaturesBridge {
     static Report read(final byte[] document) {
         final AOCAdESSigner cades = new AOCAdESSigner();
         if (cades.isSign(document)) {
-            return new Report(cadesSigners(cades, document), false);
+            return new Report(signersOf(cades, document, "CAdES"), false);
+        }
+        final AOXAdESSigner xades = new AOXAdESSigner();
+        if (xades.isSign(document)) {
+            return new Report(signersOf(xades, document, "XAdES"), false);
         }
         return readPdf(document);
     }
 
-    private static List<Signature> cadesSigners(final AOCAdESSigner cades, final byte[] cms) {
+    private static List<Signature> signersOf(final AOSigner signer, final byte[] signature,
+            final String format) {
         final AOTreeModel tree;
         try {
-            tree = cades.getSignersStructure(cms, true);
+            tree = signer.getSignersStructure(signature, true);
         }
         catch (final AOException | IOException e) {
             throw new IllegalStateException(e);
         }
         if (tree == null) {
-            throw new IllegalStateException("no se ha podido leer el arbol de firmantes del CAdES");
+            throw new IllegalStateException(
+                    "no se ha podido leer el arbol de firmantes del " + format);
         }
         return signersUnder((AOTreeNode) tree.getRoot());
     }

@@ -19,7 +19,7 @@ use rfirma_lib::desktop::ports::{
 };
 use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use rfirma_lib::signing::application::cycle::ALGORITHM;
-use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
+use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, XadesVariant};
 
 use support::{a_cycle_of, a_cycle_signed_by, a_one_page_pdf, certificate_labelled, PIN};
 
@@ -403,6 +403,89 @@ fn verbose_prints_the_countersignature_of_a_cades_inside_the_signature_it_counte
             "      Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
             "      Emisor:            AC FNMT Usuarios",
             "      Fecha declarada:   <instante de la firma>",
+        ]
+    );
+}
+
+fn a_xades_countersigned_with_the_token() -> PathBuf {
+    let challenge = std::fs::read(sample("reference/document.xml")).expect("el XML se lee");
+    let signed = a_cycle_of(
+        Format::Xades(XadesVariant::Enveloping),
+        ALGORITHM,
+        &challenge,
+        SignatureOperation::Sign,
+        &[],
+    );
+    let countersigned = a_cycle_of(
+        Format::Xades(XadesVariant::Enveloping),
+        ALGORITHM,
+        &signed,
+        SignatureOperation::Countersign,
+        &[("target", "tree")],
+    );
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("verify-countersigned.xsig");
+    std::fs::write(&path, countersigned).expect("el XAdES contrafirmado se escribe");
+    path
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn verbose_prints_the_countersignature_of_a_xades_inside_the_signature_it_countersigns() {
+    let since = Utc::now();
+    let path = a_xades_countersigned_with_the_token();
+
+    let outcome = attended(&["verify", "-i", &path.display().to_string(), "-v"]);
+
+    assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
+    assert_eq!(
+        with_the_declared_time_checked(printed_lines(&outcome), since),
+        [
+            "Firma valida",
+            "",
+            "Formato: XAdES",
+            "",
+            "Firma 1",
+            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
+            "  Emisor:            AC FNMT Usuarios",
+            "  Fecha declarada:   <instante de la firma>",
+            "",
+            "    Contrafirma 1.1",
+            "      Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
+            "      Emisor:            AC FNMT Usuarios",
+            "      Fecha declarada:   <instante de la firma>",
+        ]
+    );
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn verbose_prints_the_format_and_the_sheet_of_a_signed_invoice() {
+    let since = Utc::now();
+    let invoice = std::fs::read(sample("reference/invoice.xml")).expect("la factura se lee");
+    let signed = a_cycle_of(
+        Format::FacturaE,
+        ALGORITHM,
+        &invoice,
+        SignatureOperation::Sign,
+        &[],
+    );
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("verify-invoice.xsig");
+    std::fs::write(&path, signed).expect("la factura firmada se escribe");
+
+    let outcome = attended(&["verify", "-i", &path.display().to_string(), "-v"]);
+
+    assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
+    assert_eq!(
+        with_the_declared_time_checked(printed_lines(&outcome), since),
+        [
+            "Firma valida",
+            "",
+            "Formato: FacturaE",
+            "",
+            "Firma 1",
+            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
+            "  Emisor:            AC FNMT Usuarios",
+            "  Fecha declarada:   <instante de la firma>",
         ]
     );
 }

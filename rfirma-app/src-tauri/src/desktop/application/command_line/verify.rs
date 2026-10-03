@@ -36,9 +36,7 @@ pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome 
         return Outcome::printed(&[UNKNOWN_FORMAT.to_owned()]);
     };
     match ports.verifier.results_of(&document, format) {
-        Ok(results)
-            if verbosity(arguments) > 0 && matches!(format, Format::Pades | Format::Cades) =>
-        {
+        Ok(results) if verbosity(arguments) > 0 => {
             with_the_signatures(results, &document, format, verbosity(arguments), ports)
         }
         Ok(results) => Outcome::printed(&results),
@@ -65,7 +63,7 @@ fn with_the_signatures(
             return outcome;
         }
     };
-    lines.extend([String::new(), format!("Formato: {format}")]);
+    lines.extend([String::new(), format!("Formato: {}", family_of(format))]);
     if signatures.count() == 0 {
         lines.extend([String::new(), "El documento no tiene firmas.".to_owned()]);
     }
@@ -74,6 +72,13 @@ fn with_the_signatures(
         lines.extend(tree_of(signature, &title, 0, verbosity, ports.time_zone));
     }
     Outcome::printed(&lines)
+}
+
+fn family_of(format: Format) -> &'static str {
+    match format {
+        Format::Xades(_) => "XAdES",
+        other => other.name(),
+    }
 }
 
 /// La ficha de una firma y, indentadas dentro, las de sus contrafirmas numeradas «N.M».
