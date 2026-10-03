@@ -240,7 +240,7 @@ la aplicación instalada para actualizarse en modo `passive`, sin pedir administ
 ensayarlo sin etiquetar, `gh workflow run build.yml --ref <rama>`.
 
 Una etiqueta solo lee las cachés de `main`, así que la compilación de release de Windows iría
-siempre en frío. El job `warm-release-cache` de `ci.yml` es un calentador con matriz por sistema operativo: Linux
+siempre en frío. El job `warm` de `warm-release-cache.yml` es un calentador con matriz por sistema operativo: Linux
 corre en cada push a `main` y Windows, con la misma receta que la release, en el cron semanal y a
 mano. Guarda la caché de Rust con la clave compartida `windows-release`, que el job de `build.yml`
 solo lee. Ninguna PR arranca un runner de calentamiento.

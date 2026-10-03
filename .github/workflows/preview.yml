@@ -1,17 +1,16 @@
+# Reconstruir un preview es quitar la etiqueta `preview` y volver a ponerla: un push no lo reconstruye.
 name: Preview
 
 on:
   pull_request:
-    types: [labeled, synchronize]
+    types: [labeled]
 
 permissions:
   contents: read
 
 jobs:
   build:
-    if: >-
-      (github.event.action == 'labeled' && github.event.label.name == 'preview')
-      || (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'preview'))
+    if: github.event.label.name == 'preview'
     concurrency:
       group: preview-${{ github.event.pull_request.number }}
       cancel-in-progress: true

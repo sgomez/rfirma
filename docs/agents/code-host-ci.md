@@ -143,8 +143,8 @@ to be fast.
 | scope | `Alcance` | every run; the four jobs below wait for it |
 | fast | `Cadena Java`, `Cadena TypeScript`, `Cadena Rust` (parallel) | every push to `main`; a PR only if its files affect the chain |
 | native | `Imagen nativa` (parallel) | every push to `main`, tags `v*`, manual dispatch, weekly cron; a PR only if its files affect it |
-| warm | `Calienta la cache de la entrega` | Linux on every push to `main`; Windows on the weekly cron and manual dispatch; never a PR |
-| cron | `Caducidad del kit FNMT` | weekly cron and manual dispatch only |
+| warm | `Calienta la cache de la entrega` (`warm-release-cache.yml`) | Linux on every push to `main`; Windows on the weekly cron and manual dispatch; never a PR |
+| cron | `Caducidad del kit FNMT` (`fnmt-kit-expiry.yml`) | weekly cron and manual dispatch only |
 
 **Carriles por ficheros.** En un PR, `Alcance` pasa la lista de ficheros a
 `scripts/ci-lanes.sh`, y un carril se salta —queda `skipped`, que el run
@@ -156,6 +156,7 @@ de interfaz sigue pagando `Cadena Rust`. La etiqueta `ci-full` los fuerza
 todos en el siguiente push; el resumen de `Alcance` dice cuáles se omitieron.
 La etiqueta `preview` es de otro workflow, `Preview`: construye los paquetes del head
 de la PR y los sube como artefactos `rfirma-preview-<plataforma>`; no toca los carriles.
+Solo se dispara al poner la etiqueta: un push no reconstruye, y para rehacer un preview se quita la etiqueta y se vuelve a poner.
 
 The fast lane costs **~2 min warm**, and that number is the **Rust** job: the
 other two finish inside it and are free in wall-clock terms. Java and
@@ -179,7 +180,7 @@ gap between a cold run and that warm number.
 
 **Only `main` writes Rust caches** (`save-if`, only inside `setup-runner`, which
 `check-workflows.sh` guards): a PR restores `main`'s and saves none, and `Limpieza de caches` deletes what a
-closed PR left and, after each `CI` run on `main`, every Rust cache of `main` but the newest of its profile, so the 10 GB quota does not evict `main`'s Windows cache.
+closed PR left, and the `Caches de Rust superadas` run (`stale-rust-caches.yml`) — after the CI of every push to `main` that changes `Cargo.lock` or `versions.env`, and once a day — deletes every Rust cache of `main` but the newest of its profile, so the 10 GB quota does not evict `main`'s Windows cache.
 
 The `native` lane runs `just test-native` (tier C and the FFI CRAP gate in one instrumented pass)
 on **every push to `main` and every PR its files can affect**. The native library `librfirma_crypto.so` is

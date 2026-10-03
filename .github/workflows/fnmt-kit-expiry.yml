@@ -1,0 +1,70 @@
+# Avisa aqui y no en el carril rapido para no romper todas las PR a la vez (ADR-0014).
+name: Caducidad del kit FNMT
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  expiry:
+    name: Caducidad del kit FNMT
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      # notAfter de testdata/fnmt/active-rsa.p12. Tiene que coincidir con
+      # ACTIVE_EXPIRY_ISO de tests/fnmt_kit.rs y con testdata/fnmt/README.md.
+      EXPIRY_DATE: '2028-10-30'
+      STCERES: 'https://www.sede.fnmt.gob.es/documents/10445900/10649507/Certificados_pruebas_todas_CAs.rar'
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Avisa si quedan menos de 90 dias
+        run: |
+          set -euo pipefail
+          days_left=$(( ( $(date -u -d "$EXPIRY_DATE" +%s) - $(date -u +%s) ) / 86400 ))
+          echo "Quedan $days_left dias para el $EXPIRY_DATE." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$days_left" -gt 90 ]; then
+            exit 0
+          fi
+
+          title="El kit FNMT de testdata/fnmt/ caduca el $EXPIRY_DATE"
+          # Una sola issue viva: sin esto el cron abriria una cada lunes
+          # durante trece semanas.
+          open_count=$(gh issue list --state open --search "$title in:title" \
+            --json number --jq 'length')
+          if [ "$open_count" != "0" ]; then
+            echo "Ya hay una issue abierta; no se abre otra." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # El cuerpo va a un fichero, no a un $(cat <<...) en linea: dentro de
+          # un bloque YAML el heredoc conservaria la sangria de cada linea y el
+          # markdown llegaria a la issue como un bloque de codigo.
+          body=$(mktemp)
+          {
+            printf '`testdata/fnmt/active-rsa.p12` caduca el **%s**: quedan **%s dias**.\n\n' \
+              "$EXPIRY_DATE" "$days_left"
+            printf 'Es el certificado del camino feliz, el que esta en el token SoftHSM `rfirma-test`.\n'
+            printf 'Cuando caduque, `rfirma-app/src-tauri/tests/fnmt_kit.rs` empezara a fallar en el\n'
+            printf 'carril rapido y bloqueara todas las entregas.\n\n'
+            printf '## Que hay que hacer\n\n'
+            printf '1. Descargar el kit nuevo de <%s>.\n' "$STCERES"
+            printf '2. Sustituir los tres `.p12` de `testdata/fnmt/`.\n'
+            printf '3. Actualizar las huellas SHA-256 y las fechas en `testdata/fnmt/README.md` y en\n'
+            printf '   `rfirma-app/src-tauri/tests/fnmt_kit.rs` (`FINGERPRINTS`, `ACTIVE_EXPIRY_EPOCH`,\n'
+            printf '   `ACTIVE_EXPIRY_ISO`), y la `EXPIRY_DATE` de este workflow.\n'
+            printf '4. Reimportar el certificado activo en SoftHSM segun\n'
+            printf '   `docs/research/token-pkcs11-pruebas.md`.\n\n'
+            printf 'Abierta automaticamente por el cron semanal de `.github/workflows/fnmt-kit-expiry.yml`\n'
+            printf '(ADR-0014, TD-07).\n'
+          } > "$body"
+
+          gh issue create --title "$title" --label needs-triage --body-file "$body"
+

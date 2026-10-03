@@ -1,0 +1,48 @@
+# Deja en `main` la cache de Rust mas reciente de cada perfil, antes de que las superadas
+# desplacen a las vigentes. Solo se quedan superadas cuando cambian Cargo.lock o el compilador: corre tras el CI de ese push, y a diario por si acaso.
+name: Caches de Rust superadas
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - rfirma-app/src-tauri/Cargo.lock
+      - versions.env
+  workflow_dispatch:
+  schedule:
+    - cron: '43 3 * * *'
+
+permissions: {}
+
+jobs:
+  stale-rust:
+    name: Borra las caches de Rust superadas
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: write
+    steps:
+      # Las caches nuevas se guardan al acabar el CI de este commit: borrar antes dejaria las superadas un dia mas.
+      - name: Espera al CI de este commit
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for _ in $(seq 1 12); do
+            run=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --event push --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+            [ -n "$run" ] && break
+            sleep 10
+          done
+          [ -n "$run" ] || { echo "sin ejecucion de CI para $GITHUB_SHA" >&2; exit 1; }
+          gh run watch "$run" --interval 30 > /dev/null
+
+      # La clave acaba en el hash del compilador y el de Cargo.lock: lo anterior es el perfil.
+      - name: Deja en refs/heads/main la mas reciente de cada perfil
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh cache list --ref refs/heads/main --key v0-rust- --limit 100 --json id,key,createdAt \
+            --jq 'group_by(.key | sub("-[^-]+-[^-]+$"; "")) | .[] | sort_by(.createdAt) | .[:-1][] | .id' \
+            | while read -r id; do gh cache delete "$id"; done
