@@ -53,7 +53,7 @@ Las decisiones están en `docs/adr/`; cada zona tiene su mapa con sus trampas. L
 
 ### Mapas: lee el índice antes que el código
 
-Cada mapa dice en una frase qué es cada fichero de su zona, para que sepas cuál abrir sin explorar el árbol. Es la primera lectura de cualquier trabajo. Cómo se escribe una fila, en `docs/AGENTS.md`.
+Cada mapa dice en una frase qué es cada fichero de su zona, para que sepas cuál abrir sin explorar el árbol; en el backend lo da `just outline <directorio>/` con la cabecera `//!` de cada módulo, y el mapa guarda las trampas. Es la primera lectura de cualquier trabajo. Cómo se escribe una fila, en `docs/AGENTS.md`.
 
 * `rfirma-app/src-tauri/src/AGENTS.md` — mapa del backend Rust.
 * `rfirma-app/src/AGENTS.md` — mapa de la interfaz.

@@ -25,25 +25,19 @@ adaptadores, su estado de proceso, sus puertos y la fachada que usan los vecinos
 
 ## Lo que cuelga de la raíz
 
-| Módulo | Qué es |
-|---|---|
-| `lib.rs` | El armado de la aplicación: decide el rol de proceso, escritorio, sede o terminal (ADR-0024, ADR-0041), y monta una de las dos raíces o atiende la orden de terminal; la instancia única (ADR-0010) solo se registra en la de escritorio. Sin pruebas propias. |
-| `main.rs` | El binario. No hay nada dentro. |
-| `event_loop.rs` | El bucle de eventos de Tauri de los dos roles: construye la aplicación, entrega los `afirma://` que llegan por `RunEvent::Opened` y borra la carpeta de paso al salir. No compone raíces. Sin pruebas propias. |
-| `crossing.rs` | El rasgo `WindowCrossing` y el macro `crossing!`, con los que se declara todo lo que cruza a la ventana. Pruebas en `crossing/tests.rs`. |
-| `crossing/failure.rs` | `Failure`, lo que cruza cuando algo salió mal (ADR-0009); cada contexto traduce lo suyo en su `adapters/failures.rs`. Pruebas en `crossing/failure/tests.rs`. |
-| `crossing/guards.rs` | Las guardas que ven todas las órdenes a la vez, entre ellas la de rutas del ADR-0011. Solo en pruebas. |
-| `crossing/guards/tests.rs` | Las pruebas de esas guardas, separadas de la infraestructura de lectura de fuentes. |
-| `memory_error.rs` | `MemoryError` y su `Situation` (ADR-0009): la memoria entre sesiones es una sola (ADR-0010) y no es de ningún contexto. Pruebas en `memory_error/tests.rs`. |
-| `startup_failure.rs` | `StartupFailure` y su `Situation`: los fallos de arranque de los dos roles, antes de que exista ventana; no es de ningún contexto. Pruebas en `startup_failure/tests.rs`. |
-| `startup_dialog.rs` | El diálogo nativo que enseña un `StartupFailure` y sale del proceso: GTK en Linux, `MessageBoxW` en Windows, pendiente en macOS (ADR-0035, ADR-0040). Capa fina, sin pruebas propias. |
-| `compile_fail.rs` | Lo que no debe compilar: un doctest `compile_fail` por invariante que sostiene el sistema de tipos, y uno positivo por la misma ruta. |
+Cada módulo dice qué es en la primera línea `//!` de su fichero, y
+`just outline rfirma-app/src-tauri/src/<carpeta>/` las junta en un índice: de un
+contexto, de una capa o de `crossing/`. Lo que cuelga de la raíz es el armado
+(`lib.rs`, `main.rs`, `event_loop.rs`), los dos errores sin contexto
+(`memory_error.rs`, `startup_failure.rs`), `startup_dialog.rs` y
+`compile_fail.rs`.
 
 `tests/agents_map_is_complete.rs` exige que todo `.rs` versionado bajo `src/`
-esté nombrado aquí o en el mapa de su contexto: **un módulo nuevo se añade en la
-misma PR que lo crea.** Las pruebas de un módulo van en su hermano `tests.rs`;
-los andamios de grada A que comparten los contextos viven en
-`identity/`, `signing/` y `site/application/tests.rs`.
+que no sea de prueba abra con esa línea, sin partirla: **una frase, qué es y, si
+ayuda, qué no es**, de 300 caracteres como mucho y sin citas a la spec ni a
+issues. Las pruebas de un módulo van en su hermano `tests.rs`; los andamios de
+grada A que comparten los contextos viven en `identity/`, `signing/` y
+`site/application/tests.rs`.
 
 ## Al añadir o cambiar una orden de Tauri
 
@@ -113,7 +107,7 @@ La regla de los comentarios está en el `AGENTS.md` raíz; aquí, adónde va lo 
 no cabe en ella:
 
 * El porqué de una decisión va a un ADR; una advertencia a agentes de alcance
-  general, a este mapa. Lo que ya dice la tabla de un mapa no se repite, y un
+  general, a este mapa. Lo que ya dice la cabecera `//!` de un módulo no se repite, y un
   conteo, un número de PR o la interfaz del otro lado no van a ninguna parte.
 * Una cita a un identificador de especificación (`ID-NN`, `TD-NN`, `RD-NN`,
   `RT-NN`) que ya exista se tolera mientras la poda no pase por su zona; al
