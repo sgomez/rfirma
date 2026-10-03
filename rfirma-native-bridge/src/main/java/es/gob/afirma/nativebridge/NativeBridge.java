@@ -7,6 +7,9 @@ import java.util.Base64;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -92,6 +95,12 @@ public final class NativeBridge {
         // Volver a ponerlos "por si acaso" es lo que hace que un JPEG con perfil
         // ICC aborte el proceso en vez de dar un error recuperable.
         System.setProperty("java.awt.headless", "true");
+        silenceAutoFirmaLogging();
+    }
+
+    private static void silenceAutoFirmaLogging() {
+        LogManager.getLogManager().reset();
+        Logger.getLogger("").setLevel(Level.OFF);
     }
 
     /**

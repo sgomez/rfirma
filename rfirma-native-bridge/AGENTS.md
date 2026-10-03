@@ -64,8 +64,8 @@ de ADR-0004.
   «por si acaso» convierte un JPEG con perfil ICC en un aborto del proceso
   (ADR-0004). La exclusión de `afirma-ui-utils` del `pom.xml` es lo que deja
   `javax.imageio` sin métodos alcanzables: no la quites.
-* **El `WARNING` de `ClassNotFoundException: es.gob.afirma.ui.utils.ImageUtils`**
-  en una firma visible con rúbrica es la exclusión haciendo su trabajo.
+* **El registro de AutoFirma está apagado** en el `static` de `NativeBridge`;
+  para depurar, enciéndelo en local.
 * **La prefirma XAdES con ECDSA necesita a SpongyCastle dentro de la imagen.**
   El original genera una clave de curva elíptica de mentira con
   `KeyPairGenerator.getInstance("ECDSA")`, que solo sirve ese proveedor, y sus

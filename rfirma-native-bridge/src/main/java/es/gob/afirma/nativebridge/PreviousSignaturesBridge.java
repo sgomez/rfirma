@@ -4,6 +4,7 @@ package es.gob.afirma.nativebridge;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -102,6 +103,10 @@ final class PreviousSignaturesBridge {
     private static final Map<String, String> READABLE_KEYWORDS = Map.of(
             "2.5.4.5", "SERIALNUMBER",
             "2.5.4.97", "organizationIdentifier");
+
+    /** La cabecera de un PDF y cuantos bytes del principio se miran buscandola. */
+    private static final byte[] PDF_HEADER = "%PDF-".getBytes(StandardCharsets.US_ASCII);
+    private static final int PDF_HEADER_WINDOW = 1024;
 
     private static final PdfName ETSI_RFC3161 = new PdfName("ETSI.RFC3161");
 
@@ -219,11 +224,24 @@ final class PreviousSignaturesBridge {
         if (cades.isSign(document)) {
             return new Report(cadesSigners(document), false, List.of());
         }
+        if (isPdf(document)) {
+            return readPdf(document);
+        }
         final AOXAdESSigner xades = new AOXAdESSigner();
         if (xades.isSign(document)) {
             return new Report(xadesSigners(document), false, List.of());
         }
         return readPdf(document);
+    }
+
+    private static boolean isPdf(final byte[] document) {
+        final int window = Math.min(document.length, PDF_HEADER_WINDOW + PDF_HEADER.length);
+        for (int at = 0; at + PDF_HEADER.length <= window; at++) {
+            if (Arrays.equals(document, at, at + PDF_HEADER.length, PDF_HEADER, 0, PDF_HEADER.length)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static List<Signature> cadesSigners(final byte[] signature) {
