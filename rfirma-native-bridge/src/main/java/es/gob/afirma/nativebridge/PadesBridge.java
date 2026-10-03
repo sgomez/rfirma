@@ -59,7 +59,7 @@ public final class PadesBridge {
      * Prefirma PAdES.
      *
      * <p>El {@code preSignB64} son los <b>atributos firmados CAdES en ASN.1
-     * DER</b> (ID-15), no un hash y no un {@code DigestInfo}: Rust recibe un
+     * DER</b>, no un hash y no un {@code DigestInfo}: Rust recibe un
      * bloque que debe hashear y firmar como cualquier PKCS#1 sobre bytes
      * arbitrarios.
      *
@@ -75,7 +75,7 @@ public final class PadesBridge {
 
         // La zona horaria se captura AQUI porque preProcessPreSign construye su
         // GregorianCalendar con la de por defecto, y el desfase entra dentro del
-        // rango firmado (#23). Fuera del sello se heredaria del entorno de la
+        // rango firmado. Fuera del sello se heredaria del entorno de la
         // postfirma, que puede no ser el mismo.
         //
         // Captura y prefirma van dentro del MISMO cerrojo que la postfirma, y no
