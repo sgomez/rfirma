@@ -210,12 +210,14 @@ export function unavailableSigningBackend(): SigningBackend {
       warningCount: 0,
       tone: "information",
       changedAfterLastSignature: false,
+      findings: [],
     }),
     signedDocumentSignatures: async () => ({
       signatures: [],
       warningCount: 0,
       tone: "information",
       changedAfterLastSignature: false,
+      findings: [],
     }),
     discard: async () => {},
   };

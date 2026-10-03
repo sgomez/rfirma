@@ -1126,38 +1126,64 @@ msgstr ""
 msgid "sealLoss.confirm"
 msgstr "Firmar de todos modos"
 
-#. El titular del aviso de firmas que rFirma no sabe leer, antes de firmar.
-msgid "unregisteredSignatures.title"
-msgstr "Este PDF trae firmas que no entendemos"
-
-#. Que no se validan ni se cuentan las firmas previas: solo se avisa de que no se entienden.
-msgid "unregisteredSignatures.body"
-msgstr ""
-"Alguna de las firmas que ya tiene no está en un formato que rFirma sepa "
-"leer, así que no podemos decirte nada de ella. Puedes firmar igual: tu firma "
-"será válida, y las que ya estaban se quedan como están."
-
-msgid "unregisteredSignatures.confirm"
-msgstr "Firmar de todos modos"
-
 #. El titular del diálogo «¿Firmar de todos modos?», con alguna firma previa no válida.
 msgid "signAnyway.title"
 msgstr "¿Firmar de todos modos?"
 
-#. {{count}} firmas previas que no son válidas, en negrita.
-msgid "signAnyway.body"
-msgid_plural "signAnyway.body"
-msgstr[0] "Este documento lleva 1 firma que no es válida"
-msgstr[1] "Este documento lleva {{count}} firmas que no son válidas"
-msgstr[2] "Este documento lleva {{count}} firmas que no son válidas"
+#. El nombre de la fila de una firma en «¿Firmar de todos modos?»: su número y el firmante.
+msgid "signAnyway.signature"
+msgstr "Firma {{number}} · {{name}}"
 
-#. La sede u organismo que reciba el documento puede rechazarlo.
+#. Cierre del diálogo «¿Firmar de todos modos?»: el receptor puede rechazar el documento.
 msgid "signAnyway.warning"
-msgstr ""
-"Si lo firmas, la sede u organismo que reciba el documento puede rechazarlo."
+msgstr "El receptor podría rechazarlo."
 
 msgid "signAnyway.confirm"
-msgstr "Firmar de todos modos"
+msgstr "Firmar igualmente"
+
+#. Hallazgo del documento: cambió después de la última firma.
+msgid "documentFinding.modifiedAfterLastSignature"
+msgstr "Se ha modificado después de la última firma"
+
+#. Hallazgo del documento: se rellenó un formulario después de firmar.
+msgid "documentFinding.formFilledAfterSigning"
+msgstr "Se ha rellenado el formulario después de firmar"
+
+#. Hallazgo del documento: se añadió contenido encima de lo firmado.
+msgid "documentFinding.contentAddedOnTop"
+msgstr "Se ha añadido contenido encima de lo firmado"
+
+#. Motivo de una firma caducada. {{date}}: cuándo caducó el certificado.
+msgid "signatureReason.certificateExpired"
+msgstr "El certificado caducó el {{date}}"
+
+#. Motivo de una firma caducada cuyo certificado no es el del firmante. {{holder}}: su titular; {{date}}: cuándo caducó.
+msgid "signatureReason.certificateExpiredHolder"
+msgstr "El certificado de {{holder}} caducó el {{date}}"
+
+#. Motivo de una firma no válida: el documento cambió tras firmarla.
+msgid "signatureReason.modifiedAfterSigning"
+msgstr "Se ha modificado después de firmarse"
+
+#. Motivo de una firma no válida: ilegible o sin certificado.
+msgid "signatureReason.damaged"
+msgstr "La firma está dañada"
+
+#. Motivo de una firma no válida. {{date}}: cuándo entra en vigor el certificado.
+msgid "signatureReason.certificateNotYetValid"
+msgstr "El certificado no se podía usar antes del {{date}}"
+
+#. Motivo de una firma no válida: de un tipo que rFirma no lee.
+msgid "signatureReason.unknownSignatureType"
+msgstr "rFirma no conoce este tipo de firma"
+
+#. Motivo de una firma no válida. {{name}}: quien cerró el documento a más firmas.
+msgid "signatureReason.cosignNotAdmitted"
+msgstr "{{name}} no admitía más firmas"
+
+#. Motivo de una firma no válida: el documento no admitía más firmas y no se sabe quién.
+msgid "signatureReason.cosignNotAdmittedUnnamed"
+msgstr "El documento no admitía más firmas"
 
 msgid "status.title"
 msgstr "Estado de rFirma"

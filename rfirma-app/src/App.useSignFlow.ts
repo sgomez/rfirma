@@ -1,4 +1,4 @@
-//! La vista previa del sello y la firma, con los tres avisos que pueden interponerse antes del PIN.
+//! La vista previa del sello y la firma, con los dos avisos que pueden interponerse antes del PIN.
 
 import { useMemo, useState } from "react";
 import type { PageGeometry } from "./App.signingOrder";
@@ -7,7 +7,11 @@ import type { DocumentInHand } from "./documents/document";
 import type { Certificate } from "./signing/certificate";
 import { isUsable } from "./signing/certificate";
 import type { SigningBackend, SigningOrder } from "./signing/flow";
-import { invalidSignatures, type PreviousSignature } from "./signing/previousSignatures";
+import {
+  type PreviousSignaturesReport,
+  type SigningProblem,
+  signingProblems,
+} from "./signing/previousSignatures";
 import type { Rubric } from "./signing/rubric";
 import { composesOnRelease, type StampComposer, type StampRequest } from "./signing/stampPreview";
 import { pagesWithoutSeal } from "./signing/unsealedPages";
@@ -33,7 +37,7 @@ interface SignFlowInput {
   gesturing: boolean;
   /** El destino elegido para esta firma con «Cambiar», sin tocar la preferencia (ADR-0011). */
   singleDestinationId: string | null;
-  previousSignatures: readonly PreviousSignature[];
+  previousSignatures: PreviousSignaturesReport;
   startSigning: (
     certificate: Certificate,
     order: SigningOrder,
@@ -43,8 +47,8 @@ interface SignFlowInput {
 
 /**
  * La firma **entera**: la vista previa del sello, la orden que se
- * manda y los tres avisos que pueden interponerse antes del PIN (páginas sin sello, firmas sin
- * registrar y firmas previas no válidas).
+ * manda y los dos avisos que pueden interponerse antes del PIN («¿Firmar de
+ * todos modos?» y páginas sin sello).
  */
 export function useSignFlow({
   pdf,
@@ -74,20 +78,10 @@ export function useSignFlow({
     certificate: Certificate;
     order: SigningOrder;
   } | null>(null);
-  // El aviso de las firmas sin registrar, guardado igual que el
-  // anterior: decir que sí no rehace el viaje a `pdf.js`, manda la misma orden
-  // con el permiso puesto.
-  const [unregisteredPrompt, setUnregisteredPrompt] = useState<{
-    certificate: Certificate;
-    order: SigningOrder;
-  } | null>(null);
-  // «¿Firmar de todos modos?» con alguna firma previa no válida, antes de
-  // tocar nada más — ni la comprobación de firmas sin registrar, ni la del
-  // sello. Cierra sin pedir nada al backend: ya sabe lo que necesita del
-  // informe que trajo `usePreviousSignatures`.
-  const [invalidPreviousSignaturesPrompt, setInvalidPreviousSignaturesPrompt] = useState<
-    readonly PreviousSignature[] | null
-  >(null);
+  // «¿Firmar de todos modos?» con algún problema en el documento, antes de
+  // tocar nada más. Cierra sin pedir nada al backend: ya sabe lo que necesita
+  // del informe que trajo `usePreviousSignatures`.
+  const [signAnywayPrompt, setSignAnywayPrompt] = useState<readonly SigningProblem[] | null>(null);
 
   // ── La vista previa del sello ───────────────────────────────────
   //
@@ -157,16 +151,19 @@ export function useSignFlow({
       // estrecha el tipo, y callar es mejor que fabricar una orden a medias.
       return;
     }
-    // Con alguna firma previa no válida, «Firmar» pregunta antes de
-    // tocar nada más.
-    const invalid = invalidSignatures(previousSignatures);
-    if (invalid.length > 0) {
-      setInvalidPreviousSignaturesPrompt(invalid);
+    const problems = signingProblems(previousSignatures);
+    if (problems.length > 0) {
+      setSignAnywayPrompt(problems);
       return;
     }
 
-    await signPastPreviousSignatures(pdf, activeDocument, stampedPlacement(), chosen);
+    await signPastPreviousSignatures(pdf, activeDocument, stampedPlacement(), chosen, false);
   };
+
+  const showsUnknownSignatureType = (problem: SigningProblem) =>
+    problem.kind === "unregisteredSignatures" ||
+    (problem.kind === "signature" &&
+      problem.signature.validityReason?.kind === "unknownSignatureType");
 
   const stampedPlacement = () => (signature.enabled ? placement : null);
 
@@ -175,6 +172,7 @@ export function useSignFlow({
     activeDocument: DocumentInHand,
     stamped: Placement | null,
     chosen: Certificate,
+    consented: boolean,
   ) => {
     // La misma orden que compuso la vista previa, armada por el mismo sitio: si
     // aquí se armara a mano, lo que se enseñó y lo que se firma podrían
@@ -190,27 +188,25 @@ export function useSignFlow({
       language,
     });
 
-    // Si el documento trae firmas que no sabemos leer, la
-    // pregunta va **antes** del PIN. No es un rechazo: sin ella el puente
-    // aborta la cofirma con `PdfHasUnregisteredSignaturesException`, y con un
-    // «sí» la orden sale con el permiso puesto. Si la orden que lo averigua
-    // falla, no se inventa un aviso: la prefirma dirá lo que pasa de verdad.
+    // El permiso de cofirmar sobre firmas de tipo desconocido solo sale de un
+    // «Firmar igualmente» que enseñó esa fila; si no, se pregunta aquí. Si la
+    // orden que lo averigua falla, la prefirma dirá lo que pasa.
     const unregistered = await signer.unregisteredSignatures(order.document).catch(() => false);
-    if (unregistered) {
-      setUnregisteredPrompt({ certificate: chosen, order });
+    if (unregistered && !consented) {
+      setSignAnywayPrompt([{ kind: "unregisteredSignatures" }]);
       return;
     }
+    const permitted = unregistered ? { ...order, allowUnregisteredSignatures: true } : order;
 
-    await signUnlessTheSealFalls(chosen, order, pdf, stamped);
+    await signUnlessTheSealFalls(chosen, permitted, pdf, stamped);
   };
 
   /**
    * La segunda mitad de `sign`: el aviso de páginas sin sello y, si no hay nada
    * que avisar, la firma.
    *
-   * Está aparte porque los dos avisos previos —éste y el de las firmas sin
-   * registrar— van en fila: aceptar el primero tiene que caer justo aquí, y no
-   * volver a empezar.
+   * Está aparte para que la orden con el permiso de las firmas de tipo
+   * desconocido caiga justo aquí, y no vuelva a empezar.
    */
   const signUnlessTheSealFalls = async (
     chosen: Certificate,
@@ -250,34 +246,15 @@ export function useSignFlow({
     await startSigning(chosen, order, singleDestinationId);
   };
 
-  // `Firmar de todos modos` del aviso de las firmas sin registrar: la misma
-  // orden, ahora con el permiso que el puente necesita.
-  const signWithUnregisteredSignatures = async () => {
-    if (unregisteredPrompt === null || pdf === null) return;
-    const { certificate: chosen, order } = unregisteredPrompt;
-    setUnregisteredPrompt(null);
-    await signUnlessTheSealFalls(
-      chosen,
-      { ...order, allowUnregisteredSignatures: true },
-      pdf,
-      order.placement === null ? null : placement,
-    );
-  };
-
-  // `Firmar de todos modos` del diálogo de firmas previas no válidas: el
-  // resto del recorrido sigue igual, con los dos avisos que todavía pueden
-  // interponerse.
-  const signDespiteInvalidPreviousSignatures = async () => {
-    if (
-      invalidPreviousSignaturesPrompt === null ||
-      pdf === null ||
-      activeDocument === null ||
-      chosen === null
-    ) {
+  // `Firmar igualmente` de «¿Firmar de todos modos?»: el resto del recorrido
+  // sigue igual, con el aviso de las páginas sin sello que aún puede interponerse.
+  const signDespiteProblems = async () => {
+    if (signAnywayPrompt === null || pdf === null || activeDocument === null || chosen === null) {
       return;
     }
-    setInvalidPreviousSignaturesPrompt(null);
-    await signPastPreviousSignatures(pdf, activeDocument, stampedPlacement(), chosen);
+    const consented = signAnywayPrompt.some(showsUnknownSignatureType);
+    setSignAnywayPrompt(null);
+    await signPastPreviousSignatures(pdf, activeDocument, stampedPlacement(), chosen, consented);
   };
 
   // `Firmar de todos modos`: la orden ya estaba armada, se manda tal cual.
@@ -294,12 +271,9 @@ export function useSignFlow({
     sealLossPrompt,
     setSealLossPrompt,
     signAnyway,
-    unregisteredPrompt,
-    setUnregisteredPrompt,
-    signWithUnregisteredSignatures,
-    invalidPreviousSignaturesPrompt,
-    setInvalidPreviousSignaturesPrompt,
-    signDespiteInvalidPreviousSignatures,
+    signAnywayPrompt,
+    setSignAnywayPrompt,
+    signDespiteProblems,
   };
 }
 

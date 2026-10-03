@@ -28,6 +28,8 @@ export function previousSignatureOf(overrides: Partial<PreviousSignature> = {}):
     certificateSerialNumber: "1",
     signingTime: "2024-01-01T10:00:00Z",
     status: "valid",
+    validity: "valid",
+    validityReason: null,
     reason: null,
     countersignatures: [],
     ...overrides,
@@ -44,6 +46,7 @@ export function reportOf(
     warningCount: 0,
     tone: "information",
     changedAfterLastSignature: false,
+    findings: [],
     ...overrides,
   };
 }

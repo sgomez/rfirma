@@ -339,6 +339,24 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Xades
       Unrecognized
 
+  pub enum ValidityView
+      Valid
+      Expired
+      Invalid
+
+  pub enum ValidityReasonView   (serde: etiqueta "kind")
+      CertificateExpired { date: String, holder: Option<String> }
+      ModifiedAfterSigning
+      Damaged
+      CertificateNotYetValid { date: String }
+      UnknownSignatureType
+      CosignNotAdmitted { closedBy: Option<String> }
+
+  pub enum DocumentFindingView
+      ModifiedAfterLastSignature
+      FormFilledAfterSigning
+      ContentAddedOnTop
+
   pub struct PreviousSignatureView
       name: String
       idNumber: String
@@ -348,6 +366,8 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       signingTime: Option<String>
       status: SignatureStatusView
       reason: Option<String>
+      validity: ValidityView
+      validityReason: Option<ValidityReasonView>
       countersignatures: Vec<PreviousSignatureView>
 
   pub struct PreviousSignaturesReportView
@@ -356,6 +376,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       tone: ToneView
       changedAfterLastSignature: bool
       format: SignatureStandardView
+      findings: Vec<DocumentFindingView>
 
   pub struct SiteErrandView
       origin: Option<String>

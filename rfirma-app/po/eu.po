@@ -1132,40 +1132,64 @@ msgstr ""
 msgid "sealLoss.confirm"
 msgstr "Sinatu hala ere"
 
-#. El titular del aviso de firmas que rFirma no sabe leer, antes de firmar.
-msgid "unregisteredSignatures.title"
-msgstr "PDF honek ulertzen ez ditugun sinadurak dakartza"
-
-#. Que no se validan ni se cuentan las firmas previas: solo se avisa de que no se entienden.
-msgid "unregisteredSignatures.body"
-msgstr ""
-"Dagoeneko dituen sinaduretako bat ez dago rFirmak irakurtzen dakien formatu "
-"batean; beraz, ezin dizugu haren gainean ezer esan. Berdin sina dezakezu: "
-"zure sinadura baliozkoa izango da, eta lehendik zeudenak dauden bezala "
-"geratuko dira."
-
-msgid "unregisteredSignatures.confirm"
-msgstr "Sinatu hala ere"
-
 #. El titular del diálogo «¿Firmar de todos modos?», con alguna firma previa no válida.
 msgid "signAnyway.title"
 msgstr "Sinatu hala ere?"
 
-#. {{count}} firmas previas que no son válidas, en negrita.
-msgid "signAnyway.body"
-msgid_plural "signAnyway.body"
-msgstr[0] "Dokumentu honek baliozkoa ez den sinadura 1 dakar"
-msgstr[1] "Dokumentu honek baliozkoak ez diren {{count}} sinadura ditu"
-msgstr[2] "Dokumentu honek baliozkoak ez diren {{count}} sinadura ditu"
+#. El nombre de la fila de una firma en «¿Firmar de todos modos?»: su número y el firmante.
+msgid "signAnyway.signature"
+msgstr "{{number}}. sinadura · {{name}}"
 
-#. La sede u organismo que reciba el documento puede rechazarlo.
+#. Cierre del diálogo «¿Firmar de todos modos?»: el receptor puede rechazar el documento.
 msgid "signAnyway.warning"
-msgstr ""
-"Sinatzen baduzu, dokumentua jasotzen duen egoitzak edo erakundeak baztertu "
-"dezake."
+msgstr "Hartzaileak baztertu lezake."
 
 msgid "signAnyway.confirm"
 msgstr "Sinatu hala ere"
+
+#. Hallazgo del documento: cambió después de la última firma.
+msgid "documentFinding.modifiedAfterLastSignature"
+msgstr "Azken sinaduraren ondoren aldatu da"
+
+#. Hallazgo del documento: se rellenó un formulario después de firmar.
+msgid "documentFinding.formFilledAfterSigning"
+msgstr "Inprimakia sinatu ondoren bete da"
+
+#. Hallazgo del documento: se añadió contenido encima de lo firmado.
+msgid "documentFinding.contentAddedOnTop"
+msgstr "Sinatutakoaren gainean edukia gehitu da"
+
+#. Motivo de una firma caducada. {{date}}: cuándo caducó el certificado.
+msgid "signatureReason.certificateExpired"
+msgstr "Ziurtagiria {{date}}(e)an iraungi zen"
+
+#. Motivo de una firma caducada cuyo certificado no es el del firmante. {{holder}}: su titular; {{date}}: cuándo caducó.
+msgid "signatureReason.certificateExpiredHolder"
+msgstr "{{holder}}(r)en ziurtagiria {{date}}(e)an iraungi zen"
+
+#. Motivo de una firma no válida: el documento cambió tras firmarla.
+msgid "signatureReason.modifiedAfterSigning"
+msgstr "Sinatu ondoren aldatu da"
+
+#. Motivo de una firma no válida: ilegible o sin certificado.
+msgid "signatureReason.damaged"
+msgstr "Sinadura hondatuta dago"
+
+#. Motivo de una firma no válida. {{date}}: cuándo entra en vigor el certificado.
+msgid "signatureReason.certificateNotYetValid"
+msgstr "Ziurtagiria ezin zen {{date}} baino lehen erabili"
+
+#. Motivo de una firma no válida: de un tipo que rFirma no lee.
+msgid "signatureReason.unknownSignatureType"
+msgstr "rFirmak ez du sinadura mota hau ezagutzen"
+
+#. Motivo de una firma no válida. {{name}}: quien cerró el documento a más firmas.
+msgid "signatureReason.cosignNotAdmitted"
+msgstr "{{name}}(e)k ez zituen sinadura gehiago onartzen"
+
+#. Motivo de una firma no válida: el documento no admitía más firmas y no se sabe quién.
+msgid "signatureReason.cosignNotAdmittedUnnamed"
+msgstr "Dokumentuak ez zituen sinadura gehiago onartzen"
 
 msgid "status.title"
 msgstr "rFirmaren egoera"

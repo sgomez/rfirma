@@ -19,6 +19,8 @@ function aSignature(overrides: Partial<PreviousSignature> = {}): PreviousSignatu
     certificateSerialNumber: "1",
     signingTime: "2026-09-14T10:32:05Z",
     status: "valid",
+    validity: "valid",
+    validityReason: null,
     reason: null,
     countersignatures: [],
     ...overrides,

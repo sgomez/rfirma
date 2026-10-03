@@ -17,6 +17,8 @@ const aSignature = (name: string) => ({
   certificateSerialNumber: "1",
   signingTime: "2026-09-14T10:32:05Z",
   status: "valid" as const,
+  validity: "valid" as const,
+  validityReason: null,
   reason: null,
   countersignatures: [],
 });
@@ -45,6 +47,7 @@ const withSignatures =
     warningCount: 0,
     tone: "information" as const,
     changedAfterLastSignature: false,
+    findings: [],
   });
 
 const invokedToSee = (name: string) => ({

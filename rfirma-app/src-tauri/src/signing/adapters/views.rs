@@ -11,8 +11,8 @@ use crate::signing::adapters::state::VisibleSignatureMemory;
 use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
 use crate::signing::domain::{
-    Datum, DocumentSignature, DocumentSignatures, PageSet, PhrasePart, SignatureStandard,
-    SignatureStatus, Tone, VisibleBox, VisibleContent,
+    Datum, DocumentFinding, DocumentSignature, DocumentSignatures, PageSet, PhrasePart,
+    SignatureStandard, SignatureStatus, Tone, Validity, ValidityReason, VisibleBox, VisibleContent,
 };
 
 crossing! {
@@ -268,6 +268,81 @@ impl From<SignatureStandard> for SignatureStandardView {
 }
 
 crossing! {
+    /// La validez de una firma previa (ADR-0043).
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum ValidityView {
+        Valid,
+        Expired,
+        Invalid,
+    }
+}
+
+impl From<Validity> for ValidityView {
+    fn from(validity: Validity) -> Self {
+        match validity {
+            Validity::Valid => Self::Valid,
+            Validity::Expired => Self::Expired,
+            Validity::Invalid => Self::Invalid,
+        }
+    }
+}
+
+crossing! {
+    /// Por qué una firma previa está caducada o no es válida.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    pub enum ValidityReasonView {
+        CertificateExpired { date: String, holder: Option<String> },
+        ModifiedAfterSigning,
+        Damaged,
+        CertificateNotYetValid { date: String },
+        UnknownSignatureType,
+        CosignNotAdmitted { closed_by: Option<String> },
+    }
+}
+
+impl From<ValidityReason> for ValidityReasonView {
+    fn from(reason: ValidityReason) -> Self {
+        match reason {
+            ValidityReason::CertificateExpired { date, holder } => {
+                Self::CertificateExpired { date, holder }
+            }
+            ValidityReason::ModifiedAfterSigning => Self::ModifiedAfterSigning,
+            ValidityReason::Damaged => Self::Damaged,
+            ValidityReason::CertificateNotYetValid { date } => {
+                Self::CertificateNotYetValid { date }
+            }
+            ValidityReason::UnknownSignatureType => Self::UnknownSignatureType,
+            ValidityReason::CosignNotAdmitted { closed_by } => {
+                Self::CosignNotAdmitted { closed_by }
+            }
+        }
+    }
+}
+
+crossing! {
+    /// Lo que se ve en el documento entero y no es de ninguna firma.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum DocumentFindingView {
+        ModifiedAfterLastSignature,
+        FormFilledAfterSigning,
+        ContentAddedOnTop,
+    }
+}
+
+impl From<DocumentFinding> for DocumentFindingView {
+    fn from(finding: DocumentFinding) -> Self {
+        match finding {
+            DocumentFinding::ModifiedAfterLastSignature => Self::ModifiedAfterLastSignature,
+            DocumentFinding::FormFilledAfterSigning => Self::FormFilledAfterSigning,
+            DocumentFinding::ContentAddedOnTop => Self::ContentAddedOnTop,
+        }
+    }
+}
+
+crossing! {
     /// Titular, fecha, certificado y estado de una de las firmas que ya trae el documento.
     #[derive(Clone, Debug, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
@@ -288,6 +363,10 @@ crossing! {
         pub status: SignatureStatusView,
         /// Motivo del original, si el estado no es `Valid`.
         pub reason: Option<String>,
+        /// La validez de la firma.
+        pub validity: ValidityView,
+        /// El motivo de la validez, si no es `Valid`.
+        pub validity_reason: Option<ValidityReasonView>,
         /// Las contrafirmas de esta firma, a cualquier profundidad.
         pub countersignatures: Vec<PreviousSignatureView>,
     }
@@ -306,6 +385,8 @@ impl From<DocumentSignature> for PreviousSignatureView {
                 .status
                 .map_or(SignatureStatusView::Unverifiable, SignatureStatusView::from),
             reason: signature.reason,
+            validity: ValidityView::from(signature.validity),
+            validity_reason: signature.validity_reason.map(ValidityReasonView::from),
             countersignatures: signature
                 .countersignatures
                 .into_iter()
@@ -330,6 +411,8 @@ crossing! {
         pub changed_after_last_signature: bool,
         /// El formato de firma del documento.
         pub format: SignatureStandardView,
+        /// Los hallazgos del documento, que no son de ninguna firma.
+        pub findings: Vec<DocumentFindingView>,
     }
 }
 
@@ -339,6 +422,12 @@ impl From<DocumentSignatures> for PreviousSignaturesReportView {
         let warning_count = report.warning_count();
         let tone = ToneView::from(report.tone());
         let changed_after_last_signature = report.changed_after_last_signature();
+        let findings = report
+            .findings()
+            .iter()
+            .copied()
+            .map(DocumentFindingView::from)
+            .collect();
         Self {
             signatures: report
                 .into_signatures()
@@ -349,6 +438,7 @@ impl From<DocumentSignatures> for PreviousSignaturesReportView {
             tone,
             changed_after_last_signature,
             format,
+            findings,
         }
     }
 }
@@ -377,3 +467,6 @@ crossing! {
         InTheDestinationFolder,
     }
 }
+
+#[cfg(test)]
+mod tests;

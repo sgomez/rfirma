@@ -13,7 +13,7 @@ import type { DocumentInHand } from "./documents/document";
 import { inMemoryRecents } from "./documents/recents";
 import type { Certificate } from "./signing/certificate";
 import type { SigningBackend, SigningOrder } from "./signing/flow";
-import type { PreviousSignature } from "./signing/previousSignatures";
+import type { PreviousSignature, PreviousSignaturesReport } from "./signing/previousSignatures";
 import { NO_PREVIOUS_SIGNATURES } from "./signing/previousSignatures";
 import { emptyRubricPicker } from "./signing/rubric";
 import type { Placement } from "./viewer/signatureBox";
@@ -180,6 +180,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         warningCount: 0,
         tone: "information",
         changedAfterLastSignature: false,
+        findings: [],
       }),
       signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
@@ -244,6 +245,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         warningCount: 0,
         tone: "information",
         changedAfterLastSignature: false,
+        findings: [],
       }),
       signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
@@ -294,6 +296,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         warningCount: 0,
         tone: "information",
         changedAfterLastSignature: false,
+        findings: [],
       }),
       signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
@@ -399,6 +402,7 @@ describe("App, con un documento que no se recuerda", () => {
         warningCount: 0,
         tone: "information",
         changedAfterLastSignature: false,
+        findings: [],
       }),
       signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
@@ -425,14 +429,13 @@ describe("App, con un documento que no se recuerda", () => {
 });
 
 /**
- * El aviso de las firmas sin registrar, con el panel y el diálogo a la vez
- * (ID-297…ID-301).
+ * El diálogo «¿Firmar de todos modos?» (docs/design/dialogo-firmar-de-todos-modos.md).
  *
- * Vive en la grada A y aquí y no en el diálogo suelto porque lo que se prueba
- * es **la fila**: la pregunta va antes del PIN, y el permiso solo viaja hasta
- * el backend cuando alguien la ha contestado que sí.
+ * Vive en la grada A y aquí, junto a los otros avisos antes del PIN, porque lo
+ * que se prueba es la fila completa: el gateo del botón contra el informe de
+ * firmas previas, una fila por problema y las dos salidas del diálogo.
  */
-describe("App · firmas sin registrar", () => {
+describe("App · ¿Firmar de todos modos?", () => {
   const remembered: Certificate = { ...aCertificate, remembered: true };
 
   const aPlacement: Placement = {
@@ -440,118 +443,41 @@ describe("App · firmas sin registrar", () => {
     pages: { only: [1] },
   };
 
-  /** El panel con «Firmar documento» ya disponible, sobre ese firmante. */
-  async function readyToSign(signer: SigningBackend) {
-    const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("cofirmado.pdf", { placement: aPlacement })],
-      pdfsOf({ "cofirmado.pdf": 4 }),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
-      signer,
-    );
-    await openPdf(user);
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar" });
-    await waitFor(() => expect(sign).toBeEnabled());
-    return { user, sign };
-  }
-
-  /** Un firmante sobre un documento con firmas que rFirma no sabe leer. */
-  function signerOverAnUnreadableSignature(presign: SigningBackend["presign"]): SigningBackend {
+  function aSignature(overrides: Partial<PreviousSignature>): PreviousSignature {
     return {
-      presign,
-      sign: async () => ({ ok: true, value: undefined }),
-      postsign: async () => ({
-        ok: true,
-        value: { name: "cofirmado-firmado.pdf", folder: "Documentos", sizeBytes: 1 },
-      }),
-      padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
-      unregisteredSignatures: async () => true,
-      previousSignatures: async () => ({
-        signatures: [],
-        warningCount: 0,
-        tone: "information",
-        changedAfterLastSignature: false,
-      }),
-      signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
-      discard: async () => {},
+      name: "Bruce Wayne",
+      idNumber: "00000000T",
+      organizationIdentifier: null,
+      issuer: "AC FNMT Usuarios",
+      certificateSerialNumber: "1",
+      signingTime: "2024-01-01T10:00:00.000Z",
+      status: "valid",
+      reason: null,
+      validity: "valid",
+      validityReason: null,
+      countersignatures: [],
+      ...overrides,
     };
   }
 
-  it("asks before the pin, and only then lets the bridge cosign", async () => {
-    const presigned: SigningOrder[] = [];
-    const { user, sign } = await readyToSign(
-      signerOverAnUnreadableSignature(async (order) => {
-        presigned.push(order);
-        return { ok: true, value: { kind: "typedOnScreen" } };
-      }),
-    );
-
-    await user.click(sign);
-
-    expect(presigned).toHaveLength(0);
-    const dialog = await screen.findByRole("dialog", {
-      name: "Este PDF trae firmas que no entendemos",
-    });
-    await user.click(within(dialog).getByRole("button", { name: "Firmar de todos modos" }));
-
-    await waitFor(() => expect(presigned).toHaveLength(1));
-    expect(presigned[0]?.allowUnregisteredSignatures).toBe(true);
-  });
-
-  it("signs nothing when the question is answered no", async () => {
-    const presigned: SigningOrder[] = [];
-    const { user, sign } = await readyToSign(
-      signerOverAnUnreadableSignature(async (order) => {
-        presigned.push(order);
-        return { ok: true, value: { kind: "typedOnScreen" } };
-      }),
-    );
-
-    await user.click(sign);
-    const dialog = await screen.findByRole("dialog", {
-      name: "Este PDF trae firmas que no entendemos",
-    });
-    await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
-
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(presigned).toHaveLength(0);
-  });
-});
-
-/**
- * El diálogo «¿Firmar de todos modos?» (docs/design/dialogo-firmar-de-todos-modos.md).
- *
- * Vive en la grada A y aquí, junto a los otros dos avisos antes del PIN,
- * porque lo que se prueba es la fila completa: el gateo del botón contra el
- * informe de firmas previas, y las dos salidas del diálogo.
- */
-describe("App · firmas previas no válidas", () => {
-  const remembered: Certificate = { ...aCertificate, remembered: true };
-
-  const aPlacement: Placement = {
-    rect: { x0: 250, y0: 50, x1: 450, y1: 100 },
-    pages: { only: [1] },
-  };
-
-  const invalidSignature: PreviousSignature = {
+  const validSignature = aSignature({ name: "Alfred Pennyworth" });
+  const expiredSignature = aSignature({
     name: "Bruce Wayne",
-    idNumber: "00000000T",
-    organizationIdentifier: null,
-    issuer: "AC FNMT Usuarios",
-    certificateSerialNumber: "1",
-    signingTime: "2024-01-01T10:00:00.000Z",
     status: "certificateExpired",
-    reason: null,
-    countersignatures: [],
-  };
+    validity: "expired",
+    validityReason: { kind: "certificateExpired", date: "2020-03-05T12:00:00Z", holder: null },
+  });
+  const unknownTypeSignature = aSignature({
+    name: "Notaría XYZ",
+    status: "unverifiable",
+    validity: "invalid",
+    validityReason: { kind: "unknownSignatureType" },
+  });
 
-  function signerWithPreviousSignatures(
-    signatures: readonly PreviousSignature[],
+  function signerOver(
+    report: Partial<PreviousSignaturesReport>,
     presign: SigningBackend["presign"],
+    unregistered = false,
   ): SigningBackend {
     return {
       presign,
@@ -561,19 +487,17 @@ describe("App · firmas previas no válidas", () => {
         value: { name: "cofirmado-firmado.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
-      unregisteredSignatures: async () => false,
+      unregisteredSignatures: async () => unregistered,
       previousSignatures: async () => ({
-        signatures,
-        warningCount: signatures.length,
+        ...NO_PREVIOUS_SIGNATURES,
         tone: "attention",
-        changedAfterLastSignature: false,
+        ...report,
       }),
       signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
   }
 
-  /** El panel con «Firmar documento» ya disponible, sobre ese firmante. */
   async function readyToSign(signer: SigningBackend) {
     const user = userEvent.setup();
     renderApp(
@@ -592,21 +516,138 @@ describe("App · firmas previas no válidas", () => {
     return { user, sign };
   }
 
-  it("opens the dialog and does not sign when some previous signature is invalid", async () => {
+  function recordingPresign(presigned: SigningOrder[]): SigningBackend["presign"] {
+    return async (order) => {
+      presigned.push(order);
+      return { ok: true, value: { kind: "typedOnScreen" } };
+    };
+  }
+
+  it("opens for an expired signature, with its row and reason, and does not sign", async () => {
     const presigned: SigningOrder[] = [];
     const { user, sign } = await readyToSign(
-      signerWithPreviousSignatures([invalidSignature], async (order) => {
-        presigned.push(order);
-        return { ok: true, value: { kind: "typedOnScreen" } };
-      }),
+      signerOver({ signatures: [expiredSignature] }, recordingPresign(presigned)),
     );
 
     await user.click(sign);
 
     expect(presigned).toHaveLength(0);
     const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
-    expect(within(dialog).getByText("Bruce Wayne")).toBeInTheDocument();
+    expect(within(dialog).getByText("Firma 1 · Bruce Wayne")).toBeInTheDocument();
+    expect(within(dialog).getByText(/^El certificado caducó el .*2020$/)).toBeInTheDocument();
+    expect(within(dialog).getByText("El receptor podría rechazarlo.")).toBeInTheDocument();
+  });
 
+  it("opens for a finding alone, as a row without a second line", async () => {
+    const { user, sign } = await readyToSign(
+      signerOver(
+        { signatures: [validSignature], findings: ["modifiedAfterLastSignature"] },
+        recordingPresign([]),
+      ),
+    );
+
+    await user.click(sign);
+
+    const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(1);
+    expect(
+      within(dialog).getByText("Se ha modificado después de la última firma"),
+    ).toBeInTheDocument();
+  });
+
+  it("lists one row per problem, findings first, and leaves the valid signatures out", async () => {
+    const { user, sign } = await readyToSign(
+      signerOver(
+        {
+          signatures: [validSignature, expiredSignature, unknownTypeSignature],
+          findings: ["contentAddedOnTop"],
+        },
+        recordingPresign([]),
+      ),
+    );
+
+    await user.click(sign);
+
+    const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
+    const rows = within(dialog).getAllByRole("listitem");
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent("Se ha añadido contenido encima de lo firmado");
+    expect(rows[1]).toHaveTextContent("Firma 2 · Bruce Wayne");
+    expect(rows[2]).toHaveTextContent("Firma 3 · Notaría XYZ");
+    expect(within(dialog).queryByText(/Alfred Pennyworth/)).toBeNull();
+    expect(within(dialog).queryByText(/firmas que no son válidas/)).toBeNull();
+  });
+
+  it("shows a signature of an unknown type as one more row, with no dialog of its own", async () => {
+    const { user, sign } = await readyToSign(
+      signerOver({ signatures: [unknownTypeSignature] }, recordingPresign([]), true),
+    );
+
+    await user.click(sign);
+
+    const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
+    expect(within(dialog).getByText("Firma 1 · Notaría XYZ")).toBeInTheDocument();
+    expect(within(dialog).getByText("rFirma no conoce este tipo de firma")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Este PDF trae firmas que no entendemos" }),
+    ).toBeNull();
+  });
+
+  it("lets the bridge cosign once the unknown-type row is accepted", async () => {
+    const presigned: SigningOrder[] = [];
+    const { user, sign } = await readyToSign(
+      signerOver({ signatures: [unknownTypeSignature] }, recordingPresign(presigned), true),
+    );
+
+    await user.click(sign);
+    const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
+    await user.click(within(dialog).getByRole("button", { name: "Firmar igualmente" }));
+
+    await waitFor(() => expect(presigned).toHaveLength(1));
+    expect(presigned[0]?.allowUnregisteredSignatures).toBe(true);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("asks before cosigning over unknown signatures when the report shows no such row", async () => {
+    const presigned: SigningOrder[] = [];
+    const { user, sign } = await readyToSign(
+      signerOver({ signatures: [validSignature] }, recordingPresign(presigned), true),
+    );
+
+    await user.click(sign);
+
+    expect(presigned).toHaveLength(0);
+    const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
+    expect(within(dialog).getByText("rFirma no conoce este tipo de firma")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Firmar igualmente" }));
+
+    await waitFor(() => expect(presigned).toHaveLength(1));
+    expect(presigned[0]?.allowUnregisteredSignatures).toBe(true);
+  });
+
+  it("asks again for the unknown signatures when the dialog shown did not carry that row", async () => {
+    const presigned: SigningOrder[] = [];
+    const { user, sign } = await readyToSign(
+      signerOver({ signatures: [expiredSignature] }, recordingPresign(presigned), true),
+    );
+
+    await user.click(sign);
+    const first = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
+    await user.click(within(first).getByRole("button", { name: "Firmar igualmente" }));
+
+    const second = await screen.findByText("rFirma no conoce este tipo de firma");
+    expect(second).toBeInTheDocument();
+    expect(presigned).toHaveLength(0);
+  });
+
+  it("signs nothing when it is cancelled", async () => {
+    const presigned: SigningOrder[] = [];
+    const { user, sign } = await readyToSign(
+      signerOver({ signatures: [expiredSignature] }, recordingPresign(presigned)),
+    );
+
+    await user.click(sign);
+    const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
     await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
 
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -616,37 +657,27 @@ describe("App · firmas previas no válidas", () => {
   it("signs with the exact order already built, when confirmed", async () => {
     const presigned: SigningOrder[] = [];
     const { user, sign } = await readyToSign(
-      signerWithPreviousSignatures([invalidSignature], async (order) => {
-        presigned.push(order);
-        return { ok: true, value: { kind: "typedOnScreen" } };
-      }),
+      signerOver({ signatures: [expiredSignature] }, recordingPresign(presigned)),
     );
 
     await user.click(sign);
     const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
-
-    await user.click(within(dialog).getByRole("button", { name: "Firmar de todos modos" }));
+    await user.click(within(dialog).getByRole("button", { name: "Firmar igualmente" }));
 
     await waitFor(() => expect(presigned).toHaveLength(1));
+    expect(presigned[0]?.allowUnregisteredSignatures).toBeFalsy();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("signs directly when no previous signature is invalid, even with one unchecked and the document changed", async () => {
+  it("signs directly when every signature is valid or only unchecked", async () => {
     const presigned: SigningOrder[] = [];
-    const notFullyChecked: PreviousSignature = { ...invalidSignature, status: "notFullyChecked" };
-    const signer: SigningBackend = {
-      ...signerWithPreviousSignatures([notFullyChecked], async (order) => {
-        presigned.push(order);
-        return { ok: true, value: { kind: "typedOnScreen" } };
-      }),
-      previousSignatures: async () => ({
-        signatures: [notFullyChecked],
-        warningCount: 1,
-        tone: "indeterminate",
-        changedAfterLastSignature: true,
-      }),
-    };
-    const { user, sign } = await readyToSign(signer);
+    const unchecked = aSignature({ name: "Selene", status: "notFullyChecked" });
+    const { user, sign } = await readyToSign(
+      signerOver(
+        { signatures: [validSignature, unchecked], tone: "indeterminate" },
+        recordingPresign(presigned),
+      ),
+    );
 
     await user.click(sign);
 
