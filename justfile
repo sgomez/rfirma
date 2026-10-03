@@ -205,7 +205,7 @@ lint-i18n: po-import
 knip: po-import
     cd {{ app }} && pnpm exec knip
 
-# Instala o quita los certificados de pruebas en SoftHSM: `just certs install|uninstall`.
+# Instala, reinstala o quita los certificados de pruebas en SoftHSM: `just certs install|reinstall|uninstall`; `install` no escribe si el kit ya está completo.
 [group('dev')]
 certs action:
     ./testdata/softhsm/certs.sh {{ action }}
@@ -385,11 +385,11 @@ llvm-cov-tag:
     mkdir -p "{{ cargo_target }}/llvm-cov-target"
     test -f "{{ cargo_target }}/llvm-cov-target/CACHEDIR.TAG" || printf 'Signature: 8a477f597d28d172789f06886806bc55\n' > "{{ cargo_target }}/llvm-cov-target/CACHEDIR.TAG"
 
-# Genera el lcov de toda la suite con cargo llvm-cov y no baja del suelo (ADR-0014).
+# Genera el lcov de toda la suite con cargo llvm-cov y no baja del suelo (ADR-0014), sobre una copia privada del almacén de SoftHSM.
 [private]
 coverage: (certs "install") build-ts llvm-cov-tag
     mkdir -p "{{ coverage_out }}/coverage"
-    cd {{ tauri }} && {{ no_debuginfo }} {{ cov_lock }} cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
+    cd {{ tauri }} && {{ no_debuginfo }} {{ cov_lock }} {{ root }}/scripts/token-per-test.sh cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
         --fail-under-lines {{ coverage_floor }}
 
 # La puerta del carril rapido, con el modulo FFI oculto.

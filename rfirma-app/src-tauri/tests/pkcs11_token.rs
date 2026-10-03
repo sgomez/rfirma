@@ -505,19 +505,25 @@ fn twin_copies_of_one_certificate_in_the_token_are_one_row_each() {
 
 #[test]
 fn the_same_certificate_in_two_tokens_is_one_row() {
-    let copies = certificates()
+    let all = certificates();
+    let representative = certificate_labelled(REPRESENTATIVE_LEGAL_ENTITY);
+    let serial = representative
+        .serial_number()
+        .expect("el certificado de prueba lleva numero de serie");
+    let tokens_holding_it: std::collections::BTreeSet<&str> = all
         .iter()
-        .filter(|certificate| certificate.reference().label() == REPRESENTATIVE_LEGAL_ENTITY)
-        .count();
-    assert_eq!(
-        copies, 2,
+        .filter(|certificate| certificate.is_a_copy_of(&representative))
+        .map(|certificate| certificate.reference().token_label())
+        .collect();
+    assert!(
+        tokens_holding_it.len() >= 2,
         "el kit lo pone en dos tokens: just certs install"
     );
 
     let listed = ListedCertificates::new();
     let found: Vec<ListedCertificate> = rows(&listed)
         .into_iter()
-        .filter(|row| row.label == REPRESENTATIVE_LEGAL_ENTITY)
+        .filter(|row| row.certificate_serial_number == serial)
         .collect();
 
     assert_eq!(found.len(), 1);
