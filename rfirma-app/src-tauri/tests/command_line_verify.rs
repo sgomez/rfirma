@@ -259,3 +259,54 @@ fn verbose_prints_the_validity_the_format_and_a_sheet_per_signature_of_a_pdf() {
         ]
     );
 }
+
+fn a_cades_cosigned_with_the_token() -> PathBuf {
+    let challenge = std::fs::read(sample("reference/challenge.bin")).expect("el reto se lee");
+    let signed = a_cycle_of(
+        Format::Cades,
+        ALGORITHM,
+        &challenge,
+        SignatureOperation::Sign,
+        &[("mode", "implicit")],
+    );
+    let cosigned = a_cycle_of(
+        Format::Cades,
+        ALGORITHM,
+        &signed,
+        SignatureOperation::Cosign,
+        &[("mode", "implicit")],
+    );
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("verify-cosigned.csig");
+    std::fs::write(&path, cosigned).expect("el CAdES cofirmado se escribe");
+    path
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn verbose_prints_the_format_and_a_sheet_per_cosignature_of_a_cades() {
+    let since = Utc::now();
+    let path = a_cades_cosigned_with_the_token();
+
+    let outcome = attended(&["verify", "-i", &path.display().to_string(), "-v"]);
+
+    assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
+    assert_eq!(
+        with_the_declared_time_checked(printed_lines(&outcome), since),
+        [
+            "Firma valida",
+            "Firma valida",
+            "",
+            "Formato: CAdES",
+            "",
+            "Firma 1",
+            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
+            "  Emisor:            AC FNMT Usuarios",
+            "  Fecha declarada:   <instante de la firma>",
+            "",
+            "Firma 2",
+            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
+            "  Emisor:            AC FNMT Usuarios",
+            "  Fecha declarada:   <instante de la firma>",
+        ]
+    );
+}

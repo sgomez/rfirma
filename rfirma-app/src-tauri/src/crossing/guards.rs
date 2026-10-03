@@ -201,7 +201,7 @@ fn a_previous_signature() -> crate::signing::domain::DocumentSignature {
         issuer: "AC FNMT Usuarios".to_owned(),
         certificate_serial_number: "1234567890".to_owned(),
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
-        status: crate::signing::domain::SignatureStatus::Valid,
+        status: Some(crate::signing::domain::SignatureStatus::Valid),
         reason: None,
         countersignatures: Vec::new(),
     }
