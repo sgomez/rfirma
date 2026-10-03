@@ -81,10 +81,17 @@ fn with_the_signatures(
             .iter()
             .map(|finding| format!("{WARNING} {}", finding_text(*finding))),
     );
-    for signature in signatures.signatures() {
+    for (index, signature) in signatures.signatures().iter().enumerate() {
+        if index == 0 || has_sheets(verbosity) {
+            lines.push(String::new());
+        }
         lines.extend(tree_of(signature, 0, verbosity, ports.time_zone));
     }
     Outcome::printed(&lines)
+}
+
+fn has_sheets(verbosity: usize) -> bool {
+    verbosity > 1
 }
 
 const VALID: &str = "✓";
@@ -162,7 +169,7 @@ fn tree_of(
 ) -> Vec<String> {
     let indent = " ".repeat(4 * depth);
     let mut lines = vec![format!("{indent}{}", line_of(signature, time_zone))];
-    if verbosity > 1 {
+    if has_sheets(verbosity) {
         lines.extend(
             sheet_of(signature, verbosity, time_zone)
                 .into_iter()
@@ -170,6 +177,9 @@ fn tree_of(
         );
     }
     for countersignature in &signature.countersignatures {
+        if has_sheets(verbosity) {
+            lines.push(String::new());
+        }
         lines.extend(tree_of(countersignature, depth + 1, verbosity, time_zone));
     }
     lines
