@@ -1,4 +1,4 @@
-//! La entrada de la línea de órdenes, `run_the_command_line`, y los adaptadores de sus puertos (`SeenStores`, `ProcessTerminal`, `ProcessDescriptors`, `RootsSigner`); sin Tauri: la única ventana, la de `-certgui`, es de su elector.
+//! La entrada de la línea de órdenes, `run_the_command_line`, y los adaptadores de sus puertos (`SeenStores`, `ProcessTerminal`, `ProcessDescriptors`, `RootsSigner`); solo toca Tauri para pasarle el contexto al elector de `-certgui`, que es quien abre la única ventana.
 
 use std::collections::BTreeMap;
 use std::io::{IsTerminal, Write};

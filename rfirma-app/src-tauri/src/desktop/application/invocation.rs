@@ -1,4 +1,4 @@
-//! La invocación desde fuera —`rfirma documento.pdf`, la segunda instancia, las URL de Apple Event— y el rol de proceso que decide `role_of`, terminal incluido (ADR-0010, ADR-0015, ADR-0024).
+//! La invocación desde fuera —`rfirma documento.pdf`, la segunda instancia, las URL de Apple Event— y el rol de proceso que decide `role_of`, terminal incluido (ADR-0010, ADR-0015, ADR-0024, ADR-0041).
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};

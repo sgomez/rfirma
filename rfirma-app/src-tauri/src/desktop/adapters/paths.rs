@@ -1,4 +1,4 @@
-//! Las rutas de la memoria entre sesiones y de la CA local: el único sitio que conoce el sistema operativo y el único que crea un fichero `0600` de nacimiento (ADR-0010).
+//! Las rutas de la aplicación (configuración, estado y datos, rúbrica, CA local, certificados instalados) resueltas por plataforma, y el único sitio que crea un fichero `0600` de nacimiento (ADR-0010).
 
 use std::ffi::OsString;
 use std::fmt;

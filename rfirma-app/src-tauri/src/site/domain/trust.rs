@@ -1,4 +1,4 @@
-//! Las reglas puras de la confianza en la CA local y el puerto `TrustStores` de los almacenes donde se registra (ADR-0005).
+//! Las reglas puras de la confianza en la CA local: en qué etapa de su vida está, qué trabajo toca en cada momento y qué aviso queda pendiente (ADR-0005).
 
 pub use super::trust_error::{Situation, TrustError};
 

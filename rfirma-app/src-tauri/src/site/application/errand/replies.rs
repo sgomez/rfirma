@@ -1,4 +1,4 @@
-//! Respuestas finales del trámite para la sede y la ventana, y el único sitio que escribe en el cable (ADR-0009).
+//! Respuestas finales del trámite para la sede y la ventana: cada caso de uso que contesta devuelve su `SiteOutcome` y cierra el trámite vivo (ADR-0009).
 
 use std::path::Path;
 

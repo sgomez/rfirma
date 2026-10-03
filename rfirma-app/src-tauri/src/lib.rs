@@ -1,4 +1,4 @@
-//! El armado de la aplicación: decide el rol de proceso —escritorio, sede o terminal— y monta una de las dos raíces o atiende la orden de terminal; la instancia única solo se registra en la de escritorio (ADR-0010, ADR-0024, ADR-0041).
+//! El armado de la aplicación: decide el rol de proceso (ADR-0024) y compone las cinco raíces para el de escritorio (con instancia única) o el de sede, o atiende la orden de terminal sin ventana propia (ADR-0010, ADR-0041).
 
 pub mod crossing;
 pub mod desktop;
