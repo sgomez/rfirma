@@ -216,16 +216,16 @@ fn validity_reason_of(entry: &serde_json::Value) -> Result<Option<ValidityReason
     else {
         return Ok(None);
     };
-    let optional = |name: &str| {
+    let optional_name = |name: &str| {
         reason
             .get(name)
             .and_then(serde_json::Value::as_str)
-            .map(str::to_owned)
+            .map(|distinguished| common_name_of(Some(distinguished)))
     };
     Ok(Some(match field(reason, "kind")? {
         "certificateExpired" => ValidityReason::CertificateExpired {
             date: field(reason, "date")?.to_owned(),
-            holder: optional("holder"),
+            holder: optional_name("holder"),
         },
         "modifiedAfterSigning" => ValidityReason::ModifiedAfterSigning,
         "damaged" => ValidityReason::Damaged,
@@ -234,7 +234,7 @@ fn validity_reason_of(entry: &serde_json::Value) -> Result<Option<ValidityReason
         },
         "unknownSignatureType" => ValidityReason::UnknownSignatureType,
         "cosignNotAdmitted" => ValidityReason::CosignNotAdmitted {
-            closed_by: optional("closedBy"),
+            closed_by: optional_name("closedBy"),
         },
         other => {
             return Err(BridgeError::MalformedResponse(format!(
@@ -292,7 +292,7 @@ fn signing_date_of(entry: &serde_json::Value) -> Result<Option<SigningDate>, Bri
         "declared" => SigningDate::Declared { at },
         "stamped" => SigningDate::Stamped {
             at,
-            tsa: field(date, "tsa")?.to_owned(),
+            tsa: common_name_of(Some(field(date, "tsa")?)),
         },
         other => {
             return Err(BridgeError::MalformedResponse(format!(

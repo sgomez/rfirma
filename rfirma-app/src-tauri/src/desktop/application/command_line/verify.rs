@@ -146,10 +146,12 @@ fn counted(count: usize, noun: &str) -> String {
 fn finding_text(finding: DocumentFinding) -> &'static str {
     match finding {
         DocumentFinding::ModifiedAfterLastSignature => {
-            "El documento se modificó después de la última firma"
+            "Se ha modificado después de la última firma"
         }
-        DocumentFinding::FormFilledAfterSigning => "Se rellenó un formulario después de firmar",
-        DocumentFinding::ContentAddedOnTop => "Se añadió contenido encima de la firma",
+        DocumentFinding::FormFilledAfterSigning => {
+            "Se ha rellenado el formulario después de firmar"
+        }
+        DocumentFinding::ContentAddedOnTop => "Se ha añadido contenido encima de lo firmado",
     }
 }
 
@@ -285,20 +287,20 @@ fn reason_text(reason: &ValidityReason, time_zone: &dyn LocalTimeZone) -> String
         ValidityReason::CertificateExpired { date, holder } => {
             let day = in_local_day(date, time_zone);
             match holder {
-                Some(holder) => format!("Certificado caducado el {day} (el de {holder})"),
-                None => format!("Certificado caducado el {day}"),
+                Some(holder) => format!("El certificado de {holder} caducó el {day}"),
+                None => format!("El certificado caducó el {day}"),
             }
         }
-        ValidityReason::ModifiedAfterSigning => "Modificada después de firmarse".to_owned(),
-        ValidityReason::Damaged => "Firma dañada".to_owned(),
+        ValidityReason::ModifiedAfterSigning => "Se ha modificado después de firmarse".to_owned(),
+        ValidityReason::Damaged => "La firma está dañada".to_owned(),
         ValidityReason::CertificateNotYetValid { date } => format!(
-            "Certificado aún no en vigor hasta el {}",
+            "El certificado no se podía usar antes del {}",
             in_local_day(date, time_zone)
         ),
-        ValidityReason::UnknownSignatureType => "Tipo de firma desconocido".to_owned(),
+        ValidityReason::UnknownSignatureType => "rFirma no conoce este tipo de firma".to_owned(),
         ValidityReason::CosignNotAdmitted { closed_by } => match closed_by {
-            Some(closed_by) => format!("Cofirma no admitida: el documento lo cerró {closed_by}"),
-            None => "Cofirma no admitida".to_owned(),
+            Some(closed_by) => format!("{closed_by} no admitía más firmas"),
+            None => "El documento no admitía más firmas".to_owned(),
         },
     }
 }

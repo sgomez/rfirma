@@ -113,9 +113,9 @@ fn the_document_findings_come_above_the_signatures_and_count_as_problems() {
         printed(&outcome),
         "\
 PAdES · 1 firma · 3 problemas
-⚠ El documento se modificó después de la última firma
-⚠ Se rellenó un formulario después de firmar
-⚠ Se añadió contenido encima de la firma
+⚠ Se ha modificado después de la última firma
+⚠ Se ha rellenado el formulario después de firmar
+⚠ Se ha añadido contenido encima de lo firmado
 
 ✓ UNA
 "
@@ -260,7 +260,7 @@ PAdES · 1 firma · 1 caducada
   Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)
   Emisor:            AC FNMT Usuarios
   Fecha:             2026-09-20 18:01:44 +02:00
-  Motivo:            Certificado caducado el 2026-01-02
+  Motivo:            El certificado caducó el 2026-01-02
 "
     );
 }
@@ -290,28 +290,39 @@ fn the_reasons_are_written_in_the_sheet() {
                 date: "2026-01-02T00:00:00Z".to_owned(),
                 holder: Some("ACME SL".to_owned()),
             },
-            "Certificado caducado el 2026-01-02 (el de ACME SL)",
+            "El certificado de ACME SL caducó el 2026-01-02",
+        ),
+        (
+            ValidityReason::CertificateExpired {
+                date: "2026-01-02T00:00:00Z".to_owned(),
+                holder: None,
+            },
+            "El certificado caducó el 2026-01-02",
         ),
         (
             ValidityReason::ModifiedAfterSigning,
-            "Modificada después de firmarse",
+            "Se ha modificado después de firmarse",
         ),
-        (ValidityReason::Damaged, "Firma dañada"),
+        (ValidityReason::Damaged, "La firma está dañada"),
         (
             ValidityReason::CertificateNotYetValid {
                 date: "2027-01-02T00:00:00Z".to_owned(),
             },
-            "Certificado aún no en vigor hasta el 2027-01-02",
+            "El certificado no se podía usar antes del 2027-01-02",
         ),
         (
             ValidityReason::UnknownSignatureType,
-            "Tipo de firma desconocido",
+            "rFirma no conoce este tipo de firma",
         ),
         (
             ValidityReason::CosignNotAdmitted {
                 closed_by: Some("UNA".to_owned()),
             },
-            "Cofirma no admitida: el documento lo cerró UNA",
+            "UNA no admitía más firmas",
+        ),
+        (
+            ValidityReason::CosignNotAdmitted { closed_by: None },
+            "El documento no admitía más firmas",
         ),
     ] {
         let mut signature = a_signature("X", "", None);
