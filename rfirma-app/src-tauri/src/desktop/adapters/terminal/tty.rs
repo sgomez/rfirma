@@ -3,7 +3,7 @@
 use crate::desktop::ports::OfferedCertificate;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 #[cfg(unix)]
-use picker::{height_for, Picker, Step};
+use picker::{height_for, run, told, unusable, Picker};
 
 #[cfg(any(unix, test))]
 mod picker;
@@ -63,58 +63,48 @@ fn typed_line(input: &mut impl std::io::Read) -> Result<ProtectedSecret, String>
 /// La posición elegida en la lista, que empieza en `preselected`, dibujada bajo el prompt.
 #[cfg(unix)]
 pub fn chosen_on_tty(offered: &[OfferedCertificate], preselected: usize) -> Result<usize, String> {
-    use ratatui::backend::CrosstermBackend;
-    use ratatui::crossterm::event::{self, Event, KeyEventKind};
-    use ratatui::{Terminal, TerminalOptions, Viewport};
-    use std::io::Write;
+    let (tty, mut summary) = opened_tty()?;
+    let (raw, mut terminal) = inline_on(tty, height_for(offered.len()))?;
+    let step = run(
+        &mut terminal,
+        &mut Picker::new(offered, preselected),
+        ratatui::crossterm::event::read,
+    );
+    drop(terminal);
+    drop(raw);
+    told(step?, offered, &mut summary)
+}
 
+/// La terminal que controla el proceso, dos veces: para la lista y para el resumen.
+#[cfg(unix)]
+fn opened_tty() -> Result<(std::fs::File, std::fs::File), String> {
     let tty = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
         .open("/dev/tty")
         .map_err(|error| format!("no se puede abrir la terminal ({error})"))?;
-    let mut summary = tty.try_clone().map_err(unusable)?;
-    let raw = RawMode::on()?;
-    let mut terminal = Terminal::with_options(
-        CrosstermBackend::new(tty),
-        TerminalOptions {
-            viewport: Viewport::Inline(height_for(offered.len())),
-        },
-    )
-    .map_err(unusable)?;
-    let mut picker = Picker::new(offered, preselected);
-    let step = loop {
-        terminal
-            .draw(|frame| picker.draw(frame))
-            .map_err(unusable)?;
-        if let Event::Key(key) = event::read().map_err(unusable)? {
-            if key.kind != KeyEventKind::Press {
-                continue;
-            }
-            match picker.on(key) {
-                Step::Pending => {}
-                step => break step,
-            }
-        }
-    };
-    let origin = terminal.get_frame().area().as_position();
-    terminal.clear().map_err(unusable)?;
-    terminal.set_cursor_position(origin).map_err(unusable)?;
-    terminal.show_cursor().map_err(unusable)?;
-    drop(terminal);
-    drop(raw);
-    match step {
-        Step::Chosen(index) => {
-            let _ = writeln!(summary, "Certificado: {}", offered[index].headline);
-            Ok(index)
-        }
-        _ => Err("se ha cancelado la elección".to_owned()),
-    }
+    let summary = tty.try_clone().map_err(unusable)?;
+    Ok((tty, summary))
 }
 
 #[cfg(unix)]
-fn unusable(error: impl std::fmt::Display) -> String {
-    format!("no se puede usar la terminal ({error})")
+type OnTty = ratatui::Terminal<ratatui::backend::CrosstermBackend<std::fs::File>>;
+
+/// La terminal en modo crudo con un viewport de esa altura bajo el prompt.
+#[cfg(unix)]
+fn inline_on(tty: std::fs::File, height: u16) -> Result<(RawMode, OnTty), String> {
+    use ratatui::backend::CrosstermBackend;
+    use ratatui::{Terminal, TerminalOptions, Viewport};
+
+    let raw = RawMode::on()?;
+    let terminal = Terminal::with_options(
+        CrosstermBackend::new(tty),
+        TerminalOptions {
+            viewport: Viewport::Inline(height),
+        },
+    )
+    .map_err(unusable)?;
+    Ok((raw, terminal))
 }
 
 /// El modo crudo de la terminal que controla el proceso, devuelto a su estado al soltarlo.

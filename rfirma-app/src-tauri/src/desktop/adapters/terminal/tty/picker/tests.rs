@@ -1,8 +1,10 @@
 use ratatui::backend::TestBackend;
-use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use std::io;
+
+use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::Terminal;
 
-use super::{height_for, Picker, Step};
+use super::{height_for, run, told, Picker, Step};
 use crate::desktop::ports::OfferedCertificate;
 
 fn a_certificate(headline: &str, capacity: &str, stores: &[&str]) -> OfferedCertificate {
@@ -230,4 +232,79 @@ fn a_long_list_scrolls_to_keep_the_selection_in_sight() {
 
     assert!(shown.contains("> TITULAR 11"), "{shown}");
     assert!(!shown.contains("TITULAR 00"), "{shown}");
+}
+
+fn ran(events: Vec<io::Result<Event>>) -> (Result<Step, String>, String) {
+    let offered = three();
+    let mut picker = Picker::new(&offered, 0);
+    let mut terminal = Terminal::new(TestBackend::new(60, 13)).expect("terminal de prueba");
+    let mut events = events.into_iter();
+    let step = run(&mut terminal, &mut picker, || {
+        events.next().expect("quedan teclas en el guion")
+    });
+    let left = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect::<String>();
+    (step, left.trim().to_owned())
+}
+
+#[test]
+fn the_list_ignores_released_keys_and_other_events() {
+    let (step, _) = ran(vec![
+        Ok(Event::Resize(60, 13)),
+        Ok(Event::Key(KeyEvent::new_with_kind(
+            KeyCode::Down,
+            KeyModifiers::NONE,
+            KeyEventKind::Release,
+        ))),
+        Ok(Event::Key(key(KeyCode::Down))),
+        Ok(Event::Key(key(KeyCode::Enter))),
+    ]);
+
+    assert_eq!(step, Ok(Step::Chosen(1)));
+}
+
+#[test]
+fn the_list_leaves_the_terminal_blank_when_done() {
+    let (step, left) = ran(vec![Ok(Event::Key(key(KeyCode::Esc)))]);
+
+    assert_eq!(step, Ok(Step::Cancelled));
+    assert_eq!(left, "");
+}
+
+#[test]
+fn a_terminal_that_stops_answering_ends_the_choice() {
+    let (step, _) = ran(vec![Err(io::Error::other("cerrada"))]);
+
+    assert_eq!(
+        step,
+        Err("no se puede usar la terminal (cerrada)".to_owned())
+    );
+}
+
+#[test]
+fn the_chosen_certificate_is_left_written_under_the_prompt() {
+    let mut out = Vec::new();
+
+    let chosen = told(Step::Chosen(1), &three(), &mut out);
+
+    assert_eq!(chosen, Ok(1));
+    assert_eq!(
+        String::from_utf8(out).expect("texto"),
+        "Certificado: PÉREZ LÓPEZ JUAN\n"
+    );
+}
+
+#[test]
+fn a_cancelled_choice_writes_nothing() {
+    let mut out = Vec::new();
+
+    let chosen = told(Step::Cancelled, &three(), &mut out);
+
+    assert_eq!(chosen, Err("se ha cancelado la elección".to_owned()));
+    assert!(out.is_empty());
 }

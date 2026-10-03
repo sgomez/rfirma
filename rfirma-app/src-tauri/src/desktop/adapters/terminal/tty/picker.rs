@@ -1,11 +1,15 @@
 //! La lista de `-certtui`: filtra al teclear, se desplaza y pinta cada certificado en cuatro líneas; no sabe de dónde vienen las teclas ni adónde va lo pintado.
 
-use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use std::fmt::Display;
+use std::io::{self, Write};
+
+use ratatui::backend::Backend;
+use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Position};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{HighlightSpacing, List, ListItem, ListState, Paragraph};
-use ratatui::Frame;
+use ratatui::{Frame, Terminal};
 
 use crate::desktop::ports::OfferedCertificate;
 
@@ -26,6 +30,51 @@ pub enum Step {
 pub fn height_for(certificates: usize) -> u16 {
     let rows = 1 + LINES_PER_CERTIFICATE * certificates.clamp(1, CERTIFICATES_IN_SIGHT);
     u16::try_from(rows).unwrap_or(u16::MAX)
+}
+
+/// Lo que se elige con las teclas que llegan, pintando en ese terminal y dejándolo en blanco al acabar.
+pub fn run<B: Backend>(
+    terminal: &mut Terminal<B>,
+    picker: &mut Picker<'_>,
+    mut next: impl FnMut() -> io::Result<Event>,
+) -> Result<Step, String> {
+    let step = loop {
+        terminal
+            .draw(|frame| picker.draw(frame))
+            .map_err(unusable)?;
+        if let Event::Key(key) = next().map_err(unusable)? {
+            if key.kind == KeyEventKind::Press {
+                match picker.on(key) {
+                    Step::Pending => {}
+                    step => break step,
+                }
+            }
+        }
+    };
+    let origin = terminal.get_frame().area().as_position();
+    terminal.clear().map_err(unusable)?;
+    terminal.set_cursor_position(origin).map_err(unusable)?;
+    terminal.show_cursor().map_err(unusable)?;
+    Ok(step)
+}
+
+/// La posición elegida, dejando escrito cuál es; o por qué no se ha elegido ninguna.
+pub fn told(
+    step: Step,
+    offered: &[OfferedCertificate],
+    out: &mut impl Write,
+) -> Result<usize, String> {
+    match step {
+        Step::Chosen(index) => {
+            let _ = writeln!(out, "{PROMPT}{}", offered[index].headline);
+            Ok(index)
+        }
+        _ => Err("se ha cancelado la elección".to_owned()),
+    }
+}
+
+pub fn unusable(error: impl Display) -> String {
+    format!("no se puede usar la terminal ({error})")
 }
 
 /// El estado de la lista: lo tecleado, lo que deja ver y cuál está marcado.
