@@ -7,7 +7,7 @@ use base64::Engine as _;
 use crate::desktop::application::store_scope::{within_the_scope, ScopeFailure};
 use crate::desktop::domain::command_line::{
     command_of, handover_to_the_window, is_a_help_flag, normalised, parameter_left_out,
-    verbose_outside_verify, Command, Refusal, WindowHandover,
+    verbose_outside_verify, Command, Refusal, WindowHandover, PASSWORD_FD, XML,
 };
 use crate::desktop::domain::sign_arguments::{
     parse_sign_arguments, Format, Selection, SignArguments,
@@ -195,6 +195,31 @@ fn carried_out(
 }
 
 fn list_aliases(arguments: &[String], stores: &dyn CertificateStores) -> Outcome {
+    let outcome = aliases_listed(arguments, stores);
+    if !arguments.iter().any(|argument| argument == XML) {
+        return outcome;
+    }
+    if outcome.exit_code != SUCCEEDED {
+        return in_the_xml_response(outcome, None);
+    }
+    Outcome {
+        stdout: xml_aliases(&outcome.stdout).into_bytes(),
+        ..outcome
+    }
+}
+
+fn xml_aliases(text: &[u8]) -> String {
+    let aliases: String = String::from_utf8_lossy(text)
+        .lines()
+        .map(|alias| format!("<alias>{}</alias>", escaped_for_xml(alias)))
+        .collect();
+    format!("<afirma><result>ok</result><response>{aliases}</response></afirma>\n")
+}
+
+fn aliases_listed(arguments: &[String], stores: &dyn CertificateStores) -> Outcome {
+    if arguments.iter().any(|argument| argument == PASSWORD_FD) {
+        return Outcome::refused(&Refusal::PasswordForListing);
+    }
     let scope = match scope_named_by(arguments) {
         Ok(scope) => scope,
         Err(refusal) => return Outcome::refused(&Refusal::InvalidStore(refusal)),
