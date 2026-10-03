@@ -17,6 +17,11 @@ use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::{DocumentSignature, DocumentSignatures, SignatureStatus};
 use crate::site::domain::protocol::SiteFilter;
 
+const AN_XML: &[u8] = b"<?xml version=\"1.0\"?><root/>";
+
+const AN_INVOICE: &[u8] =
+    b"<?xml version=\"1.0\"?><fe:Facturae><FileHeader/><Parties/><Invoices/></fe:Facturae>";
+
 const A_PDF: &[u8] = b"%PDF-1.7\n1 0 obj\n<< >>\nendobj\n";
 
 /// Un `SignedData` mínimo: la cabecera que reconoce `is_cms_signed_data`.
@@ -474,6 +479,29 @@ Firma 2
   Emisor:            AC FNMT Usuarios
 "
     );
+}
+
+#[test]
+fn verbose_names_xades_and_facturae_as_the_format_of_their_sheets() {
+    for (document, format) in [(AN_XML, "XAdES"), (AN_INVOICE, "FacturaE")] {
+        let reader = Reading(Ok(vec![a_signature("UNA PERSONA", "99999999R", None)]));
+        let verifier = Answering::with(&["Firma valida"]);
+
+        let outcome = attended(
+            &["verify", "-v", "-i", "datos.xsig"],
+            &OneFile(document),
+            &verifier,
+            &reader,
+            &SummerInMadrid,
+        );
+
+        assert_eq!(
+            printed(&outcome),
+            format!(
+                "Firma valida\n\nFormato: {format}\n\nFirma 1\n  Firmante:          UNA PERSONA (99999999R)\n  Emisor:            AC FNMT Usuarios\n"
+            )
+        );
+    }
 }
 
 #[test]
