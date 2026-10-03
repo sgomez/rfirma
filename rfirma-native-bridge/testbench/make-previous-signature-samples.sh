@@ -61,5 +61,13 @@ sign cades implicit "$WORK/content.txt" "$EXPIRED" "$EXPIRED_PIN" "$OUT/cades-ex
 sign cades implicit "$WORK/content.txt" "$ACTIVE" "$ACTIVE_PIN" "$WORK/cades-active.csig"
 sign countersign cades tree "$WORK/cades-active.csig" "$EXPIRED" "$EXPIRED_PIN" \
     "$OUT/cades-countersigned-by-expired.csig"
+echo "== CA autofirmada de pruebas, caducada desde 2015"
+keytool -genkeypair -keystore "$WORK/expired-ca.p12" -storetype PKCS12 -storepass 123456 \
+    -alias ca -keyalg RSA -keysize 2048 -dname "CN=rfirma CA caducada de pruebas, O=rfirma, C=ES" \
+    -ext bc:c -startdate 2010/01/01 -validity 1826
+keytool -exportcert -rfc -keystore "$WORK/expired-ca.p12" -storepass 123456 -alias ca \
+    -file "$WORK/expired-ca.pem"
+sign xades-extra-certificate "$ROOT/testdata/reference/document.xml" "$ACTIVE" "$ACTIVE_PIN" \
+    "$WORK/expired-ca.pem" "$OUT/xades-expired-ca.xml"
 
 ls -la "$OUT"
