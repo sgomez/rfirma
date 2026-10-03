@@ -215,6 +215,12 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 No hay ningún prototipo en vuelo.
 
+El caso de uso **la validez de las firmas en la ventana** se validó el
+**03/10/2026**, sin página de trabajo, en `Main`, `EstadoFirmarDeTodosModos`,
+`SedeConsentimiento` y el nuevo `EstadoVerFirmas`. Tocó las fichas
+`panel-de-firma`, `dialogo-ver-firmas`, `dialogo-firmar-de-todos-modos`,
+`ventana-de-sede`, `ventana-principal` y `design-system`.
+
 El caso de uso **el resumen unificado con `verify --gui`** se validó el
 **03/10/2026**, en `Main` y sin página de trabajo: el resumen de después de
 firmar y el que abre `rfirma verify -i <doc> -gui` son el mismo estado, que

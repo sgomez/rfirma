@@ -55,7 +55,8 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | - | -------- | ------ |
 | 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos (el selector con su buscador), firmando (diálogo con velo), firmado (el resumen, que es también el de `verify --gui`: con firmas, CAdES con contrafirmas, sin firmas, formato desconocido y fallo al leer) y error al firmar; la firma visible y su contenido, la cabecera por escritorio —en Linux la barra de título GTK con la tira de pestañas debajo; en Windows y macOS la barra única—, con el botón partido, «Abiertos recientemente», el desborde de pestañas, el menú y el botón de aviso, la vista sin pestañas, la franja de versión nueva bajo la barra, el destino, el zoom y la vista previa |
 | 5b | `EstadoPaginasSinFirmaVisible` | Antes de firmar: las páginas donde la firma visible no cabe |
-| 5c | `EstadoFirmarDeTodosModos` | Antes de firmar: el documento trae alguna firma no válida, y se pide confirmación |
+| 5c | `EstadoFirmarDeTodosModos` | Antes de firmar: el documento trae alguna firma caducada o no válida, o un hallazgo, y se pide confirmación |
+| 5d | `EstadoVerFirmas` | El diálogo «Ver firmas»: las firmas que ya trae el documento, con su validez, sobre `Main` lista |
 | 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén —, sobre `Main` buscando certificados o lista, según el almacén |
 | 7 | `EstadoPinIncorrecto` | Secreto incorrecto, con el mismo fondo que el 6 |
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
@@ -1005,3 +1006,36 @@ con palancas en `Main`, que se retiraron al elegir.
   de firma».
 
 El porqué, en [`panel-de-firma`](../panel-de-firma.md#decisiones).
+
+## Lo que cambió con la validez de las firmas
+
+Validado el 03/10/2026, sin artboards ni páginas de trabajo. La regla es la del
+ADR-0043; el razonamiento, en la anotación `nota-validez`.
+
+- **`Main`**: el aviso de firmas previas pasa a ser una línea —el icono de la
+  peor validez, «Junto a N firmas», « · N caducadas» o « · N problemas», y
+  «Ver firmas →»—, sin desplegar. El resumen gana la validez en cada ficha,
+  «Fecha» o «Sellada» en lugar de «Fecha declarada» y los hallazgos del
+  documento encima de las fichas; tras firmar, «Se ha modificado después de la
+  última firma» se lee «Se modificó antes de tu firma». La palanca «Firmas
+  previas» cambia de casos y la de «Ver firmas» desaparece.
+- **`EstadoVerFirmas`**, nuevo, en la página «Recorrido de firma» junto a 5c:
+  el diálogo «Firmas del documento», con las fichas del resumen y solo
+  «Cerrar».
+- **`EstadoFirmarDeTodosModos`**: una fila por problema, hallazgos primero;
+  absorbe las firmas que rFirma no reconoce; cierra con «El receptor podría
+  rechazarlo.» y «Firmar igualmente». Su palanca pasa a ser «Firmas previas».
+- **`SedeConsentimiento`**: el mismo aviso compacto en la caja del documento,
+  con «Ver firmas →»; pierde la palanca `verFirmas`.
+- **`EstadoPin`, `EstadoPinIncorrecto` y `EstadoAcercaDe`** copian el aviso
+  nuevo, sin exponer la palanca.
+- **`_aviso-firmas.part`** y **`_fichas-firmas.part`**, nuevos: el aviso y las
+  fichas se estampan con `estampa.sh` y los vigila `comprueba.sh`.
+- **`canvas.json`** gana el artboard 5d y la anotación `nota-validez`, y
+  reescribe `nota-main`, `nota-firmar-de-todos-modos`,
+  `nota-sede-consentimiento` y `nota-verify-gui`.
+
+El porqué, en [`panel-de-firma`](../panel-de-firma.md#decisiones),
+[`dialogo-ver-firmas`](../dialogo-ver-firmas.md),
+[`dialogo-firmar-de-todos-modos`](../dialogo-firmar-de-todos-modos.md) y
+[`ventana-de-sede`](../ventana-de-sede.md).

@@ -217,16 +217,15 @@ desplaza y el pie no se mueve.
   cuenta atrás se apaga en Preferencias ([preferencias.md](preferencias.md)),
   y entonces la acción nace activa y con el foco.
 
-**Las firmas previas**, dentro de la caja del documento, son el aviso de
-[`panel-de-firma.md`](panel-de-firma.md) con su mismo comportamiento: la línea
-«Firmarás junto a **N firmas** anteriores · **M avisos**», que aquí cabe
-siempre en una línea; el chevron del desplegable (16 px, trazo 1,5,
-`--rf-text-muted`) a la derecha; plegada por defecto, y al pulsarla, una fila
-por firma con quién, cuándo, su veredicto y su motivo, y «El documento ha
-cambiado después de esta firma» en la última. El icono del resumen y el borde de
-la caja toman el tono de la peor fila. «Ya lo firmaste tú» va en una franja al
-pie de la caja y se ve aunque esté plegada. Las reglas —qué cuenta como aviso,
-cómo se valida cada firma y qué es «ya lo firmaste tú»— son las del panel.
+**Las firmas previas**, dentro de la caja del documento, son el aviso compacto
+de [`panel-de-firma.md`](panel-de-firma.md#el-aviso-de-firmas-previas), el
+mismo: una línea con el icono de la peor validez, «Junto a **N firmas**»,
+« · **M caducadas**» o « · **M problemas**», y «Ver firmas →», que abre el mismo
+diálogo [«Ver firmas»](dialogo-ver-firmas.md) de la ventana principal; no se
+dibuja otro sobre la sede. El tono va en el icono y en el borde de la caja.
+«Ya lo firmaste tú» va en una franja al pie de la caja. Las reglas —qué cuenta
+como problema, la validez de cada firma y qué es «ya lo firmaste tú»— son las
+del panel.
 
 **La sede no bloquea ni pide confirmación** por una firma no válida, como
 AutoFirma cuando lo invoca una sede: esta pantalla ya es un consentimiento, lo
@@ -253,8 +252,8 @@ dejar de verse como válidas», con el mismo icono de información y el mismo
 borde de 1 px que el origen sin identificar (ID-302). El botón sigue diciendo
 `Firmar`, y **«firmas sin registrar» no aparece en la interfaz**. Cancelar aquí
 es cancelar el trámite, como en cualquier otra situación del consentimiento.
-Las firmas que sí se entienden salen en el aviso de firmas previas, cada una con
-su veredicto.
+En el aviso compacto, esa firma cuenta como un problema más, y en «Ver firmas»
+es una ficha «No válida» con el motivo «rFirma no conoce este tipo de firma».
 
 ### 1c · Marcar el área de la firma visible — sin artboard
 
@@ -476,7 +475,7 @@ cancela— se borró por explicar lo evidente.
 | La página está desactualizada | sin artboard | `Entendido` |
 | El canal no se abre (Chrome / Firefox) | `SedeEspera` · `no-va-chrome`, `no-va-firefox` | `Instalar…` (la CA local) |
 | Consentimiento de firma | `SedeConsentimiento` · `forma = confirmacion` | `Firmar` |
-| Consentimiento con firmas previas | `SedeConsentimiento` · `firmasPrevias`, `verFirmas` | `Firmar` |
+| Consentimiento con firmas previas | `SedeConsentimiento` · `firmasPrevias` | `Firmar`; «Ver firmas →» abre el diálogo de la ventana principal |
 | Consentimiento de cesión de datos | `SedeConsentimiento` · `situacion = entregar identidad` | `Enviar mis datos` |
 | Marcar el área de la firma visible | sin artboard | `Continuar` |
 | Hay que confirmar | sin artboard | `Continuar` |
@@ -544,6 +543,13 @@ flotante de la ventana principal, y las firmas previas dentro de la caja del
 documento con el comportamiento del panel. Sin origen, una línea en lugar de la
 caja. Palancas de estado nuevas: `firmasPrevias`, `verFirmas`, `desplegable` y
 `origen`.
+
+**La validez de las firmas previas, validada el 03/10/2026** en la misma
+página, sobre `SedeConsentimiento`: el aviso desplegable pasa a ser el aviso
+compacto del panel, con «Ver firmas →» y el mismo diálogo que la ventana
+principal. Desaparece la palanca `verFirmas`, porque ya no hay nada que
+plegar. El porqué, en [`panel-de-firma.md`](panel-de-firma.md#decisiones) y en
+[`dialogo-ver-firmas.md`](dialogo-ver-firmas.md#decisiones).
 
 **El selector de certificado, validado el 27/09/2026** en la misma página,
 sobre `SedeConsentimiento`, a la vez que en `Main`. Es un solo componente para

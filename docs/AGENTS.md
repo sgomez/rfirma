@@ -101,7 +101,9 @@ conformidad.
 `ventana-principal` · `cabecera` · `pestanas-de-documentos` ·
 `visor-de-documento` · `panel-de-firma` · `preferencias` · `dialogo-pin` ·
 `dialogo-progreso-firma` · `dialogo-paginas-sin-firma-visible` ·
-`dialogo-firmar-de-todos-modos` · `acerca-de` ·
+`dialogo-firmar-de-todos-modos` ·
+`dialogo-ver-firmas` (las firmas que ya trae el documento, con su validez, antes de firmar) ·
+`acerca-de` ·
 `ventana-de-sede` (la ventana que abre una sede por `afirma://`, entera: espera,
 consentimiento, firma, desenlace y sin certificado utilizable) ·
 `primer-arranque` (el asistente que configura el equipo la primera vez) ·

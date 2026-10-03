@@ -1,0 +1,29 @@
+          <sc-for list="{{ hallazgos }}" as="x" hint-placeholder-count="1">
+            <div class="rf-row rf-gap-xs" style="flex:none;align-items:flex-start;padding:9px 12px;border:2px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
+              <span style="display:flex;flex:none;height:18px;align-items:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></span>
+              <span style="flex:1;min-width:0;font-size:13px;line-height:18px;font-weight:700">{{ x }}</span>
+            </div>
+          </sc-for>
+          <div class="rf-stack" style="flex:none;gap:6px">
+            <sc-for list="{{ fichas }}" as="f" hint-placeholder-count="3">
+              <div class="rf-card" style="padding:10px 12px;gap:8px">
+                <div class="rf-row rf-gap-xs" style="min-height:20px">
+                  <span class="rf-label" style="flex:1;letter-spacing:.6px;text-transform:uppercase">{{ f.etiqueta }}</span>
+                  <sc-if value="{{ f.nueva }}" hint-placeholder-val="{{ false }}">
+                    <span class="rf-badge rf-badge--primary" style="flex:none">Nueva</span>
+                  </sc-if>
+                  <span class="rf-row" style="flex:none;gap:5px;{{ f.estiloValidez }}"><sc-if value="{{ f.ok }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M8 12.5 11 15.5 16.5 9"/></svg></sc-if><sc-if value="{{ f.caducada }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></sc-if><sc-if value="{{ f.mal }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></sc-if><span class="rf-body" style="color:inherit;font-weight:inherit">{{ f.validez }}</span></span>
+                </div>
+                <div class="rf-stack" style="gap:4px"><sc-for list="{{ f.campos }}" as="c" hint-placeholder-count="4"><div class="rf-row" style="align-items:baseline;gap:10px"><span class="rf-body rf-text-muted" style="width:104px;flex:none;line-height:1.35;{{ c.estiloK }}">{{ c.k }}</span><span style="{{ c.estilo }}">{{ c.v }}</span></div></sc-for></div>
+                <sc-for list="{{ f.hijos }}" as="h" hint-placeholder-count="1">
+                  <div class="rf-stack" style="gap:8px;margin-top:2px;padding:2px 0 2px 12px;border-left:2px solid var(--rf-border-strong)">
+                    <div class="rf-row rf-gap-xs" style="min-height:20px">
+                      <span class="rf-label" style="flex:1;letter-spacing:.6px;text-transform:uppercase">{{ h.etiqueta }}</span>
+                      <span class="rf-row" style="flex:none;gap:5px;{{ h.estiloValidez }}"><sc-if value="{{ h.ok }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M8 12.5 11 15.5 16.5 9"/></svg></sc-if><sc-if value="{{ h.caducada }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></sc-if><sc-if value="{{ h.mal }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></sc-if><span class="rf-body" style="color:inherit;font-weight:inherit">{{ h.validez }}</span></span>
+                    </div>
+                    <div class="rf-stack" style="gap:4px"><sc-for list="{{ h.campos }}" as="c" hint-placeholder-count="4"><div class="rf-row" style="align-items:baseline;gap:10px"><span class="rf-body rf-text-muted" style="width:104px;flex:none;line-height:1.35;{{ c.estiloK }}">{{ c.k }}</span><span style="{{ c.estilo }}">{{ c.v }}</span></div></sc-for></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
