@@ -18,7 +18,10 @@ import java.util.Properties;
 
 import com.aowagie.text.Document;
 import com.aowagie.text.Paragraph;
+import com.aowagie.text.Rectangle;
 import com.aowagie.text.pdf.PRIndirectReference;
+import com.aowagie.text.pdf.PdfAnnotation;
+import com.aowagie.text.pdf.PdfFormField;
 import com.aowagie.text.pdf.PdfName;
 import com.aowagie.text.pdf.PdfReader;
 import com.aowagie.text.pdf.PdfWriter;
@@ -49,6 +52,9 @@ final class TestFixtures {
     private static final String SIGN_ALGORITHM = "SHA256withRSA";
     /** El {@code /SubFilter} que ningun detector de formato PAdES/CAdES del original reconoce. */
     private static final String UNRECOGNIZED_SUBFILTER = "rfirma.unknown-format";
+
+    /** Nombre de campo que el {@code HashMap} de {@code AcroFields} pone antes que {@code Signature1}. */
+    static final String FIRST_SIGNATURE_FIELD = "EarlierSignature";
 
     private TestFixtures() { }
 
@@ -115,6 +121,43 @@ final class TestFixtures {
         final byte[] once = pades(samplePdf(), certificateChain(), privateKey(), new Properties());
         Thread.sleep(1_100);
         return pades(once, otherCertificateChain(), otherPrivateKey(), new Properties());
+    }
+
+    /**
+     * Una firma en un campo visible de nombre {@link #FIRST_SIGNATURE_FIELD} y una cofirma visible
+     * nueva solapada con ella, sin nada despues: iText lista primero el campo de la antigua.
+     */
+    static byte[] pdfWithAVisibleCosignOverTheFirstSignature() throws Exception {
+        final Properties inTheField = new Properties();
+        inTheField.setProperty("signatureField", FIRST_SIGNATURE_FIELD);
+        final byte[] once = pades(pdfWithAnEmptySignatureField(FIRST_SIGNATURE_FIELD,
+                new Rectangle(100, 600, 300, 700)), certificateChain(), privateKey(), inTheField);
+        Thread.sleep(1_100);
+
+        final Properties overlapping = new Properties();
+        overlapping.setProperty("signaturePage", "1");
+        overlapping.setProperty("signaturePositionOnPageLowerLeftX", "150");
+        overlapping.setProperty("signaturePositionOnPageLowerLeftY", "620");
+        overlapping.setProperty("signaturePositionOnPageUpperRightX", "350");
+        overlapping.setProperty("signaturePositionOnPageUpperRightY", "720");
+        return pades(once, otherCertificateChain(), otherPrivateKey(), overlapping);
+    }
+
+    private static byte[] pdfWithAnEmptySignatureField(final String name, final Rectangle box)
+            throws Exception {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        final Document document = new Document();
+        final PdfWriter writer = PdfWriter.getInstance(document, out);
+        document.open();
+        document.add(new Paragraph("Documento de prueba de rfirma."));
+        final PdfFormField field = PdfFormField.createSignature(writer);
+        field.setWidget(box, new PdfName("I"));
+        field.setFieldName(name);
+        field.setFlags(PdfAnnotation.FLAGS_PRINT);
+        field.setPage(1);
+        writer.addAnnotation(field);
+        document.close();
+        return out.toByteArray();
     }
 
     /**

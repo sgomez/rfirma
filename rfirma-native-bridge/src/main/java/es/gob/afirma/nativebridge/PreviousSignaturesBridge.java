@@ -565,7 +565,7 @@ final class PreviousSignaturesBridge {
                 suspect != null, findings(reader, fields, suspect));
     }
 
-    /** El perfil del original es el de la firma de mayor revision; solo a esa se le atribuye. */
+    /** La firma de la revision mas alta, que es la ultima: {@code getSignatureNames} no tiene orden. */
     private static String latestRevisionName(final AcroFields fields) {
         String latest = null;
         for (final String name : fields.getSignatureNames()) {
@@ -740,11 +740,11 @@ final class PreviousSignaturesBridge {
      */
     private static Finding changedAfterLastSignature(final PdfReader current,
             final AcroFields fields) {
-        final List<String> names = fields.getSignatureNames();
-        if (names.isEmpty() || fields.getRevision(names.get(0)) >= fields.getTotalRevisions()) {
+        final String last = latestRevisionName(fields);
+        if (last == null || fields.getRevision(last) >= fields.getTotalRevisions()) {
             return null;
         }
-        try (InputStream lastSignedRevision = fields.extractRevision(names.get(0))) {
+        try (InputStream lastSignedRevision = fields.extractRevision(last)) {
             final PdfReader signed = new PdfReader(lastSignedRevision);
             final int pages = Math.min(current.getNumberOfPages(), PAGES_TO_COMPARE);
             for (int page = 1; page <= pages; page++) {
