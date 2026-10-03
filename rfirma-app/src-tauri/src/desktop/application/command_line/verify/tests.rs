@@ -14,7 +14,10 @@ use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::bridge::BridgeError;
-use crate::signing::domain::{DocumentSignature, DocumentSignatures, SignatureStatus, Validity};
+use crate::signing::domain::{
+    DocumentFinding, DocumentSignature, DocumentSignatures, SignatureStatus, SigningDate, Validity,
+    ValidityReason,
+};
 use crate::site::domain::protocol::SiteFilter;
 
 const AN_XML: &[u8] = b"<?xml version=\"1.0\"?><root/>";
@@ -91,6 +94,15 @@ impl SignatureReader for Reading {
             .clone()
             .map(|signatures| DocumentSignatures::new(signatures, false))
             .map_err(BridgeError::Failed)
+    }
+}
+
+/// La lectura de firmas que además trae hallazgos del documento.
+struct ReadingWithFindings(Vec<DocumentSignature>, Vec<DocumentFinding>);
+
+impl SignatureReader for ReadingWithFindings {
+    fn signatures_in(&self, _document: &[u8]) -> Result<DocumentSignatures, BridgeError> {
+        Ok(DocumentSignatures::new(self.0.clone(), false).with_findings(self.1.clone()))
     }
 }
 
@@ -197,6 +209,11 @@ impl DocumentSigner for Untouched {
 
 fn verified(words: &[&str], files: &dyn CommandLineFiles, verifier: &Answering) -> Outcome {
     attended(words, files, verifier, &Untouched, &Untouched)
+}
+
+fn verified_reading_with(words: &[&str], reader: &dyn SignatureReader) -> Outcome {
+    let verifier = Answering::with(&["Firma valida"]);
+    attended(words, &OneFile(A_PDF), &verifier, reader, &SummerInMadrid)
 }
 
 fn verified_reading(words: &[&str], reader: &Reading) -> Outcome {
@@ -373,277 +390,4 @@ fn verify_in_xml_is_not_available_yet() {
     assert!(outcome.stdout.is_empty());
 }
 
-#[test]
-fn verbose_prints_the_validity_then_the_format_and_one_sheet_per_signature() {
-    let reader = Reading(Ok(vec![
-        a_signature(
-            "NOMBRE APELLIDO1 APELLIDO2",
-            "99999999R",
-            Some("2026-09-14T08:32:05Z"),
-        ),
-        a_signature(
-            "OTRA PERSONA PRUEBA",
-            "00000000T",
-            Some("2026-09-20T16:01:44.250Z"),
-        ),
-    ]));
-
-    let outcome = verified_reading(&["verify", "-i", "firmado.pdf", "-v"], &reader);
-
-    assert_eq!(outcome.exit_code, SUCCEEDED);
-    assert_eq!(
-        printed(&outcome),
-        "\
-Firma valida
-
-Formato: PAdES
-
-Firma 1
-  Firmante:          NOMBRE APELLIDO1 APELLIDO2 (99999999R)
-  Emisor:            AC FNMT Usuarios
-  Fecha declarada:   2026-09-14 10:32:05 +02:00
-
-Firma 2
-  Firmante:          OTRA PERSONA PRUEBA (00000000T)
-  Emisor:            AC FNMT Usuarios
-  Fecha declarada:   2026-09-20 18:01:44 +02:00
-"
-    );
-    assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
-}
-
-#[test]
-fn the_long_form_of_verbose_prints_the_same() {
-    let reader = Reading(Ok(vec![a_signature("UNA PERSONA", "99999999R", None)]));
-
-    let short = verified_reading(&["verify", "-i", "firmado.pdf", "-v"], &reader);
-    let long = verified_reading(&["verify", "--verbose", "-i", "firmado.pdf"], &reader);
-
-    assert_eq!(long, short);
-}
-
-#[test]
-fn a_field_the_signature_does_not_have_is_not_printed() {
-    let mut signature = a_signature("UNA PERSONA", "", None);
-    signature.issuer = String::new();
-
-    let outcome = verified_reading(
-        &["verify", "-v", "-i", "firmado.pdf"],
-        &Reading(Ok(vec![signature])),
-    );
-
-    assert_eq!(
-        printed(&outcome),
-        "Firma valida\n\nFormato: PAdES\n\nFirma 1\n  Firmante:          UNA PERSONA\n"
-    );
-}
-
-#[test]
-fn a_document_without_signatures_says_so_in_verbose() {
-    let outcome = verified_reading(
-        &["verify", "-v", "-i", "firmado.pdf"],
-        &Reading(Ok(Vec::new())),
-    );
-
-    assert_eq!(
-        printed(&outcome),
-        "Firma valida\n\nFormato: PAdES\n\nEl documento no tiene firmas.\n"
-    );
-}
-
-#[test]
-fn verbose_on_a_cades_names_the_format_and_prints_a_sheet_per_signer() {
-    let reader = Reading(Ok(vec![
-        a_signature("UNA PERSONA", "99999999R", None),
-        a_signature("OTRA PERSONA", "00000000T", None),
-    ]));
-    let verifier = Answering::with(&["Firma valida"]);
-
-    let outcome = attended(
-        &["verify", "-v", "-i", "datos.csig"],
-        &OneFile(A_CMS),
-        &verifier,
-        &reader,
-        &SummerInMadrid,
-    );
-
-    assert_eq!(
-        printed(&outcome),
-        "\
-Firma valida
-
-Formato: CAdES
-
-Firma 1
-  Firmante:          UNA PERSONA (99999999R)
-  Emisor:            AC FNMT Usuarios
-
-Firma 2
-  Firmante:          OTRA PERSONA (00000000T)
-  Emisor:            AC FNMT Usuarios
-"
-    );
-}
-
-#[test]
-fn verbose_names_xades_and_facturae_as_the_format_of_their_sheets() {
-    for (document, format) in [(AN_XML, "XAdES"), (AN_INVOICE, "FacturaE")] {
-        let reader = Reading(Ok(vec![a_signature("UNA PERSONA", "99999999R", None)]));
-        let verifier = Answering::with(&["Firma valida"]);
-
-        let outcome = attended(
-            &["verify", "-v", "-i", "datos.xsig"],
-            &OneFile(document),
-            &verifier,
-            &reader,
-            &SummerInMadrid,
-        );
-
-        assert_eq!(
-            printed(&outcome),
-            format!(
-                "Firma valida\n\nFormato: {format}\n\nFirma 1\n  Firmante:          UNA PERSONA (99999999R)\n  Emisor:            AC FNMT Usuarios\n"
-            )
-        );
-    }
-}
-
-#[test]
-fn verbose_nests_the_countersignatures_inside_the_signature_they_countersign() {
-    let mut deepest = a_signature("TERCERA PERSONA", "11111111H", None);
-    deepest.countersignatures = Vec::new();
-    let mut counter = a_signature("OTRA PERSONA", "00000000T", None);
-    counter.countersignatures = vec![deepest];
-    let mut signer = a_signature("UNA PERSONA", "99999999R", None);
-    signer.countersignatures = vec![counter];
-    let reader = Reading(Ok(vec![signer]));
-    let verifier = Answering::with(&["Firma valida"]);
-
-    let outcome = attended(
-        &["verify", "-v", "-i", "datos.csig"],
-        &OneFile(A_CMS),
-        &verifier,
-        &reader,
-        &SummerInMadrid,
-    );
-
-    assert_eq!(
-        printed(&outcome),
-        "\
-Firma valida
-
-Formato: CAdES
-
-Firma 1
-  Firmante:          UNA PERSONA (99999999R)
-  Emisor:            AC FNMT Usuarios
-
-    Contrafirma 1.1
-      Firmante:          OTRA PERSONA (00000000T)
-      Emisor:            AC FNMT Usuarios
-
-        Contrafirma 1.1.1
-          Firmante:          TERCERA PERSONA (11111111H)
-          Emisor:            AC FNMT Usuarios
-"
-    );
-}
-
-#[test]
-fn signatures_that_cannot_be_read_leave_the_validity_and_end_with_zero() {
-    let reader = Reading(Err("el isolate no arranca".to_owned()));
-
-    let outcome = verified_reading(&["verify", "-v", "-i", "firmado.pdf"], &reader);
-
-    assert_eq!(outcome.exit_code, SUCCEEDED);
-    assert_eq!(printed(&outcome), "Firma valida\n");
-    assert_eq!(
-        outcome.stderr,
-        ["rfirma: no se han podido leer las firmas del documento: el puente ha fallado: el isolate no arranca"]
-    );
-}
-
-#[test]
-fn the_signer_is_named_once_with_the_id_number_without_its_semantics_prefix() {
-    let signature = a_signature(
-        "EIDAS CERTIFICADO PRUEBAS - 99999999R",
-        "IDCES-99999999R",
-        None,
-    );
-
-    let outcome = verified_reading(
-        &["verify", "-v", "-i", "firmado.pdf"],
-        &Reading(Ok(vec![signature])),
-    );
-
-    assert!(
-        printed(&outcome).contains("  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)\n"),
-        "{}",
-        printed(&outcome)
-    );
-}
-
-#[test]
-fn a_representation_certificate_names_the_entity_on_whose_behalf_it_signs() {
-    let mut signature = a_signature(
-        "00000000T NOMBRE APELLIDOUNO (R: B00000000)",
-        "IDCES-00000000T",
-        None,
-    );
-    signature.organization_identifier = Some("VATES-B00000000".to_owned());
-    signature.organization_name = Some("EMPRESA FICTICIA SL".to_owned());
-
-    let outcome = verified_reading(
-        &["verify", "-v", "-i", "firmado.pdf"],
-        &Reading(Ok(vec![signature])),
-    );
-
-    assert_eq!(
-        printed(&outcome),
-        "Firma valida\n\nFormato: PAdES\n\nFirma 1\n  \
-         Firmante:          NOMBRE APELLIDOUNO (00000000T)\n  \
-         En nombre de:      EMPRESA FICTICIA SL (B00000000)\n  \
-         Emisor:            AC FNMT Usuarios\n"
-    );
-}
-
-#[test]
-fn a_company_seal_is_signed_by_the_company_with_its_organization_identifier() {
-    let mut signature = a_signature("EMPRESA FICTICIA SL - B00000000", "", None);
-    signature.organization_identifier = Some("VATES-B00000000".to_owned());
-    signature.organization_name = Some("EMPRESA FICTICIA SL".to_owned());
-
-    let outcome = verified_reading(
-        &["verify", "-v", "-i", "firmado.pdf"],
-        &Reading(Ok(vec![signature])),
-    );
-
-    assert_eq!(
-        printed(&outcome),
-        "Firma valida\n\nFormato: PAdES\n\nFirma 1\n  \
-         Firmante:          EMPRESA FICTICIA SL (B00000000)\n  \
-         Emisor:            AC FNMT Usuarios\n"
-    );
-}
-
-#[test]
-fn the_serial_number_is_printed_only_from_the_second_level() {
-    let reader = Reading(Ok(vec![a_signature("UNA PERSONA", "", None)]));
-    let with_serial = "  Número de serie:   0123ABCD\n";
-
-    for words in [
-        &["verify", "-i", "firmado.pdf", "-vv"][..],
-        &["verify", "-i", "firmado.pdf", "-v", "-v"][..],
-        &["verify", "-i", "firmado.pdf", "--verbose", "--verbose"][..],
-        &["verify", "-i", "firmado.pdf", "-vvv"][..],
-    ] {
-        let outcome = verified_reading(words, &reader);
-        assert!(
-            printed(&outcome).ends_with(with_serial),
-            "{words:?}: {}",
-            printed(&outcome)
-        );
-    }
-    let single = verified_reading(&["verify", "-i", "firmado.pdf", "-v"], &reader);
-    assert!(!printed(&single).contains("Número de serie"));
-}
+mod verbose;
