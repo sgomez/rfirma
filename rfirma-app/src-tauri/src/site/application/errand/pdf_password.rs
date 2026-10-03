@@ -1,4 +1,4 @@
-//! La firma de sede sobre un PDF cifrado: su contraseña se pide a la persona, salvo con `headless`.
+//! La firma de sede sobre un PDF cifrado: su contraseña se pide a la persona, salvo con `headless`, que da `SAF_50`; no decide qué PDF está cifrado.
 
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::{unlocked_with, Refusal, Waivers};

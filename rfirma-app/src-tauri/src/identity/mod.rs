@@ -1,4 +1,4 @@
-//! Contexto `identity` (ADR-0017): la raíz de composición y lo que presta a los vecinos.
+//! Contexto `identity` (ADR-0017): la raíz de composición, `IdentityRoot`, lo que presta a los vecinos y el `Signer` de `signing` sobre cualquier `Token`.
 
 pub mod adapters;
 pub mod application;

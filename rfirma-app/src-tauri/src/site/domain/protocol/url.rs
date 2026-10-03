@@ -1,4 +1,4 @@
-//! Una URL `afirma://` partida en un verbo y unos pares.
+//! Una URL `afirma://` partida en un verbo y unos pares, con las rarezas del original.
 
 use std::collections::BTreeMap;
 

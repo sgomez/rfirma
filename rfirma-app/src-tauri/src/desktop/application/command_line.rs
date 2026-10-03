@@ -1,4 +1,4 @@
-//! El caso de uso de la línea de órdenes: atiende una orden y dice qué sale por cada flujo, sin escribir en ninguno.
+//! El caso de uso de la línea de órdenes (ADR-0041): atiende una orden y dice qué sale por cada flujo, sin escribir en ninguno.
 
 use std::path::Path;
 

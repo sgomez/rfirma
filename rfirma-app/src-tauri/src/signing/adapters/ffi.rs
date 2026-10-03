@@ -1,4 +1,4 @@
-//! Frontera FFI con la librería nativa compilada con GraalVM Native Image (ADR-0003, ADR-0004).
+//! Frontera FFI con la librería nativa compilada con GraalVM Native Image: cargarla y volver sin fugas; ninguna entrada firma (ADR-0003, ADR-0004).
 
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_void};

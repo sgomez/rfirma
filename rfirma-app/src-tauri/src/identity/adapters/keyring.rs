@@ -1,4 +1,4 @@
-//! El llavero del escritorio para el PIN del Almacén de rFirma, con `oo7` (ADR-0034).
+//! `RealKeyring`, el llavero del escritorio para el PIN del Almacén de rFirma con `oo7` —portal de secretos o Secret Service—; solo en Linux (ADR-0034).
 
 use std::collections::HashMap;
 use std::future::Future;

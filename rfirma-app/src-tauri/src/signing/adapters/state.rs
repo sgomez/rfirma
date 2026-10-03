@@ -1,4 +1,4 @@
-//! Estado acumulado por la aplicación persistido entre sesiones (ADR-0010).
+//! `State`, el estado acumulado por la aplicación tal como se guarda entre sesiones (ADR-0010).
 
 use std::path::PathBuf;
 

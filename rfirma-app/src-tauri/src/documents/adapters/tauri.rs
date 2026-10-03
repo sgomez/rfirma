@@ -1,4 +1,4 @@
-//! Las órdenes de documentos: abrir, recientes, rúbrica, destino y el PDF firmado.
+//! Las órdenes de documentos: abrir por el portal, leer, recientes, rúbrica, destino y abrir el PDF firmado o su carpeta.
 
 use tauri::State;
 

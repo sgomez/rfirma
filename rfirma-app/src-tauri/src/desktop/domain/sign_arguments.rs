@@ -1,4 +1,4 @@
-//! Los argumentos de `sign` y `cosign` ya analizados y lo que se rechaza de ellos, sin abrir ningún almacén.
+//! Los argumentos de `sign` y `cosign` ya analizados y lo que se rechaza de ellos, sin firmar ni abrir ningún almacén (ADR-0041).
 
 use std::fmt;
 

@@ -1,4 +1,4 @@
-//! Los tipos del escritorio que cruzan a la ventana principal (ADR-0011).
+//! Los tipos del escritorio que cruzan a la ventana: manejadores, versión nueva, señales de estado, retirada, barra de título nativa, elección de `-certgui` y documento invocado (ADR-0011).
 
 use serde::{Deserialize, Serialize};
 

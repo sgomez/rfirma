@@ -1,4 +1,4 @@
-//! El cierre de la ventana de sede por el gestor de ventanas con el trámite vivo.
+//! Lo que contesta a la sede el cierre de la ventana por el gestor de ventanas con el trámite vivo (ADR-0024).
 
 use std::time::Duration;
 

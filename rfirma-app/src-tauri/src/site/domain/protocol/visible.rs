@@ -1,4 +1,4 @@
-//! Recuadro de firma visible solicitado por la sede (ADR-0019).
+//! El recuadro de firma visible que pide la sede, que no comparte conversión con el camino local (ADR-0019).
 
 use std::collections::BTreeMap;
 

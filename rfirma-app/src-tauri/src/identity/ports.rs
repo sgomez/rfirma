@@ -1,6 +1,4 @@
-//! Puertos del contexto de identidad: el token, el almacén de los `.p12` instalados, el certificado
-//! recordado, el diálogo interactivo que pide un secreto y el llavero del PIN del Almacén de rFirma
-//! (ADR-0001, ADR-0014, ADR-0034).
+//! Puertos del contexto de identidad: el token, el almacén de los `.p12` instalados, el certificado recordado, el diálogo interactivo que pide un secreto y el llavero del PIN del Almacén de rFirma (ADR-0001, ADR-0014, ADR-0034).
 
 use std::fmt;
 use std::path::{Path, PathBuf};

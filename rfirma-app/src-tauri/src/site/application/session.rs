@@ -1,4 +1,4 @@
-//! Sesión de firma de un trámite de sede: prefirma filtrada y postfirma en memoria (ADR-0001, ADR-0016).
+//! Sesión de firma de un trámite de sede —prefirma filtrada y postfirma en memoria— y `SiteRefusal`, la situación de cada negativa sin traducir (ADR-0001, ADR-0016).
 
 use std::collections::BTreeMap;
 

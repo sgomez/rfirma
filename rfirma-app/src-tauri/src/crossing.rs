@@ -1,4 +1,4 @@
-//! El rasgo de los tipos que cruzan a la ventana y el registro que el enlazador completa: de él salen el contrato y la guarda de rutas, no del fuente.
+//! `WindowCrossing` y el macro `crossing!`, con los que se declara lo que cruza a la ventana, y el registro que el enlazador completa: de él salen el contrato y la guarda de rutas, no del fuente.
 
 /// Lo que un tipo de cruce dice de sí mismo, con la forma exacta que ve la ventana.
 pub trait WindowCrossing {

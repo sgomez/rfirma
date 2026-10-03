@@ -1,4 +1,4 @@
-//! Lo que ya no compila: el cebo de cada tipo que sustituyó a una guarda que leía el código como texto (#439, #441).
+//! Lo que no debe compilar: un doctest `compile_fail` por invariante que sostiene el sistema de tipos, y uno positivo por la misma ruta.
 
 /// ```
 /// use rfirma_lib::signing::adapters::ffi::parse_presign;

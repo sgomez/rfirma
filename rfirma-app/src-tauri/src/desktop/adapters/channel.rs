@@ -1,4 +1,4 @@
-//! Canal de distribución y consulta de manejadores del esquema afirma:// en el escritorio (ADR-0015).
+//! Canal de distribución (`/.flatpak-info`) y consulta de manejadores del esquema afirma:// en el escritorio (ADR-0015).
 
 use std::path::Path;
 

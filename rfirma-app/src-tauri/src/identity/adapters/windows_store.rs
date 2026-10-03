@@ -1,4 +1,4 @@
-//! Los almacenes de Windows detrás del puerto `Token`: el del usuario por CNG y, para lo demás, los módulos PKCS#11 (ADR-0035).
+//! `WindowsToken`, los almacenes de Windows detrás del puerto `Token`: el del usuario por CNG y, para lo demás, los módulos PKCS#11 y dónde se buscan (ADR-0035).
 
 mod cng;
 

@@ -1,4 +1,4 @@
-//! La carpeta del Almacén de rFirma y el directorio desechable de prueba, tras su puerto: `std::fs` y los permisos del dueño.
+//! `RealInstalledFolder`: la carpeta del Almacén de rFirma y el directorio desechable donde se prueba un `.p12`, con `std::fs` y los permisos del dueño (ADR-0034).
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};

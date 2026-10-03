@@ -1,4 +1,4 @@
-//! Respuestas finales del trámite para la sede y la ventana (ADR-0009).
+//! Respuestas finales del trámite para la sede y la ventana, y el único sitio que escribe en el cable (ADR-0009).
 
 use std::path::Path;
 

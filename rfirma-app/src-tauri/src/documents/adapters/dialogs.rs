@@ -1,4 +1,4 @@
-//! El diálogo de verdad tras el puerto `PortalDialogs`: `tauri_plugin_dialog` y nada más.
+//! `RealPortalDialogs`, el diálogo de verdad tras el puerto `PortalDialogs`: `tauri_plugin_dialog` y nada más.
 
 use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};

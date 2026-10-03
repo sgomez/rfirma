@@ -1,4 +1,4 @@
-//! El llavero de macOS, que aún no existe: sin Keychain Services no hay llavero (ADR-0035).
+//! `PendingMacosKeychain`, el llavero de macOS que aún no existe: sin Keychain Services falla como un Linux sin Secret Service (ADR-0035, ADR-0040).
 
 use crate::identity::domain::keyring::KeyringError;
 use crate::identity::domain::protected_secret::ProtectedSecret;

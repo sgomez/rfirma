@@ -1,4 +1,4 @@
-//! Serialización de parámetros extra a formato java.util.Properties en ASCII.
+//! Los `extraParams` serializados como `java.util.Properties` en ASCII, y `merged_with`: quién manda cuando la sede y rFirma tocan la misma clave.
 
 use std::collections::BTreeMap;
 

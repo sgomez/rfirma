@@ -1,4 +1,4 @@
-//! Consulta HTTP de la última publicación oficial en GitHub (ADR-0015).
+//! Consulta HTTP de la última publicación oficial en GitHub, el único sitio del escritorio que abre una conexión (ADR-0015).
 
 use std::time::Duration;
 

@@ -1,4 +1,4 @@
-//! Solicitud y modalidades del secreto de acceso a almacenes PKCS#11.
+//! Cómo se pide el secreto de acceso a cada almacén PKCS#11: sin sesión, por pantalla o en el teclado del lector.
 
 use std::fmt;
 

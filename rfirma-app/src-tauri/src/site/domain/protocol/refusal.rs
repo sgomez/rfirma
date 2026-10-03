@@ -1,4 +1,4 @@
-//! Rechazos a la sede: código del catálogo para el cable y detalle local (ADR-0009).
+//! Rechazos a la sede: el código del catálogo que sale al cable, el detalle crudo que no sale y cómo lo nombra la ventana (ADR-0009).
 
 use std::fmt;
 

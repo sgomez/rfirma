@@ -1,4 +1,4 @@
-//! Deserialización y validación de las órdenes de la ventana.
+//! Las órdenes de la ventana ya deserializadas y validadas hasta `SigningChoice`, lo decidido sin asas; lo que no vale es un `PlacementError`.
 
 use serde::Deserialize;
 

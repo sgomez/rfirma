@@ -1,4 +1,4 @@
-//! La entrada de la línea de órdenes: compone sus puertos y escribe en stdout y stderr lo que deja el caso de uso; la única ventana, la de `-certgui`, es de su elector.
+//! La entrada de la línea de órdenes, `run_the_command_line`, y los adaptadores de sus puertos (`SeenStores`, `ProcessTerminal`, `ProcessDescriptors`, `RootsSigner`); sin Tauri: la única ventana, la de `-certgui`, es de su elector.
 
 use std::collections::BTreeMap;
 use std::io::{IsTerminal, Write};

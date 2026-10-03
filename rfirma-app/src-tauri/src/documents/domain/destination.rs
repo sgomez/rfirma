@@ -1,4 +1,4 @@
-//! Determinación y comprobación de la carpeta de destino del documento firmado (ADR-0011).
+//! La carpeta de destino del documento firmado: `DestinationFolder`, `DestinationMode`, `SingleDestination`, el `FolderFact` que contesta el disco y los nombres candidatos (ADR-0011).
 
 pub use super::error::{DestinationError, Situation};
 pub use super::naming::{numbered, signed_name, FIRST_NUMBER, MAX_NAMESAKES, SIGNED_SUFFIX};

@@ -1,4 +1,4 @@
-//! La única traducción de las situaciones del escritorio a lo que ve la ventana (ADR-0009).
+//! La única traducción de las situaciones del escritorio a lo que ve la ventana (ADR-0009); ninguna llega a la sede.
 
 use crate::crossing::Failure;
 use crate::desktop::domain::error::{DesktopError, Situation};

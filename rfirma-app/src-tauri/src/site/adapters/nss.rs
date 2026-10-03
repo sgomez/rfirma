@@ -1,4 +1,4 @@
-//! Gestión de certificados y confianza en almacenes NSS mediante FFI (ADR-0005).
+//! Registro de certificados y confianza en los almacenes NSS por su API y no por `certutil`, que no está en el flatpak, sobre el `NssHost` de `identity` (ADR-0005).
 
 use std::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CString};
 use std::path::Path;

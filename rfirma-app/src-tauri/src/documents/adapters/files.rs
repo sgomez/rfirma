@@ -1,4 +1,4 @@
-//! El disco de verdad tras el puerto `DocumentFiles`: `std::fs` y nada más.
+//! `RealFiles`, el disco de verdad tras el puerto `DocumentFiles`: `std::fs` y nada más.
 
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;

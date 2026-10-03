@@ -1,4 +1,4 @@
-//! La carpeta de paso de verdad tras el puerto `Scratch`: `std::fs` y nada más.
+//! La carpeta de paso tras el puerto `Scratch` —la del documento de la sede mientras dura el trámite, propia de cada proceso y cerrada con `flock`— y las rutas que elige la persona al guardar o cargar (ADR-0011).
 
 use std::fs::{File, OpenOptions};
 use std::io;

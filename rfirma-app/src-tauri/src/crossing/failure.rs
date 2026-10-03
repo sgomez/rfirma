@@ -1,4 +1,4 @@
-//! Cómo se le cuenta a la ventana que algo salió mal (ADR-0009); cada contexto traduce lo suyo en su `adapters/failures.rs`.
+//! `Failure`, cómo se le cuenta a la ventana que algo salió mal (ADR-0009); cada contexto traduce lo suyo en su `adapters/failures.rs`.
 
 use serde::Serialize;
 

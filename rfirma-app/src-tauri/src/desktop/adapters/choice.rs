@@ -1,4 +1,4 @@
-//! Registro del manejador predeterminado para un esquema en mimeapps.list (ADR-0015).
+//! Elegir, leer o retirar el manejador predeterminado de un esquema en el `mimeapps.list` del `$HOME`, sin tocar el resto; la elección propia de Firefox no vive aquí (ADR-0015).
 
 use super::channel::{content_type_for, Channel};
 use crate::desktop::adapters::paths::{xdg_config_home, HomeUnknown};

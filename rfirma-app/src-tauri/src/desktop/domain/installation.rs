@@ -1,4 +1,4 @@
-//! El resultado cerrado de instalar la versión anunciada desde la aplicación (ADR-0015).
+//! El resultado cerrado de instalar la versión anunciada desde la aplicación y los fallos del instalador (ADR-0015).
 
 /// Por qué el instalador no pudo comprobar o instalar la versión anunciada.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

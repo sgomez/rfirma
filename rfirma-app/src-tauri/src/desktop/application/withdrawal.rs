@@ -1,5 +1,4 @@
-//! Qué retirada hay que reintentar y cómo fusionar el resultado con lo que ya constaba: la
-//! decisión pura detrás de que `Reintentar` solo toque lo que falló.
+//! Qué retirada hay que reintentar y cómo fusionar el resultado con lo que ya constaba, sin puertos: la decisión pura detrás de que `Reintentar` solo toque lo que falló.
 
 use std::collections::HashMap;
 use std::path::PathBuf;

@@ -1,4 +1,4 @@
-//! El catálogo publicado de respuestas hacia la sede.
+//! El catálogo publicado de respuestas hacia la sede: los `SAF_NN` y las tres respuestas que no son códigos.
 
 use std::fmt;
 

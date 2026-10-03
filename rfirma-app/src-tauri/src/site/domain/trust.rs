@@ -1,4 +1,4 @@
-//! Registro y gestión de confianza de la CA local en almacenes NSS (ADR-0005).
+//! Las reglas puras de la confianza en la CA local y el puerto `TrustStores` de los almacenes donde se registra (ADR-0005).
 
 pub use super::trust_error::{Situation, TrustError};
 

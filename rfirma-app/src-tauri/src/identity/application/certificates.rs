@@ -1,4 +1,4 @@
-//! Listado, inspección y selección de certificados en tokens sin pedir PIN.
+//! Listado, inspección y selección de certificados sin pedir PIN, e instalación o retirada de un `.p12`; `ListedCertificates` guarda el último listado con sus asas.
 
 use std::collections::HashMap;
 use std::path::Path;

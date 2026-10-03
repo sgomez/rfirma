@@ -1,4 +1,4 @@
-//! Lo que este proceso sabe de sí mismo: su línea de órdenes, su carpeta y su relanzamiento.
+//! Lo que este proceso sabe de sí mismo: su línea de órdenes, su carpeta, su relanzamiento y el proceso de sede de cada URL que macOS entrega por Apple Event; no decide el rol.
 
 use crate::desktop::application::invocation::{
     arguments_before_the_single_instance, delivered_urls, informative_text, Arguments, Invocation,

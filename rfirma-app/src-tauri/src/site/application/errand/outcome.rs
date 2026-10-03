@@ -1,4 +1,4 @@
-//! Vocabulario de salida del trámite con la sede y la ventana, y el códec que lo pone en el cable.
+//! Vocabulario de salida del trámite con la sede y la ventana, y `ProtocolCodec`, el puerto que lo pone en el cable.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

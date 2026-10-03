@@ -1,4 +1,4 @@
-//! Adaptadores de `site`: todo lo que toca el mundo, incluidas las órdenes y las vistas de Tauri.
+//! Adaptadores de `site`, todo lo que toca el mundo con las órdenes y vistas de Tauri, y qué almacenes de confianza usa cada plataforma: NSS en Linux, `CurrentUser\Root` en Windows y el llavero, pendiente, en macOS (ADR-0035, ADR-0040).
 
 pub mod batch_services;
 pub mod channel;

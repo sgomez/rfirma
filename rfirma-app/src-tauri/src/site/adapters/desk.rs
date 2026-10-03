@@ -1,4 +1,4 @@
-//! El puerto que el trámite pide a los vecinos, servido por sus tres raíces: certificados, documento de paso y firma.
+//! `Neighbourhood`, el único implementador de producción del puerto `Neighbours`, lo que el trámite pide a los vecinos, servido por sus tres raíces: certificados, documento de paso y firma.
 
 use std::path::PathBuf;
 

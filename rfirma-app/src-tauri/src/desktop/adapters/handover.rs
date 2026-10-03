@@ -1,4 +1,4 @@
-//! La entrega de un fichero al escritorio lanzando otro proceso de rFirma, que la instancia única reenvía si ya hay uno.
+//! `SpawnedDesktop`: la entrega de un fichero al escritorio lanzando otro proceso de rFirma, que la instancia única reenvía si ya hay uno.
 
 use std::path::Path;
 use std::process::{Command, Stdio};

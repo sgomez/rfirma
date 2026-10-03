@@ -1,4 +1,4 @@
-//! Revelación de la ventana: por temporizador de respaldo, por llegada del navegador o porque el trámite tiene algo que decir.
+//! Revelación de la ventana: por temporizador de respaldo, por llegada del navegador o porque el trámite tiene algo que decir (ADR-0020).
 
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;

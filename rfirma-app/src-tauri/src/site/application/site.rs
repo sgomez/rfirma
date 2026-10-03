@@ -1,4 +1,4 @@
-//! Invocación de sede por esquema de URL y negociación de canal y códec (ADR-0005, ADR-0017).
+//! Invocación de sede por esquema de URL: la negociación de arranque, que elige canal y códec y decide si un rechazo sale por el socket o por la ventana; no dispara la entrega (ADR-0005, ADR-0017).
 
 use std::sync::Arc;
 

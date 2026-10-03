@@ -1,4 +1,4 @@
-//! Puertos del contexto de documentos: la memoria entre sesiones (ADR-0010) y el disco donde viven.
+//! Puertos del contexto de documentos: la memoria entre sesiones (ADR-0010), el disco donde viven y el portal de diálogos del sistema.
 
 use std::path::{Path, PathBuf};
 

@@ -1,4 +1,4 @@
-//! Tipos de salida relacionados con la rúbrica y sus conversiones (ADR-0011, ADR-0012).
+//! Los tipos de salida de la rúbrica y sus conversiones, aparte de `views.rs` por tamaño y no porque sean otra cosa (ADR-0011, ADR-0012).
 
 use std::io::Cursor;
 

@@ -1,4 +1,4 @@
-//! Destino externo reconocido por la aplicación (ADR-0011).
+//! Destino externo reconocido por la aplicación y su dirección web (ADR-0011).
 
 pub const DISCUSSIONS: &str = "discussions";
 pub const DISCUSSIONS_URL: &str = "https://github.com/sgomez/rfirma/discussions";

@@ -1,4 +1,4 @@
-//! Trámite de sede: atención de la operación del canal, consentimiento y entrega de respuesta.
+//! Trámite de sede: atención de la operación del canal, consentimiento y entrega de respuesta; sus verbos son lo único que llama una orden.
 
 mod area;
 mod closing;

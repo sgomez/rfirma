@@ -1,4 +1,4 @@
-//! El XML de parámetros que la sede sube al servlet de almacenamiento cuando la operación no cabe en la URL.
+//! El XML de parámetros que la sede sube al servlet de almacenamiento cuando la operación no cabe en la URL; no es el documento a firmar.
 
 use quick_xml::events::attributes::Attribute;
 use quick_xml::events::{BytesStart, Event};

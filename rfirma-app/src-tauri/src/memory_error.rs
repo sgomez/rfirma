@@ -1,4 +1,4 @@
-//! Clasificación de errores de persistencia entre sesiones (ADR-0009, ADR-0010).
+//! `MemoryError` y su `Situation`: los errores de la memoria entre sesiones, que es una sola y no es de ningún contexto (ADR-0009, ADR-0010).
 
 use std::fmt;
 use std::path::Path;

@@ -1,4 +1,4 @@
-//! Composición del texto de rúbrica en capa 2 para la firma visible.
+//! Composición del texto del recuadro visible de la firma desde un modelo, y la máscara sobre el `CN`.
 
 use serde::{Deserialize, Serialize};
 

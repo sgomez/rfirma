@@ -1,4 +1,4 @@
-//! Composición y arranque de la aplicación Tauri: construye las raíces de los cinco contextos y las registra.
+//! El armado de la aplicación: decide el rol de proceso —escritorio, sede o terminal— y monta una de las dos raíces o atiende la orden de terminal; la instancia única solo se registra en la de escritorio (ADR-0010, ADR-0024, ADR-0041).
 
 pub mod crossing;
 pub mod desktop;

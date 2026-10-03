@@ -1,4 +1,4 @@
-//! Peticiones de la sede desacopladas de la versión del protocolo.
+//! `SiteRequest`: las peticiones de la sede desacopladas de la versión del protocolo.
 
 use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::protocol::{

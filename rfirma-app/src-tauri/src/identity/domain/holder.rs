@@ -1,4 +1,4 @@
-//! Quién es el titular de un certificado, leído de su nombre distinguido (RFC 4514).
+//! Quién es el titular de un certificado, leído de su nombre distinguido (RFC 4514), y `StampedHolder`, lo que estampa el recuadro; no sirve para el `Display` de `x509_cert::Name`.
 
 use x509_cert::der::Decode;
 use x509_cert::Certificate;

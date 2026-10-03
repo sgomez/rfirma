@@ -1,4 +1,4 @@
-//! Puertos del contexto de sede: transporte, confianza, CA local, servlets del servidor intermedio, los dos motores del puente y lo que el trámite pide a los vecinos (ADR-0017).
+//! Puertos del contexto de sede: transporte, confianza, CA local, servlets del servidor intermedio y del lote remoto (`BatchServices`), los motores del puente y `Neighbours`, lo que el trámite pide a los vecinos (ADR-0017).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

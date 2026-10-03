@@ -1,4 +1,4 @@
-//! Guardas de verificación para las órdenes y los tipos que cruzan a la ventana (ADR-0011): las órdenes se leen del fuente, los tipos del registro.
+//! Guardas que ven a la vez todas las órdenes y los tipos que cruzan a la ventana, entre ellas la de rutas (ADR-0011): las órdenes se leen del fuente, los tipos del registro; solo en pruebas.
 
 use std::path::Path;
 use std::sync::OnceLock;

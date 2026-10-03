@@ -1,4 +1,4 @@
-//! El secreto que sale de un descriptor abierto por quien llama, sin pasar por argv, entorno ni disco.
+//! El secreto de `-password-fd N`, leído de un descriptor abierto por quien llama, sin pasar por argv, entorno ni disco.
 
 use crate::identity::domain::protected_secret::ProtectedSecret;
 

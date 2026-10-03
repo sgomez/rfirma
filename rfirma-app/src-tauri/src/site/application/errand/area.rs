@@ -1,4 +1,4 @@
-//! El diálogo del área de la firma visible: la que marca la persona, o lo que hace cancelarlo.
+//! El diálogo del área de la firma visible: la que marca la persona, o lo que hace cancelarlo (ADR-0019).
 
 use crate::signing::domain::Placement;
 use crate::site::domain::protocol::{the_mandatory_area_was_cancelled, IfCancelled};

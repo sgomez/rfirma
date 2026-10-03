@@ -1,4 +1,4 @@
-//! Capa de acceso a tokens criptográficos y firma nativa PKCS#11 (ADR-0001).
+//! Capa de acceso a tokens criptográficos y firma nativa PKCS#11, con `RealToken`, el adaptador de producción del puerto `Token` en Linux (ADR-0001).
 
 mod listing;
 mod mechanism;

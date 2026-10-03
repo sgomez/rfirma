@@ -1,4 +1,4 @@
-//! El bucle de eventos de Tauri de los dos roles: construye la aplicación, la ejecuta y limpia al salir; no compone raíces.
+//! El bucle de eventos de Tauri de los dos roles: construye la aplicación, entrega los `afirma://` de `RunEvent::Opened` y borra la carpeta de paso al salir; no compone raíces.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;

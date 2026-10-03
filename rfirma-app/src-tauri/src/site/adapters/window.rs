@@ -1,4 +1,4 @@
-//! Adaptador de la ventana de sede y publicación de eventos del trámite.
+//! Adaptador de la ventana de sede: su ciclo de vida, la publicación de eventos del trámite y lo que hace su cierre por el gestor de ventanas con el trámite vivo (ADR-0024).
 
 use tauri::{Emitter as _, Manager as _};
 

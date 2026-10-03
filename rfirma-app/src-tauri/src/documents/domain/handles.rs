@@ -1,4 +1,4 @@
-//! Las asas opacas de la frontera con la ventana: cómo se acuñan y el mapa de cada asa a lo que nombra (ADR-0011).
+//! Las asas opacas de la frontera con la ventana, `mint` y `Handles<T>`: el único mapa de asa a lo que nombra, también para los certificados de `identity` (ADR-0011).
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};

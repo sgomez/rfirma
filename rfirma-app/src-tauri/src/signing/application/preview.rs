@@ -1,4 +1,4 @@
-//! Prefirma en seco: composición del PDF con sello visible sin interactuar con el token (ADR-0001, ADR-0006).
+//! Prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ADR-0001, ADR-0006).
 
 use crate::documents::domain::document::Document;
 use crate::identity::domain::certificate::TokenCertificate;

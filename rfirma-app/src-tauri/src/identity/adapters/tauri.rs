@@ -1,4 +1,4 @@
-//! Las órdenes de identidad: certificados de los tokens y almacenes PKCS#12.
+//! Las órdenes de identidad: listar los certificados e instalar o quitar un `.p12`.
 
 use tauri::State;
 

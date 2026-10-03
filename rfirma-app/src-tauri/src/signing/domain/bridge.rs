@@ -1,4 +1,4 @@
-//! El vocabulario con el que se habla al puente nativo, sin la carga de la biblioteca.
+//! El vocabulario con el que se habla al puente nativo —`Format` y las etapas `PreSignature`, `SealedPreSignature` y `CompletedCycle`—, sin la carga de la biblioteca.
 
 use std::fmt;
 use std::path::{Path, PathBuf};

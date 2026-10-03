@@ -1,4 +1,4 @@
-//! Paso de configuración entre la interfaz y el almacenamiento en disco (ADR-0010, ADR-0011).
+//! Los ajustes como `Preferences`, puros: cómo se enseñan y cómo se combinan; no los guarda, eso es de la orden (ADR-0010, ADR-0011).
 
 use crate::documents::domain::destination::{DestinationFolder, DestinationMode};
 use crate::signing::application::configuration_memory::{

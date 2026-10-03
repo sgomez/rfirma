@@ -1,4 +1,4 @@
-//! Caso de uso de la bandeja de documentos recientes (ADR-0010, ADR-0011).
+//! Caso de uso de la bandeja de documentos recientes, de la memoria a la ventana: la fila `RecentRow` y `RecentsError`, por qué no se anota (ADR-0010, ADR-0011).
 
 use std::path::Path;
 use std::time::SystemTime;

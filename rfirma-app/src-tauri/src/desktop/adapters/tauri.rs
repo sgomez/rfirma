@@ -1,4 +1,4 @@
-//! Las órdenes del escritorio: invocación, versión publicada y manejadores afirma://.
+//! Las órdenes del escritorio: invocación, barra de título nativa, versión publicada, manejadores afirma:// y su elección, destino externo, panel de estado y retirada.
 
 use tauri::State;
 

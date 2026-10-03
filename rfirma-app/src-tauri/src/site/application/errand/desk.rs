@@ -1,4 +1,4 @@
-//! Mesa del trámite: dependencias de ejecución y evaluación del consentimiento.
+//! Mesa del trámite, `ErrandDesk`: dependencias de ejecución, `attend_operation` y el consentimiento de firma, guardado y carga.
 
 mod certificates;
 mod confirmation;

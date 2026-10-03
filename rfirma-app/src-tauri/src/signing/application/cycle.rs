@@ -1,4 +1,4 @@
-//! Ciclo trifásico de firma, parametrizado por formato: prefirma en Java, firma en Rust y postfirma en Java (ADR-0001, ADR-0016).
+//! Ciclo trifásico de firma, parametrizado por formato sobre `Bridge` y `Token`: prefirma en Java, firma en Rust y postfirma en Java; el único caso de uso que cruza la FFI para firmar (ADR-0001, ADR-0016).
 
 use base64::Engine;
 

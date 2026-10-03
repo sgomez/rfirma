@@ -1,4 +1,4 @@
-//! Puertos del contexto de firma: el puente, el hilo que lo aloja y lo que el ciclo le pide al token.
+//! Puertos del contexto de firma: el puente (`Bridge`), que no tiene entrada que firme, el hilo que lo aloja (`IsolateHost`) y lo que el ciclo pide al token y al disco (`Signer`, `DocumentBytes`) (ADR-0001).
 
 use std::path::Path;
 

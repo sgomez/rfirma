@@ -1,4 +1,4 @@
-//! La única traducción de los rechazos del trámite: a la vista de la ventana y al código de la sede (ADR-0009).
+//! La única traducción de los rechazos del trámite: a la vista de la ventana y al código `SAF_NN` de la sede (ADR-0009).
 
 use crate::crossing::Failure;
 use crate::identity::adapters::failures::code_of_token;

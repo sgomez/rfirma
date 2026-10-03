@@ -1,4 +1,4 @@
-//! Clasificación de errores del token PKCS#11 (ADR-0009).
+//! Clasificación de errores del token PKCS#11 y el aviso de que falta `libnss3.so` (ADR-0009).
 
 use cryptoki::context::Function;
 use cryptoki::error::{Error, RvError};
