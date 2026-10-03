@@ -1,4 +1,4 @@
-//! Guarda de las cabeceras: en el backend y en la interfaz cada módulo abre con una `//!` de una frase y 300 caracteres como mucho, que `just outline <directorio>/` junta (ADR-0017).
+//! Guarda de las cabeceras: en el backend, en la interfaz y en el puente Java cada módulo abre con una `//!` de una frase y 300 caracteres como mucho, que `just outline <directorio>/` junta (ADR-0017).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -12,7 +12,7 @@ struct Zone {
     extensions: &'static [&'static str],
 }
 
-const ZONES: [Zone; 2] = [
+const ZONES: [Zone; 3] = [
     Zone {
         root: "rfirma-app/src-tauri/src",
         extensions: &["rs"],
@@ -21,9 +21,13 @@ const ZONES: [Zone; 2] = [
         root: "rfirma-app/src",
         extensions: &["ts", "tsx"],
     },
+    Zone {
+        root: "rfirma-native-bridge/src/main/java",
+        extensions: &["java"],
+    },
 ];
 
-/// Comprueba si el fichero es de pruebas, al que no se le pide cabecera; `scripts/outline.sh` usa el mismo criterio.
+/// Comprueba si el fichero es de pruebas, al que no se le pide cabecera; `scripts/outline.sh` usa el mismo criterio. Las pruebas del puente Java viven en `src/test`, fuera de la zona.
 fn is_a_test_file(relative: &str) -> bool {
     let rooted = format!("/{relative}");
     let a_rust_test = relative.ends_with(".rs")
@@ -137,6 +141,18 @@ fn the_tests_of_the_window_are_not_asked_for_a_header() {
         !is_a_test_file("tests/render.tsx"),
         "una carpeta `tests/` solo aparta ficheros de Rust"
     );
+}
+
+#[test]
+fn a_java_class_opens_with_its_header_before_the_package() {
+    assert_eq!(
+        what_is_wrong_with_the_header("//! El sello de sesión.\npackage es.gob;\n"),
+        None
+    );
+    assert!(what_is_wrong_with_the_header("package es.gob;\n\n/** El sello. */\n").is_some());
+    assert!(!is_a_test_file(
+        "es/gob/afirma/nativebridge/NativeBridge.java"
+    ));
 }
 
 #[test]
