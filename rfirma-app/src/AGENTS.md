@@ -1,12 +1,14 @@
 # Mapa de la interfaz (React 19 + TypeScript)
 
-Este índice **sustituye a explorar el árbol**. Localiza el módulo por su línea,
-abre **solo** ese fichero.
+Este índice **sustituye a explorar el árbol**. Cada módulo dice qué es en su
+primera línea `//!`, y `just outline rfirma-app/src/<carpeta>/` las junta en un
+índice: localiza el módulo por su línea y abre **solo** ese fichero.
 
-`src-tauri/tests/agents_map_is_complete.rs` comprueba que aquí está listado, por
-su ruta, todo `.ts`/`.tsx` versionado bajo `src/` que no sea un `*.test.*`. **Un
-módulo nuevo se añade a esta tabla en la misma PR que lo crea**, o el PR sale en
-rojo.
+`src-tauri/tests/agents_map_is_complete.rs` exige que todo `.ts`/`.tsx`
+versionado bajo `src/` que no sea un `*.test.*` abra con esa línea, sin
+partirla: **una frase, qué es y, si ayuda, qué no es**, de 300 caracteres como
+mucho y sin citas a la spec ni a issues. **Un módulo nuevo trae su cabecera en
+la misma PR que lo crea**, o el PR sale en rojo.
 
 ## Presupuesto de lectura
 
@@ -35,154 +37,33 @@ rojo.
 
 ## Dónde vive qué
 
-| Módulo | Qué es |
+`just outline rfirma-app/src/<carpeta>/` da el índice de una carpeta, y
+`just outline rfirma-app/src/` el de la interfaz entera. Las carpetas:
+
+| Carpeta | Qué es |
 |---|---|
-| `main.tsx` | **El cableado de la ventana principal** (`index.html`): quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | El punto de import de los puertos que hablan con Tauri: reexporta los `tauri*.ts` de abajo. La otra cara de los `adapters/tauri.rs` de cada contexto. |
-| `tauriStage.ts` | Clasifica el fallo de una orden de Tauri y envuelve su llamada. Lo comparten `tauriSigning.ts` y `tauriSede.ts`. |
-| `tauriSigning.ts` | Los puertos de Tauri de la firma: certificados, las tres etapas, la rúbrica y el sello. |
-| `tauriDocuments.ts` | Los puertos de Tauri del documento: el portal, el arrastre, los recientes y el visor. |
-| `tauriPreferences.ts` | Los puertos de Tauri de la configuración: ajustes, idioma, destino y la versión publicada. |
-| `tauriSede.ts` | El puerto de Tauri del trámite de sede. |
-| `tauriStatus.ts` | El puerto de Tauri del estado de la instalación. |
-| `tauriTitlebar.ts` | El puerto de Tauri de la barra de título GTK de Linux: la orden del estado y el evento de las acciones. |
-| `App.tsx` | El árbol de la ventana y el estado que la recorre. |
-| `App.forgetActivity.ts` | Olvidar la actividad: los ajustes y los documentos abiertos, aunque uno de los dos falle. Sin React. |
-| `App.SignFlowPrompts.tsx` | Los tres avisos que la firma interpone antes del PIN, y si alguno está abierto. |
-| `App.signingOrder.ts` | La colocación guardada, la geometría de la página y la orden de firma armada en un solo sitio. Sin React. |
-| `App.useCertificateSearch.ts` | Buscar certificados, instalar y quitar `.p12`, y elegir uno del desplegable. |
-| `App.useDropNotices.ts` | El arrastre sobre la ventana y la invocación externa, y el aviso que dejan. |
-| `App.usePlacementControls.ts` | La colocación de la firma visible: el recuadro y los tres modos de página. |
-| `App.usePageGeometry.ts` | La geometría de la página que lleva el recuadro, leída del PDF abierto. |
-| `App.usePreferencesState.ts` | Los ajustes, el destino previsto para el documento activo y la rúbrica adoptada. |
-| `App.usePreviousSignatures.ts` | El informe de firmas previas del documento activo, pedido al abrir o cargar. |
-| `App.useNativeTitlebar.ts` | El estado que se manda a la barra de título nativa y a dónde lleva cada acción que vuelve. |
-| `App.useOpenShortcut.ts` | El atajo Ctrl+O (Cmd+O en macOS) que abre un PDF, el primero de la ventana. |
-| `App.useSignFlow.ts` | La vista previa del sello y la firma, con los dos avisos que pueden interponerse antes del PIN. |
-| `App.useSignedSummary.ts` | El acuse de recibo del documento firmado y los dos caminos hasta el fichero. |
-| `App.useSigningFailure.ts` | El error de firma del documento activo, y su salida al cambiar de pestaña. |
-| `App.useStartupNotices.ts` | El aviso de versión nueva y las filas del panel de estado, medidos al arrancar. |
-| `App.useViewedSignatures.ts` | El documento abierto para ver sus firmas (`verify --gui`) y lo que se lee de él. |
-| `App.useVisibleSignature.ts` | La firma visible, apagada mientras no hay certificado elegido. |
-| `App.testSupport.tsx` | Los dobles y el `renderApp` que comparten las pruebas de `App`. |
-| **`shell/`** | La ventana y su cabecera (ADR-0007). |
-| `shell/MainWindow.tsx` | El marco, con el hueco de la franja entre la cabecera y las regiones. |
-| `shell/NotificationStrip.tsx` | La franja de notificación: el patrón, no el aviso concreto. |
-| `shell/Header.tsx` | La cabecera única, sin barra de menús. |
-| `shell/menuAnchor.ts` | Dónde se ancla el menú de la aplicación, por plataforma: cabecera o barra de título GTK. |
-| `shell/nativeTitlebar.ts` | El puerto de la barra de título nativa de Linux, con su doble en memoria. Sin React. |
-| **`documents/`** | Los documentos abiertos y los recientes. |
-| `documents/document.ts` | El vocabulario del documento: el que se tiene delante y su insignia. No es la fila. |
-| `documents/useDocuments.ts` | El estado de las pestañas abiertas, la activa y los recientes. |
-| `documents/DocumentTabs.tsx` | La tira de pestañas, con el botón partido de abrir salvo en Linux. |
-| `documents/tabLayout.ts` | Qué pestañas caben en la tira según el ancho y cuáles quedan en «+N». Sin React. |
-| `documents/RecentRows.tsx` | Las filas de los recientes, que comparten el menú de abiertos recientemente y el estado vacío del visor. |
-| `documents/recents.ts` | Los diez recientes —**la fila que se guarda**— y su puerto. |
-| `documents/picker.ts` | Por dónde entra un documento. |
-| `documents/drops.ts` | Qué ocurre al soltar ficheros encima, y el documento con el que se invocó a la aplicación desde fuera. |
-| **`signing/`** | La firma, en el lado de la interfaz. |
-| `signing/flow.ts` | Las tres etapas de la trifásica. |
-| `signing/useSigning.ts` | El estado de la firma. |
-| `signing/SigningPanel.tsx` | El panel, con la zona que se desliza y el pie fijo. |
-| `signing/SigningPanel.testSupport.tsx` | Los dobles y ayudas que comparten las pruebas de `SigningPanel`. |
-| `signing/CertificateNotice.tsx` | El aviso de «sin certificados», arriba de la zona que se desliza. |
-| `signing/PreviousSignaturesNotice.tsx` | El aviso de firmas previas: línea plegable con quién firmó y cuándo, y la franja de «ya lo firmaste tú» al pie. |
-| `signing/previousSignatures.ts` | El vocabulario de una firma previa y su informe. Sin React. |
-| `signing/sameSignerNotice.ts` | Si el certificado elegido coincide con el titular de alguna firma previa, y con cuál certificado. Sin React. |
-| `signing/PlacementFieldset.tsx` | El segmentado de páginas de la firma visible —«Una página», «Varias», «Todas»— y la línea o el campo de debajo. |
-| `signing/usePlacementField.ts` | Lo tecleado en el campo de «Varias» y qué botón toca bajo el segmentado. |
-| `signing/placementField.ts` | Las situaciones del campo de páginas, redactadas. Sin React. |
-| `signing/ModelFieldset.tsx` | Qué se estampa en el recuadro: las tarjetas de modelo y la rúbrica. |
-| `signing/PhraseEditor.tsx` | La frase de *Personalizada*: el campo con las pastillas de los datos y su menú «+ Dato». |
-| `signing/phraseDom.ts` | Leer la frase del campo editable y escribirla en él, y dónde está el cursor respecto a una pastilla. No es el componente. |
-| `signing/PanelFooter.tsx` | El pie fijo del panel: el destino y, según el estado, «Firmar», «Reintentar»/«Volver» o las salidas de sin certificados. |
-| `signing/panelFormat.ts` | El tamaño del documento en la unidad que reconoce el usuario. Sin React. |
-| `signing/CertificateSelect.tsx` | El selector de certificado, primer bloque del panel y el mismo en la sede. |
-| `signing/secret.ts` | Cómo hay que pedirle el secreto al almacén: sin sesión, tecleado en pantalla, o en el teclado del lector. Sin React. |
-| `signing/SigningProgressDialog.tsx` | El progreso. |
-| `signing/UnsealedPagesDialog.tsx` | El diálogo de páginas sin sello, justo antes de firmar. |
-| `signing/UnregisteredSignaturesDialog.tsx` | El aviso de las firmas previas que rFirma no sabe leer, en la misma fila que el anterior. |
-| `signing/InvalidPreviousSignaturesDialog.tsx` | El diálogo «¿Firmar de todos modos?», con alguna firma previa no válida. |
-| `signing/unsealedPages.ts` | Qué páginas del conjunto elegido se quedan sin sello. Sin React. |
-| `signing/SignedPanel.tsx` | El resumen tras firmar, y sus tres salidas. |
-| `signing/certificate.ts` | El certificado, en el lado de la interfaz, con el orden y el agrupado del desplegable. |
-| `signing/destination.ts` | Dónde cae el firmado, el recorte de esa línea y quién lleva al usuario hasta el fichero. |
-| `signing/visibleSignature.ts` | Qué se estampa en el recuadro. |
-| `signing/rubric.ts` | La rúbrica que va dentro del recuadro. |
-| `signing/pageRange.ts` | El conjunto de páginas tecleado (`1,2-3,10-20`) y su camino de vuelta a texto. Sin React. |
-| `signing/token.ts` | Lo que el token puede contestar cuando algo va mal. |
-| `signing/failure.ts` | El fallo de firma, clasificado. |
-| `signing/stampPreview.ts` | El sello que se ve dentro del recuadro antes de firmar: su puerto, sus estados y el umbral del documento grande. Sin React. |
-| `signing/useStampPreview.ts` | Cuándo se compone el sello y qué se enseña mientras tanto. Su trabajo es **no** componer. |
-| **`viewer/`** | El visor de PDF. |
-| `viewer/DocumentViewer.tsx` | El JSX del visor: la hoja, el recuadro y la botonera. |
-| `viewer/StampPill.tsx` | La pastilla flotante del estado del sello. |
-| `viewer/useViewerPage.ts` | La pintada sobre el `<canvas>`, el recorrido de páginas y el zoom. |
-| `viewer/useViewerBox.ts` | Los tres gestos del recuadro de la firma visible: arrastrar, redimensionar y trazar. |
-| `viewer/pdf.ts` | La frontera con `pdf.js`, escrita como puerto. |
-| `viewer/pdfjsLoader.ts` | El worker de `pdf.js`, empaquetado por Vite. |
-| `viewer/renderQueue.ts` | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
-| `viewer/zoom.ts` | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
-| `viewer/source.ts` | De dónde salen los bytes del documento. |
-| `viewer/signatureBox.ts` | El recuadro: dónde se guarda, cómo se redimensiona y cómo se traza. |
-| `viewer/useBoxDrag.ts` | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
-| `viewer/useBoxTrace.ts` | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer. Hermano del anterior, no un modo suyo. |
-| `viewer/testing/documentViewerFixtures.ts` | El doble de `pdf.js` y los atajos de consulta del DOM que comparten las pruebas de `DocumentViewer*.test.tsx`. |
-| **`status/`** | El estado de la instalación. |
-| `status/status.ts` | El puerto de consulta y medición de estado, con su doble en memoria y el nombre en pantalla de cada sitio. Sin React. |
-| `status/StatusView.tsx` | La vista del cuerpo con el estado de rFirma. |
-| `status/WithdrawCertificateDialog.tsx` | El velo que confirma, ejecuta y cuenta la retirada del certificado de rFirma (docs/design/retirar-certificado.md). |
-| **`preferences/`** | Los ajustes. |
-| `preferences/preferences.ts` | Lo que la aplicación recuerda. |
-| `preferences/destinationMode.ts` | Dónde cae el siguiente firmado: junto al original o en la carpeta de destino. |
-| `preferences/PreferencesView.tsx` | La vista del cuerpo con los ajustes, con su índice de **cuatro** secciones. |
-| `preferences/PreferencesSections.tsx` | El contenido de cada sección del índice, como componentes propios. |
-| `preferences/focusTrap.ts` | El tabulador que da la vuelta dentro de un modal. |
-| `preferences/Switch.tsx` | El interruptor. |
-| `preferences/Select.tsx` | El desplegable. |
-| `preferences/theme.ts` | El tema de la ventana. |
-| `preferences/testSupport.tsx` | Los dobles y ayudas que comparten sus pruebas. |
-| **`i18n/`** | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). Los bloques de comentario que explican el mecanismo están indexados en `i18n/AGENTS.md`. |
-| `i18n/catalog.ts` | La forma del catálogo. |
-| `i18n/i18n.ts` | La traducción. |
-| `i18n/LanguageProvider.tsx` | El contexto. |
-| `i18n/languages.ts` | Los idiomas publicados: reexporta lo que generó `po-import`. |
-| `i18n/i18next.d.ts` | Las claves, para `tsc` y el editor. Se versiona; `resources.d.ts` no. |
-| `i18n/preference.ts` | De dónde sale y a dónde vuelve el idioma. |
-| `i18n/locales/*.ts` | **Generados, no versionados.** Salen de `po/`. No se leen ni se editan. |
-| **`errors/`** | Los fallos que ve el usuario. |
-| `errors/classify.ts` | El fallo como situación, no como mensaje. |
-| `errors/ErrorNotice.tsx` | El aviso. |
-| `errors/RenderErrorBoundary.tsx` | El *error boundary* de cada ventana: si un hijo lanza al pintarse, esto es lo que se ve en su lugar. |
-| **`design-system/`** | `design-system/icons.tsx`, copiados en línea de los artboards. |
-| **`desktop/`** | El escritorio de la persona, en el lado de la interfaz. |
-| `desktop/externalDestination.ts` | El puerto que abre destinos web externos en el navegador, y su doble. Sin React. |
-| **`sede/`** | **La ventana que abre una sede** por `afirma://`: una ventana con una secuencia de momentos, no una pantalla por momento. Ficha: `docs/design/ventana-de-sede.md`. |
-| `sede/main.tsx` | **El cableado de la ventana de sede** (`sede.html`): su propio montaje, sin nada del árbol de la principal. |
-| `sede/siteErrands.ts` | El adaptador del puerto: la suscripción y el recorrido de consentir, confirmar, firmar y cancelar. Sin React y sin Tauri. |
-| `sede/siteErrandView.ts` | Los tipos de lo que empuja el backend (`SiteErrandView`, `SiteStageView`) y de cómo acaban sus órdenes. Sin React. |
-| `sede/errandConversion.ts` | La conversión pura del momento del backend al `Errand` de la ventana, y el catálogo de rechazos. Sin React. |
-| `sede/siteErrandsFixtures.ts` | Los dobles de `SiteCommands` y los momentos de ejemplo que comparten las pruebas de `siteErrands`. |
-| `sede/errand.ts` | El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand` y los relojes. Sin React. |
-| `sede/SedeWindow.tsx` | El marco de 520 × 420 px y el reparto entre los momentos. |
-| `sede/SedeMarking.tsx` | 1c · El área de la firma visible trazada sobre el PDF, y sus páginas, con el visor y el segmentado de la ventana principal, antes del consentimiento. |
-| `sede/sedeWindowFixtures.ts` | Los dobles de `SiteErrandPort` y los momentos de ejemplo que comparten las pruebas de `SedeWindow`. |
-| `sede/SedeFrame.tsx` | Cuerpo y pie —56 px clavados en firma y salida— y los relojes de la ventana en forma de `hook`. |
-| `sede/SedeWaiting.tsx` | 1 · La espera y las dos recetas de navegador, que **no diagnostican**. |
-| `sede/SedeConsent.tsx` | 2 · La confirmación escrita, con el desplegable de `signing/CertificateSelect.tsx` reutilizado tal cual. |
-| `sede/SedeConfirm.tsx` | 2b · La pregunta que el validador del original obliga a hacer, con las palabras del original y sus dos salidas. |
-| `sede/SedeSigning.tsx` | 3 · Los dos tramos de la firma, sin nombrar ninguna fase del motor. |
-| `sede/SedeTransfer.tsx` | El fichero que la sede quiere guardar o cargar, mientras el diálogo del portal está encima. No tiene acciones propias. |
-| `sede/SedeOutcome.tsx` | 4 · Firmado, lote entregado, cancelado, guardado, cargado y rechazado, con el documento recién firmado y el detalle copiable del rechazo. |
-| `sede/SedeOldWebClient.tsx` | El aviso de que la página usa un cliente web antiguo, que no detiene el trámite. |
-| `sede/SedeNoCertificate.tsx` | 5 · Sin certificado utilizable, y sus dos salidas distintas. |
-| **`updates/`** | `updates/newVersion.ts`: el puerto que pregunta si hay versión nueva y la instala, y su doble. Sin React. |
-| `updates/InstallUpdateDialog.tsx` | La confirmación con la versión, la instalación y el mensaje de cada resultado fallido. |
-| `updates/NewVersionStrip.tsx` | La franja que anuncia la versión nueva, con «Actualizar ahora» si se puede instalar desde aquí y, si no, el paso a *Acerca de*. |
-| **`about/`** | `about/AboutDialog.tsx`. |
-| **`setup/`** | El asistente del primer arranque (docs/design/primer-arranque.md). Usa los casos de uso del panel de estado, no tiene los suyos propios. |
-| `setup/SetupWizard.tsx` | Las dos pantallas, montadas en `main.tsx` mientras `Preferences.setupWizardSeen` siga en `false`. Sustituye al antiguo `trust/TrustNotice.tsx`. |
-| **Andamiaje** | `test-setup.ts`, `testing/render.tsx`. No son la aplicación. |
+| raíz: `main.tsx`, `tauri*.ts` | El cableado de la ventana principal y los adaptadores de Tauri de cada puerto; `tauri.ts` es su punto de import (ver «La regla del puerto»). |
+| raíz: `App.*` | El árbol de la ventana principal, `App.tsx`, y sus ganchos y piezas, uno por fichero `App.<pieza>`. |
+| `shell/` | La ventana y su cabecera (ADR-0007). |
+| `documents/` | Los documentos abiertos y los recientes. |
+| `signing/` | La firma, en el lado de la interfaz. |
+| `viewer/` | El visor de PDF. |
+| `status/` | El estado de la instalación. |
+| `preferences/` | Los ajustes. |
+| `i18n/` | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). Los bloques de comentario que explican el mecanismo están indexados en `i18n/AGENTS.md`. `i18n/locales/*.ts` son generados y no versionados: no se leen ni se editan. |
+| `errors/` | Los fallos que ve el usuario. |
+| `design-system/` | Los iconos, copiados en línea de los artboards, y el bundle CSS del sistema de diseño. |
+| `desktop/` | El escritorio de la persona, en el lado de la interfaz. |
+| `sede/` | La ventana que abre una sede por `afirma://`: una ventana con una secuencia de momentos, no una pantalla por momento. Ficha: `docs/design/ventana-de-sede.md`, que numera los momentos (1, 1c, 2, 2b, 3, 4, 5) como las cabeceras de sus componentes. |
+| `updates/` | La versión nueva: la franja que la anuncia y su instalación. |
+| `about/` | El diálogo Acerca de. |
+| `setup/` | El asistente del primer arranque (`docs/design/primer-arranque.md`). Usa los casos de uso del panel de estado, no tiene los suyos propios. |
+| `testing/`, `test-setup.ts` | Andamiaje de las pruebas, como los `*.testSupport.tsx`, los `*Fixtures.ts` y `viewer/testing/`. No son la aplicación. |
+
+Dos módulos se leen antes que sus hermanos, porque cablean una ventana entera:
+**`main.tsx`** (la principal, `index.html`), por donde se empieza siempre, y
+`sede/main.tsx` (la de sede, `sede.html`), que monta la suya sin el árbol de
+`App`.
 
 ## El circuito de cadenas (ADR-0009 enmendado)
 
