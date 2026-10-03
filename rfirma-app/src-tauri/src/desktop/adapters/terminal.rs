@@ -1,4 +1,4 @@
-//! La entrada de la línea de órdenes: compone sus puertos y escribe en stdout y stderr lo que deja el caso de uso, sin Tauri ni ventana.
+//! La entrada de la línea de órdenes: compone sus puertos y escribe en stdout y stderr lo que deja el caso de uso; la única ventana, la de `-certgui`, es de su elector.
 
 use std::collections::BTreeMap;
 use std::io::{IsTerminal, Write};
@@ -8,6 +8,7 @@ use crate::crossing::Failure;
 use crate::desktop::adapters::command_line_ports::{DiskFiles, NativeFilter, NativeVerifier};
 use crate::desktop::adapters::handover::SpawnedDesktop;
 use crate::desktop::adapters::paths::Paths;
+use crate::desktop::adapters::site_window_picker::SiteWindowPicker;
 use crate::desktop::application::command_line::{attend, CommandLinePorts, FAILED};
 use crate::desktop::domain::sign_arguments::Algorithm;
 use crate::desktop::ports::{
@@ -172,6 +173,12 @@ impl RootsSigner<'_> {
         signer: &dyn Signer,
         request: &CommandLineSigning<'_>,
     ) -> Result<(), String> {
+        if let Some(secret) = request.typed_in_the_window {
+            return self
+                .signing
+                .sign_on_token(signer, secret)
+                .map_err(|failure| Failure::from(failure).detail);
+        }
         if let Some(descriptor) = request.password_fd {
             let secret = request.descriptor.read(descriptor)?;
             return self
@@ -321,9 +328,10 @@ impl DocumentSigner for Homeless {
 }
 
 /// Atiende la línea de órdenes de este argv, con el ejecutable delante, y devuelve el código de salida.
-pub fn run_the_command_line(argv: &[String]) -> i32 {
+pub fn run_the_command_line(argv: &[String], context: tauri::Context<tauri::Wry>) -> i32 {
     let roots = Paths::from_environment().ok().map(crate::roots);
     let signer = roots.as_ref().map(RootsSigner::of);
+    let window = SiteWindowPicker::over(roots.as_ref().map(|roots| &roots.identity), context);
     let ports = CommandLinePorts {
         stores: &SeenStores::of_this_machine(),
         terminal: &ProcessTerminal,
@@ -336,6 +344,7 @@ pub fn run_the_command_line(argv: &[String]) -> i32 {
             Some(signer) => signer,
             None => &Homeless,
         },
+        window: &window,
     };
     let outcome = attend(argv.get(1..).unwrap_or_default(), &ports);
     for line in &outcome.stderr {

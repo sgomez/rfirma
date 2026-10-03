@@ -210,7 +210,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 53, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 57, "la lista de ordenes es cerrada a proposito");
 }
 
 #[test]
@@ -306,11 +306,23 @@ fn the_command_that_takes_the_pin_runs_off_the_main_thread() {
 }
 
 #[test]
-fn the_pin_is_taken_by_a_single_command() {
-    let takers: usize = sources()
+fn the_pin_is_taken_by_a_single_command_in_each_process() {
+    let takers: Vec<(&str, usize)> = sources()
         .iter()
-        .map(|(_, source)| production_half(source).matches("pin: String").count())
-        .sum();
+        .map(|(file, source)| {
+            let count = production_half(source).matches("pin: String").count();
+            (file.as_str(), count)
+        })
+        .filter(|(_, count)| *count > 0)
+        .collect();
 
-    assert_eq!(takers, 1, "el PIN entra por una sola orden");
+    assert_eq!(
+        takers,
+        [
+            ("desktop/adapters/tauri_certgui.rs", 1),
+            ("signing/adapters/tauri.rs", 1)
+        ],
+        "el PIN entra por una sola orden en cada proceso: sign_with_pin en el de escritorio y \
+         el de sede, terminal_hand_the_secret en el de terminal con -certgui"
+    );
 }

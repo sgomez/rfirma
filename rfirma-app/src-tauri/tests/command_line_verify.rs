@@ -11,7 +11,9 @@ use rfirma_lib::desktop::adapters::terminal::{ProcessDescriptors, ProcessTermina
 use rfirma_lib::desktop::application::command_line::{
     attend, CommandLinePorts, Outcome, SUCCEEDED, UNKNOWN_FORMAT,
 };
-use rfirma_lib::desktop::ports::{CommandLineSigning, DocumentSigner};
+use rfirma_lib::desktop::ports::{
+    CommandLineSigning, DocumentSigner, GraphicalPicker, WindowChoice, WindowOffer,
+};
 use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
@@ -25,6 +27,16 @@ fn sample(relative: &str) -> PathBuf {
 }
 
 struct NeverSigns;
+
+impl GraphicalPicker for NeverSigns {
+    fn has_a_display(&self) -> bool {
+        panic!("verify no abre la ventana de sede")
+    }
+
+    fn chosen(&self, document: &Path, _offer: WindowOffer<'_>) -> Result<WindowChoice, String> {
+        panic!("verify no elige certificado para {}", document.display())
+    }
+}
 
 impl DocumentSigner for NeverSigns {
     fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
@@ -57,6 +69,7 @@ fn verified(path: &Path) -> Outcome {
             files: &DiskFiles,
             verifier: &NativeVerifier,
             signer: &NeverSigns,
+            window: &NeverSigns,
         },
     )
 }

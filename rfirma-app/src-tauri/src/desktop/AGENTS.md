@@ -10,7 +10,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 |---|---|
 | `mod.rs` | La raíz: `DesktopRoot`, con las rutas, la invocación pendiente y la memoria de la versión. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
-| `ports.rs` | **Los puertos**: `HandlerRegistry`, `VersionMemory`, `UpdateInstaller` y los de la línea de órdenes: `CertificateStores`, `CertificateFilter`, `Terminal`, `SecretDescriptor`, `DesktopHandover`, `CommandLineFiles`, `SignatureVerifier` y `DocumentSigner`. |
+| `ports.rs` | **Los puertos**: `HandlerRegistry`, `VersionMemory`, `UpdateInstaller` y los de la línea de órdenes: `CertificateStores`, `CertificateFilter`, `Terminal`, `SecretDescriptor`, `DesktopHandover`, `CommandLineFiles`, `SignatureVerifier`, `DocumentSigner` y `GraphicalPicker`. |
 | `adapters/process.rs` | Lo que este proceso sabe de sí mismo: su línea de órdenes, su carpeta, el relanzamiento cuando los argumentos no son UTF-8 y el proceso de sede de cada URL que macOS entrega por Apple Event. No decide el rol. |
 | `adapters/channel.rs` | El canal de distribución (`/.flatpak-info`) y quién dice el escritorio que atiende `afirma://`. Léelo antes que sus hermanos. Pruebas en `adapters/channel/tests.rs`. |
 | `adapters/choice.rs` | Elegir, leer o retirar el manejador, en el `mimeapps.list` del `$HOME` y con todo lo demás intacto. Firefox guarda la suya aparte. Pruebas en `adapters/choice/tests.rs`. |
@@ -23,17 +23,21 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs` en Linux, sobre `registry/windows_classes.rs` en Windows, y el pendiente de Launch Services en macOS. |
 | `adapters/registry/windows_classes.rs` | Quién abre `afirma://` en Windows: `HKCU\Software\Classes` sobre `HKLM`, y la rama de rFirma en la del usuario (ADR-0035). Pruebas en `adapters/registry/windows_classes/tests.rs`. |
 | `adapters/releases.rs` | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación. Pruebas en `adapters/releases/tests.rs`. |
-| `adapters/terminal.rs` | La entrada de la línea de órdenes, `run_the_command_line`, y los adaptadores de sus puertos: `SeenStores`, `ProcessTerminal`, `ProcessDescriptors` y `RootsSigner`. Ni Tauri ni ventana; sus pruebas, con el binario, en `tests/command_line*.rs`. |
+| `adapters/terminal.rs` | La entrada de la línea de órdenes, `run_the_command_line`, y los adaptadores de sus puertos: `SeenStores`, `ProcessTerminal`, `ProcessDescriptors` y `RootsSigner`. Sin Tauri; sus pruebas, con el binario, en `tests/command_line*.rs`. |
+| `adapters/site_window_picker.rs` | `SiteWindowPicker`, el elector gráfico de `-certgui`: levanta Tauri en el proceso de terminal solo para la ventana de sede con el origen «orden de terminal», y devuelve lo elegido. No firma. Pruebas en `adapters/site_window_picker/tests.rs`. |
+| `adapters/tauri_certgui.rs` | Las órdenes de esa ventana, que solo registra el proceso de terminal: leer la elección, elegir certificado, dar el PIN y cancelar. Sin pruebas propias. |
 | `adapters/terminal/descriptor.rs` | El PIN leído de `-password-fd N`: la primera línea del descriptor. Pruebas en `adapters/terminal/descriptor/tests.rs`. |
 | `adapters/terminal/tty.rs` | El PIN tecleado sin eco y la lista con flechas de `-certtui`, en `/dev/tty`, que no toca stdin ni stdout. Solo Unix. Pruebas en `adapters/terminal/tty/tests.rs`. |
 | `adapters/tauri.rs` | Las órdenes del escritorio: invocación, estado de la barra de título nativa, versión publicada, manejadores de `afirma://` y su elección, destino externo, estado y retirada. Pruebas en `adapters/tauri/tests.rs`. |
 | `adapters/titlebar.rs` | La barra de título nativa de GTK de la ventana principal en Linux, y la composición de WebKitGTK que piden sus popovers: sus eventos, cuándo aplicar el estado de la ventana y qué dice cada reciente. Nada en Windows ni macOS. Pruebas en `adapters/titlebar/tests.rs`. |
 | `adapters/titlebar/gtk_titlebar.rs` | Los widgets GTK de esa barra: sus acciones `hdr`, el popover propio de los recientes y el ☰. Solo Linux, sin pruebas propias. |
-| `adapters/views.rs` | Lo que cruza a la ventana: manejadores de `afirma://`, versión nueva, señales de estado, resultado de la retirada y la barra de título nativa. Sin pruebas propias. |
+| `adapters/views.rs` | Lo que cruza a la ventana: manejadores de `afirma://`, versión nueva, señales de estado, resultado de la retirada, la barra de título nativa y la elección de la ventana de `-certgui`. Sin pruebas propias. |
 | `adapters/webkit_renderer.rs` | Si WebKitGTK debe componer sin la GPU en esta sesión (ADR-0007): solo la decisión; la fija `titlebar.rs`. Pruebas en `adapters/webkit_renderer/tests.rs`. |
 | `application/command_line.rs` | El caso de uso de la línea de órdenes (ADR-0041): de los argumentos al código de salida, los bytes de stdout y las líneas de stderr, sin escribir en ningún flujo. Pruebas en `application/command_line/tests.rs`. |
+| `application/command_line/certgui.rs` | El certificado y el PIN de `-certgui`: lo que se ofrece a la ventana, o por qué no hay nada, y lo que vuelve de ella; no abre la ventana. Pruebas en `application/command_line/tests/certgui.rs`. |
 | `application/command_line/certtui.rs` | El certificado de `-certtui`: los vigentes que dejan `-store` y `-filter`, con el recordado preseleccionado; no pinta la lista. Pruebas en `application/command_line/tests/certtui.rs`. |
 | `application/command_line/config.rs` | El `-config` de `sign`: sus propiedades, con las reglas de las `properties` de una sede. No las expande. Pruebas en `application/command_line/config/tests.rs`. |
+| `application/command_line/tests/certgui.rs` | Las pruebas de `-certgui` en el caso de uso, con un doble del elector gráfico. |
 | `application/command_line/tests/certtui.rs` | Las pruebas de `-certtui` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/cosign.rs` | Las pruebas de `cosign` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/filter_and_xml.rs` | Las pruebas de `-filter` y de la respuesta de `-xml`, partidas de `application/command_line/tests.rs`. |

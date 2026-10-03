@@ -111,11 +111,17 @@ fn a_filter_goes_alone_or_narrows_the_terminal_list() {
 }
 
 #[test]
-fn certgui_is_refused_proposing_certtui() {
-    let refusal = parsed(&["-i", "a", "-o", "b", "-certgui"]).expect_err("rechazado");
+fn certgui_chooses_in_the_window_and_a_filter_narrows_its_list() {
+    let alone = parsed(&["-i", "a", "-o", "b", "-certgui"]).expect("válido");
+    let narrowing = parsed(&["-i", "a", "-o", "b", "-certgui", "-filter", "x"]).expect("válido");
 
-    assert_eq!(refusal, ArgumentsRefusal::GraphicalSelectionNotAvailable);
-    assert!(refusal.to_string().contains("-certtui"));
+    assert_eq!(alone.selection, Some(Selection::Window { filter: None }));
+    assert_eq!(
+        narrowing.selection,
+        Some(Selection::Window {
+            filter: Some("x".to_owned())
+        })
+    );
 }
 
 #[test]

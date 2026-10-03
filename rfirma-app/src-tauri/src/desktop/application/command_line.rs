@@ -14,14 +14,16 @@ use crate::desktop::domain::sign_arguments::{
 use crate::desktop::domain::store_scope::scope_named_by;
 use crate::desktop::ports::{
     CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning, DesktopHandover,
-    DocumentSigner, SecretDescriptor, SignatureVerifier, Terminal,
+    DocumentSigner, GraphicalPicker, SecretDescriptor, SignatureVerifier, Terminal,
 };
 use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::store::StoreClass;
 use crate::signing::domain::bridge::{Format as SignatureFormat, SignatureOperation, XadesVariant};
 use crate::site::domain::protocol::detection::{shape_of, DetectedShape};
 use crate::site::domain::protocol::{site_filter, SiteFilter};
 
+mod certgui;
 mod certtui;
 mod config;
 mod verify;
@@ -54,6 +56,8 @@ pub struct CommandLinePorts<'a> {
     pub verifier: &'a dyn SignatureVerifier,
     /// Quien firma por el camino de la sede.
     pub signer: &'a dyn DocumentSigner,
+    /// La ventana de sede en la que se elige con `-certgui`.
+    pub window: &'a dyn GraphicalPicker,
 }
 
 /// Lo que una orden deja al terminar: código de salida, bytes de stdout y líneas de stderr.
@@ -227,11 +231,12 @@ fn signed(
             )))
         }
     };
-    let certificate = match the_certificate_chosen_by(selection, arguments, ports) {
-        Ok(certificate) => certificate,
-        Err(failed) => return outcome(failed),
-    };
     let input = Path::new(&parsed.input);
+    let (certificate, typed_in_the_window) =
+        match the_certificate_chosen_by(selection, input, arguments, ports) {
+            Ok(chosen) => chosen,
+            Err(failed) => return outcome(failed),
+        };
     let bytes = match ports.files.read(input) {
         Ok(bytes) => bytes,
         Err(reason) => {
@@ -253,6 +258,7 @@ fn signed(
         document_length: bytes.len(),
         password_fd: parsed.password_fd,
         descriptor: ports.descriptor,
+        typed_in_the_window: typed_in_the_window.as_ref(),
     }) {
         Ok(document) => document,
         Err(reason) => {
@@ -321,17 +327,28 @@ fn escaped_for_xml(text: &str) -> String {
 
 fn the_certificate_chosen_by(
     selection: &Selection,
+    input: &Path,
     arguments: &[String],
     ports: &CommandLinePorts,
-) -> Result<TokenCertificate, Outcome> {
+) -> Result<(TokenCertificate, Option<ProtectedSecret>), Outcome> {
+    let without_a_secret = |certificate| (certificate, None);
     match selection {
-        Selection::Alias(alias) => the_certificate_named(alias, arguments, ports.stores),
+        Selection::Alias(alias) => {
+            the_certificate_named(alias, arguments, ports.stores).map(without_a_secret)
+        }
         Selection::Filter(expression) => {
-            the_only_certificate_accepted_by(expression, arguments, ports)
+            the_only_certificate_accepted_by(expression, arguments, ports).map(without_a_secret)
         }
         Selection::Terminal { filter } => {
             certtui::the_certificate_chosen_on_the_terminal(filter.as_deref(), arguments, ports)
+                .map(without_a_secret)
         }
+        Selection::Window { filter } => certgui::the_certificate_chosen_in_the_window(
+            filter.as_deref(),
+            input,
+            arguments,
+            ports,
+        ),
     }
 }
 

@@ -14,7 +14,10 @@ pub use rfirma_lib::desktop::adapters::terminal::{ProcessDescriptors, RootsSigne
 pub use rfirma_lib::desktop::application::command_line::{
     attend, CommandLinePorts, Outcome, FAILED, SUCCEEDED,
 };
-pub use rfirma_lib::desktop::ports::{AskedSecret, DesktopHandover, OfferedCertificate, Terminal};
+pub use rfirma_lib::desktop::ports::{
+    AskedSecret, DesktopHandover, GraphicalPicker, OfferedCertificate, Terminal, WindowChoice,
+    WindowOffer,
+};
 pub use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 pub use rfirma_lib::identity::adapters::pkcs11;
 pub use rfirma_lib::identity::application::certificates;
@@ -205,10 +208,32 @@ pub fn attended_over(words: &[&str], home: &Path, terminal: &ScriptedTerminal) -
     attended_with_the_roots(words, &the_roots_under(home), terminal)
 }
 
+/// La ventana de `-certgui` que estas pruebas no abren.
+pub struct NoSiteWindow;
+
+impl GraphicalPicker for NoSiteWindow {
+    fn has_a_display(&self) -> bool {
+        false
+    }
+
+    fn chosen(&self, _document: &Path, _offer: WindowOffer<'_>) -> Result<WindowChoice, String> {
+        Err("estas pruebas no abren la ventana de sede".to_owned())
+    }
+}
+
 pub fn attended_with_the_roots(
     words: &[&str],
     roots: &Roots,
     terminal: &ScriptedTerminal,
+) -> Outcome {
+    attended_with_the_window(words, roots, terminal, &NoSiteWindow)
+}
+
+pub fn attended_with_the_window(
+    words: &[&str],
+    roots: &Roots,
+    terminal: &ScriptedTerminal,
+    window: &dyn GraphicalPicker,
 ) -> Outcome {
     let stores = SeenStores::over(roots.identity.all_stores());
     let ports = CommandLinePorts {
@@ -220,6 +245,7 @@ pub fn attended_with_the_roots(
         files: &DiskFiles,
         verifier: &NativeVerifier,
         signer: &RootsSigner::of(roots),
+        window,
     };
     let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
     attend(&arguments, &ports)

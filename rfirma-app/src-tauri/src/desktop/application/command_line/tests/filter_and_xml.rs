@@ -28,6 +28,7 @@ fn filtered_with(accepted: &[&'static str], words: &[&str], signer: &RecordingSi
         files: &files,
         verifier: &Untouched,
         signer,
+        window: &Untouched,
     };
     attend(&arguments_of(words), &ports)
 }
