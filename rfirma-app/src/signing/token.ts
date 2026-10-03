@@ -1,4 +1,4 @@
-//! Lo que el token puede contestar cuando algo va mal: las siete situaciones que ya clasificó Rust y el detalle crudo. Sin React.
+//! El fallo del token: su situación traducible, una de las siete que este tipo declara de entre las que clasifica Rust, y el detalle crudo. Sin React.
 /**
  * **La clasificación es de Rust** (`pkcs11::error`, ID-29): el `CKR_*` de
  * `cryptoki` se convierte allí en una situación nuestra, y aquí solo llega ya

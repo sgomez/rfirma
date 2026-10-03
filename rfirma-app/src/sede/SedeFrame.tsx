@@ -1,4 +1,4 @@
-//! El cuerpo y el pie de cada momento (`SedeBody`) y los hooks que comparten: el cierre solo del desenlace, la cuenta atrás de consentir, la tecla Escape y el botón por defecto.
+//! El cuerpo y el pie de cada momento (`SedeBody`), con su tecla Escape, y los hooks que comparten los momentos: el cierre solo del desenlace, la cuenta atrás de consentir y el botón por defecto.
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { CONSENT_COUNTDOWN_SECONDS, OUTCOME_CLOSE_MS } from "./errand";
