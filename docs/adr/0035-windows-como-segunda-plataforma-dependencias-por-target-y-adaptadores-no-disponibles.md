@@ -223,11 +223,16 @@ se sustituye.
 
 ## El CI tiene un carril de Windows
 
-El job `windows` de `ci.yml` corre en `windows-latest` cuando corre el carril de Rust o el
-nativo: compila la `.dll` (cacheada con la misma clave que la de Linux y otro `runner.os`), pasa
-`rustfmt` y `clippy`, las pruebas de `--lib` y las del canal local (`channel_client`,
-`channel_operations`, `service_acknowledgement`) en una pasada instrumentada (`just
-test-windows`). Las gradas B y C no corren: faltan softhsm, NSS y poppler.
+El job `windows` de `platforms.yml` corre en `windows-latest`: compila la `.dll` (cacheada con la
+misma clave que la de Linux y otro `runner.os`), pasa `rustfmt` y `clippy`, las pruebas de
+`--lib` y las del canal local (`channel_client`, `channel_operations`,
+`service_acknowledgement`) en una pasada instrumentada (`just test-windows`). Las gradas B y C no
+corren: faltan softhsm, NSS y poppler.
+
+No corre en cada PR, sino cuando el PR toca algo que solo compila Windows o que cambia cómo se
+compila allí, o lleva la etiqueta `ci-windows` o `ci-full`; en `main`, en la nocturna de
+`nightly.yml`, que guarda sus cachés y abre una issue si sale roja. Qué cuenta como «de Windows»
+y por qué, en el ADR-0014.
 
 El instalador no sale de `ci.yml` sino de la release, como el `.deb`, el `.rpm` y el flatpak: el
 job `windows` de `build.yml` compila la `.dll` y ejecuta `just bundle`, y el `.exe` pasa
@@ -241,8 +246,8 @@ ensayarlo sin etiquetar, `gh workflow run build.yml --ref <rama>`.
 
 Una etiqueta solo lee las cachés de `main`, así que la compilación de release de Windows iría
 siempre en frío. El job `warm` de `warm-release-cache.yml` es un calentador con matriz por sistema operativo: Linux
-corre en cada push a `main` y Windows, con la misma receta que la release, en el cron semanal y a
-mano. Guarda la caché de Rust con la clave compartida `windows-release`, que el job de `build.yml`
+corre a diario si `main` se ha movido desde el anterior, y Windows, con la misma receta que la
+release, en el cron semanal; a mano corren los dos. Guarda la caché de Rust con la clave compartida `windows-release`, que el job de `build.yml`
 solo lee. Ninguna PR arranca un runner de calentamiento.
 
 La puerta CRAP del carril rápido de Linux puntúa como 0 % de cobertura lo que Linux no compila, y
@@ -371,8 +376,8 @@ interfaz también en Linux. Se aplaza; mientras, el almacén del usuario se pres
 - En Windows la aplicación busca la `.dll` junto al ejecutable; en Linux, en `../lib/rfirma`.
 - El instalador no está firmado con Authenticode: SmartScreen avisa al abrirlo la primera vez.
   Las actualizaciones las verifica el *updater* con la minisign, no Windows.
-- Un cambio solo en `packaging/windows/` no enciende el carril de Windows en un PR, porque
-  `ci-lanes.sh` no tiene un carril propio para él.
+- Un cambio solo en `packaging/windows/` enciende el carril de Windows en un PR, y no el de macOS.
+- Un rojo que solo se ve en Windows puede llegar a `main`; lo avisa la nocturna al día siguiente.
 - `cargo test` en Windows no corre las pruebas de grada B y C que necesitan softhsm o NSS.
 - Las pruebas de `identity/adapters/windows_store/tests.rs` crean certificados autofirmados en
   `Cert:\CurrentUser\My` con `New-SelfSignedCertificate` y los borran con su clave al acabar.

@@ -1,5 +1,5 @@
 # Deja en `main` la cache de Rust mas reciente de cada perfil, antes de que las superadas
-# desplacen a las vigentes. Solo se quedan superadas cuando cambian Cargo.lock o el compilador: corre tras el CI de ese push, y a diario por si acaso.
+# desplacen a las vigentes. Solo se quedan superadas cuando cambian Cargo.lock o el compilador: las de Linux tras el CI de ese push, y las de Windows y macOS tras la nocturna, por eso el cron va detras de ella.
 name: Caches de Rust superadas
 
 on:
@@ -10,7 +10,7 @@ on:
       - versions.env
   workflow_dispatch:
   schedule:
-    - cron: '43 3 * * *'
+    - cron: '43 5 * * *'
 
 permissions: {}
 
