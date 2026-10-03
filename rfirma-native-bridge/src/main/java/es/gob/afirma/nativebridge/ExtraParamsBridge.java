@@ -1,4 +1,4 @@
-//! El expansor de `expPolicy` de `extraParams`, prestado de `ExtraParamsProcessor` del original; sin estado y sin sello.
+//! La expansión de `extraParams` que hace `ExtraParamsProcessor` del original: la política `expPolicy` y, con ella, el `mode` de CAdES según el tamaño y el subfiltro de PAdES; sin estado y sin sello.
 package es.gob.afirma.nativebridge;
 
 import java.util.Enumeration;

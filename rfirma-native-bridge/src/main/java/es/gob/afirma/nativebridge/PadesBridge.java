@@ -27,6 +27,11 @@ import es.gob.afirma.triphase.signer.processors.PAdESTriPhasePreProcessor;
  * privada no entra nunca en el isolate de Java: el PKCS#1 sobre los atributos
  * firmados lo calcula Rust contra el PKCS#11 del sistema. Java hace la prefirma
  * y la postfirma, y nada mas.
+ *
+ * <p>Se instancia {@code PAdESTriPhasePreProcessor} directamente y NO
+ * {@code PreProcessorFactory}, que referencia los preprocesadores XAdES,
+ * FacturaE, ASiC y PKCS1 y haria alcanzable todo el arbol de formatos dentro de
+ * la imagen.
  */
 public final class PadesBridge {
 

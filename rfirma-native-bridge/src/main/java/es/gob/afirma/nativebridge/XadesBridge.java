@@ -1,4 +1,4 @@
-//! Prefirma y postfirma XAdES en Java puro, para firma (Enveloping, Detached, Enveloped, ASiC-S, FacturaE), cofirma y contrafirma, con los procesadores del original; la firma del hash no está aquí (ADR-0001).
+//! Prefirma y postfirma XAdES en Java puro, para firma (Enveloping, Detached, Externally Detached, Enveloped, ASiC-S, FacturaE), cofirma y contrafirma, con los procesadores del original; la firma del hash no está aquí (ADR-0001).
 package es.gob.afirma.nativebridge;
 
 import java.nio.charset.StandardCharsets;
