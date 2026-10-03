@@ -150,6 +150,11 @@ impl AnEngineThatReports {
             .cloned()
             .expect("se le ha pedido algo")
     }
+
+    /// Si se le ha pedido algo.
+    pub(crate) fn was_asked(&self) -> bool {
+        !crate::lock(&self.documents_seen).is_empty()
+    }
 }
 
 impl PreviousSignaturesEngine for AnEngineThatReports {

@@ -190,3 +190,22 @@ fn a_path_exported_by_the_portal_is_a_path_like_any_other() {
         Some("contrato.pdf")
     );
 }
+
+#[test]
+fn a_file_that_is_not_a_pdf_opens_when_it_comes_to_see_its_signatures() {
+    let signature = a_pdf("datos.csig");
+
+    assert_eq!(
+        resolved(first_file(std::slice::from_ref(&signature)), Ok(())),
+        Dropped::Opened {
+            path: signature,
+            also_entering: Vec::new(),
+            discarded: 0,
+        }
+    );
+}
+
+#[test]
+fn handing_over_nothing_to_see_its_signatures_opens_nothing() {
+    assert_eq!(resolved(first_file(&[]), Ok(())), Dropped::Nothing);
+}

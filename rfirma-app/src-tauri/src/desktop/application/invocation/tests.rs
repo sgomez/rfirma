@@ -3,8 +3,10 @@ use std::path::Path;
 use super::*;
 use crate::crossing::Failure;
 use crate::documents::adapters::files::RealFiles;
-use crate::documents::application::documents::dropped_document;
 use crate::documents::application::documents::OpenedDocuments;
+use crate::documents::application::documents::{
+    dropped_document, handed_over_to_see_its_signatures,
+};
 
 fn told(
     invocation: &Invocation,
@@ -114,6 +116,25 @@ fn a_file_handed_over_just_to_open_it_reaches_the_desktop_as_today() {
 
     assert_eq!(invocation, invoked_with(&pdf));
     assert_eq!(invoked_intent(&invocation), WindowIntent::OpenTheDocument);
+}
+
+#[test]
+fn a_file_that_is_not_a_pdf_handed_over_to_see_its_signatures_opens_in_the_window() {
+    let signature = a_temporary_pdf("ver-firmas.csig");
+    let invocation = handed_over_by_the_terminal(&signature, WindowIntent::SeeItsSignatures);
+
+    let view = handed_over_to_see_its_signatures(
+        &RealFiles,
+        &invoked_documents(&invocation).expect("trae el fichero"),
+        &OpenedDocuments::new(),
+    )
+    .expect("algo trae");
+
+    assert!(view.refused.is_none());
+    assert_eq!(
+        view.document.expect("se abre").name,
+        "rfirma-invocation-ver-firmas.csig"
+    );
 }
 
 #[test]

@@ -21,7 +21,7 @@ use crate::signing::application::cycle::{
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{
     compose_visible_content, AdmissibleDocument, CompletedCycle, DocumentSignatures, Format,
-    PlacementError, SessionSeal, SignatureConfig, SigningChoice, VisibleData,
+    PlacementError, SessionSeal, SignatureConfig, SignatureStandard, SigningChoice, VisibleData,
 };
 use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures, Waivers};
 use crate::signing::ports::ProtectedSecret;
@@ -414,11 +414,35 @@ pub fn previous_signatures_in(
     engine: &dyn PreviousSignaturesEngine,
     document: &Document,
 ) -> Result<DocumentSignatures, CycleFailure> {
-    let bytes = admitted_bytes(files, document, Format::Pades, Waivers::NONE)?;
+    let bytes = files
+        .read(document.reading_path())
+        .map_err(DocumentError::Unreadable)?;
+    let format = standard_of(&bytes);
+    match format {
+        SignatureStandard::Unrecognized => {
+            return Ok(DocumentSignatures::default().in_format(format))
+        }
+        SignatureStandard::Pades => {
+            AdmissibleDocument::check_for(Format::Pades, &bytes, Waivers::NONE)
+                .map_err(CycleError::from)?;
+        }
+        SignatureStandard::Cades | SignatureStandard::Xades => {}
+    }
     let document_b64 = base64::engine::general_purpose::STANDARD.encode(bytes);
     Ok(engine
         .previous_signatures(&document_b64)
-        .map_err(CycleError::from)?)
+        .map_err(CycleError::from)?
+        .in_format(format))
+}
+
+fn standard_of(bytes: &[u8]) -> SignatureStandard {
+    use crate::site::domain::protocol::detection::{is_cms_signed_data, shape_of, DetectedShape};
+    match shape_of(bytes) {
+        DetectedShape::Pdf => SignatureStandard::Pades,
+        DetectedShape::Invoice | DetectedShape::Xml => SignatureStandard::Xades,
+        DetectedShape::Binary if is_cms_signed_data(bytes) => SignatureStandard::Cades,
+        DetectedShape::Binary => SignatureStandard::Unrecognized,
+    }
 }
 
 /// Firmas del último documento firmado entregado en esta sesión, la propia incluida.

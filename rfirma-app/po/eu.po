@@ -568,6 +568,9 @@ msgstr "Arrastatu PDF bat edo sakatu irekitzeko"
 msgid "viewer.dropZoneHint"
 msgstr "Ez da zure ordenagailutik ateratzen"
 
+msgid "viewer.noPreview"
+msgstr "Aurrebistarik ez"
+
 msgid "viewer.pageNumber"
 msgstr "Orrialde-zenbakia"
 
@@ -988,8 +991,16 @@ msgid "panel.signed.title"
 msgstr "Dokumentuaren sinadurak"
 
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
-msgid "panel.signed.format"
+msgid "panel.signed.formatPades"
 msgstr "PAdES"
+
+#. Término del dominio: CAdES es la sigla del formato de firma; no se traduce.
+msgid "panel.signed.formatCades"
+msgstr "CAdES"
+
+#. Término del dominio: XAdES es la sigla del formato de firma; no se traduce.
+msgid "panel.signed.formatXades"
+msgstr "XAdES"
 
 #. Recuento de firmas del documento, en la insignia del resumen.
 msgid "panel.signed.count"
@@ -1028,6 +1039,12 @@ msgstr "Sinadurarik ez"
 msgid "panel.signed.none.body"
 msgstr "Dokumentuak ez du sinadurarik."
 
+msgid "panel.signed.unrecognized.title"
+msgstr "Formatu ezezaguna"
+
+msgid "panel.signed.unrecognized.body"
+msgstr "Ez da PDF bat, ezta CAdES edo XAdES sinadura bat ere."
+
 msgid "panel.signed.readFailed.title"
 msgstr "Ezin izan dira sinadurak irakurri"
 
@@ -1037,6 +1054,13 @@ msgstr "{{time}}etan sinatuta"
 
 msgid "panel.signed.openDocument"
 msgstr "Ireki PDFa"
+
+msgid "panel.signed.openFile"
+msgstr "Ireki fitxategia"
+
+#. Motivo de «Firmar» deshabilitado en el resumen de un fichero que no es PDF.
+msgid "panel.signed.onlyPdfs"
+msgstr "Mahaigainean PDFak soilik sina daitezke"
 
 msgid "panel.signed.openFolder"
 msgstr "Ireki karpeta"

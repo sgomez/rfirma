@@ -129,6 +129,18 @@ impl DocumentsRoot {
     pub fn what_was_dropped(&self, paths: &[PathBuf]) -> Option<DroppedDocument> {
         application::documents::dropped_document(self.files.as_ref(), paths, &self.opened)
     }
+
+    /// Lo que se le cuenta a la ventana del fichero que llega para ver sus firmas, sea o no un PDF.
+    pub fn what_was_handed_over_to_see_its_signatures(
+        &self,
+        paths: &[PathBuf],
+    ) -> Option<DroppedDocument> {
+        application::documents::handed_over_to_see_its_signatures(
+            self.files.as_ref(),
+            paths,
+            &self.opened,
+        )
+    }
 }
 
 #[cfg(test)]

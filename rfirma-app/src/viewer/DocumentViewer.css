@@ -32,6 +32,10 @@
   text-align: center;
 }
 
+.viewer--without-preview {
+  gap: var(--rf-space-sm);
+}
+
 /* docs/design/visor-de-documento.md, «Zona de soltar del estado vacío». */
 .viewer__drop-zone {
   display: flex;

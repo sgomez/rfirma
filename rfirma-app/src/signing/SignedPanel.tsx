@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { formatSignedAt, formatSignedTime } from "../App.signingOrder";
-import { CheckCircleIcon, FileIcon } from "../design-system/icons";
+import { AlertIcon, CheckCircleIcon, FileIcon } from "../design-system/icons";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { Destination } from "./destination";
 import { PanelFooter } from "./PanelFooter";
-import type { PreviousSignature } from "./previousSignatures";
+import type { PreviousSignature, SignatureFormat } from "./previousSignatures";
 import "./SigningPanel.css";
 import "./SignedPanel.css";
 
@@ -25,6 +25,10 @@ interface SignedPanelProps {
   onSign: () => void;
   /** Mueve el destino; ausente en `verify --gui`, donde el pie no tiene «Cambiar». */
   onChangeDestination?: () => void;
+  /** El formato de firma del documento; por omisión, PAdES. */
+  format?: SignatureFormat;
+  /** Si se puede firmar desde aquí: en el escritorio, solo un PDF. */
+  signable?: boolean;
   /** Se están leyendo las firmas del documento abierto. */
   reading?: boolean;
   /** Por qué no se pudieron leer las firmas del documento abierto. */
@@ -33,6 +37,12 @@ interface SignedPanelProps {
   failure?: NamedFailure | null;
   onOpenHelp?: () => void;
 }
+
+const FORMAT_BADGES = {
+  pades: "panel.signed.formatPades",
+  cades: "panel.signed.formatCades",
+  xades: "panel.signed.formatXades",
+} as const;
 
 /** La columna derecha cuando la firma ya está escrita: todas las firmas del documento. */
 export function SignedPanel({
@@ -44,6 +54,8 @@ export function SignedPanel({
   onOpenFolder,
   onSign,
   onChangeDestination,
+  format = "pades",
+  signable = true,
   reading = false,
   readFailure = null,
   failure = null,
@@ -71,6 +83,16 @@ export function SignedPanel({
             title={t("panel.signed.readFailed.title")}
             onOpenHelp={onOpenHelp}
           />
+        ) : !reading && format === "unrecognized" ? (
+          <div className="panel__no-certificates">
+            <div className="panel__notice-title">
+              <AlertIcon size={18} />
+              <span className="rf-title">{t("panel.signed.unrecognized.title")}</span>
+            </div>
+            <p className="rf-body rf-text-muted panel__notice-body">
+              {t("panel.signed.unrecognized.body")}
+            </p>
+          </div>
         ) : !reading && signedAt === undefined && signatures.length === 0 ? (
           <div className="panel__no-certificates">
             <div className="panel__notice-title">
@@ -89,7 +111,9 @@ export function SignedPanel({
             </p>
             {!reading && (
               <div className="rf-row rf-gap-xs">
-                <span className="rf-badge">{t("panel.signed.format")}</span>
+                {format !== "unrecognized" && (
+                  <span className="rf-badge">{t(FORMAT_BADGES[format])}</span>
+                )}
                 <span className="rf-badge">
                   {t("panel.signed.count", { count: signatures.length })}
                 </span>
@@ -127,6 +151,7 @@ export function SignedPanel({
         onOpenFolder={onOpenFolder}
         onSign={onSign}
         onChangeDestination={onChangeDestination}
+        signable={signable}
       />
     </div>
   );

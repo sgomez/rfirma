@@ -5,6 +5,7 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
+  FileIcon,
   FitIcon,
   FitPageIcon,
   MinusIcon,
@@ -89,6 +90,8 @@ interface DocumentViewerProps {
    * mudo y parecía que la pulsación no había hecho nada.
    */
   failure?: DocumentFailure | null;
+  /** El nombre del documento abierto que no es un PDF y no tiene vista previa. */
+  withoutPreview?: string | null;
   onOpenHelp?: () => void;
   /**
    * Se puede colocar la firma visible ahora mismo: el interruptor está
@@ -176,6 +179,7 @@ export function DocumentViewer({
   placementRequest = null,
   canPlace = true,
   failure = null,
+  withoutPreview = null,
   onOpenHelp,
   stamped = null,
   stampFrozen = false,
@@ -228,6 +232,18 @@ export function DocumentViewer({
     style: "percent",
     maximumFractionDigits: 0,
   });
+
+  if (withoutPreview !== null) {
+    return (
+      <div className="viewer viewer--empty viewer--without-preview">
+        <span className="rf-text-muted">
+          <FileIcon size={40} />
+        </span>
+        <span className="rf-title">{withoutPreview}</span>
+        <span className="rf-body rf-text-muted">{t("viewer.noPreview")}</span>
+      </div>
+    );
+  }
 
   if (!pdf) {
     return (

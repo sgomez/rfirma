@@ -35,6 +35,9 @@ export type SignatureStatus =
 /** El tono del peor aviso, de menor a mayor gravedad. */
 export type Tone = "information" | "indeterminate" | "attention";
 
+/** El formato de firma del documento, o que no se reconoce. */
+export type SignatureFormat = "pades" | "cades" | "xades" | "unrecognized";
+
 /** El informe de firmas previas del documento, en el orden en que firmaron. */
 export interface PreviousSignaturesReport {
   signatures: readonly PreviousSignature[];
@@ -44,6 +47,8 @@ export interface PreviousSignaturesReport {
   tone: Tone;
   /** Si el documento cambió después de la última firma. */
   changedAfterLastSignature: boolean;
+  /** El formato de firma del documento; sin él, PAdES. */
+  format?: SignatureFormat;
 }
 
 const INVALID_STATUSES: readonly SignatureStatus[] = [

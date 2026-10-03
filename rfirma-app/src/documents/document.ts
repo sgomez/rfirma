@@ -51,3 +51,8 @@ export interface DocumentInHand {
    */
   remembered: boolean;
 }
+
+/** Si el documento es un PDF, por su extensión, como lo decide el backend al soltarlo. */
+export function isAPdf(document: Pick<DocumentInHand, "name">): boolean {
+  return document.name.toLowerCase().endsWith(".pdf");
+}

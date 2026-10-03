@@ -36,6 +36,8 @@ interface PanelFooterSignedProps extends PanelFooterDestinationProps {
   onSign: () => void;
   /** Mueve el destino del documento (ADR-0011); ausente, el pie no ofrece «Cambiar». */
   onChangeDestination?: () => void;
+  /** Si el documento se puede firmar en el escritorio, que solo firma PDF. */
+  signable?: boolean;
 }
 
 type PanelFooterProps = PanelFooterSigningProps | PanelFooterSignedProps;
@@ -125,7 +127,7 @@ export function PanelFooter(props: PanelFooterProps) {
             className="rf-btn rf-btn--primary panel__signed-open"
             onClick={props.onOpenDocument}
           >
-            {t("panel.signed.openDocument")}
+            {t(props.signable === false ? "panel.signed.openFile" : "panel.signed.openDocument")}
           </button>
           <button
             type="button"
@@ -138,6 +140,8 @@ export function PanelFooter(props: PanelFooterProps) {
           <button
             type="button"
             className="rf-btn rf-btn--ghost panel__signed-sign"
+            title={props.signable === false ? t("panel.signed.onlyPdfs") : undefined}
+            disabled={props.signable === false}
             onClick={props.onSign}
           >
             {t("panel.footer.sign")}

@@ -140,4 +140,67 @@ describe("App, con verify --gui", () => {
     );
     expect(screen.queryByText("Firmas del documento")).not.toBeInTheDocument();
   });
+
+  describe("with a file that is not a PDF", () => {
+    function renderNotAPdf(signer: SigningBackend) {
+      return renderApp(
+        inMemoryRecents([row("datos.csig", { folder: "Contratos" })]),
+        [],
+        pdfsOf({}),
+        {},
+        { list: async () => [{ ...aCertificate, remembered: true }] },
+        emptyRubricPicker(),
+        signer,
+        invokedToSee("datos.csig"),
+        inMemoryDocumentDrops(invokedToSee("datos.csig")),
+      );
+    }
+
+    const cadesWith =
+      (...names: string[]) =>
+      async () => ({
+        ...(await withSignatures(...names)()),
+        format: "cades" as const,
+      });
+
+    it("shows the signatures of a CAdES with its format, and the viewer says there is no preview", async () => {
+      renderNotAPdf(aSigner({ previousSignatures: cadesWith("GRACE HOPPER", "ADA LOVELACE") }));
+
+      expect(await screen.findByText("2 firmas")).toBeInTheDocument();
+      expect(screen.getByText("CAdES")).toBeInTheDocument();
+      expect(screen.queryByText("PAdES")).not.toBeInTheDocument();
+      expect(screen.getByText("GRACE HOPPER (00000000T)")).toBeInTheDocument();
+      expect(screen.getByText("Sin vista previa")).toBeInTheDocument();
+      expect(screen.queryByText("No se ha podido leer el documento")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /zoom/i })).not.toBeInTheDocument();
+      expect(globalThis.document.querySelector(".viewer__bar")).toBeNull();
+    });
+
+    it("offers to open the file and disables Firmar with its reason", async () => {
+      renderNotAPdf(aSigner({ previousSignatures: cadesWith("GRACE HOPPER") }));
+      await screen.findByText("1 firma");
+
+      expect(screen.getByRole("button", { name: "Abrir el fichero" })).toBeEnabled();
+      expect(screen.queryByRole("button", { name: "Abrir el PDF" })).not.toBeInTheDocument();
+      const sign = screen.getByRole("button", { name: "Firmar" });
+      expect(sign).toBeDisabled();
+      expect(sign).toHaveAttribute("title", "En el escritorio solo se firman PDF");
+    });
+
+    it("says «Formato no reconocido» for a file of an unknown format", async () => {
+      renderNotAPdf(
+        aSigner({
+          previousSignatures: async () => ({
+            ...NO_PREVIOUS_SIGNATURES,
+            format: "unrecognized" as const,
+          }),
+        }),
+      );
+
+      expect(await screen.findByText("Formato no reconocido")).toBeInTheDocument();
+      expect(screen.getByText("No es un PDF ni una firma CAdES o XAdES.")).toBeInTheDocument();
+      expect(screen.queryByText("Sin firmas")).not.toBeInTheDocument();
+      expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+    });
+  });
 });

@@ -56,15 +56,33 @@ pub fn dropped_document(
     told_as_dropped(files, decide_what_was_dropped(files, paths), opened)
 }
 
+/// Abre el primer fichero entregado para ver sus firmas, sea o no un PDF.
+pub fn handed_over_to_see_its_signatures(
+    files: &dyn DocumentFiles,
+    paths: &[PathBuf],
+    opened: &OpenedDocuments,
+) -> Option<DroppedDocument> {
+    use crate::documents::domain::dropped::first_file;
+    let decided = decided(files, first_file(&expanded(files, paths)));
+    told_as_dropped(files, decided, opened)
+}
+
 /// Expande las carpetas soltadas, elige el primer PDF y pregunta al disco si se deja leer.
 pub fn decide_what_was_dropped(
     files: &dyn DocumentFiles,
     paths: &[PathBuf],
 ) -> crate::documents::domain::dropped::Dropped {
-    use crate::documents::domain::dropped::{first_pdf, resolved, Choice};
-    let choice = first_pdf(&expanded(files, paths));
+    use crate::documents::domain::dropped::first_pdf;
+    decided(files, first_pdf(&expanded(files, paths)))
+}
+
+fn decided(
+    files: &dyn DocumentFiles,
+    choice: crate::documents::domain::dropped::Choice,
+) -> crate::documents::domain::dropped::Dropped {
+    use crate::documents::domain::dropped::{resolved, Choice};
     let readable = match &choice {
-        Choice::Pdf { path, .. } => files.readable(path),
+        Choice::Chosen { path, .. } => files.readable(path),
         _ => Ok(()),
     };
     resolved(choice, readable)
