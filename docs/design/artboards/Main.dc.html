@@ -415,6 +415,14 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 <sc-if value="{{ hayDoc }}" hint-placeholder-val="{{ true }}">
   <div style="flex:1;min-width:0;position:relative;overflow:hidden;background:var(--rf-bg)">
 
+    <sc-if value="{{ sinHoja }}" hint-placeholder-val="{{ false }}">
+      <div class="rf-stack" style="position:absolute;inset:0;align-items:center;justify-content:center;gap:10px;padding:var(--rf-space-lg)">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--rf-text-muted)"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+        <span style="max-width:440px;font-size:14px;font-weight:700;text-align:center;overflow-wrap:anywhere">{{ docVerify }}</span>
+        <span class="rf-body rf-text-muted">Sin vista previa</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ hayHoja }}" hint-placeholder-val="{{ true }}">
     <div style="position:absolute;{{ posicionHoja }};width:{{ anchoHoja }}px;opacity:{{ opacidadHoja }}">
       <div data-theme="light" style="width:100%;aspect-ratio:1/1.414;background:var(--rf-bg);
         border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);box-shadow:var(--rf-shadow-card);position:relative">
@@ -464,6 +472,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </sc-if>
       </div>
     </div>
+    </sc-if>
 
     <sc-if value="{{ hayAvisoVista }}" hint-placeholder-val="{{ false }}">
       <div class="rf-row rf-gap-xs" style="position:absolute;bottom:calc(var(--rf-space-md) + 52px);left:50%;
@@ -475,6 +484,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
           padding:0 var(--rf-space-sm);border-radius:var(--rf-radius-pill);font-size:12px">{{ botonAvisoVista }}</button>
       </div>
     </sc-if>
+    <sc-if value="{{ hayHoja }}" hint-placeholder-val="{{ true }}">
     <div class="rf-row" style="position:absolute;bottom:var(--rf-space-md);left:50%;
       transform:translateX(-50%);gap:2px;padding:4px;border-radius:var(--rf-radius-pill);
       border:1px solid var(--rf-border-subtle);background:var(--rf-surface);
@@ -495,6 +505,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       <span title="Acercar" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
       <span title="Ajustar a la ventana" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></span>
     </div>
+    </sc-if>
   </div>
 
   <aside class="rf-stack" style="width:380px;flex:none;border-left:1px solid var(--rf-border-subtle);background:var(--rf-bg);position:relative">
@@ -588,33 +599,62 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </div>
       </sc-if>
 
-      <sc-if value="{{ firmado }}" hint-placeholder-val="{{ false }}">
-        <div class="rf-row" style="flex:none;gap:8px;font-weight:700;font-size:14px">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>Firmado a las 11:04</div>
-        <div class="rf-stack" style="flex:none;gap:8px">
-          <span class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Resumen</span>
-          <div class="rf-row rf-gap-xs">
-            <span class="rf-badge">PAdES</span>
-            <sc-if value="{{ ficha14 }}" hint-placeholder-val="{{ false }}">
-              <span class="rf-badge">{{ cuantasFirmas }}</span>
-            </sc-if>
+      <sc-if value="{{ enResumen }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ hayFichas }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ hayFranjaFirmado }}" hint-placeholder-val="{{ false }}">
+            <div class="rf-row" style="flex:none;gap:8px;padding:9px 12px;border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>
+              <span style="flex:1;font-size:14px;font-weight:700">Firmado a las 11:04</span>
+            </div>
+          </sc-if>
+          <div class="rf-row" style="flex:none;gap:8px;font-weight:700;font-size:14px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Firmas del documento</div>
+          <div class="rf-row rf-gap-xs" style="flex:none">
+            <span class="rf-badge">{{ formatoVerify }}</span>
+            <span class="rf-badge">{{ cuantasVerify }}</span>
           </div>
-          <sc-if value="{{ ficha14 }}" hint-placeholder-val="{{ false }}">
-            <div class="rf-stack" style="gap:6px">
-              <sc-for list="{{ firmasResumen }}" as="f" hint-placeholder-count="2">
-                <div class="rf-card" style="padding:10px 12px;gap:4px">
-                  <div class="rf-row rf-gap-xs">
-                    <span style="flex:1;min-width:0;font-size:13px;font-weight:600;line-height:1.35;overflow-wrap:anywhere">{{ f.quien }}</span>
-                    <sc-if value="{{ f.tuya }}" hint-placeholder-val="{{ false }}">
-                      <span class="rf-badge rf-badge--primary" style="flex:none">La tuya</span>
+            <div class="rf-stack" style="flex:none;gap:6px">
+              <sc-for list="{{ fichas }}" as="f" hint-placeholder-count="2">
+                <div class="rf-card" style="padding:10px 12px;gap:8px">
+                  <div class="rf-row rf-gap-xs" style="min-height:20px">
+                    <span class="rf-label" style="flex:1;letter-spacing:.6px;text-transform:uppercase">{{ f.etiqueta }}</span>
+                    <sc-if value="{{ f.nueva }}" hint-placeholder-val="{{ false }}">
+                      <span class="rf-badge rf-badge--primary" style="flex:none">Nueva</span>
                     </sc-if>
                   </div>
-                  <span class="rf-body rf-text-muted">{{ f.cuando }}</span>
+                  <div class="rf-stack" style="gap:4px"><sc-for list="{{ f.campos }}" as="c" hint-placeholder-count="3"><div class="rf-row" style="align-items:baseline;gap:10px"><span class="rf-body rf-text-muted" style="width:104px;flex:none;line-height:1.35">{{ c.k }}</span><span style="{{ c.estilo }}">{{ c.v }}</span></div></sc-for></div>
+                  <sc-for list="{{ f.hijos }}" as="h" hint-placeholder-count="1">
+                    <div class="rf-stack" style="gap:8px;margin-top:2px;padding:2px 0 2px 12px;border-left:2px solid var(--rf-border-strong)">
+                      <span class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">{{ h.etiqueta }}</span>
+                      <div class="rf-stack" style="gap:4px"><sc-for list="{{ h.campos }}" as="c" hint-placeholder-count="3"><div class="rf-row" style="align-items:baseline;gap:10px"><span class="rf-body rf-text-muted" style="width:104px;flex:none;line-height:1.35">{{ c.k }}</span><span style="{{ c.estilo }}">{{ c.v }}</span></div></sc-for></div>
+                    </div>
+                  </sc-for>
                 </div>
               </sc-for>
             </div>
-          </sc-if>
-        </div>
+        </sc-if>
+        <sc-if value="{{ sinFirmasVerify }}" hint-placeholder-val="{{ false }}">
+          <div class="rf-stack" style="flex:none;gap:4px">
+            <div class="rf-row" style="gap:8px;font-weight:700;font-size:14px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Sin firmas</div>
+            <p class="rf-body rf-text-muted" style="padding-left:26px">El documento no tiene firmas.</p>
+          </div>
+        </sc-if>
+        <sc-if value="{{ desconocidoVerify }}" hint-placeholder-val="{{ false }}">
+          <div class="rf-stack" style="flex:none;gap:4px">
+            <div class="rf-row" style="gap:8px;font-weight:700;font-size:14px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>Formato no reconocido</div>
+            <p class="rf-body rf-text-muted" style="padding-left:26px">No es un PDF ni una firma CAdES o XAdES.</p>
+          </div>
+        </sc-if>
+        <sc-if value="{{ falloVerify }}" hint-placeholder-val="{{ false }}">
+          <div class="rf-stack" style="flex:none;gap:8px;padding:12px 14px;border:2px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
+            <div class="rf-row" style="gap:8px;font-weight:700;font-size:14px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>No se han podido leer las firmas</div>
+            <p class="rf-body rf-text-muted" style="font-family:ui-monospace,Menlo,monospace;line-height:1.5;overflow-wrap:anywhere">{{ detalleFallo }}</p>
+            <button type="button" class="rf-btn rf-btn--ghost" style="align-self:flex-start;padding-left:0;min-height:28px;font-size:12px">Copiar detalle</button>
+          </div>
+        </sc-if>
       </sc-if>
 
       <sc-if value="{{ errorFirma }}" hint-placeholder-val="{{ false }}">
@@ -636,9 +676,6 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
             <span title="{{ tituloInterruptor }}" style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;cursor:pointer;border:1px solid var(--rf-border-strong);{{ estiloInterruptor }}">
               <span style="position:absolute;width:16px;height:16px;border-radius:var(--rf-radius-pill);{{ estiloPomo }}"></span>
             </span>
-          </sc-if>
-          <sc-if value="{{ firmado }}" hint-placeholder-val="{{ false }}">
-            <span style="flex:none;font-size:13px;line-height:1.35">{{ valorFirma }}</span>
           </sc-if>
         </div>
         <sc-if value="{{ firmaActiva }}" hint-placeholder-val="{{ false }}">
@@ -777,12 +814,12 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </div>
       </sc-if>
       <!-- /_boton-firmar.part -->
-      <sc-if value="{{ firmado }}" hint-placeholder-val="{{ false }}">
+      <sc-if value="{{ pieResumen }}" hint-placeholder-val="{{ false }}">
         <div class="rf-row" style="height:44px;gap:8px">
-          <button type="button" class="rf-btn rf-btn--primary" style="flex:1;min-width:0">Abrir el PDF</button>
+          <button type="button" class="rf-btn rf-btn--primary" style="flex:1;min-width:0">{{ textoAbrir }}</button>
           <button type="button" title="Abrir la carpeta" class="rf-btn rf-btn--secondary" style="flex:none;width:44px;padding:0">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
-          <button type="button" class="rf-btn rf-btn--ghost" style="flex:none;padding:0 10px">Volver a firmar</button>
+          <button type="button" class="rf-btn rf-btn--ghost" title="{{ tituloFirmarResumen }}" style="flex:none;padding:0 10px;{{ estiloFirmarResumen }}">Firmar</button>
         </div>
       </sc-if>
       <sc-if value="{{ sinCertificados }}" hint-placeholder-val="{{ false }}">
@@ -832,7 +869,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"escritorio": {"editor": "enum", "options": ["Linux", "Windows", "macOS"], "default": "Linux", "section": "Escritorio"}, "tema": {"editor": "enum", "options": ["light", "dark"], "default": "light", "section": "Tema"}, "estado": {"editor": "enum", "options": ["listo", "vacio", "buscando certificados", "sin certificados", "sin certificado elegido", "certificados abiertos", "firmando", "firmado", "error al firmar", "sin pestanas · Preferencias"], "default": "listo", "section": "Estado"}, "firmaVisible": {"editor": "enum", "options": ["apagada", "una pagina", "una pagina, mirando otra", "varias, mirando una que esta", "varias, mirando una que no esta", "varias con error del rango", "todas", "arrastrandola"], "default": "apagada", "section": "Firma visible"}, "errorRango": {"editor": "enum", "options": ["pagina que no existe", "al reves", "mal escrito"], "default": "pagina que no existe", "section": "Firma visible"}, "vista": {"editor": "enum", "options": ["fiel", "recalculando", "no se ha podido dibujar"], "default": "fiel", "section": "Vista previa de la firma visible"}, "contenidoFirma": {"editor": "enum", "options": ["Completa", "Solo rubrica", "Personalizada", "Personalizada, menu + Dato abierto"], "default": "Completa", "section": "Contenido de la firma"}, "conRubrica": {"editor": "enum", "options": ["encendido", "apagado", "encendido sin imagen cargada"], "default": "encendido", "section": "Contenido de la firma"}, "tamano": {"editor": "enum", "options": ["normal", "pequeno (el texto se reduce)"], "default": "normal", "section": "Contenido de la firma"}, "zoom": {"editor": "enum", "options": ["50 %", "100 %", "300 %"], "default": "100 %", "section": "Visor"}, "cuantos": {"editor": "enum", "options": ["2", "4", "9"], "default": "4", "section": "Lista de certificados"}, "caducados": {"editor": "boolean", "default": true, "section": "Lista de certificados"}, "orden": {"editor": "enum", "options": ["agrupado · utilizables primero", "como hoy · el orden en que cargaron los modulos"], "default": "agrupado · utilizables primero", "section": "Lista de certificados"}, "firmasPrevias": {"editor": "enum", "options": ["ninguna", "1 · valida", "varias · todas validas", "certificado caducado", "firma longeva · certificado caducado", "certificado aun no valido", "firma rota · no corresponde con los datos", "firma rota · danada (1 firma)", "firma rota · PDF certificado que no admitia firmas", "no se puede validar", "cambio tras la ultima firma", "ya la firmaste tu · mismo certificado", "ya la firmaste tu · certificado renovado", "todo a la vez"], "default": "ninguna", "section": "Firmas previas"}, "verFirmas": {"editor": "enum", "options": ["al abrir el documento", "plegado", "desplegado"], "default": "al abrir el documento", "section": "Firmas previas"}, "ficha14": {"editor": "boolean", "default": false, "section": "Ficha 14 (v1.0)"}, "destino": {"editor": "enum", "options": ["cabe entero", "segunda firma", "no disponible"], "default": "cabe entero", "section": "Pie · destino"}, "recientes": {"editor": "enum", "options": ["plegados", "desplegados", "sin recientes · lista vacia o actividad apagada"], "default": "plegados", "section": "Abiertos recientemente"}, "desborde": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Desborde de pestanas (con Contenido: extremo)"}, "menu": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Menu de la cabecera"}, "aviso": {"editor": "enum", "options": ["hay algo que revisar", "todo en orden"], "default": "hay algo que revisar", "section": "Escritorio"}, "foco": {"editor": "enum", "options": ["sin foco", "teclado · primera entrada", "teclado · la salida al navegador"], "default": "sin foco", "section": "Menu de la cabecera"}, "version": {"editor": "enum", "options": ["al dia", "hay version nueva"], "default": "al dia", "section": "Version"}, "contenido": {"editor": "enum", "options": ["normal", "extremo"], "default": "normal", "section": "Contenido"}, "$preview": {"width": 1214, "height": 864}}'>
+<script type="text/x-dc" data-dc-script data-props='{"escritorio": {"editor": "enum", "options": ["Linux", "Windows", "macOS"], "default": "Linux", "section": "Escritorio"}, "tema": {"editor": "enum", "options": ["light", "dark"], "default": "light", "section": "Tema"}, "estado": {"editor": "enum", "options": ["listo", "vacio", "buscando certificados", "sin certificados", "sin certificado elegido", "certificados abiertos", "firmando", "firmado", "error al firmar", "sin pestanas · Preferencias", "verify · PDF con firmas", "verify · CAdES con contrafirmas", "verify · sin firmas", "verify · formato desconocido", "verify · fallo al leer las firmas"], "default": "listo", "section": "Estado"}, "firmaVisible": {"editor": "enum", "options": ["apagada", "una pagina", "una pagina, mirando otra", "varias, mirando una que esta", "varias, mirando una que no esta", "varias con error del rango", "todas", "arrastrandola"], "default": "apagada", "section": "Firma visible"}, "errorRango": {"editor": "enum", "options": ["pagina que no existe", "al reves", "mal escrito"], "default": "pagina que no existe", "section": "Firma visible"}, "vista": {"editor": "enum", "options": ["fiel", "recalculando", "no se ha podido dibujar"], "default": "fiel", "section": "Vista previa de la firma visible"}, "contenidoFirma": {"editor": "enum", "options": ["Completa", "Solo rubrica", "Personalizada", "Personalizada, menu + Dato abierto"], "default": "Completa", "section": "Contenido de la firma"}, "conRubrica": {"editor": "enum", "options": ["encendido", "apagado", "encendido sin imagen cargada"], "default": "encendido", "section": "Contenido de la firma"}, "tamano": {"editor": "enum", "options": ["normal", "pequeno (el texto se reduce)"], "default": "normal", "section": "Contenido de la firma"}, "zoom": {"editor": "enum", "options": ["50 %", "100 %", "300 %"], "default": "100 %", "section": "Visor"}, "cuantos": {"editor": "enum", "options": ["2", "4", "9"], "default": "4", "section": "Lista de certificados"}, "caducados": {"editor": "boolean", "default": true, "section": "Lista de certificados"}, "orden": {"editor": "enum", "options": ["agrupado · utilizables primero", "como hoy · el orden en que cargaron los modulos"], "default": "agrupado · utilizables primero", "section": "Lista de certificados"}, "firmasPrevias": {"editor": "enum", "options": ["ninguna", "1 · valida", "varias · todas validas", "certificado caducado", "firma longeva · certificado caducado", "certificado aun no valido", "firma rota · no corresponde con los datos", "firma rota · danada (1 firma)", "firma rota · PDF certificado que no admitia firmas", "no se puede validar", "cambio tras la ultima firma", "ya la firmaste tu · mismo certificado", "ya la firmaste tu · certificado renovado", "todo a la vez"], "default": "ninguna", "section": "Firmas previas"}, "verFirmas": {"editor": "enum", "options": ["al abrir el documento", "plegado", "desplegado"], "default": "al abrir el documento", "section": "Firmas previas"}, "destino": {"editor": "enum", "options": ["cabe entero", "segunda firma", "no disponible"], "default": "cabe entero", "section": "Pie · destino"}, "recientes": {"editor": "enum", "options": ["plegados", "desplegados", "sin recientes · lista vacia o actividad apagada"], "default": "plegados", "section": "Abiertos recientemente"}, "desborde": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Desborde de pestanas (con Contenido: extremo)"}, "menu": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Menu de la cabecera"}, "aviso": {"editor": "enum", "options": ["hay algo que revisar", "todo en orden"], "default": "hay algo que revisar", "section": "Escritorio"}, "foco": {"editor": "enum", "options": ["sin foco", "teclado · primera entrada", "teclado · la salida al navegador"], "default": "sin foco", "section": "Menu de la cabecera"}, "version": {"editor": "enum", "options": ["al dia", "hay version nueva"], "default": "al dia", "section": "Version"}, "contenido": {"editor": "enum", "options": ["normal", "extremo"], "default": "normal", "section": "Contenido"}, "$preview": {"width": 1214, "height": 864}}'>
 class Component extends DCLogic {
   datos(extremo) {
     if (extremo) {
@@ -907,11 +944,73 @@ class Component extends DCLogic {
     }
     return d.extremo ? { texto: "1, 60-70, 184-190", error: "Solo hay 184 páginas" } : { texto: "10-40", error: "Solo hay 6 páginas" };
   }
-  valorFirmado(c, n) {
-    if (c.modo === "ninguna") { return "No"; }
-    if (c.modo === "todas") { return "En todas las páginas"; }
-    if (c.sel.length === 1) { return "En la página " + c.sel[0]; }
-    return "En " + c.sel.length + " de " + n + " páginas";
+  firmantesResumen(d) {
+    const extremo = d.extremo;
+    const persona = extremo ? "NOMBRE COMPUESTO APELLIDO-PRIMERO-MUY-LARGO DE LA TORRE APELLIDO2 (99999999R)" : "NOMBRE APELLIDO1 APELLIDO2 (99999999R)";
+    const entidad = extremo ? "FUNDACIÓN FICTICIA PARA LA INVESTIGACIÓN BIOMÉDICA DEL HOSPITAL UNIVERSITARIO DE EJEMPLO" : "EMPRESA FICTICIA SL";
+    const cif = extremo ? "G00000000" : "B00000000";
+    return {
+      persona: { quien: persona, emisor: "AC FNMT Usuarios", fecha: "12/9/26, 10:32:07" },
+      representante: { quien: "OTRA PERSONA PRUEBA (00000000T)", enNombre: entidad + " (" + cif + ")", emisor: "AC Representación", fecha: "15/9/26, 9:05:41" },
+      sello: { quien: entidad + " (VATES-" + cif + ")", emisor: "AC Representación" },
+      otra: { quien: "OTRA PERSONA PRUEBA (00000000T)", emisor: "AC FNMT Usuarios", fecha: "20/9/26, 18:47:13" },
+      tuya: { quien: d.titular.toUpperCase() + " (11111111H)", emisor: d.emisor, fecha: "3/10/26, 11:04:12", nueva: true }
+    };
+  }
+  camposResumen(f) {
+    const valor = "flex:1;min-width:0;font-size:13px;line-height:1.35;overflow-wrap:anywhere;";
+    const campos = [{ k: "Firmante", v: f.quien, estilo: valor + "font-weight:600" }];
+    if (f.enNombre) { campos.push({ k: "En nombre de", v: f.enNombre, estilo: valor }); }
+    campos.push({ k: "Emisor", v: f.emisor, estilo: valor });
+    if (f.fecha) { campos.push({ k: "Fecha declarada", v: f.fecha, estilo: valor }); }
+    return campos;
+  }
+  vistaResumen(d, clave, nPrevias) {
+    const self = this;
+    const firmado = clave === "firmado";
+    const cades = clave === "CAdES con contrafirmas";
+    const sinHoja = cades || clave === "formato desconocido";
+    const p = this.firmantesResumen(d);
+    const previas = [p.persona, p.representante, p.sello];
+    const arbol = firmado
+      ? this.rango(0, nPrevias - 1).map(function (i) { return { f: previas[i % 3], hijos: [] }; }).concat([{ f: p.tuya, hijos: [] }])
+      : cades
+        ? [{ f: p.persona, hijos: [p.representante, p.sello] }, { f: p.otra, hijos: [] }]
+        : previas.map(function (f) { return { f: f, hijos: [] }; });
+    const fichas = arbol.map(function (n, i) {
+      const num = String(i + 1);
+      return { etiqueta: "Firma " + num, nueva: n.f.nueva === true, campos: self.camposResumen(n.f),
+        hijos: n.hijos.map(function (h, j) { return { etiqueta: "Contrafirma " + num + "." + (j + 1), campos: self.camposResumen(h) }; }) };
+    });
+    const nContra = fichas.reduce(function (a, f) { return a + f.hijos.length; }, 0);
+    const cambiar = "flex:none;min-height:24px;padding:0 8px;font-size:13px;color:var(--rf-text);";
+    const res = {
+      enResumen: true,
+      hayHoja: !sinHoja, sinHoja: sinHoja, docVerify: d.doc,
+      hayFirmaVisible: false, hayAvisoVista: false,
+      haySelector: false, hayCofirma: false, firmaActiva: false, hayFirmar: false,
+      hayFichas: firmado || cades || clave === "PDF con firmas",
+      hayFranjaFirmado: firmado,
+      sinFirmasVerify: clave === "sin firmas",
+      desconocidoVerify: clave === "formato desconocido",
+      falloVerify: clave === "fallo al leer las firmas",
+      detalleFallo: "Signature2: el diccionario /V está dañado",
+      formatoVerify: cades ? "CAdES" : "PAdES",
+      cuantasVerify: (fichas.length === 1 ? "1 firma" : fichas.length + " firmas") + (nContra > 0 ? " · " + nContra + " contrafirmas" : ""),
+      fichas: fichas,
+      pieResumen: true,
+      destinoRoto: false, destinoOk: true,
+      rotuloDestino: "Documento",
+      estiloCambiar: cambiar + (firmado ? "" : "visibility:hidden;"),
+      textoAbrir: sinHoja ? "Abrir el fichero" : "Abrir el PDF",
+      tituloFirmarResumen: sinHoja ? "En el escritorio solo se firman PDF" : "Firmar este documento",
+      estiloFirmarResumen: sinHoja ? "opacity:.55;cursor:not-allowed" : ""
+    };
+    if (!firmado) {
+      Object.assign(res, { hayFirmaAqui: false, tiradores: false, arrastrando: false,
+        salida: this.recorta(d.doc, d.extremo ? 22 : 40), salidaEntera: d.doc });
+    }
+    return res;
   }
   pestanas(d, hayDoc, firmado) {
     const base = "height:100%;padding:0 4px 0 10px;gap:8px;margin-bottom:-1px;border-bottom:2px solid transparent;font-size:13px;"
@@ -1218,7 +1317,6 @@ class Component extends DCLogic {
     const z = parseInt(this.props.zoom ?? "100 %", 10) / 100;
     const vista = this.props.vista ?? "fiel";
     const destino = this.props.destino ?? "cabe entero";
-    const ficha14 = this.props.ficha14 === true || this.props.ficha14 === "true";
     const conCaducados = !(this.props.caducados === false || this.props.caducados === "false");
     const menuAbierto = (this.props.menu ?? "cerrado") === "abierto";
     const opcion = this.props.firmaVisible ?? "apagada";
@@ -1235,6 +1333,10 @@ class Component extends DCLogic {
     const editable = estado === "listo" || eligiendo || buscando || sinCertificados || sinElegir;
     const sinPestanas = estado.indexOf("sin pestanas") === 0;
     const hayDoc = !vacio && !sinPestanas;
+    const claveVerify = firmado ? "firmado" : estado.indexOf("verify · ") === 0 ? estado.slice(9) : null;
+    const enResumen = claveVerify !== null;
+    if (claveVerify === "CAdES con contrafirmas") { d.doc = d.doc.replace(/\.pdf$/i, ".pdf.csig"); }
+    if (claveVerify === "formato desconocido") { d.doc = d.doc.replace(/\.pdf$/i, ".odt"); }
     const tira = this.pestanas(d, hayDoc, firmado);
     const claveRecientes = this.props.recientes ?? "plegados";
     // Con los diez recientes, en Linux la ventana se baja para que el popover no quepa y se desplace.
@@ -1320,13 +1422,10 @@ class Component extends DCLogic {
       : "right:" + Math.round(22 * z) + "px;bottom:" + Math.round(30 * z) + "px;";
     const render = this.render(d, elegido, Object.assign({}, opcionesRender, { tope: 9 * z }), anchoFirma, altoFirma);
     if (sinDibujar || sinCertificado) { render.hayTexto = false; render.hayHueco = false; }
-    const nFirmas = 1 + nPrevias;
-    const firmasResumen = [{ quien: d.titular, cuando: "***9999** · hoy, 11:04", tuya: true }]
-      .concat(d.previas.slice(0, nFirmas - 1).map(function (f) { return { quien: f.quien, cuando: f.cuando, tuya: false }; }));
     const salidaEntera = this.salida(d.doc);
 
     const salidaDestino = destino === "segunda firma" ? salidaEntera.replace(/\.pdf$/i, "-2.pdf") : salidaEntera;
-    return {
+    const vals = {
       altoVentana: altoVentana,
       ...this.barra({ escritorio: this.props.escritorio,
         hayTira: !sinPestanas, pestanas: tira.visibles, ocultas: tira.ocultas,
@@ -1344,7 +1443,6 @@ class Component extends DCLogic {
       firmando: firmando,
       buscando: buscando, sinCertificados: sinCertificados, errorFirma: errorFirma,
       hayFirmaVisible: !errorFirma,
-      ficha14: ficha14, cuantasFirmas: nFirmas === 1 ? "1 firma" : nFirmas + " firmas", firmasResumen: firmasResumen,
       destinoRoto: destino === "no disponible" && !firmado,
       destinoOk: !(destino === "no disponible" && !firmado),
       zoom: Math.round(z * 100) + " %",
@@ -1393,7 +1491,6 @@ class Component extends DCLogic {
       estiloInterruptor: (activa ? "background:var(--rf-primary);border-color:transparent" : "background:transparent")
         + (firmando ? ";opacity:.35" : ""),
       estiloPomo: "top:3px;" + (activa ? "left:19px;background:var(--rf-on-primary)" : "left:3px;background:var(--rf-border-strong)"),
-      valorFirma: this.valorFirmado(c, d.n),
       firmaActiva: activa && !firmado && !errorFirma,
       estiloControles: firmando ? "opacity:.35" : "",
       segmentos: segmentos,
@@ -1439,6 +1536,8 @@ class Component extends DCLogic {
       textoFirmar: firmando ? "Firmando…" : "Firmar",
       tituloFirmar: buscando || sinElegir ? "" : "Firmar con el certificado de " + d.titular
     };
+    return Object.assign(vals, enResumen ? this.vistaResumen(d, claveVerify, nPrevias)
+      : { enResumen: false, hayHoja: true, sinHoja: false, pieResumen: false });
   }
 }
 </script>

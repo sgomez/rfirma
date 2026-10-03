@@ -215,6 +215,14 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 No hay ningún prototipo en vuelo.
 
+El caso de uso **el resumen unificado con `verify --gui`** se validó el
+**03/10/2026**, en `Main` y sin página de trabajo: el resumen de después de
+firmar y el que abre `rfirma verify -i <doc> -gui` son el mismo estado, que
+lista todas las firmas del documento en fichas apiladas con lo de `verify -v`.
+Se retiró la palanca «Ficha 14». Reescribe
+[`panel-de-firma.md`](../design/panel-de-firma.md), que enlaza el canvas desde
+su sección «Decisiones»; de rebote, `ventana-principal` y `visor-de-documento`.
+
 La **fusión del canvas con la app** se validó el **28/09/2026**, dentro de
 `PreferenciasPantalla` y `PrimerArranque` y sin páginas de trabajo: la sección
 *Firma* de Preferencias con el destino en radios, y el asistente del primer

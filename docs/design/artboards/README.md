@@ -53,7 +53,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 
 | # | Artboard | Estado |
 | - | -------- | ------ |
-| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos (el selector con su buscador), firmando (diálogo con velo), firmado (el resumen) y error al firmar; la firma visible y su contenido, la cabecera por escritorio —en Linux la barra de título GTK con la tira de pestañas debajo; en Windows y macOS la barra única—, con el botón partido, «Abiertos recientemente», el desborde de pestañas, el menú y el botón de aviso, la vista sin pestañas, la franja de versión nueva bajo la barra, el destino, el zoom y la vista previa |
+| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos (el selector con su buscador), firmando (diálogo con velo), firmado (el resumen, que es también el de `verify --gui`: con firmas, CAdES con contrafirmas, sin firmas, formato desconocido y fallo al leer) y error al firmar; la firma visible y su contenido, la cabecera por escritorio —en Linux la barra de título GTK con la tira de pestañas debajo; en Windows y macOS la barra única—, con el botón partido, «Abiertos recientemente», el desborde de pestañas, el menú y el botón de aviso, la vista sin pestañas, la franja de versión nueva bajo la barra, el destino, el zoom y la vista previa |
 | 5b | `EstadoPaginasSinFirmaVisible` | Antes de firmar: las páginas donde la firma visible no cabe |
 | 5c | `EstadoFirmarDeTodosModos` | Antes de firmar: el documento trae alguna firma no válida, y se pide confirmación |
 | 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén —, sobre `Main` buscando certificados o lista, según el almacén |
@@ -163,9 +163,10 @@ cambia.
 Una cosa que el canvas da por buena y el código no sostiene tal cual. No la
 resuelvas por tu cuenta: es un cambio de ficha.
 
-**El panel enseña datos que hoy nadie calcula**: «27 páginas · 2,4 MB» y, con
-la palanca «Ficha 14» levantada, «2 firmas» y la lista de firmas. El código pasa
-el tamaño como desconocido. El tamaño **sí** se recupera en el resumen: lo
+**El panel enseña datos que hoy nadie calcula**: «27 páginas · 2,4 MB» y, en
+el resumen, la ficha de cada firma del documento con su firmante, «En nombre
+de», emisor y fecha declarada. Las fichas salen de la misma extracción de
+firmantes que `rfirma verify -v`. El código pasa el tamaño como desconocido. El tamaño **sí** se recupera en el resumen: lo
 conoce `finish_signing` y hoy `SignedDocumentView` lo descarta. Las firmas
 previas ya no son un punto abierto de diseño: el aviso, sus veredictos y cómo se
 valida cada firma están decididos en [`panel-de-firma.md`](../panel-de-firma.md).
@@ -982,3 +983,25 @@ sin artboards ni páginas de trabajo.
   página «Ventana de sede · v0.5».
 
 El porqué, en [`ventana-de-sede`](../ventana-de-sede.md#decisiones).
+
+## Lo que cambió con el resumen unificado y `verify --gui`
+
+Validado el 03/10/2026, sin artboards ni páginas de trabajo: todo se exploró
+con palancas en `Main`, que se retiraron al elegir.
+
+- **`Main`**: el estado «firmado» pasa a dibujar el resumen unificado
+  —«Firmas del documento», todas las firmas del documento en fichas apiladas y
+  la tuya con «Nueva», la franja «Firmado a las 11:04» encima, y el pie
+  «Documento» con abrir, carpeta y «Firmar»—. Desaparecen «RESUMEN», la línea
+  de solo lectura de la firma visible y «Volver a firmar».
+- **`Main`** gana cinco estados en la palanca «Estado»: «verify · PDF con
+  firmas», «verify · CAdES con contrafirmas» (contrafirmas anidadas y visor sin
+  vista previa), «verify · sin firmas», «verify · formato desconocido» y
+  «verify · fallo al leer las firmas».
+- **`Main`** pierde la palanca «Ficha 14 (v1.0)»: su lista de firmas es ahora
+  el resumen. Las dos palancas de la exploración, «lista de firmas» y
+  «acciones del pie», no se quedan: lo descartado está en la anotación.
+- **`canvas.json`** gana la anotación `nota-verify-gui` en la página «Recorrido
+  de firma».
+
+El porqué, en [`panel-de-firma`](../panel-de-firma.md#decisiones).
