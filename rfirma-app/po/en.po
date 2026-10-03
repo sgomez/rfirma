@@ -550,6 +550,9 @@ msgstr "Drag a PDF here, or click to open one"
 msgid "viewer.dropZoneHint"
 msgstr "It never leaves your computer"
 
+msgid "viewer.noPreview"
+msgstr "No preview"
+
 msgid "viewer.pageNumber"
 msgstr "Page number"
 
@@ -969,8 +972,16 @@ msgid "panel.signed.title"
 msgstr "Document signatures"
 
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
-msgid "panel.signed.format"
+msgid "panel.signed.formatPades"
 msgstr "PAdES"
+
+#. Término del dominio: CAdES es la sigla del formato de firma; no se traduce.
+msgid "panel.signed.formatCades"
+msgstr "CAdES"
+
+#. Término del dominio: XAdES es la sigla del formato de firma; no se traduce.
+msgid "panel.signed.formatXades"
+msgstr "XAdES"
 
 #. Recuento de firmas del documento, en la insignia del resumen.
 msgid "panel.signed.count"
@@ -1009,6 +1020,12 @@ msgstr "No signatures"
 msgid "panel.signed.none.body"
 msgstr "The document has no signatures."
 
+msgid "panel.signed.unrecognized.title"
+msgstr "Unrecognized format"
+
+msgid "panel.signed.unrecognized.body"
+msgstr "It is neither a PDF nor a CAdES or XAdES signature."
+
 msgid "panel.signed.readFailed.title"
 msgstr "The signatures could not be read"
 
@@ -1018,6 +1035,13 @@ msgstr "Signed at {{time}}"
 
 msgid "panel.signed.openDocument"
 msgstr "Open the PDF"
+
+msgid "panel.signed.openFile"
+msgstr "Open the file"
+
+#. Motivo de «Firmar» deshabilitado en el resumen de un fichero que no es PDF.
+msgid "panel.signed.onlyPdfs"
+msgstr "Only PDFs can be signed on the desktop"
 
 msgid "panel.signed.openFolder"
 msgstr "Open the folder"

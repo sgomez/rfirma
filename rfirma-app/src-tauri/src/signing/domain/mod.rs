@@ -21,7 +21,9 @@ pub use config::{
     PadesRect, Placement, Setting, SignatureConfig, SigningChoice, ALLOW_UNREGISTERED_KEY,
     SUB_FILTER,
 };
-pub use document_signatures::{DocumentSignature, DocumentSignatures, SignatureStatus, Tone};
+pub use document_signatures::{
+    DocumentSignature, DocumentSignatures, SignatureStandard, SignatureStatus, Tone,
+};
 pub use language::Language;
 pub use layer2_text::{
     compose_visible_content, mask_id_number, Datum, PhrasePart, VisibleContent, VisibleData,

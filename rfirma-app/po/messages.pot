@@ -495,6 +495,9 @@ msgstr ""
 msgid "viewer.dropZoneHint"
 msgstr ""
 
+msgid "viewer.noPreview"
+msgstr ""
+
 msgid "viewer.pageNumber"
 msgstr ""
 
@@ -914,7 +917,15 @@ msgid "panel.signed.title"
 msgstr ""
 
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
-msgid "panel.signed.format"
+msgid "panel.signed.formatPades"
+msgstr ""
+
+#. Término del dominio: CAdES es la sigla del formato de firma; no se traduce.
+msgid "panel.signed.formatCades"
+msgstr ""
+
+#. Término del dominio: XAdES es la sigla del formato de firma; no se traduce.
+msgid "panel.signed.formatXades"
 msgstr ""
 
 #. Recuento de firmas del documento, en la insignia del resumen.
@@ -954,6 +965,12 @@ msgstr ""
 msgid "panel.signed.none.body"
 msgstr ""
 
+msgid "panel.signed.unrecognized.title"
+msgstr ""
+
+msgid "panel.signed.unrecognized.body"
+msgstr ""
+
 msgid "panel.signed.readFailed.title"
 msgstr ""
 
@@ -962,6 +979,13 @@ msgid "panel.signed.signedAt"
 msgstr ""
 
 msgid "panel.signed.openDocument"
+msgstr ""
+
+msgid "panel.signed.openFile"
+msgstr ""
+
+#. Motivo de «Firmar» deshabilitado en el resumen de un fichero que no es PDF.
+msgid "panel.signed.onlyPdfs"
 msgstr ""
 
 msgid "panel.signed.openFolder"

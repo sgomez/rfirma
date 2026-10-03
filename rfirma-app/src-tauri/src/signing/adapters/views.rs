@@ -11,8 +11,8 @@ use crate::signing::adapters::state::VisibleSignatureMemory;
 use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
 use crate::signing::domain::{
-    Datum, DocumentSignature, DocumentSignatures, PageSet, PhrasePart, SignatureStatus, Tone,
-    VisibleBox, VisibleContent,
+    Datum, DocumentSignature, DocumentSignatures, PageSet, PhrasePart, SignatureStandard,
+    SignatureStatus, Tone, VisibleBox, VisibleContent,
 };
 
 crossing! {
@@ -245,6 +245,29 @@ impl From<Tone> for ToneView {
 }
 
 crossing! {
+    /// El formato de firma del documento, o que no se reconoce.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum SignatureStandardView {
+        Pades,
+        Cades,
+        Xades,
+        Unrecognized,
+    }
+}
+
+impl From<SignatureStandard> for SignatureStandardView {
+    fn from(format: SignatureStandard) -> Self {
+        match format {
+            SignatureStandard::Pades => Self::Pades,
+            SignatureStandard::Cades => Self::Cades,
+            SignatureStandard::Xades => Self::Xades,
+            SignatureStandard::Unrecognized => Self::Unrecognized,
+        }
+    }
+}
+
+crossing! {
     /// Titular, fecha, certificado y estado de una de las firmas que ya trae el documento.
     #[derive(Clone, Debug, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
@@ -298,11 +321,14 @@ crossing! {
         pub tone: ToneView,
         /// Si el documento cambió después de la última firma.
         pub changed_after_last_signature: bool,
+        /// El formato de firma del documento.
+        pub format: SignatureStandardView,
     }
 }
 
 impl From<DocumentSignatures> for PreviousSignaturesReportView {
     fn from(report: DocumentSignatures) -> Self {
+        let format = SignatureStandardView::from(report.format());
         let warning_count = report.warning_count();
         let tone = ToneView::from(report.tone());
         let changed_after_last_signature = report.changed_after_last_signature();
@@ -315,6 +341,7 @@ impl From<DocumentSignatures> for PreviousSignaturesReportView {
             warning_count,
             tone,
             changed_after_last_signature,
+            format,
         }
     }
 }

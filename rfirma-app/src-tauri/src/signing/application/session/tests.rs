@@ -12,8 +12,8 @@ use crate::signing::application::tests::{
     an_order, AnEngineThatReports, DocumentsInMemory, NoIsolate,
 };
 use crate::signing::domain::{
-    DocumentSignature, DocumentSignatures, Format, PageSet, SignatureConfig, SignatureStatus,
-    SigningChoice, Waivers,
+    DocumentSignature, DocumentSignatures, Format, PageSet, SignatureConfig, SignatureStandard,
+    SignatureStatus, SigningChoice, Waivers,
 };
 use base64::Engine;
 use serde_json::json;
@@ -489,6 +489,58 @@ fn previous_signatures_in_returns_what_the_engine_reports() {
     let report = previous_signatures_in(&files, &engine, &document).expect("el motor contesta");
 
     assert_eq!(report.signatures(), [signature]);
+}
+
+#[test]
+fn the_signatures_of_a_pdf_are_told_as_pades() {
+    let files = DocumentsInMemory::default().with("/tmp/documento.pdf", b"%PDF-1.7 contenido");
+    let engine = AnEngineThatReports::default();
+
+    let report = previous_signatures_in(&files, &engine, &Document::opened("/tmp/documento.pdf"))
+        .expect("el motor contesta");
+
+    assert_eq!(report.format(), SignatureStandard::Pades);
+}
+
+#[test]
+fn a_cades_reaches_the_engine_and_is_told_as_cades() {
+    let cades = [
+        0x30, 0x80, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x07, 0x02, 0xa0, 0x80,
+    ];
+    let files = DocumentsInMemory::default().with("/tmp/datos.csig", &cades);
+    let engine = AnEngineThatReports::default();
+
+    let report = previous_signatures_in(&files, &engine, &Document::opened("/tmp/datos.csig"))
+        .expect("el motor contesta");
+
+    assert_eq!(report.format(), SignatureStandard::Cades);
+    assert!(engine.was_asked());
+}
+
+#[test]
+fn a_xades_reaches_the_engine_and_is_told_as_xades() {
+    let files =
+        DocumentsInMemory::default().with("/tmp/datos.xsig", b"<?xml version=\"1.0\"?><a/>");
+    let engine = AnEngineThatReports::default();
+
+    let report = previous_signatures_in(&files, &engine, &Document::opened("/tmp/datos.xsig"))
+        .expect("el motor contesta");
+
+    assert_eq!(report.format(), SignatureStandard::Xades);
+    assert!(engine.was_asked());
+}
+
+#[test]
+fn a_file_of_an_unrecognized_format_has_no_signatures_and_does_not_reach_the_engine() {
+    let files = DocumentsInMemory::default().with("/tmp/foto.png", b"\x89PNG\r\n\x1a\n datos");
+    let engine = AnEngineThatReports::default();
+
+    let report = previous_signatures_in(&files, &engine, &Document::opened("/tmp/foto.png"))
+        .expect("no hace falta el motor");
+
+    assert_eq!(report.format(), SignatureStandard::Unrecognized);
+    assert_eq!(report.count(), 0);
+    assert!(!engine.was_asked());
 }
 
 #[test]

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { classify, type NamedFailure } from "./errors/classify";
 import type { SigningBackend } from "./signing/flow";
-import type { PreviousSignature } from "./signing/previousSignatures";
+import type { PreviousSignature, SignatureFormat } from "./signing/previousSignatures";
 
 type Reading =
   | { kind: "reading" }
-  | { kind: "read"; signatures: readonly PreviousSignature[] }
+  | { kind: "read"; signatures: readonly PreviousSignature[]; format: SignatureFormat }
   | { kind: "failed"; failure: NamedFailure };
 
 /** El documento abierto para ver sus firmas (`verify --gui`), con lo que se lee de él. */
@@ -33,7 +33,13 @@ export function useViewedSignatures(signer: SigningBackend, activeDocumentId: st
     signer
       .previousSignatures(viewedId)
       .then((report) => {
-        if (current) setReading({ kind: "read", signatures: report.signatures });
+        if (current) {
+          setReading({
+            kind: "read",
+            signatures: report.signatures,
+            format: report.format ?? "pades",
+          });
+        }
       })
       .catch((thrown: unknown) => {
         if (current) setReading({ kind: "failed", failure: classify(thrown) });

@@ -333,6 +333,12 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Indeterminate
       Attention
 
+  pub enum SignatureStandardView
+      Pades
+      Cades
+      Xades
+      Unrecognized
+
   pub struct PreviousSignatureView
       name: String
       idNumber: String
@@ -348,6 +354,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       warningCount: usize
       tone: ToneView
       changedAfterLastSignature: bool
+      format: SignatureStandardView
 
   pub struct SiteErrandView
       origin: Option<String>

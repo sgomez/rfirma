@@ -21,6 +21,7 @@ import { AboutDialog } from "./about/AboutDialog";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
 import { DocumentTabs } from "./documents/DocumentTabs";
+import { isAPdf } from "./documents/document";
 import type { DocumentDrops } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
 import { RecentsSection } from "./documents/RecentRows";
@@ -247,6 +248,12 @@ export function App({
       setPlacing({ rect: null, sets: NO_PAGE_SETS, choice: "single" });
       return;
     }
+    if (!isAPdf(active)) {
+      setPdf(null);
+      setPdfFailure(null);
+      setSizeBytes(null);
+      return;
+    }
     let current = true;
     void pdfs.open(active).then((opened) => {
       if (!current) return;
@@ -430,6 +437,9 @@ export function App({
             // documento que se soltó tampoco se deja pintar, eso es más urgente
             // que contar cuántos ficheros venían con él.
             failure={pdfFailure ?? (dropNotice?.about === activeId ? dropNotice.failure : null)}
+            withoutPreview={
+              documents.active && !isAPdf(documents.active) ? documents.active.name : null
+            }
             stamp={stamp.state}
             rubricGap={stamp.rubricGap}
             onComposeStamp={stamp.compose}
@@ -466,6 +476,10 @@ export function App({
               signatures={
                 viewedSignatures.reading.kind === "read" ? viewedSignatures.reading.signatures : []
               }
+              format={
+                viewedSignatures.reading.kind === "read" ? viewedSignatures.reading.format : "pades"
+              }
+              signable={isAPdf(documents.active)}
               reading={viewedSignatures.reading.kind === "reading"}
               readFailure={
                 viewedSignatures.reading.kind === "failed" ? viewedSignatures.reading.failure : null

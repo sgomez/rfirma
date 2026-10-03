@@ -236,7 +236,8 @@
   min-width: 0;
 }
 
-.panel__sign[disabled] {
+.panel__sign[disabled],
+.panel__signed-sign[disabled] {
   opacity: 0.55;
 }
 

@@ -75,11 +75,23 @@ pub struct DocumentSignature {
     pub countersignatures: Vec<DocumentSignature>,
 }
 
+/// El formato de firma del documento, reconocido por su forma.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SignatureStandard {
+    #[default]
+    Pades,
+    Cades,
+    Xades,
+    /// Ni un PDF ni una firma CAdES o XAdES.
+    Unrecognized,
+}
+
 /// Las firmas que ya trae el documento, en el orden cronológico que devuelve el puente.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct DocumentSignatures {
     signatures: Vec<DocumentSignature>,
     changed_after_last_signature: bool,
+    format: SignatureStandard,
 }
 
 impl DocumentSignatures {
@@ -88,7 +100,18 @@ impl DocumentSignatures {
         Self {
             signatures,
             changed_after_last_signature,
+            format: SignatureStandard::Pades,
         }
+    }
+
+    /// El mismo informe, de un documento en ese formato.
+    pub fn in_format(self, format: SignatureStandard) -> Self {
+        Self { format, ..self }
+    }
+
+    /// El formato de firma del documento.
+    pub fn format(&self) -> SignatureStandard {
+        self.format
     }
 
     /// Cuántas firmas trae el documento.

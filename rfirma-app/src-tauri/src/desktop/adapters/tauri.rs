@@ -35,12 +35,16 @@ pub fn invoked_document(
     paths: &[std::path::PathBuf],
     intent: WindowIntent,
 ) -> Option<InvokedDocumentView> {
-    documents
-        .what_was_dropped(paths)
-        .map(|opened| InvokedDocumentView {
-            opened: DroppedDocumentView::from(opened),
-            intent,
-        })
+    let told = match intent {
+        WindowIntent::SeeItsSignatures => {
+            documents.what_was_handed_over_to_see_its_signatures(paths)
+        }
+        WindowIntent::OpenTheDocument => documents.what_was_dropped(paths),
+    };
+    told.map(|opened| InvokedDocumentView {
+        opened: DroppedDocumentView::from(opened),
+        intent,
+    })
 }
 
 /// Aplica en el hilo principal el estado de la barra de título nativa que manda la ventana.

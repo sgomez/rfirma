@@ -21,11 +21,11 @@ pub enum Dropped {
 
 const PDF: &str = "pdf";
 
-/// El PDF elegido entre los candidatos, a la espera de saber si se deja leer.
+/// El fichero elegido entre los candidatos, a la espera de saber si se deja leer.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Choice {
-    /// El primer PDF, el resto que entran en recientes y cuántos candidatos había.
-    Pdf {
+    /// El elegido, el resto que entran en recientes y cuántos candidatos había.
+    Chosen {
         path: PathBuf,
         also_entering: Vec<PathBuf>,
         discarded: usize,
@@ -47,10 +47,23 @@ pub fn first_pdf(candidates: &[PathBuf]) -> Choice {
     let Some(first) = pdfs.next() else {
         return Choice::NotAPdf { discarded };
     };
-    Choice::Pdf {
+    Choice::Chosen {
         path: first.clone(),
         also_entering: pdfs.cloned().collect(),
         discarded,
+        candidates: candidates.len(),
+    }
+}
+
+/// Elige el primer fichero sea del tipo que sea: se abre para ver sus firmas, no para firmarlo.
+pub fn first_file(candidates: &[PathBuf]) -> Choice {
+    let Some((first, rest)) = candidates.split_first() else {
+        return Choice::Nothing;
+    };
+    Choice::Chosen {
+        path: first.clone(),
+        also_entering: Vec::new(),
+        discarded: rest.len(),
         candidates: candidates.len(),
     }
 }
@@ -60,7 +73,7 @@ pub fn resolved(choice: Choice, readable: Result<(), String>) -> Dropped {
     match choice {
         Choice::Nothing => Dropped::Nothing,
         Choice::NotAPdf { discarded } => Dropped::NotAPdf { discarded },
-        Choice::Pdf {
+        Choice::Chosen {
             path,
             also_entering,
             discarded,
