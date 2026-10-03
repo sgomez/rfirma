@@ -16,13 +16,13 @@ import { pdfjsLoader } from "./viewer/pdfjsLoader";
 const SITE_ERRAND = "site-errand";
 
 /**
- * **El trámite de una sede, por sus órdenes y su evento** (ID-336, ID-338).
+ * **El trámite de una sede, por sus órdenes y su evento**.
  *
  * Es el puerto que sustituye a `noErrand()` en la ventana de sede, y aquí sólo
  * está la mitad que sabe que debajo hay Tauri: una línea por orden. Lo que hay
  * que pensar —convertir cada momento en el que la ventana espera, y los dos
  * momentos que no vienen del backend— vive en `sede/siteErrands.ts`, que se
- * prueba sin Tauri (TD-78).
+ * prueba sin Tauri.
  *
  * `watch` escucha **el evento y no un sondeo**: el trámite empuja cada momento
  * nuevo, y que no llegue ninguno es la respuesta normal. La suscripción se

@@ -6,7 +6,7 @@ import "./NotificationStrip.css";
 interface NotificationStripProps {
   /**
    * La frase. **Una sola**: la franja mide 41 px y admite una frase, no un
-   * párrafo (ID-207).
+   * párrafo.
    */
   message: string;
   /**
@@ -21,10 +21,10 @@ interface NotificationStripProps {
 }
 
 /**
- * La franja bajo la cabecera: **el patrón de notificación de la ventana**
- * (ID-207), no el widget del aviso de versión.
+ * La franja bajo la cabecera: **el patrón de notificación de la ventana**, no el widget del aviso
+ * de versión.
  *
- * Nada de esto es modal (ID-181). Un modal al arrancar interrumpe el recorrido
+ * Nada de esto es modal. Un modal al arrancar interrumpe el recorrido
  * para decir algo que no lo bloquea; la franja se ve sin abrir nada, se
  * descarta y desaparece del todo. Se descartaron una insignia en el botón de
  * menú —no se ve hasta abrir el menú, así que no notifica— y una línea en el

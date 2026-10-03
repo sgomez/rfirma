@@ -265,7 +265,7 @@ export function SigningSection({
 
 /**
  * Lo que identifica cada fila **es el certificado, no el fichero**: del
- * `.p12` no se recuerda nada, ni la ruta (ID-196), así que aquí no hay ni
+ * `.p12` no se recuerda nada, ni la ruta, así que aquí no hay ni
  * ruta ni «volver a localizar». La fecha de caducidad va en la misma línea
  * que el DNI y el emisor; un caducado la cambia por su insignia.
  */

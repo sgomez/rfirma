@@ -32,9 +32,9 @@ interface PanelFooterSignedProps extends PanelFooterDestinationProps {
   signed: true;
   /** Abre el PDF firmado con el visor del sistema. */
   onOpenDocument: () => void;
-  /** Abre la carpeta donde quedó, con las firmas anteriores dentro (ID-81). */
+  /** Abre la carpeta donde quedó, con las firmas anteriores dentro. */
   onOpenFolder: () => void;
-  /** Vuelve al panel de firma con el original releído del disco (ID-80). */
+  /** Vuelve al panel de firma con el original releído del disco. */
   onSign: () => void;
   /** Mueve el destino del documento (ADR-0011); ausente, el pie no ofrece «Cambiar». */
   onChangeDestination?: () => void;

@@ -9,7 +9,7 @@ import { acknowledgementFor, type Signing } from "./signing/useSigning";
 /**
  * El acuse de recibo del documento que se acaba de firmar, y los dos caminos
  * hasta el fichero. Solo sigue en pie mientras el documento firmado siga
- * activo (ID-51): cambiar de fila lo cierra, en vez de esperar a que vuelva.
+ * activo: cambiar de fila lo cierra, en vez de esperar a que vuelva.
  */
 export function useSignedSummary(
   signing: Signing,
@@ -63,17 +63,17 @@ export function useSignedSummary(
 
   // Los dos caminos hasta el fichero. El fallo se recoge aquí y se enseña en el
   // resumen: un botón que no hace nada y no dice por qué deja al usuario sin
-  // ninguna forma de llegar a lo que acaba de firmar (ID-79).
+  // ninguna forma de llegar a lo que acaba de firmar.
   const openSigned = (open: () => Promise<void>) => {
     setOpenFailure(null);
     open().catch((thrown: unknown) => setOpenFailure(classify(thrown)));
   };
 
   // «Firmar»: se cierra el resumen y **se relee el original del
-  // disco** (ID-80). Es abrir el documento otra vez, porque entre una firma y
+  // disco**. Es abrir el documento otra vez, porque entre una firma y
   // la siguiente el usuario ha podido modificarlo fuera o haberse equivocado al
   // configurar la firma. Lo que decida el recuadro recordado —incluido el aviso
-  // del ID-22 si ya no cabe— lo resuelve el camino de siempre, no uno nuevo.
+  // de que ya no cabe— lo resuelve el camino de siempre, no uno nuevo.
   const signAgain = () => {
     setOpenFailure(null);
     signing.signAnother();

@@ -8,9 +8,9 @@ import { FALLBACK_LANGUAGE, type LanguageTag } from "./languages";
  * (`CONTEXT.md`). No se olfatea del navegador.
  *
  * Es un puerto y no una llamada a Tauri porque la ventana no conoce a Tauri:
- * quien guarda la configuración es el backend (`memory::Configuration`,
- * ID-31), la implementación de verdad es `tauriLanguagePreference` y quien
- * elige entre ella y el doble de memoria es `main.tsx` (ID-75). El idioma va
+ * quien guarda la configuración es el backend (`configuration_memory::Configuration`), la
+ * implementación de verdad es `tauriLanguagePreference` y quien elige entre ella y el doble de
+ * memoria es `main.tsx`. El idioma va
  * por su propio puerto y no dentro de `Preferences` porque se lee **antes** de
  * que haya ventana: `createI18n` lo necesita para el primer pintado.
  */

@@ -7,8 +7,7 @@ import type { PageSize } from "./signatureBox";
  * mapa de bits.
  *
  * Aquí no hay React ni DOM: es aritmética, y por eso se prueba sola. El visor
- * pone el estado y los oyentes; este módulo contesta a «cuánto» (ID-116,
- * ID-117, ID-119).
+ * pone el estado y los oyentes; este módulo contesta a «cuánto».
  *
  * La distinción que sostiene el módulo es entre **cuánto quieres ampliar** y
  * **cómo quieres mirar**. Un porcentaje es lo primero: fija ese número, sea
@@ -17,7 +16,7 @@ import type { PageSize } from "./signatureBox";
  * y al redimensionado de la ventana. Entre un documento y el siguiente se
  * recuerda lo último que haya fijado la persona usuaria, sea modo o
  * porcentaje; el modo de partida de un documento recién abierto solo manda
- * mientras no haya tocado nada (ID-117).
+ * mientras no haya tocado nada.
  */
 
 /** El zoom mínimo: por debajo, un A4 es una miniatura sobre la que no se coloca nada. */
@@ -26,7 +25,7 @@ export const ZOOM_MIN = 0.25;
 export const ZOOM_MAX = 4;
 
 /**
- * Los escalones del zoom, los mismos siete de siempre (ID-116).
+ * Los escalones del zoom, los mismos siete de siempre.
  *
  * Ya no son *el* zoom —eso es ahora el rango continuo— sino los **destinos con
  * los que tropiezan los botones ±**: el porcentaje se lee, se compara entre
@@ -36,7 +35,7 @@ export const ZOOM_MAX = 4;
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
 
 /**
- * El tope del mapa de bits: `zoom * devicePixelRatio` no pasa de 4× (ID-119).
+ * El tope del mapa de bits: `zoom * devicePixelRatio` no pasa de 4×.
  *
  * Un A4 al 400 % con `devicePixelRatio` 2 sería un lienzo de ~4 760 × 6 736 px,
  * **128 MB para una sola página**, y con el porcentaje editable ese techo se
@@ -67,7 +66,7 @@ export type ZoomMode =
 
 /**
  * El punto de partida de un documento recién abierto: la hoja entera, tanto en
- * vertical como en apaisado (ID-117 enmendado). `Ctrl+0` sigue yendo al 100 %,
+ * vertical como en apaisado. `Ctrl+0` sigue yendo al 100 %,
  * que es un porcentaje fijado a mano y no este modo.
  *
  * Solo se aplica mientras la persona usuaria no haya tocado nada: en cuanto
@@ -100,7 +99,7 @@ export function steppedZoom(current: number, direction: 1 | -1): number {
 
 /**
  * El zoom tras un `Ctrl`+rueda —que es también como llega **el pellizco del
- * trackpad**, sin una línea de código aparte (ID-116)—.
+ * trackpad**, sin una línea de código aparte—.
  *
  * Es **multiplicativo**: la misma cantidad de rueda amplía lo mismo al 30 % que
  * al 300 %, que es lo que hace que el gesto se sienta igual en todo el rango.
@@ -118,7 +117,7 @@ export interface ScrollOffset {
 
 /**
  * El desplazamiento que deja **quieto bajo el puntero** el punto del documento
- * que había debajo (ID-116).
+ * que había debajo.
  *
  * `pointer` es la posición del puntero **relativa a la parte visible**, no a la
  * página. El punto del documento está a `scroll + pointer` del origen; tras
@@ -180,7 +179,7 @@ export function fitScale(
 /**
  * A qué escala se pinta el mapa de bits, que **no** es la escala a la que se
  * mide nada: el viewport en píxeles CSS sigue siendo el del zoom, porque de él
- * salen las coordenadas del recuadro (ID-84).
+ * salen las coordenadas del recuadro.
  */
 export function bitmapScale(zoom: number, devicePixelRatio: number): number {
   const ratio = Math.max(devicePixelRatio || 1, 1);

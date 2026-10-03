@@ -15,11 +15,11 @@ interface BoxDragOptions {
   box: RefObject<HTMLElement | null>;
   /** Dónde está pintado ahora, en píxeles del lienzo. */
   rect: PixelRect;
-  /** El lienzo, para la guardia del ID-22. */
+  /** El lienzo, para la guardia. */
   page: PageSize;
   /**
    * El tamaño por debajo del cual los tiradores no bajan, **en píxeles del
-   * lienzo** (ID-103).
+   * lienzo**.
    *
    * Llega convertido y no como los puntos de `MIN_BOX_POINTS` porque el gesto
    * entero trabaja en píxeles: el mínimo es del papel, pero la comparación es
@@ -76,13 +76,13 @@ interface Gesture {
  * El puntero se **captura** al agarrar, así que el gesto sigue vivo aunque el
  * cursor se salga del recuadro —que es justo lo que pasa al arrastrar deprisa—.
  *
- * Los tiradores de las esquinas (ID-103) usan el mismo gesto con otra
+ * Los tiradores de las esquinas usan el mismo gesto con otra
  * aritmética: la esquina opuesta se queda quieta, `Mayús` conserva la
  * proporción y por debajo del tamaño mínimo **el gesto se detiene** en vez de
  * recortar el texto del sello en silencio.
  *
  * Soltar fuera de la página no se acepta: se avisa y el recuadro vuelve donde
- * estaba (ID-22). Recortar en silencio es lo que hace iText, y es el fallo del
+ * estaba. Recortar en silencio es lo que hace iText, y es el fallo del
  * que este proyecto se defiende.
  */
 export function useBoxDrag({ box, rect, page, min, onDrop, onOutOfPage }: BoxDragOptions): BoxDrag {

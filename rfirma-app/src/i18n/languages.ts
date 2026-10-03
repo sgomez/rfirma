@@ -6,7 +6,7 @@ import { LANGUAGES } from "./locales";
 
 /**
  * Los idiomas de la aplicación son **cinco** —`es`, `ca`, `eu`, `gl`, `en`—, y
- * de ellos se publican los que están al 100 % (ID-123, ID-124).
+ * de ellos se publican los que están al 100 %.
  *
  * Ni la lista ni los catálogos se escriben aquí: salen de `locales/index.ts`,
  * que genera `tools/po-import.mjs` con **los idiomas cuyo `.po` llegó al

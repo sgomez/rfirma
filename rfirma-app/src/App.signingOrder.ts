@@ -16,7 +16,7 @@ import {
 } from "./viewer/signatureBox";
 
 /**
- * La colocación **entera**, tal y como la guarda la ventana (#188).
+ * La colocación **entera**, tal y como la guarda la ventana.
  *
  * Un rectángulo, tres conjuntos —uno por opción— y cuál de ellas manda. Lo que
  * cruza a firmar es el `Placement` que sale de las tres, no esto: aquí vive el
@@ -29,7 +29,7 @@ export interface Placing {
 }
 
 /**
- * La colocación guardada en la fila, repartida en las tres opciones (ID-74).
+ * La colocación guardada en la fila, repartida en las tres opciones.
  *
  * La opción activa es **la que explica el conjunto sin inventar nada**: una
  * página sola es `Solo 1 página`, la palabra `"all"` es `Todas las páginas` y
@@ -65,8 +65,8 @@ export interface PageGeometry {
  * La orden de firma, armada en **un solo sitio**.
  *
  * La usan la firma de verdad y el ciclo en seco de la vista previa, y esa es la
- * razón de que exista: el ID-107 promete que lo que se ve dentro del recuadro
- * coincide con el PDF firmado, y dos constructores separados podrían dejar de
+ * razón de que exista: lo que se ve dentro del recuadro tiene que
+ * coincidir con el PDF firmado, y dos constructores separados podrían dejar de
  * cumplirlo sin que ninguna prueba lo notara.
  */
 export function signingOrderFor({
@@ -112,7 +112,7 @@ export function signingOrderFor({
     rubric: box !== null && signature.withRubric && rubric !== null ? base64Of(rubric) : null,
     language,
     // Nadie ha consentido nada todavía: el permiso se pone al aceptar el aviso
-    // de las firmas sin registrar, y en ningún otro sitio (ID-301).
+    // de las firmas sin registrar, y en ningún otro sitio.
     allowUnregisteredSignatures: false,
   };
 }
@@ -124,7 +124,7 @@ export function signingOrderFor({
  * propósito: quien sabe el huso y las convenciones de fecha del sistema es el
  * navegador, no Rust, y meter una biblioteca de husos en el backend para
  * repetir lo que `Intl` ya sabe sería duplicar el problema. Las **etiquetas**
- * del recuadro siguen siendo de `signing::layer2_text` (ID-19): aquí no se
+ * del recuadro siguen siendo de `signing::layer2_text`: aquí no se
  * escribe «Fecha», solo lo que va detrás.
  */
 export function formatSignedAt(instant: Date, locale: string): string {
@@ -151,7 +151,7 @@ export function formatSignedTime(instant: Date, locale: string): string {
  * solo» no es una excepción a esa regla —preseleccionarlo sería elegir por
  * ella—.
  *
- * Manda **el que se usó la última vez** (#110): quien tiene cuatro
+ * Manda **el que se usó la última vez**: quien tiene cuatro
  * certificados los elige una vez, no cada día. Eso no contradice la regla de
  * que la aplicación no elige por su cuenta: no está eligiendo, está devolviendo
  * lo que ya se eligió firmando. Pero viene con su estado de ahora, no con el

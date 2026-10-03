@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { StampPreview } from "../signing/stampPreview";
 
 /**
- * La pastilla flotante del estado del sello (ID-107, #202): un texto y, si
+ * La pastilla flotante del estado del sello: un texto y, si
  * hace falta, un botón. No hay insignia — se retiró con el rótulo «Vista
  * previa» del panel, junto con sus 16 claves — y no hay nada que decir de la
  * colocación: la etiqueta del botón de sellar, en el panel, ya cuenta eso.
@@ -22,7 +22,7 @@ export function StampPill({ state, onCompose }: { state: StampPreview; onCompose
 
   // Las claves se escriben **enteras y a mano**: `i18next-cli` lee el código
   // para cazar la clave que no está en el catálogo y la del catálogo que ya no
-  // usa nadie (ID-127), y una clave compuesta con una plantilla es invisible
+  // usa nadie, y una clave compuesta con una plantilla es invisible
   // para las dos comprobaciones.
   const said = {
     noCertificate: null,

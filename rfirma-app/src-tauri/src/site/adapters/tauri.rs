@@ -289,7 +289,7 @@ fn told_of_loading(
 
 /// Lee lo que la persona eligió y continúa el trámite, o cancela si no eligió nada: si el
 /// selector esperaba documento para `signandsave`, el paso que sigue no es una entrega a la
-/// sede, sino el consentimiento de firma (#494).
+/// sede, sino el consentimiento de firma.
 fn load_chosen<E: crate::site::ports::FilterEngine, P: crate::site::ports::PolicyEngine>(
     chosen: Vec<std::path::PathBuf>,
     desk: &crate::site::application::errand::ErrandDesk<'_, E, P>,

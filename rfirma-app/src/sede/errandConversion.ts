@@ -101,7 +101,7 @@ export function refusedByTheBatch(failure: { situation: string; detail: string }
 }
 
 /**
- * **El momento del backend, en el vocabulario de la ventana** (TD-78).
+ * **El momento del backend, en el vocabulario de la ventana**.
  *
  * La operación no viaja en el evento porque está en el momento: la sede que
  * sólo pide identidad manda `askingForConsent`, y la que manda un documento
@@ -146,8 +146,7 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
     case "askingForConsent":
       // Sin documento porque no lo hay: `selectcert` no manda ninguno. Y
       // `narrowed` es `false` porque el backend no dice si la sede acotó la
-      // lista: lo que cruza son las filas ya cribadas y nunca el criterio
-      // (ID-277).
+      // lista: lo que cruza son las filas ya cribadas y nunca el criterio.
       return {
         kind: "consent",
         document: null,

@@ -1,7 +1,7 @@
 //! Los ajustes que la aplicación recuerda, en el lado de la interfaz: `Preferences`, su puerto `PreferencesStore` y el doble `inMemoryPreferences`.
 /**
- * Son un subconjunto de `memory::Configuration`: el idioma no está aquí porque
- * ya lo lleva `LanguagePreference` (#55), y la **ruta** de la carpeta de
+ * Son un subconjunto de `configuration_memory::Configuration`: el idioma no está aquí porque
+ * ya lo lleva `LanguagePreference`, y la **ruta** de la carpeta de
  * destino tampoco, porque bajo el sandbox la aplicación escribe en ella pero
  * la única palabra que tiene de ella es su último segmento. Enseñar la ruta
  * donde se puede y el nombre donde no sería la misma pantalla contando cosas
@@ -23,7 +23,7 @@ export interface Preferences {
    */
   destination: string;
   /**
-   * Si Preferencias puede ofrecer «Junto al documento original» (ID-184). La
+   * Si Preferencias puede ofrecer «Junto al documento original». La
    * contesta el entorno —si sabe devolver la ruta real del documento—, no el
    * usuario: se lee, **no se guarda** al escribir, igual que `destination`.
    */
@@ -46,7 +46,7 @@ export interface Preferences {
    */
   rememberActivity: boolean;
   /**
-   * «Avisarme cuando haya una versión nueva» (ID-180). **Siempre visible y
+   * «Avisarme cuando haya una versión nueva». **Siempre visible y
    * sin condición**: no se detecta si alguien gestiona la instalación. No
    * apaga la comprobación —esa la sigue haciendo el backend en cada
    * arranque—, solo si la ventana enseña la franja con lo que contestó.
@@ -69,7 +69,7 @@ export interface Preferences {
  *
  * Puerto, y no una llamada a Tauri, por lo mismo que `LanguagePreference`: la
  * ventana no conoce a Tauri, y quien elige entre `tauriPreferences` y el doble
- * de memoria es `main.tsx` (ID-75). Debajo son `read_configuration` y
+ * de memoria es `main.tsx`. Debajo son `read_configuration` y
  * `write_configuration`, que pasan por `memory::Memory::remember_configuration`
  * —el único sitio donde el borrado del estado al apagarse «Recordar mi
  * actividad» no se puede olvidar—.
@@ -89,7 +89,7 @@ export interface PreferencesStore {
    *
    * Va aquí y no en un puerto aparte porque es el otro medio de escribir un
    * ajuste, y el único que la ventana no puede resolver sola: el diálogo lo
-   * abre Rust (ID-65), así que la ventana no manda ninguna ruta —no la
+   * abre Rust, así que la ventana no manda ninguna ruta —no la
    * conoce— y lo que recibe de vuelta es lo mismo que enseña.
    */
   chooseFolder(): Promise<string | null>;

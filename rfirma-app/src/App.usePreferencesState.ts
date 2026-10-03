@@ -33,7 +33,7 @@ export function usePreferencesState(
   }, [preferences, covered]);
 
   // La rúbrica adoptada en una sesión anterior sigue en el almacén aunque se
-  // cierre la aplicación (ID-33): sin esta lectura al arrancar, «Tu rúbrica»
+  // cierre la aplicación: sin esta lectura al arrancar, «Tu rúbrica»
   // aparecía siempre apagada aunque el JPEG estuviera ahí.
   useEffect(() => {
     let current = true;
@@ -61,8 +61,7 @@ export function usePreferencesState(
    * pantalla vuelve a lo que había: una ventana que enseña un ajuste que el
    * disco no tiene estaría mintiendo sobre la sesión siguiente. Repuesto el
    * valor, **el rechazo sigue su camino**: quien lo recoge es Preferencias, que
-   * es quien sabe en qué sección se pulsó y por tanto dónde va el aviso
-   * (ID-70).
+   * es quien sabe en qué sección se pulsó y por tanto dónde va el aviso.
    */
   const changeSettings = async (next: Preferences) => {
     const before = settings;
@@ -78,11 +77,11 @@ export function usePreferencesState(
   /**
    * La carpeta de destino se elige con el **selector de directorio** del
    * sistema, que abre Rust: la ventana no manda ninguna ruta —no la conoce— y
-   * lo que recibe de vuelta es el nombre que enseña (ID-65).
+   * lo que recibe de vuelta es el nombre que enseña.
    *
    * Cerrar el selector sin elegir deja la carpeta que hubiera. Si guardar
    * falla, el rechazo sigue su camino hasta Preferencias, que es quien sabe
-   * dónde va el aviso (ID-70).
+   * dónde va el aviso.
    */
   const chooseDestination = async () => {
     const chosen = await preferences.chooseFolder();
@@ -118,7 +117,7 @@ export function usePreferencesState(
  * Dónde caerá el firmado, tal y como lo cuenta el backend, y el destino de una
  * sola firma que lo puede sustituir. Es estado y no un cálculo del pie porque
  * el nombre lo compone Rust —con el sufijo y el homónimo ya resueltos— y
- * `writable` sale de comprobar la carpeta de verdad (ID-67): la ventana lo
+ * `writable` sale de comprobar la carpeta de verdad: la ventana lo
  * enseña, no lo deduce.
  *
  * El destino de una sola firma, elegido con «Cambiar», vale solo para el

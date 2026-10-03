@@ -5,7 +5,7 @@ import type { Viewport } from "./pdf";
 /**
  * El recuadro de la firma visible: dónde se guarda y cómo se pinta.
  *
- * **Se guarda en espacio de usuario PDF, nunca en píxeles** (ID-21). Los
+ * **Se guarda en espacio de usuario PDF, nunca en píxeles**. Los
  * píxeles se derivan del viewport en cada pintada, así que el zoom es
  * puramente visual: acercarse no mueve la firma. Guardado en píxeles, el
  * recuadro se queda clavado en la pantalla y se desplaza sobre el documento sin
@@ -43,17 +43,16 @@ export interface UserSpaceRect {
 export type PageSet = "all" | { only: number[] };
 
 /**
- * El recuadro colocado: **dónde y en qué páginas** (ID-90).
+ * El recuadro colocado: **dónde y en qué páginas**.
  *
  * Sustituye al `SignaturePlacement { page, rect }` de v0.2. Es un registro
  * llano y no una unión de un brazo: un `kind` que nunca discrimina es ruido, y
  * el día que entre otra rama de colocación, `rect` y `pages` tendrán que
  * **desaparecer**, no convivir con ella.
  *
- * **«Colocado» no es una bandera: es tener al menos una página sellada**
- * (ID-92). Por eso no existe una colocación con el conjunto vacío: quitar la
- * última página devuelve `null`, que es exactamente el estado del PDF recién
- * abierto.
+ * **«Colocado» no es una bandera: es tener al menos una página sellada**. Por eso no existe una
+ * colocación con el conjunto vacío: quitar la última página devuelve `null`, que es exactamente
+ * el estado del PDF recién abierto.
  */
 export interface Placement {
   rect: UserSpaceRect;
@@ -63,14 +62,14 @@ export interface Placement {
 /**
  * Cuál de las tres opciones del panel manda sobre el conjunto.
  *
- * El visor no la elige —vive en el panel— pero la necesita para dos cosas que
- * le pide el ID-101: la cuarta redacción del botón («Colocar el sello aquí»
- * cuando se sellan todas) y que con `Solo 1 página` o `Todas las páginas` una
- * página ya sellada **no ofrezca pastilla**, porque no queda nada que ofrecer.
+ * El visor no la elige —vive en el panel— pero la necesita para dos cosas: la cuarta
+ * redacción del botón («Colocar el sello aquí» cuando se sellan todas) y que con `Solo 1
+ * página` o `Todas las páginas` una página ya sellada **no ofrezca pastilla**, porque no queda
+ * nada que ofrecer.
  */
 export type PageChoice = "single" | "these" | "all";
 
-/** ¿Esta página lleva recuadro? Es la pregunta que contesta el ID-96. */
+/** ¿Esta página lleva recuadro? */
 export function sealsPage(pages: PageSet, page: number): boolean {
   return pages === "all" || pages.only.includes(page);
 }
@@ -88,7 +87,7 @@ export function sealedPages(pages: PageSet, pageCount: number): number[] {
 /**
  * El conjunto ordenado y sin repetir, o `null` si no queda ninguna página.
  *
- * `null` no es un fallo: es el ID-92. Sin páginas no hay colocación, y quien lo
+ * `null` no es un fallo. Sin páginas no hay colocación, y quien lo
  * reciba tiene que **borrar el recuadro**, no guardar un conjunto vacío —que el
  * puente leería como «la última página»—.
  */
@@ -112,8 +111,7 @@ export function sealing(placement: Placement, page: number): Placement {
 }
 
 /**
- * Quita una página del conjunto, y con la última **quita la colocación entera**
- * (ID-92).
+ * Quita una página del conjunto, y con la última **quita la colocación entera**.
  *
  * `"all"` se resuelve antes de restar, que es para lo que hace falta
  * `pageCount`: quitar una de «todas» deja a las demás nombradas una a una.
@@ -139,7 +137,7 @@ export interface PageSize {
 }
 
 /**
- * Píxeles → espacio de usuario, que es el paso 1 del ID-21 tal cual lo hace
+ * Píxeles → espacio de usuario, tal cual lo hace
  * `pdf.js`. Las dos esquinas se ordenan porque se arrastra en cualquier
  * dirección y el recuadro es el mismo.
  */
@@ -169,7 +167,7 @@ export function movedBy(rect: PixelRect, dx: number, dy: number): PixelRect {
 }
 
 /**
- * ¿Cabe entero en la página? (ID-22).
+ * ¿Cabe entero en la página?
  *
  * Es la mitad de interfaz de la guardia: aquí se impide **soltarlo** fuera, con
  * aviso, en píxeles del lienzo, que es lo que la persona ve. La mitad
@@ -187,13 +185,13 @@ export function fitsInPage(rect: PixelRect, page: PageSize): boolean {
 }
 
 /**
- * La **posición estándar** del recuadro (ID-102).
+ * La **posición estándar** del recuadro.
  *
  * Colocado por la pastilla o por el campo de páginas no hay gesto que diga
  * dónde, así que cae abajo a la derecha a un **8 %** del borde, que es donde
  * suele ir la firma en un documento administrativo. Va en proporción a la
  * página para que el zoom no lo cambie de tamaño sobre el papel; a partir de
- * ahí se arrastra, que la posición es libre y no hay rejilla (ID-26).
+ * ahí se arrastra, que la posición es libre y no hay rejilla.
  */
 export function standardBox(page: PageSize): PixelRect {
   const width = page.width * 0.34;
@@ -208,7 +206,7 @@ export function standardBox(page: PageSize): PixelRect {
 }
 
 /**
- * El **tamaño mínimo** del recuadro, en puntos de espacio de usuario (ID-103).
+ * El **tamaño mínimo** del recuadro, en puntos de espacio de usuario.
  *
  * Es «aquel por debajo del cual el nombre y la fecha ya no caben»: con las tres
  * líneas del sello administrativo —«Firmado por», el nombre con el DNI y la
@@ -224,7 +222,7 @@ export function standardBox(page: PageSize): PixelRect {
 export const MIN_BOX_POINTS: PageSize = { width: 120, height: 34 };
 
 /**
- * El lado del tirador, **en píxeles de pantalla** (ID-104).
+ * El lado del tirador, **en píxeles de pantalla**.
  *
  * No escala con la hoja: mide lo mismo al 50 %, al 100 % y al 300 %, porque es
  * la diana del gesto y no parte del documento. El sello sí escala, porque es la
@@ -287,7 +285,7 @@ export function resizedBy(
 }
 
 /**
- * El conjunto que guarda **cada opción** del bloque «Colocación» (#188).
+ * El conjunto que guarda **cada opción** del bloque «Colocación».
  *
  * Las tres opciones no se turnan sobre un mismo conjunto: cada una recuerda el
  * suyo, y elegir otra **no reescribe la que dejas**. Sin esto, sellar la 2 en
@@ -322,7 +320,7 @@ export function pagesOf(sets: PageSets, choice: PageChoice): PageSet | null {
  * La colocación que ve el resto de la ventana: el recuadro compartido y el
  * conjunto de la opción activa.
  *
- * Sigue valiendo el ID-92 —colocado es tener páginas—, solo que ahora «tener
+ * Colocado sigue siendo tener páginas, solo que ahora «tener
  * páginas» se pregunta **por opción**: con el recuadro puesto y `Estas páginas`
  * sin rango, no hay colocación aunque `single` sí tenga la suya.
  */
@@ -378,14 +376,12 @@ export function activating(
 
 /**
  * La **posición estándar en espacio de usuario**, que es la que puede pedir
- * quien no pinta nada (ID-102, #185).
+ * quien no pinta nada.
  *
- * El issue #185 daba por hecho que colocar desde el panel exigía una costura
- * nueva con el visor «porque el viewport no sale de ahí». No es cierto: el
- * viewport a escala 1 lo da la propia página de `pdf.js`, y con él la posición
- * estándar sale de las dos funciones que ya existían, rotación incluida y sin
- * una segunda tabla por `/Rotate` —que es justo lo que la cabecera de este
- * módulo prohíbe—.
+ * Colocar desde el panel no exige una costura nueva con el visor «porque el viewport no sale de
+ * ahí»: el viewport a escala 1 lo da la propia página de `pdf.js`, y con él la posición estándar
+ * sale de las dos funciones que ya existían, rotación incluida y sin una segunda tabla por
+ * `/Rotate` —que es justo lo que la cabecera de este módulo prohíbe—.
  */
 export function standardRectOf(viewport: Viewport): UserSpaceRect {
   return toUserSpace(viewport, standardBox(viewport));
@@ -398,7 +394,7 @@ export interface PixelPoint {
 }
 
 /**
- * El recuadro que sale de **trazarlo** sobre la hoja (#190).
+ * El recuadro que sale de **trazarlo** sobre la hoja.
  *
  * Es el único de los tres caminos que elige sitio y tamaño en el mismo gesto,
  * así que es también el único que tiene que reconciliar tres reglas que pueden
@@ -407,10 +403,10 @@ export interface PixelPoint {
  * 1. **Normalizar**: el trazo se dibuja en cualquiera de las cuatro
  *    direcciones, y el rectángulo no tiene lados negativos.
  * 2. **Recortar al papel**: salirse por un borde deja el recuadro pegado a él.
- *    Aquí sí se recorta, al revés que al mover (ID-22, donde se avisa y no se
+ *    Aquí sí se recorta, al revés que al mover (donde se avisa y no se
  *    aplica): allí hay un sitio anterior válido al que volver y aquí no, así
  *    que descartar dejaría el gesto sin resultado y con un aviso encima.
- * 3. **No bajar del mínimo** (ID-103), anclado a la esquina donde arrancó el
+ * 3. **No bajar del mínimo**, anclado a la esquina donde arrancó el
  *    gesto: es la esquina que la mano eligió, y la que `resizedBy` deja quieta.
  * 4. **Empujar hacia dentro** lo que el mínimo haya sacado del papel: trazar a
  *    dos dedos del borde inferior no puede producir un recuadro que se salga.

@@ -10,7 +10,7 @@ interface UnregisteredSignaturesDialogProps {
 }
 
 /**
- * El aviso de las **firmas sin registrar** (ID-297…ID-301, ID-305).
+ * El aviso de las **firmas sin registrar**.
  *
  * Aparece **justo antes de firmar**, cuando el documento trae alguna firma
  * previa cuyo `/SubFilter` no es de los cuatro que el puente sabe leer. Tres
@@ -19,16 +19,16 @@ interface UnregisteredSignaturesDialogProps {
  * - **No es un rechazo, es una pregunta.** El PDF certificado sí invalida con
  *   certeza y por eso se rechaza sin preguntar; esto es desconocimiento
  *   nuestro, y negarse dejaría a rFirma rechazando documentos que AutoFirma sí
- *   firma (ID-298).
- * - **No se dice cuántas hay ni de quién son, y no se dice si valen**
- *   (ID-305): rFirma no tiene validador, y enseñar «válida» sin poder
+ *   firma.
+ * - **No se dice cuántas hay ni de quién son, y no se dice si valen**: rFirma no tiene validador, y
+ * enseñar «válida» sin poder
  *   sostenerlo es peor que el silencio. Se avisa de lo que no entendemos y se
  *   calla lo que entendemos.
  * - **No lleva recuento**, así que no hay plural que resolver: un aviso, una
  *   frase.
  *
  * Decir que no **no es un fallo**: devuelve al panel con todo como estaba, y en
- * el recorrido de una sede es lo que sale al cable como `CANCEL` (ID-303).
+ * el recorrido de una sede es lo que sale al cable como `CANCEL`.
  */
 export function UnregisteredSignaturesDialog({
   onConfirm,

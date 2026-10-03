@@ -1,14 +1,14 @@
 //! Dónde cae el documento firmado: el puerto `DestinationSource`, el recorte de esa línea y `SignedDocumentOpener`, que lleva a la persona hasta el fichero (ADR-0011).
 /**
  * **Dónde va a caer el documento firmado**, en el lado de la interfaz: la
- * carpeta y el nombre, los dos por su nombre y ninguno por su ruta (ID-63,
- * ADR-0011).
+ * carpeta y el nombre, los dos por su nombre y ninguno por su ruta
+ * (ADR-0011).
  *
  * Aquí viven las dos mitades del componente **ruta de destino** del sistema de
  * diseño: el puerto que pregunta al backend dónde caerá lo que hay delante, y
  * la **función pura** que decide cómo se recorta la línea cuando no cabe. El
  * recorte está aquí y no dentro del pie del panel porque es la pieza con más
- * reglas y menos superficie visible de todo el destino (TD-13): probarlo por la
+ * reglas y menos superficie visible de todo el destino: probarlo por la
  * pantalla obligaría a medir píxeles para comprobar una regla sobre cadenas.
  */
 
@@ -25,7 +25,7 @@ export interface Destination {
   name: string | null;
   /**
    * Si la carpeta está y se puede escribir **ahora mismo**. Sale de
-   * `CheckedFolder::check` y no de un literal (ID-67).
+   * `CheckedFolder::confirmed` y no de un literal.
    */
   writable: boolean;
 }
@@ -46,7 +46,7 @@ export interface SingleDestination extends Destination {
  * conoce a Tauri y quien elige la implementación es `main.tsx` (ADR-0017).
  * Debajo son las órdenes `preview_destination` y `choose_single_destination`,
  * que miran el disco —la carpeta y sus homónimos— sin escribir nada y **sin
- * crear la carpeta** (ID-38).
+ * crear la carpeta**.
  */
 export interface DestinationSource {
   /**
@@ -68,8 +68,7 @@ export interface DestinationSource {
  *
  * Bajo el sandbox esto no es comodidad: la aplicación nunca conoce la ruta del
  * documento y el usuario nunca la ve (ADR-0011), así que abrir el PDF y abrir
- * su carpeta son las dos únicas formas de llegar a lo que se acaba de firmar
- * (ID-79).
+ * su carpeta son las dos únicas formas de llegar a lo que se acaba de firmar.
  *
  * Ninguno de los dos métodos recibe nada: el documento que se abre es el de la
  * última firma, y quién es lo sabe el backend, que es el único que tiene su
@@ -79,7 +78,7 @@ export interface DestinationSource {
 export interface SignedDocumentOpener {
   /** Abre el PDF firmado con el visor del sistema, o el abierto tras el asa si se da. */
   openDocument(documentId?: string): Promise<void>;
-  /** Abre la carpeta donde quedó, con las firmas anteriores dentro (ID-81), o la del abierto. */
+  /** Abre la carpeta donde quedó, con las firmas anteriores dentro, o la del abierto. */
   openFolder(documentId?: string): Promise<void>;
 }
 
@@ -119,7 +118,7 @@ const ELLIPSIS = "…";
 /**
  * El destino recortado para caber, **conservando lo que se mira**.
  *
- * Tres reglas, y son el componente entero (ID-64):
+ * Tres reglas, y son el componente entero:
  *
  * 1. El nombre se recorta **por el medio**: se conservan siempre la extensión y
  *    el sufijo `-firmado` con su número de desempate —`-2`, `-3`—, porque son la

@@ -13,10 +13,10 @@ interface NewVersionStripProps {
 }
 
 /**
- * El único inquilino de la franja (ID-354). Si la versión se puede instalar
+ * El único inquilino de la franja. Si la versión se puede instalar
  * desde aquí, la acción es «Actualizar ahora»; si no, no descarga nada: lleva
- * a *Acerca de*, que es donde están las órdenes de alta del repositorio
- * (ID-181), y así el `opener:deny-open-url` del ID-85 sigue sin hacer falta.
+ * a *Acerca de*, que es donde están las órdenes de alta del repositorio, y así el
+ * `opener:deny-open-url` sigue sin hacer falta.
  */
 export function NewVersionStrip({ newVersion, onOpen, onDismiss }: NewVersionStripProps) {
   const { t } = useTranslation();

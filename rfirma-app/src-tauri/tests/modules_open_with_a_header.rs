@@ -1,4 +1,4 @@
-//! Guarda de los índices: en el backend y en la interfaz cada módulo abre con una cabecera `//!` que dice qué es, y `just outline <directorio>/` las junta (ADR-0017).
+//! Guarda de las cabeceras: en el backend y en la interfaz cada módulo abre con una `//!` de una frase y 300 caracteres como mucho, que `just outline <directorio>/` junta (ADR-0017).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -189,9 +189,7 @@ fn a_header_is_one_line_and_the_prose_below_it_is_free() {
 }
 
 #[test]
-fn a_header_that_cites_the_spec_or_explains_how_it_works_is_caught() {
-    assert!(what_is_wrong_with_the_header("//! Lo que ya no compila (#439, #441).\n").is_some());
-    assert!(what_is_wrong_with_the_header("//! Lo que sea (ID-215).\n").is_some());
+fn a_header_that_explains_how_it_works_is_caught() {
     let long = format!("//! {}\n", "y ademas ".repeat(40));
     assert!(what_is_wrong_with_the_header(&long).is_some());
     assert_eq!(
@@ -203,31 +201,8 @@ fn a_header_that_cites_the_spec_or_explains_how_it_works_is_caught() {
 /// Lo que cabe en una cabecera: una frase que dice qué es el fichero.
 const THE_LONGEST_HEADER: usize = 300;
 
-/// Prefijos de los identificadores de la especificación, que mueren con ella.
-const SPEC_CITATIONS: [&str; 4] = ["ID-", "TD-", "RD-", "RT-"];
-
-/// Comprueba si el texto cita un identificador de la especificación o un número de issue.
-fn cites_something_that_dies(header: &str) -> bool {
-    let dies_after = |prefix: &str| {
-        header
-            .match_indices(prefix)
-            .any(|(at, _)| header[at + prefix.len()..].starts_with(|c: char| c.is_ascii_digit()))
-    };
-    let is_an_issue = header.match_indices('#').any(|(at, _)| {
-        let before_it_starts = at == 0 || matches!(&header[at - 1..at], " " | "(");
-        before_it_starts && header[at + 1..].starts_with(|c: char| c.is_ascii_digit())
-    });
-
-    SPEC_CITATIONS.iter().any(|prefix| dies_after(prefix)) || is_an_issue
-}
-
 /// Lo que sobra de una cabecera, si sobra algo.
 fn what_is_wrong_with(header: &str) -> Option<String> {
-    if cites_something_that_dies(header) {
-        return Some(
-            "cita un ID-NN o un numero de issue, que mueren antes que el codigo".to_owned(),
-        );
-    }
     let length = header.chars().count();
     if length > THE_LONGEST_HEADER {
         return Some(format!(
@@ -235,19 +210,4 @@ fn what_is_wrong_with(header: &str) -> Option<String> {
         ));
     }
     None
-}
-
-#[test]
-fn what_counts_as_a_citation_that_dies() {
-    assert!(cites_something_that_dies("Lo que sea (ID-215)."));
-    assert!(cites_something_that_dies("Lo que sea (TD-9)."));
-    assert!(cites_something_that_dies("Lo que sea, del #453."));
-    assert!(!cites_something_that_dies("Lo que sea (ADR-0017)."));
-    assert!(!cites_something_that_dies(
-        "El identificador RD del formulario."
-    ));
-    assert!(
-        !cites_something_that_dies("El modulo PKCS#11 del sistema."),
-        "PKCS#11 no es un numero de issue"
-    );
 }

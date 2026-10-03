@@ -10,8 +10,7 @@ import type { PdfDocument, PdfLoader, PdfPage, Viewport } from "./pdf";
 GlobalWorkerOptions.workerSrc = workerSource;
 
 /**
- * Dónde están las catorce fuentes estándar, que las empaqueta `vite.config.ts`
- * (ID-112).
+ * Dónde están las catorce fuentes estándar, que las empaqueta `vite.config.ts`.
  *
  * Sin esto `pdf.js` avisa y sustituye por una fuente del sistema: pinta igual
  * —está medido—, pero con otras métricas, y el corte de línea del texto que se
@@ -38,7 +37,7 @@ export function pdfjsLoader(): PdfLoader {
       // `pdf.js` tipa el diccionario de información como `Object` a secas, así
       // que el `/Title` hay que estrecharlo aquí: es una cadena si el PDF lo
       // trae, y no está si no. Sin título es `null`, que es lo que la ventana
-      // de sede entiende por «Documento sin título» (ID-270).
+      // de sede entiende por «Documento sin título».
       const { info } = (await document.getMetadata()) as { info: { Title?: string } };
       return {
         pageCount: document.numPages,

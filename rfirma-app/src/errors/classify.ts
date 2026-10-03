@@ -3,7 +3,7 @@
 import type { ErrorSituation } from "./ErrorNotice";
 
 /**
- * Un fallo con la forma del ID-29: una **situación** nuestra, que el catálogo
+ * Un fallo: una **situación** nuestra, que el catálogo
  * traduce, y el texto original **crudo** al lado.
  *
  * Es la misma forma que `commands::Failure` en Rust, campo a campo.
@@ -41,7 +41,7 @@ function isRejectedFailure(thrown: unknown): thrown is RejectedFailure {
  * que no supimos clasificar (ADR-0009).
  *
  * Vive aquí y no en `tauri.ts` porque no es conocimiento de Tauri: es la forma
- * del ID-29, y la comparten el puente de firma y el visor.
+ * de un fallo, y la comparten el puente de firma y el visor.
  */
 export function classify(thrown: unknown): NamedFailure {
   if (isRejectedFailure(thrown)) {

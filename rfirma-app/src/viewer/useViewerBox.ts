@@ -22,7 +22,7 @@ import { useBoxTrace } from "./useBoxTrace";
 
 /**
  * Lo que se mueve el recuadro con una flecha, y con la flecha más `Shift`,
- * **en puntos de espacio de usuario** (ID-115).
+ * **en puntos de espacio de usuario**.
  *
  * En píxeles del lienzo el gesto dependía del zoom: al 300 % una flecha movía
  * un tercio de punto y al 50 % movía dos, así que colocar con precisión pedía
@@ -72,12 +72,12 @@ export function useViewerBox({
   // oculto: el trazo le escribe la geometría a mano, sin pasar por React.
   const ghost = useRef<HTMLDivElement>(null);
   // El recuadro acaba de nacer de un trazo y se lleva el foco en cuanto se
-  // pinte: el gesto grueso y el ajuste fino con las flechas (ID-115) son un
+  // pinte: el gesto grueso y el ajuste fino con las flechas son un
   // solo movimiento.
   const focusBox = useRef(false);
 
   // El recuadro se pinta **idéntico en todas las páginas del conjunto y en
-  // ninguna más** (ID-96). La página donde se arrastró no se dibuja distinta
+  // ninguna más**. La página donde se arrastró no se dibuja distinta
   // —inventaría una diferencia que el PDF no tiene—, y fuera del conjunto la
   // página va en blanco: ni un fantasma a trazos, que insinuaría que ahí hay
   // algo. Quien quiera saberlo lo lee en la pastilla, con palabras.
@@ -87,12 +87,12 @@ export function useViewerBox({
 
   // Al cambiar de página, un recuadro que quede fuera de la parte visible se
   // trae a ella. **Una sola vez, en el cambio de página**: hacerlo al repintar
-  // o al cambiar el zoom impediría mirar otra zona de la misma página (ID-118).
+  // o al cambiar el zoom impediría mirar otra zona de la misma página.
   //
   // La página se da por atendida **en cuanto se ha podido mirar**, haya
-  // recuadro o no: el recuadro se pinta sólo en su página (ID-96), así que
+  // recuadro o no: el recuadro se pinta sólo en su página, así que
   // marcarla sólo cuando lo hay dejaba la marca clavada en la página del
-  // recuadro y el regreso a ella —el único caso que el ID-118 quiere cubrir—
+  // recuadro y el regreso a ella —el único caso que importa—
   // salía por la guarda sin hacer nada.
   const broughtIn = useRef(page);
   useEffect(() => {
@@ -116,7 +116,7 @@ export function useViewerBox({
    *
    * El conjunto de páginas **no lo toca el gesto**: mover el recuadro de una
    * página del conjunto lo mueve en todas, porque es un solo campo de firma con
-   * el widget replicado (ID-96).
+   * el widget replicado.
    */
   const place = (moved: PixelRect) => {
     if (!viewport || !placement) return;
@@ -131,7 +131,7 @@ export function useViewerBox({
     onPointerDown: (event) => {
       // Agarrar el recuadro **no es** trazar sobre la hoja: sin esto el mismo
       // `pointerdown` arrancaría los dos gestos, porque el recuadro vive dentro
-      // de la hoja y el trazo escucha allí (#190).
+      // de la hoja y el trazo escucha allí.
       event.stopPropagation();
       handlers.onPointerDown(event);
       // La misma guardia que `useBoxDrag`: con el botón secundario no arranca
@@ -155,8 +155,8 @@ export function useViewerBox({
     box: boxElement,
     rect: pixels ?? { x: 0, y: 0, width: 0, height: 0 },
     page: viewport ?? { width: 0, height: 0 },
-    // El mínimo es del papel y la comparación de la pantalla: los puntos del
-    // ID-103, a la escala a la que se está mirando.
+    // El mínimo es del papel y la comparación de la pantalla: los puntos de
+    // `MIN_BOX_POINTS`, a la escala a la que se está mirando.
     min: { width: MIN_BOX_POINTS.width * zoom, height: MIN_BOX_POINTS.height * zoom },
     onDrop: place,
     onOutOfPage: () => setOutOfPage(true),
@@ -164,16 +164,16 @@ export function useViewerBox({
 
   /**
    * La colocación que resulta de sellar la página que se mira, con el recuadro
-   * en `rect` (ID-101, ID-102).
+   * en `rect`.
    *
    * Es la regla del conjunto y **la comparten los dos gestos que sellan**: la
-   * pastilla, que no toca el rectángulo, y el trazo, que trae uno nuevo (#190).
+   * pastilla, que no toca el rectángulo, y el trazo, que trae uno nuevo.
    * Trazar es «sellar esta página» con sitio elegido, así que dos reglas
    * habrían sido dos maneras de contestar a la misma pregunta.
    *
    * Con `Solo 1 página` sellar **sustituye**: esa opción no puede nombrar dos, y
    * sumar aquí dejaba la 1 y la 2 selladas a la vez con el panel diciendo
-   * «Página 1» (#188). Con las otras dos se añade, que es lo que significan.
+   * «Página 1». Con las otras dos se añade, que es lo que significan.
    */
   const placedAt = (rect: UserSpaceRect): Placement => {
     if (placement === null) {
@@ -196,11 +196,11 @@ export function useViewerBox({
   };
 
   /**
-   * El recuadro trazado sobre la hoja, que es el gesto que lo hace nacer (#190).
+   * El recuadro trazado sobre la hoja, que es el gesto que lo hace nacer.
    *
    * Trazar dice dos cosas —esta página y aquí— y se aplican las dos: el
    * rectángulo se mueve **en todas las páginas del conjunto**, porque el PDF
-   * lleva un solo campo de firma con el widget replicado (ID-96), y el conjunto
+   * lleva un solo campo de firma con el widget replicado, y el conjunto
    * cambia según la opción activa, igual que al sellar.
    */
   const trace = (traced: PixelRect) => {
@@ -236,17 +236,16 @@ export function useViewerBox({
   };
 
   // El botón que sella o quita el sello vive en el panel; la petición cruza
-  // como `placementRequest` y se atiende aquí, que es donde vive el `viewport`
-  // (#194). El guardado por identidad es el mismo patrón que usaba
-  // `goToPage`: pulsar el mismo botón dos veces tiene que actuar las dos
-  // veces, aunque la acción no haya cambiado.
+  // como `placementRequest` y se atiende aquí, que es donde vive el `viewport`. Se guarda la
+  // identidad de la petición: pulsar el mismo botón dos veces tiene que actuar las dos veces,
+  // aunque la acción no haya cambiado.
   const requestedPlacement = useRef(placementRequest);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `seal` y `unseal` se recrean en cada pintada; lo que dispara el efecto es la identidad de `placementRequest`, no ellas.
   useEffect(() => {
     if (placementRequest === null || placementRequest === requestedPlacement.current) return;
     requestedPlacement.current = placementRequest;
     // Sin firma visible que colocar no hay nada que sellar: atenderla colocaba
-    // un recuadro que después no se pintaba en ninguna parte (#190).
+    // un recuadro que después no se pintaba en ninguna parte.
     if (!canPlace) return;
     if (placementRequest.action === "seal") seal();
     else unseal();
@@ -254,13 +253,12 @@ export function useViewerBox({
 
   /**
    * El recuadro atiende **sólo las flechas**, y `Esc` devuelve el foco a la
-   * hoja (ID-113). Todo lo demás —las teclas de página— se deja burbujear
+   * hoja. Todo lo demás —las teclas de página— se deja burbujear
    * hasta la hoja, así que se pasa de página sin salir del recuadro.
    *
    * El empuje es de **un punto de espacio de usuario**, y 10 con `Shift`: como
    * la guardia de «cabe en la página» trabaja en píxeles del lienzo, el paso se
-   * convierte aquí, y a la escala del viewport un punto son `zoom` píxeles
-   * (ID-115).
+   * convierte aquí, y a la escala del viewport un punto son `zoom` píxeles.
    */
   const nudge = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === "Escape") {

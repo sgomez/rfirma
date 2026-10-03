@@ -28,7 +28,7 @@ export interface SignedDocument {
    * Cuántos bytes ocupa el fichero que ha quedado.
    *
    * Lo cuenta la postfirma al escribirlo y **no se recalcula** abriéndolo otra
-   * vez (ID-77): la ventana ni siquiera conoce su ruta para poder hacerlo.
+   * vez: la ventana ni siquiera conoce su ruta para poder hacerlo.
    */
   sizeBytes: number;
 }
@@ -41,7 +41,7 @@ export interface SignedDocument {
  * sello de sesión. Lo que la ventana no tiene no lo puede alterar (ADR-0016).
  */
 export interface SigningOrder {
-  /** El identificador que acuñó el backend al abrir el documento (ID-62). */
+  /** El identificador que acuñó el backend al abrir el documento. */
   document: string;
   /**
    * El **asa** del certificado elegido, la que acuñó el backend al listar.
@@ -53,24 +53,24 @@ export interface SigningOrder {
    */
   certificate: string;
   /**
-   * Dónde cae el recuadro, en **espacio de usuario PDF** (ID-21), con la
+   * Dónde cae el recuadro, en **espacio de usuario PDF**, con la
    * `MediaBox` y la `/Rotate` de la página; `null` si la firma no es visible.
    *
    * No en puntos PAdES: la inversa de la rotación que iText aplica al cerrar el
    * documento la hace `signing::placement` en el backend, y con ella viene la
-   * guardia del ID-22. Una tabla por rotación en TypeScript sería una copia de
+   * guardia. Una tabla por rotación en TypeScript sería una copia de
    * ese módulo, y divergiría en la primera esquina.
    */
   placement: {
     /**
      * La página cuya `MediaBox` y `/Rotate` acompañan al recuadro, **1-based**
      * como la numera `pdf.js`. Es la primera del conjunto: el widget se replica
-     * idéntico en todas (ID-96), así que cualquiera daría la misma conversión.
+     * idéntico en todas, así que cualquiera daría la misma conversión.
      */
     page: number;
-    /** En qué páginas se estampa el recuadro (ID-90). */
+    /** En qué páginas se estampa el recuadro. */
     pages: PageSet;
-    /** Cuántas páginas tiene el documento, para validar el destino (ID-94). */
+    /** Cuántas páginas tiene el documento, para validar el destino. */
     pageCount: number;
     /** `[x0, y0, x1, y1]` de la `MediaBox`. */
     mediaBox: readonly [number, number, number, number];
@@ -91,7 +91,7 @@ export interface SigningOrder {
   language: string;
   /**
    * Que la persona ya ha dicho que sí a cofirmar un PDF con **firmas que
-   * rFirma no sabe leer** (ID-297, ID-301).
+   * rFirma no sabe leer**.
    *
    * Sin ese permiso el backend no le manda al puente
    * `allowCosigningUnregisteredSignatures`, y el puente aborta la cofirma:
@@ -116,7 +116,7 @@ export interface SigningBackend {
   /**
    * Etapa 1: prepara lo que hay que firmar. No toca la clave privada.
    *
-   * Devuelve **cómo hay que pedirle el secreto al almacén** (ID-189, ID-190):
+   * Devuelve **cómo hay que pedirle el secreto al almacén**:
    * la ventana la lee para decidir entre abrir el diálogo del secreto y firmar
    * directo.
    */
@@ -124,7 +124,7 @@ export interface SigningBackend {
   /**
    * Etapa 2: firma el hash en la tarjeta, con el secreto que ya se tiene: el
    * PIN que el usuario tecleó, o la cadena vacía cuando `presign` devolvió
-   * `notNeeded` y nadie ha tecleado nada (ID-190).
+   * `notNeeded` y nadie ha tecleado nada.
    */
   sign(pin: string): Promise<StageResult<void>>;
   /**
@@ -136,7 +136,7 @@ export interface SigningBackend {
   postsign(singleDestinationId?: string | null): Promise<StageResult<SignedDocument>>;
   /**
    * La esquina inferior izquierda de `placement.rect`, convertida a puntos
-   * PAdES (ID-105).
+   * PAdES.
    *
    * No es una etapa de la firma trifásica —no toca el ciclo ni la clave—: es
    * geometría pura, la misma `T⁻¹` de `signing::placement` que arma la orden
@@ -148,11 +148,11 @@ export interface SigningBackend {
     placement: NonNullable<SigningOrder["placement"]>,
   ): Promise<readonly [number, number]>;
   /**
-   * Si el documento trae **firmas que rFirma no sabe leer** (ID-297, ID-300).
+   * Si el documento trae **firmas que rFirma no sabe leer**.
    *
    * Tampoco es una etapa: se decide sobre los bytes, sin token y sin cruzar la
    * frontera, y se pregunta **antes** del PIN para que el aviso quepa delante
-   * de él. No dice cuántas hay ni de quién son, y no las valida (ID-305).
+   * de él. No dice cuántas hay ni de quién son, y no las valida.
    */
   unregisteredSignatures(document: string): Promise<boolean>;
   /**
@@ -183,7 +183,7 @@ export interface SigningBackend {
 /**
  * Un firmante que **no firma**, y lo dice.
  *
- * Desde el #60 quien firma de verdad es `tauriSigningBackend`, así que esto ya
+ * Quien firma de verdad es `tauriSigningBackend`, así que esto ya
  * no es el relleno de `main.tsx` sino un doble: sirve para montar la ventana en
  * una prueba sin backend, y para cualquier composición que no deba llegar a
  * firmar. Falla diciendo la verdad en vez de fingir una firma, que es lo único

@@ -42,9 +42,9 @@ interface SignFlowInput {
 }
 
 /**
- * La firma **entera**: la vista previa del sello (ID-107), la orden que se
- * manda y los tres avisos que pueden interponerse antes del PIN (ID-105,
- * ID-297…ID-301, y el de las firmas previas no válidas).
+ * La firma **entera**: la vista previa del sello, la orden que se
+ * manda y los tres avisos que pueden interponerse antes del PIN (páginas sin sello, firmas sin
+ * registrar y firmas previas no válidas).
  */
 export function useSignFlow({
   pdf,
@@ -65,7 +65,7 @@ export function useSignFlow({
   previousSignatures,
   startSigning,
 }: SignFlowInput) {
-  // El diálogo de páginas sin sello (ID-105), guardado con la orden y el
+  // El diálogo de páginas sin sello, guardado con la orden y el
   // certificado ya armados: `Firmar de todos modos` no rehace el viaje a
   // `pdf.js`, manda exactamente lo que se enseñó.
   const [sealLossPrompt, setSealLossPrompt] = useState<{
@@ -74,7 +74,7 @@ export function useSignFlow({
     certificate: Certificate;
     order: SigningOrder;
   } | null>(null);
-  // El aviso de las firmas sin registrar (ID-297…ID-301), guardado igual que el
+  // El aviso de las firmas sin registrar, guardado igual que el
   // anterior: decir que sí no rehace el viaje a `pdf.js`, manda la misma orden
   // con el permiso puesto.
   const [unregisteredPrompt, setUnregisteredPrompt] = useState<{
@@ -89,7 +89,7 @@ export function useSignFlow({
     readonly PreviousSignature[] | null
   >(null);
 
-  // ── La vista previa del sello (ID-107) ───────────────────────────────────
+  // ── La vista previa del sello ───────────────────────────────────
   //
   // La orden en seco es **la misma** que se manda a firmar: por eso lo que se
   // ve dentro del recuadro coincide con el PDF firmado, y no porque nadie lo
@@ -148,7 +148,7 @@ export function useSignFlow({
    *
    * La `MediaBox` y la `/Rotate` salen de la página abierta porque el backend
    * **no lee PDFs**: la conversión del recuadro a puntos PAdES es suya
-   * (`signing::placement`, con la guardia del ID-22), pero los datos de la
+   * (`signing::placement`), pero los datos de la
    * página los tiene `pdf.js`.
    */
   const sign = async () => {
@@ -190,7 +190,7 @@ export function useSignFlow({
       language,
     });
 
-    // ID-297 / ID-300: si el documento trae firmas que no sabemos leer, la
+    // Si el documento trae firmas que no sabemos leer, la
     // pregunta va **antes** del PIN. No es un rechazo: sin ella el puente
     // aborta la cofirma con `PdfHasUnregisteredSignaturesException`, y con un
     // «sí» la orden sale con el permiso puesto. Si la orden que lo averigua
@@ -222,10 +222,10 @@ export function useSignFlow({
       await startSigning(chosen, order, singleDestinationId);
       return;
     }
-    // ID-105: `correctPositionSignature` descarta en silencio, contra cada
+    // `correctPositionSignature` descarta en silencio, contra cada
     // página, aquella donde no cabe la esquina inferior izquierda del
     // recuadro. Es el único aviso que queda desde que se cayó la tira del
-    // visor (#152), así que se calcula aquí, antes de mandar la orden.
+    // visor, así que se calcula aquí, antes de mandar la orden.
     //
     // La esquina se compara en **puntos PAdES**, no en espacio de usuario
     // PDF: son espacios distintos en cuanto la `/Rotate` no es 0, y la
@@ -251,7 +251,7 @@ export function useSignFlow({
   };
 
   // `Firmar de todos modos` del aviso de las firmas sin registrar: la misma
-  // orden, ahora con el permiso que el puente necesita (ID-301).
+  // orden, ahora con el permiso que el puente necesita.
   const signWithUnregisteredSignatures = async () => {
     if (unregisteredPrompt === null || pdf === null) return;
     const { certificate: chosen, order } = unregisteredPrompt;

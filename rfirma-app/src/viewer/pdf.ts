@@ -18,10 +18,9 @@ export interface Viewport {
   /** Alto del lienzo, en píxeles, ya multiplicado por la escala. */
   readonly height: number;
   /**
-   * Píxeles del lienzo → **espacio de usuario PDF**. Es el paso 1 del ID-21, y
-   * el único punto del frontal donde se convierten coordenadas: invierte la
-   * matriz del viewport, que deshace de golpe la escala, el volteo del eje Y,
-   * la `/Rotate` y el origen de la MediaBox.
+   * Píxeles del lienzo → **espacio de usuario PDF**. Es el único punto del frontal donde se
+   * convierten coordenadas: invierte la matriz del viewport, que deshace de golpe la escala, el
+   * volteo del eje Y, la `/Rotate` y el origen de la MediaBox.
    */
   convertToPdfPoint(x: number, y: number): [number, number];
   /** Espacio de usuario PDF → píxeles del lienzo. Lo inverso del anterior. */
@@ -76,7 +75,7 @@ export interface PdfDocument {
    *
    * Es **opcional** porque el visor no lo mira: quien lo necesita es la ventana
    * de sede, donde el título de los metadatos es lo único que hay para nombrar
-   * el documento que manda la sede (ID-270). Un doble de las pruebas que no lo
+   * el documento que manda la sede. Un doble de las pruebas que no lo
    * ponga sigue siendo un `PdfDocument`.
    */
   readonly title?: string | null;

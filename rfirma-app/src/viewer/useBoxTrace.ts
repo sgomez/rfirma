@@ -7,8 +7,8 @@ import type { BoxDragHandlers } from "./useBoxDrag";
 /**
  * El desplazamiento por debajo del cual no hay trazo, **en píxeles de pantalla**.
  *
- * No escala con el zoom, por la misma razón que el lado de los tiradores
- * (ID-104): mide la intención de la mano, no el documento. Y existe porque la
+ * No escala con el zoom, por la misma razón que el lado de los tiradores: mide la intención de la
+ * mano, no el documento. Y existe porque la
  * hoja es también lo que se enfoca para pasar de página con el teclado, así que
  * un clic seco sobre ella significa «dame el foco» y no puede pasar a colocar
  * una firma.
@@ -22,7 +22,7 @@ const TRACE_THRESHOLD_PX = 4;
  * Aplicarlo durante el gesto lo delataba: pasado el umbral, el fantasma pegaba
  * un salto al tamaño mínimo y se quedaba ahí, quieto y despegado del cursor,
  * hasta que el recorrido lo alcanzaba. El mínimo es una regla sobre **el
- * recuadro que queda** (ID-103), no sobre el gesto que lo dibuja, así que se
+ * recuadro que queda**, no sobre el gesto que lo dibuja, así que se
  * aplica al soltar.
  */
 const NO_MINIMUM: PageSize = { width: 0, height: 0 };
@@ -39,7 +39,7 @@ interface BoxTraceOptions {
   ghost: RefObject<HTMLElement | null>;
   /** El lienzo, que es lo que el trazo no puede desbordar. */
   page: PageSize;
-  /** El mínimo del ID-103, ya en píxeles del lienzo. */
+  /** El mínimo, ya en píxeles del lienzo. */
   min: PageSize;
   /** Se ha trazado un recuadro: esto es la colocación nueva. */
   onTrace: (traced: PixelRect) => void;
@@ -55,7 +55,7 @@ interface Trace {
 }
 
 /**
- * **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer (#190).
+ * **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer.
  *
  * Es el hermano de [`useBoxDrag`](./useBoxDrag.ts) y no un tercer modo suyo, y
  * la diferencia está en el ciclo de vida: aquel edita un elemento que ya está
@@ -138,7 +138,7 @@ export function useBoxTrace({
     // esto fue un clic y la hoja se queda con el foco y nada más.
     if (current.to === null) {
       // Un clic sobre la hoja es **«dame el foco»**: es lo que deja pasar de
-      // página con `AvPág` y `RePág` (ID-113). Sin esto el foco se quedaba donde
+      // página con `AvPág` y `RePág`. Sin esto el foco se quedaba donde
       // estuviera y esas teclas desplazaban la vista en vez de pasar de página.
       sheet.current?.focus({ preventScroll: true });
       return;

@@ -41,36 +41,35 @@ interface DocumentViewerProps {
   /**
    * Dónde va la firma visible y en qué páginas, en espacio de usuario. `null`
    * es **el documento recién abierto**: sin ninguna página sellada no hay
-   * recuadro en ninguna parte (ID-92).
+   * recuadro en ninguna parte.
    */
   placement: Placement | null;
   /**
    * El recuadro ha cambiado de sitio, de tamaño o de conjunto de páginas.
    *
    * `null` es quitar la colocación entera, que es lo que deja quitar el sello
-   * de la última página del conjunto (ID-92).
+   * de la última página del conjunto.
    */
   onPlace: (placement: Placement | null) => void;
   /**
    * Cuál de las tres opciones del panel manda sobre el conjunto de páginas.
    *
-   * El visor no la elige: la lee para saber si sellar sustituye o añade
-   * (ID-96). Por omisión, `these`.
+   * El visor no la elige: la lee para saber si sellar sustituye o añade. Por omisión, `these`.
    */
   pageChoice?: PageChoice;
   /**
    * La página que se está mirando ha cambiado.
    *
    * El visor la sigue eligiendo él —el recorrido es suyo—, pero el panel la
-   * necesita para elegir la cara del botón de sellar (#194, antes ID-100).
+   * necesita para elegir la cara del botón de sellar.
    */
   onPageChange?: (page: number) => void;
   /**
    * El botón de sellar vive en el panel, pero sellar y quitar el sello siguen
    * siendo del visor: es quien tiene el `viewport` de `pdf.js` que mide la
-   * posición estándar del recuadro (#194).
+   * posición estándar del recuadro.
    *
-   * **Cada petición es un objeto nuevo**, igual que antes `goToPage`: pulsar
+   * **Cada petición es un objeto nuevo**: pulsar
    * el mismo botón dos veces tiene que actuar las dos veces, así que lo que
    * dispara la acción es la identidad y no el valor.
    */
@@ -97,13 +96,13 @@ interface DocumentViewerProps {
   onOpenHelp?: () => void;
   /**
    * Se puede colocar la firma visible ahora mismo: el interruptor está
-   * encendido **y** hay un certificado utilizable (ID-108).
+   * encendido **y** hay un certificado utilizable.
    *
    * Los tres caminos que colocan cuelgan de esto: sin ello no hay recuadro
    * pintado, no hay pastilla que ofrezca sellar y la hoja no traza. Es la misma
    * pregunta que el panel contesta apagando su bloque entero —«Elige un
    * certificado para colocar la firma visible»—, y el visor tenía su propia
-   * copia del estado que no la respetaba (#190).
+   * copia del estado que no la respetaba.
    *
    * La colocación **no se borra** al perderla: vive en quien la recuerda y
    * vuelve intacta, así que aquí sólo se deja de pintar.
@@ -111,7 +110,7 @@ interface DocumentViewerProps {
   canPlace?: boolean;
   /**
    * El documento **con el sello ya estampado**, que se pinta en lugar del
-   * original mientras esté compuesto (ID-107).
+   * original mientras esté compuesto.
    *
    * Es la pieza entera de «dentro del recuadro va el sello de verdad»: el visor
    * no dibuja nada nuevo, pinta otro PDF. Los bytes visibles de ese PDF están
@@ -122,8 +121,7 @@ interface DocumentViewerProps {
    */
   stamped?: PdfDocument | null;
   /**
-   * El gesto está en curso: la vista anterior queda **congelada y atenuada**
-   * (ID-109).
+   * El gesto está en curso: la vista anterior queda **congelada y atenuada**.
    *
    * Congelada sale gratis —quien no recompone es quien entrega `stamped`—; lo
    * que se pinta aquí es el atenuado, sobre el recuadro de antes del gesto.
@@ -134,11 +132,11 @@ interface DocumentViewerProps {
    *
    * Lo necesita quien compone el sello: recalcular por fotograma cuesta ≈1,9 s
    * y 507 MB de RSS en el peor documento medido, así que el ciclo se pide **al
-   * soltar** y no durante el arrastre (ID-109).
+   * soltar** y no durante el arrastre.
    */
   onGesture?: (active: boolean) => void;
   /**
-   * En qué estado está el sello que se ve **sobre la hoja** (ID-107, #202).
+   * En qué estado está el sello que se ve **sobre la hoja**.
    *
    * Es lo único que la pastilla flotante cuenta: sin certificado, sin colocar
    * y «al día» no dicen nada —no hay sello del que hablar, o ya no hace falta
@@ -160,9 +158,9 @@ interface DocumentViewerProps {
  * tres gestos del recuadro— vive en [`useViewerPage`](./useViewerPage.ts) y
  * [`useViewerBox`](./useViewerBox.ts); este componente sólo es el JSX.
  *
- * El recuadro vive **en espacio de usuario PDF** (ID-21): los píxeles se
+ * El recuadro vive **en espacio de usuario PDF**: los píxeles se
  * derivan del viewport en cada pintada, nunca al revés, así que el zoom es
- * puramente visual. Y se coloca **libremente**, sin rejilla (ID-26).
+ * puramente visual. Y se coloca **libremente**, sin rejilla.
  *
  * **No hay pan por arrastre.** El documento se desplaza con la barra de
  * desplazamiento y la rueda, que es lo que ya hace el WebView, así que el
@@ -287,7 +285,7 @@ export function DocumentViewer({
         <div
           ref={sheet}
           // El `crosshair` es lo único que anuncia el trazo: es el único de los
-          // tres caminos que no tiene un botón ni un campo que lo cuente (#190).
+          // tres caminos que no tiene un botón ni un campo que lo cuente.
           className={`viewer__sheet${canPlace ? " viewer__sheet--traceable" : ""}`}
           data-theme="light"
           role="document"
@@ -344,7 +342,7 @@ export function DocumentViewer({
                 />
               )}
               {/*
-                Los tiradores son **cromo, no papel** (ID-104): el lado va en
+                Los tiradores son **cromo, no papel**: el lado va en
                 línea, en píxeles de pantalla, para que mida lo mismo al 50 %,
                 al 100 % y al 300 %. El recuadro sí escala, porque es la hoja.
               */}
@@ -361,7 +359,7 @@ export function DocumentViewer({
             </div>
           )}
           {/*
-            El atenuado del gesto (ID-109). Va sobre el recuadro **de antes**,
+            El atenuado del gesto. Va sobre el recuadro **de antes**,
             que es donde sigue el sello congelado: el que se arrastra se ha ido
             con el puntero, y atenuar la hoja entera atenuaría el documento, que
             es justo lo que hay que seguir viendo debajo.
@@ -382,7 +380,7 @@ export function DocumentViewer({
       </div>
 
       {/*
-        Un solo inquilino en el hueco sobre la botonera (#202): `outOfPage` no
+        Un solo inquilino en el hueco sobre la botonera: `outOfPage` no
         se apaga al soltar, solo con la siguiente colocación válida (`place`,
         `seal`, `trace`, `unseal` o `goTo`), así que el aviso puede seguir
         puesto —y la pastilla del sello escondida con él— después de que el
@@ -459,8 +457,8 @@ export function DocumentViewer({
         </button>
         {/*
           El porcentaje se teclea: con el zoom continuo, los botones ya no
-          alcanzan cualquier valor, y «ponlo al 150 %» tiene que poder escribirse
-          (ID-116). Se recorta al rango en vez de rechazarse.
+          alcanzan cualquier valor, y «ponlo al 150 %» tiene que poder escribirse. Se recorta al
+          rango en vez de rechazarse.
         */}
         <input
           className="rf-input viewer__zoom"

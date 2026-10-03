@@ -14,7 +14,7 @@ import type { DocumentInHand } from "./document";
  * Devuelve el documento ya canonicalizado y con sus metadatos, porque eso lo
  * sabe quien tocó el disco y no la interfaz. Y devuelve un documento **en la
  * mano**, no una fila: quien decide si se anota es la bandeja, y lo que sale
- * del diálogo se recuerda porque lo eligió una persona (ID-287).
+ * del diálogo se recuerda porque lo eligió una persona.
  */
 export interface DocumentPicker {
   /** Abre el explorador del sistema. `null` si se cancela. */

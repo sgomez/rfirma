@@ -29,7 +29,7 @@ export type CertificateStatus =
    *
    * Cruza con su carga desde `pkcs11::certificate` igual que `expired` y
    * `revoked`: sin ella, `refusalFor` acababa fabricando la prosa del detalle
-   * justo en el hueco que el ID-29 reserva al texto original crudo, y el
+   * justo en el hueco que se reserva al texto original crudo, y el
    * informe de fallo perdía lo único que servía para diagnosticarlo.
    */
   | { kind: "unreadable"; detail: string };
@@ -37,9 +37,9 @@ export type CertificateStatus =
 /**
  * De qué clase es el almacén de donde salió el certificado.
  *
- * `installed` es el `.p12` que se metió en rFirma desde Preferencias (ID-192):
+ * `installed` es el `.p12` que se metió en rFirma desde Preferencias:
  * es la única clase que se puede **quitar**, y por eso la lista de esa pantalla
- * se queda exactamente con ella (ID-198).
+ * se queda exactamente con ella.
  *
  * Cruza la frontera como **clase en inglés** y nunca como texto ya escrito ni
  * como ruta: el rótulo lo pone el catálogo de esta ventana, igual que hace con
@@ -76,7 +76,7 @@ export interface Certificate {
   surname: string;
   /**
    * El DNI o NIE **en claro**, tal cual viene del RDN `serialNumber`. La
-   * máscara del recuadro la aplica Rust al componer `layer2Text` (ID-19); aquí
+   * máscara del recuadro la aplica Rust al componer `layer2Text`; aquí
    * se enseña tal cual, porque el panel dice con qué identidad se firma y no es
    * el recuadro que se estampa en el PDF.
    */
@@ -99,7 +99,7 @@ export interface Certificate {
   status: CertificateStatus;
   /**
    * Si es **el que se usó la última vez**, y por tanto el que viene ya puesto
-   * en el desplegable al arrancar (#110).
+   * en el desplegable al arrancar.
    *
    * Lo decide el backend y no esta ventana, porque lo que se recordó son
    * coordenadas del token —módulo, etiqueta, `CKA_ID`, perfil— y ninguna de
@@ -160,7 +160,7 @@ export interface CertificateGroups {
   readonly available: readonly Certificate[];
   /**
    * Caducados, todavía no válidos, no leídos o —el día que se empiece a
-   * comprobar la revocación (#194)— revocados: cualquier motivo por el que no
+   * comprobar la revocación— revocados: cualquier motivo por el que no
    * se puede firmar con ellos cae en el mismo grupo, abajo.
    */
   readonly unusable: readonly Certificate[];
@@ -236,7 +236,7 @@ export interface CertificateStore {
 /**
  * Un almacén vacío: ni token ni orden de por medio.
  *
- * Desde el #60 quien habla con PKCS#11 es `tauriCertificateStore`; esto queda
+ * Quien habla con PKCS#11 es `tauriCertificateStore`; esto queda
  * como doble para pintar la ventana sin backend, que es el estado «Sin
  * certificado» de la ficha.
  */
@@ -251,7 +251,7 @@ export function emptyCertificateStore(): CertificateStore {
 
 /**
  * Los que se instalaron en rFirma desde un `.p12`, que son los únicos que
- * Preferencias enseña y los únicos que se pueden quitar (ID-198).
+ * Preferencias enseña y los únicos que se pueden quitar.
  *
  * El orden es el mismo del desplegable —alfabético por primera línea— para
  * que la misma persona salga en el mismo sitio en las dos pantallas, y **los

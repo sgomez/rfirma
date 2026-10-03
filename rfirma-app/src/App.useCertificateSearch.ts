@@ -21,11 +21,11 @@ export function useCertificateSearch(certificates: CertificateStore) {
       const found = await certificates.list();
       setCertificate(chosenFrom(found));
     } catch (thrown) {
-      // El rechazo se recoge **aquí** y no se deja escapar (ID-11): sin este
+      // El rechazo se recoge **aquí** y no se deja escapar: sin este
       // `catch` nadie volvía a llamar a `setCertificate` y la ficha se quedaba
       // girando en «Buscando certificados…» para siempre. Se clasifica con el
       // mismo `classify` que el visor y la rúbrica: no hay dos formas de
-      // contar un error (ID-29).
+      // contar un error.
       setCertificate({ kind: "failed", failure: classify(thrown) });
     }
   }, [certificates]);

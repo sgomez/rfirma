@@ -7,7 +7,7 @@ import type { PdfDocument } from "./pdf";
 import { pdfjsLoader } from "./pdfjsLoader";
 
 /**
- * Por qué no se ha podido pintar un documento, con la forma del ID-29.
+ * Por qué no se ha podido pintar un documento.
  *
  * No lleva `attemptsLeft`: eso es del token, y aquí no hay ninguno.
  */
@@ -33,7 +33,7 @@ type OpenedPdf =
    * leer y no hay una segunda forma de saberlo: bajo el sandbox la aplicación
    * no conoce la ruta del documento, así que nadie puede preguntarle al disco.
    * Quien lo usa es la vista previa del sello, que por encima de cierto tamaño
-   * deja de recalcularse sola (ID-109).
+   * deja de recalcularse sola.
    */
   { ok: true; pdf: PdfDocument; sizeBytes: number } | { ok: false; failure: DocumentFailure };
 
@@ -43,8 +43,8 @@ type OpenedPdf =
  * Es un puerto por lo mismo que lo es el selector: bajo el sandbox los bytes
  * los entrega el **portal**, no una ruta que el WebView pueda abrir. La
  * aplicación nunca conoce la ruta original de un documento, así que aquí no hay
- * ni una URL: entra el documento que se tiene delante —tenga fila detrás o no
- * (ID-287)— y sale el PDF ya abierto.
+ * ni una URL: entra el documento que se tiene delante —tenga fila detrás o no— y sale el PDF ya
+ * abierto.
  */
 export interface PdfSource {
   /** El documento abierto, o el fallo que lo impidió. */
@@ -89,7 +89,7 @@ export function pdfjsSource(read: ReadDocument): PdfSource {
 /**
  * Un origen que **no abre nada**, y lo dice.
  *
- * Desde el #82 quien pinta de verdad es `tauriPdfSource`, así que esto ya no es
+ * Quien pinta de verdad es `tauriPdfSource`, así que esto ya no es
  * el relleno de `main.tsx` sino un doble: sirve para montar la ventana en una
  * prueba sin backend. Falla diciendo la verdad en vez de dejar el visor vacío,
  * que era indistinguible de no haber abierto nada.

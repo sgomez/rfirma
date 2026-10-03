@@ -15,23 +15,22 @@ interface UnsealedPagesDialogProps {
 }
 
 /**
- * El diálogo de páginas sin sello (docs/design/dialogo-paginas-sin-firma-visible.md,
- * ID-105, ID-106).
+ * El diálogo de páginas sin sello (docs/design/dialogo-paginas-sin-firma-visible.md).
  *
  * Aparece **justo antes de firmar**, y solo cuando `correctPositionSignature`
  * se va a comer alguna página en silencio: es el único aviso que hay, porque
- * no queda marca por página en el visor (#152).
+ * no queda marca por página en el visor.
  *
  * Dos cosas que el texto no puede equivocarse:
  *
  * - **«Sin firma visible», nunca «recortadas»**: la firma criptográfica cubre
  *   el documento entero pase lo que pase; lo que falta en esas páginas es la
  *   marca visible, no un trozo de la firma.
- * - **El denominador es el conjunto elegido, no el documento** (ID-106): con
+ * - **El denominador es el conjunto elegido, no el documento**: con
  *   27 páginas, 13 elegidas y 3 que se caen, dice «3 de las 13», nunca
  *   «3 de las 27».
  *
- * Las páginas que se caen no se nombran una a una (ID-106): con doce, una
+ * Las páginas que se caen no se nombran una a una: con doce, una
  * lista de números es una pared que no ayuda a decidir. Solo el recuento.
  */
 export function UnsealedPagesDialog({

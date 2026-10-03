@@ -134,8 +134,8 @@ vas a publicar un issue o una PR.**
 **Una fila de un mapa dice qué es el fichero, y se para ahí.** Una frase, la que
 hace falta para saber si es el que se busca; y, cuando ayude a no confundirlo,
 qué **no** es. El *cómo* funciona lo dice el código, y el porqué un ADR, citado
-por número. Sin tamaños —los da `just outline` en el momento—, sin citas a
-identificadores de spec y sin números de PR o de issue.
+por número. Sin tamaños ni números de línea —los da `just outline` en el momento—, sin
+citas a identificadores de spec y sin números de PR o de issue.
 
 En el backend y en la interfaz no hay filas: la misma regla vale para la primera
 línea `//!` de cada módulo —`.rs`, `.ts` o `.tsx`—, entera en una línea y de 300
@@ -143,5 +143,5 @@ caracteres como mucho, que `just outline <directorio>/` junta en el índice. El
 mapa de cada zona y de cada contexto se queda con lo que el código no confiesa:
 las carpetas, los módulos que se leen antes que sus hermanos, las trampas y las
 secciones «Al tocar…». Lo vigila
-`rfirma-app/src-tauri/tests/agents_map_is_complete.rs`, que exige que todo
+`rfirma-app/src-tauri/tests/modules_open_with_a_header.rs`, que exige que todo
 módulo de las dos zonas que no sea de prueba abra con esa línea.

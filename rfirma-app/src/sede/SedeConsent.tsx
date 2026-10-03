@@ -96,7 +96,7 @@ export function SedeConsent({
           />
         ) : (
           <>
-            {/* Sin origen válido, mismo silencio deliberado que con origen (ID-271). */}
+            {/* Sin origen válido, mismo silencio deliberado que con origen. */}
             <p className="rf-title sede-consent__asks">
               {origin === null
                 ? identity
@@ -121,7 +121,7 @@ export function SedeConsent({
 
             {/* Debajo del desplegable y no encima: es una nota sobre lo que la lista
             contiene, y se lee después de verla. Dice **que** la sede acotó, y
-            nunca qué descartó ni con qué criterio (ID-277). */}
+            nunca qué descartó ni con qué criterio. */}
             {stage.narrowed && (
               <p className="rf-prose sede-consent__narrowed">
                 {origin === null
@@ -138,9 +138,9 @@ export function SedeConsent({
 
             {stage.items !== null && <LocalBatchItemsList items={stage.items} />}
 
-            {/* Situación 5 (ID-302, ID-304): información, no alarma — mismo icono
+            {/* Situación 5: información, no alarma — mismo icono
             y mismo borde de 1 px que el aviso de firmas previas. No hay un
-            sexto momento (ID-298): se pregunta aquí, dentro del mismo
+            sexto momento: se pregunta aquí, dentro del mismo
             consentimiento. */}
             {stage.document?.hasUnregisteredSignatures && (
               <div className="rf-row rf-gap-xs sede-consent__unrecognized-signatures">
@@ -288,7 +288,7 @@ function batchRoundLabel(t: TFunction, round: SignatureRound): string {
 }
 
 /**
- * Sólo lo que el PDF dice **de sí mismo** (ID-270): título de sus metadatos si
+ * Sólo lo que el PDF dice **de sí mismo**: título de sus metadatos si
  * lo trae, páginas, tamaño y si ya viene firmado.
  *
  * No hay nombre de fichero ni ruta porque el protocolo no los trae, y un PDF

@@ -1,4 +1,4 @@
-//! Cada `ADR-NNNN` citado en un `.rs` del backend tiene su fichero en `docs/adr/`, y esta guarda lo comprueba leyendo el código como texto.
+//! Cada `ADR-NNNN` citado en un `.rs` del backend o en un `.ts`/`.tsx` de la interfaz tiene su fichero en `docs/adr/`, y esta guarda lo comprueba leyendo el código como texto.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -107,6 +107,49 @@ fn dangling_citations(sources: &[Source], existing: &BTreeSet<String>) -> Vec<St
         .collect()
 }
 
+/// Los `.ts` y `.tsx` **versionados** de la interfaz, con la ruta desde la raíz del repositorio.
+fn tracked_interface_files() -> Vec<String> {
+    let listing = Command::new("git")
+        .args([
+            "ls-files",
+            "-z",
+            "--",
+            "rfirma-app/src/*.ts",
+            "rfirma-app/src/*.tsx",
+        ])
+        .current_dir(repository_root())
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .output()
+        .expect("git deberia estar: `just tools` lo exige");
+    assert!(listing.status.success(), "git ls-files deberia funcionar");
+    String::from_utf8(listing.stdout)
+        .expect("las rutas deberian ser UTF-8")
+        .split('\0')
+        .filter(|path| !path.is_empty())
+        .map(str::to_owned)
+        .collect()
+}
+
+/// Ruta y texto de cada `.ts` y `.tsx` versionado de la interfaz.
+fn interface_sources() -> Vec<(String, String)> {
+    let files = tracked_interface_files();
+    assert!(
+        files.len() > 50,
+        "la interfaz tiene mas de cincuenta .ts y .tsx; git ha listado {}",
+        files.len()
+    );
+    files
+        .into_iter()
+        .map(|path| {
+            let text = std::fs::read_to_string(repository_root().join(&path))
+                .unwrap_or_else(|error| panic!("no se pudo leer {path}: {error}"));
+            (path, text)
+        })
+        .collect()
+}
+
 /// Ruta y texto de cada `.rs` versionado del backend.
 fn backend_sources() -> Vec<(String, String)> {
     let files = tracked_rust_files();
@@ -133,13 +176,14 @@ fn as_sources(owned: &[(String, String)]) -> Vec<Source<'_>> {
 }
 
 #[test]
-fn every_adr_cited_in_the_backend_has_a_file() {
+fn every_adr_cited_in_the_backend_and_the_interface_has_a_file() {
     let existing = adr_numbers_in(&repository_root().join("docs/adr"));
     assert!(
         existing.len() >= 18,
         "docs/adr deberia tener al menos dieciocho ADR"
     );
-    let owned = backend_sources();
+    let mut owned = backend_sources();
+    owned.extend(interface_sources());
 
     let dangling = dangling_citations(&as_sources(&owned), &existing);
     assert!(
@@ -152,6 +196,13 @@ fn every_adr_cited_in_the_backend_has_a_file() {
 #[test]
 fn the_backend_cites_at_least_one_adr_so_the_guard_has_work() {
     let owned = backend_sources();
+
+    assert!(citations_in(&as_sources(&owned)).len() > 10);
+}
+
+#[test]
+fn the_interface_cites_at_least_one_adr_so_the_guard_has_work() {
+    let owned = interface_sources();
 
     assert!(citations_in(&as_sources(&owned)).len() > 10);
 }

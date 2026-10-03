@@ -8,7 +8,7 @@ import type { PdfDocument } from "../viewer/pdf";
 
 /**
  * El trámite que abre una sede electrónica por `afirma://`, en el lado de la
- * interfaz (docs/design/ventana-de-sede.md, ID-268…ID-278).
+ * interfaz (docs/design/ventana-de-sede.md).
  *
  * Es un **puerto** como el almacén de certificados o el origen del PDF: quien
  * habla con el canal `wss://`, con el protocolo y con el puente es el backend,
@@ -26,8 +26,7 @@ export type SiteOperation =
   | "selectcert";
 
 /**
- * Lo que el PDF dice **de sí mismo**, que es lo único que hay para nombrarlo
- * (ID-270).
+ * Lo que el PDF dice **de sí mismo**, que es lo único que hay para nombrarlo.
  *
  * **La petición no trae nunca el nombre del documento**: el `extraData` con el
  * nombre va en la *respuesta*, y `appname` está roto en el original. Así que no
@@ -48,10 +47,10 @@ export interface SiteDocument {
   round: SignatureRound;
   /**
    * Si alguna de las firmas que ya trae el PDF es de un `/SubFilter` que
-   * rFirma no sabe leer (#355). No es un rechazo — el PDF certificado sí
+   * rFirma no sabe leer. No es un rechazo — el PDF certificado sí
    * invalida con certeza y por eso se rechaza sin preguntar; esto es
-   * desconocimiento nuestro (ID-298). Se dice con una frase de información,
-   * dentro del mismo consentimiento: no hay un sexto momento (ID-302).
+   * desconocimiento nuestro. Se dice con una frase de información,
+   * dentro del mismo consentimiento: no hay un sexto momento.
    */
   hasUnregisteredSignatures: boolean;
   /** Las firmas que ya trae el documento, calculadas sobre el PDF real. */
@@ -60,7 +59,7 @@ export interface SiteDocument {
 
 /**
  * Por qué rFirma rechazó la petición, **clasificado** y no redactado en el
- * backend (ADR-0009, ID-29).
+ * backend (ADR-0009).
  *
  * Las propias de la sede salen de `sede.refusals`; las del token, el puente y
  * el documento se cuentan con el título que ya les da el escritorio.
@@ -100,7 +99,7 @@ type NamedByTheDesk = (typeof NAMED_BY_THE_DESK)[number];
 
 /**
  * Cómo acabó el trámite. En los tres casos **la sede ya ha recibido su
- * respuesta**: los dos canales van desacompasados a propósito (#316), y esta
+ * respuesta**: los dos canales van desacompasados a propósito, y esta
  * ventana no es el acuse sino donde vive la precisión que el código `SAF_NN` no
  * puede llevar.
  */
@@ -132,7 +131,7 @@ export type SiteOutcome =
     };
 
 /**
- * Qué es lo que la sede pide firmar, según el formato de su petición (#530).
+ * Qué es lo que la sede pide firmar, según el formato de su petición.
  * `null` es que el momento no lo dice: `selectcert` no firma nada y el lote
  * sólo sabe cuántas firmas lleva.
  */
@@ -177,7 +176,7 @@ export type ErrandStage =
    */
   | { kind: "oldWebClient" }
   /**
-   * **El canal no se ha abierto y ya no va a abrirse** (ID-341). No es el
+   * **El canal no se ha abierto y ya no va a abrirse**. No es el
    * umbral del reloj: aquí rFirma ya lo sabe —no le queda ni un puerto que
    * atar, o la CA local no ha entrado en ningún almacén— y por eso se enseña la
    * pantalla de reparación sin esperar los treinta segundos.
@@ -185,7 +184,7 @@ export type ErrandStage =
   | { kind: "noChannel"; reason: NoChannelReason }
   /**
    * El corazón del trámite: una **confirmación escrita**, no el selector de
-   * certificados (ID-269). Aparece también con un solo certificado, salvo que
+   * certificados. Aparece también con un solo certificado, salvo que
    * la persona deje elegir a la sede (ADR-0032).
    */
   | {
@@ -202,7 +201,7 @@ export type ErrandStage =
       certificates: readonly Certificate[];
       /**
        * Si la sede acotó la lista. Se dice **que** la acotó y nada más: nunca
-       * se enumera lo que descartó ni con qué criterio (ID-277).
+       * se enumera lo que descartó ni con qué criterio.
        */
       narrowed: boolean;
     }
@@ -237,7 +236,7 @@ export type ErrandStage =
   | { kind: "outcome"; outcome: SiteOutcome }
   /**
    * No hay nada que consentir ni nada que elegir, y son **dos situaciones
-   * distintas porque la salida es distinta** (ID-278).
+   * distintas porque la salida es distinta**.
    */
   | { kind: "noCertificate"; reason: NoCertificateReason; owned: number };
 
@@ -272,7 +271,7 @@ export type NoCertificateReason =
 /** El trámite vivo, entero. `null` es que no hay ninguno. */
 export interface Errand {
   /**
-   * El origen de la petición, nombrado **a secas** (ID-271).
+   * El origen de la petición, nombrado **a secas**.
    *
    * `null` es que no hay origen válido, y entonces queda una etiqueta serena y
    * no una advertencia. **El `Origin` no se usa para rechazar el saludo**: es
@@ -352,7 +351,7 @@ export function noErrand(): SiteErrandPort {
  *
  * Quince segundos y no cinco: con cinco no daba tiempo a leer, y el caso que lo
  * decide es el rechazo, donde cerrarse sola reproduciría el síntoma que el
- * aviso venía a evitar (ID-274).
+ * aviso venía a evitar.
  */
 export const OUTCOME_CLOSE_MS = 15_000;
 

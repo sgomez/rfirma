@@ -12,7 +12,7 @@ interface StampPreviewInput {
   request: StampRequest;
   /** Se está arrastrando o redimensionando el recuadro. */
   gesturing: boolean;
-  /** Documento grande: el recálculo se pide con «Ver cómo queda» (ID-109). */
+  /** Documento grande: el recálculo se pide con «Ver cómo queda». */
   onDemand: boolean;
 }
 
@@ -40,7 +40,7 @@ interface Attempt<T> {
  * cada pintada a partir del recuadro, del certificado y de las casillas, así
  * que dos objetos distintos describen el mismo sello a cada rato. Por identidad
  * esto pediría un ciclo trifásico entero por pintada, que es exactamente lo que
- * el ID-109 prohíbe.
+ * hay que evitar.
  */
 function keyOf(request: StampRequest): string | null {
   return request.kind === "ready" ? JSON.stringify(request.order) : null;
@@ -56,7 +56,7 @@ function keyOf(request: StampRequest): string | null {
  * se compuso. Cada uno de esos cinco casos vale ≈1,9 s y 507 MB de RSS en el
  * peor documento medido, así que el trabajo de este módulo es no hacer nada.
  *
- * Y un fallo **no se reintenta solo**: el ID-111 dice que la vista previa no es
+ * Y un fallo **no se reintenta solo**: la vista previa no es
  * una puerta, y un bucle de reintentos contra un documento con contraseña sería
  * la peor puerta posible.
  */
@@ -123,8 +123,8 @@ export function useStampPreview({
     //
     // Y lo compuesto sólo se pinta contra **su** orden: mientras la de ahora se
     // compone o ha fallado, enseñar el sello de la colocación anterior sería
-    // enseñar algo que no es lo que se va a firmar (ID-107). La excepción es el
-    // gesto, que es justo donde congelar el anterior es lo que pide el ID-109.
+    // enseñar algo que no es lo que se va a firmar. La excepción es el
+    // gesto, que es justo donde congelar el anterior es lo que se quiere.
     pdf:
       request.kind !== "ready"
         ? null

@@ -40,7 +40,7 @@ interface StatusViewProps {
   /**
    * Se llama con las filas de cada remedición propia —al abrirse, tras una
    * acción, con «Volver a comprobar»—, para quien más allá del panel también
-   * necesite saberlas (el triángulo del menú, ID-353).
+   * necesite saberlas (el triángulo del menú).
    */
   onRowsChange?: (rows: SignalRow[]) => void;
 }

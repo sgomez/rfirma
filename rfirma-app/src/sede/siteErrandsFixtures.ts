@@ -9,7 +9,7 @@ import type { Errand } from "./errand";
 import type { DescribedDocument, SiteCommands, SiteErrandView } from "./siteErrands";
 import { siteErrands } from "./siteErrands";
 
-/** Los dobles y auxiliares que comparten las pruebas de `siteErrands` (TD-78). */
+/** Los dobles y auxiliares que comparten las pruebas de `siteErrands`. */
 
 export function certificate(overrides: Partial<Certificate> = {}): Certificate {
   return {

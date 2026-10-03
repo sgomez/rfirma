@@ -1,13 +1,13 @@
 //! Los iconos de la interfaz, copiados en línea de los artboards, salvo los cinco de veredicto, que dibuja `VerdictIcon` con trazados de Heroicons.
 /**
- * No hay biblioteca de iconos ni icono de fuente (ID-53): el artboard los trae
+ * No hay biblioteca de iconos ni icono de fuente: el artboard los trae
  * como `<svg>` en línea y la transcripción los copia tal cual. Meter una
  * dependencia para reproducir un trazado que ya está escrito sería pagar un
  * paquete entero por lo que cabe en este fichero.
  *
  * Todos comparten el mismo lápiz del canvas —`fill="none"`,
  * `stroke="currentColor"`, uniones y extremos redondeados— y heredan el color
- * de quien los monta, así que ninguno fija un color: es lo que exige el ID-58.
+ * de quien los monta, así que ninguno fija un color.
  * El grosor del trazo se mantiene en 1.5 salvo donde el artboard lo sube (la
  * marca de verificación, a 3).
  *

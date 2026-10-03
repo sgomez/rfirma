@@ -42,7 +42,7 @@ export function SedeBody({
 }
 
 /**
- * El cierre solo del desenlace, a los quince segundos (ID-274).
+ * El cierre solo del desenlace, a los quince segundos.
  *
  * El cierre viaja en una referencia y no en las dependencias: quien nos monta
  * pasa una función anónima nueva en cada pintada, y con ella en la lista la

@@ -17,7 +17,7 @@ export const CAPACITY = 10;
  * No es el documento que se tiene delante —eso es
  * [`DocumentInHand`](./document.ts)— sino lo que se persiste de él: se
  * deduplica por ruta canónica, se ordena y sobrevive al reinicio. De un
- * documento que no se recuerda no existe ninguna (ID-286, ID-287).
+ * documento que no se recuerda no existe ninguna.
  *
  * Los cinco primeros campos son los de `memory::recents::RecentDocument`, que
  * es quien los persiste; `available` no se guarda nunca porque es un hecho
@@ -26,7 +26,7 @@ export const CAPACITY = 10;
 export interface RecentDocument {
   /**
    * El identificador **opaco** que acuñó el backend al abrir el documento, y
-   * que es lo que identifica la fila (ID-62).
+   * que es lo que identifica la fila.
    *
    * No es una ruta y de él no se puede reconstruir ninguna: bajo el sandbox la
    * aplicación no conoce la ruta original de un documento —el portal solo se la
@@ -51,10 +51,10 @@ export interface RecentDocument {
   available: boolean;
   /**
    * Dónde cayó el recuadro **en este documento**, o `null` si nadie lo colocó
-   * todavía (ID-74).
+   * todavía.
    *
    * Va en la fila y no en un ajuste global porque reponer sobre un documento
-   * nuevo una posición elegida para otro es lo que rechaza el ID-22. El
+   * nuevo una posición elegida para otro sería un error. El
    * **tamaño** sí es global, y quien junta las dos mitades es el backend: aquí
    * llega el rectángulo entero.
    */
@@ -64,7 +64,7 @@ export interface RecentDocument {
 /**
  * La fila de la bandeja, **puesta delante**.
  *
- * Es el camino de vuelta del ID-287: elegir una fila no es firmar la fila,
+ * Elegir una fila no es firmar la fila,
  * es tomar en la mano el documento que hay detrás. Lo que se cae por el camino
  * —cuándo se usó, si responde— es de la lista y no del trabajo; lo que se
  * añade es que de este sí queda rastro, porque fila tiene.
@@ -86,7 +86,7 @@ export function taken(row: RecentDocument): DocumentInHand {
  * La identidad es el identificador opaco, así que **volver a elegir una fila
  * de la bandeja la rescata** al frente en vez de duplicarla. Reabrir el mismo
  * fichero **por el diálogo** es otra cosa: el backend acuña un identificador
- * nuevo por cada concesión del portal (ID-62), así que el mismo
+ * nuevo por cada concesión del portal, así que el mismo
  * `contrato.pdf` abierto tres veces son tres filas. Es lo buscado —el
  * identificador nombra la concesión, no el fichero— y el precio es que esas
  * tres desalojan a las demás.
@@ -145,7 +145,7 @@ export interface RecentsStore {
    * Devuelve la fila y no nada porque es donde la ventana recupera lo que el
    * backend ya sabía de ese documento: su insignia cacheada y dónde había
    * caído su recuadro. Un documento que ya estuvo abierto vuelve con su página
-   * y su posición; uno nuevo vuelve sin ninguna, que es lo que pide el ID-22.
+   * y su posición; uno nuevo vuelve sin ninguna.
    */
   record(document: DocumentInHand): Promise<RecentDocument>;
   /** Quita una fila. Ver [`forget`]. */
