@@ -7,6 +7,11 @@ soltar.
 ## Casos de uso que la usan
 
 - Firmar un PDF en local — desde que se abre el documento hasta que se guarda.
+- Ver las firmas de un documento con `rfirma verify -i <doc> -gui`: la hoja sin
+  recuadro; si el fichero no es PDF (CAdES, XAdES, un formato desconocido), en
+  lugar de la hoja, centrados, el icono de documento de 40 px en
+  `--rf-text-muted`, el nombre del fichero en negrita y «Sin vista previa», y
+  sin la píldora.
 
 ## Estructura
 

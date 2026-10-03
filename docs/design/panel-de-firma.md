@@ -7,6 +7,8 @@ firma.
 ## Casos de uso que la usan
 
 - Firmar un PDF en local — desde que hay un documento abierto hasta «firmado».
+- Ver las firmas de un documento desde la terminal — `rfirma verify -i <doc>
+  -gui` abre directamente el resumen.
 
 ## Estructura
 
@@ -16,7 +18,7 @@ Zona que se desliza, de arriba abajo, cada bloque solo cuando toca:
 
 1. **Certificado**: el selector, siempre el primero mientras se puede firmar.
 2. **Aviso de firmas previas**, si el PDF ya trae firmas.
-3. **«Sin certificados»**, **«Firmado a las 11:04» y el resumen**, o **el error
+3. **«Sin certificados»**, **el resumen** («Firmas del documento») o **el error
    de firma**, según el estado.
 4. **Firma visible**: rótulo e interruptor; encendida, el segmentado de páginas
    y su línea o campo.
@@ -24,8 +26,8 @@ Zona que se desliza, de arriba abajo, cada bloque solo cuando toca:
 
 Pie fijo:
 
-1. **«Guardar en»** con `Cambiar`, y una caja con la carpeta y el nombre del
-   fichero.
+1. **«Guardar en»** con `Cambiar` («Documento» en el resumen), y una caja con
+   la carpeta y el nombre del fichero.
 2. **«Firmar»**, a secas.
 
 No hay cabecera de documento: el nombre ya está en la
@@ -324,7 +326,7 @@ certificado para añadir una firma visible.».
 ## Estados
 
 En el artboard `Main`, palanca «Estado», más «Firma visible», «Lista de
-certificados», «Firmas previas», «Pie · destino» y «Ficha 14»:
+certificados», «Firmas previas» y «Pie · destino»:
 
 - **Sin certificado elegido**: la caja dice «Elige un certificado» y «Firmar»
   está al 55 %; «Firma visible» apagada y desactivada, con el aviso debajo.
@@ -346,7 +348,9 @@ certificados», «Firmas previas», «Pie · destino» y «Ficha 14»:
 - **Firmando**: el selector, interruptor, controles y `Cambiar` al 35 %; el
   botón al 55 % dice «Firmando…». Encima, el
   [diálogo de progreso](dialogo-progreso-firma.md).
-- **Firmado**: ver «El resumen».
+- **Firmado**, y los cinco «verify · …» (PDF con firmas, CAdES con
+  contrafirmas, sin firmas, formato desconocido, fallo al leer las firmas): ver
+  «El resumen».
 - **Error al firmar**: la zona que se desliza se sustituye por una tarjeta con
   borde de 2 px en `--rf-border-strong`: triángulo y «No se ha podido firmar», la
   causa en llano —«El certificado ha dejado de estar disponible mientras se
@@ -358,27 +362,76 @@ certificados», «Firmas previas», «Pie · destino» y «Ficha 14»:
   «Copiar detalle» aparece también «Vaciar el almacén», con su misma
   confirmación (ADR-0034).
 
-## El resumen, tras firmar
+## El resumen: tras firmar y con `verify --gui`
 
-Arriba de la zona que se desliza:
+Un solo resumen, y se ve igual llegues como llegues: después de firmar, o
+abierto por `rfirma verify -i <doc> -gui`. Lista **todas las firmas del
+documento tal como ha quedado**, con lo mismo que `rfirma verify -v` y nada más.
+Sustituye a la zona que se desliza: no hay selector, ni aviso de firmas
+previas, ni firma visible, ni modelo.
 
-- «**Firmado a las 11:04**» con el círculo y la ✓.
-- **RESUMEN** en versalitas y la insignia **PAdES**. El rótulo se queda aunque
-  cuelgue una sola insignia: guarda el sitio de la ficha 14.
-- **Con la ficha 14 (v1.0)**: la insignia «N firmas» y una tarjeta por firma, la
-  tuya primero con `La tuya` en `.rf-badge--primary` y «***9999** · hoy, 11:04»,
-  después las previas con quién y cuándo.
-- «Firma visible» pasa a una línea de solo lectura: «No», «En la página 6», «En
-  todas las páginas» o «En N de M páginas». El aviso de firmas previas desaparece.
+De arriba abajo:
 
-En el pie, «Guardado en», `Cambiar` oculto sin mover nada, y en la fila de 44 px:
-«Abrir el PDF» (primario), la carpeta (secundario, 44 px, `title` «Abrir la
-carpeta») y «Volver a firmar» (`--ghost`). Los dos primeros usan el portal
-`OpenURI`: bajo el sandbox son la única forma de llegar al fichero sin saberse la
-ruta.
+- **Solo tras firmar**, una franja: fondo `--rf-surface`, borde de 1 px en
+  `--rf-border-subtle`, `--rf-radius-md`, el círculo con la ✓ y «**Firmado a
+  las 11:04**» a 14 px en negrita. Con `verify` no hay franja.
+- «**Firmas del documento**», con el icono de documento, a 14 px en negrita.
+- Dos insignias `.rf-badge`: el formato (**PAdES**, **CAdES**, **XAdES**) y el
+  recuento («1 firma», «3 firmas», «2 firmas · 2 contrafirmas»).
+- **Una ficha por firma**, `.rf-card` de 10 × 12 px de relleno, apiladas a 6 px
+  y todo a la vista. Arriba, «FIRMA 1» en `.rf-label` versalita; tras firmar,
+  la tuya va la última y lleva a la derecha la insignia **Nueva**
+  (`.rf-badge--primary`). Debajo, una fila por dato: el rótulo en
+  `--rf-text-muted`, a 104 px fijos, y el valor a 13 px:
+  - **Firmante**, en seminegrita: el nombre y el NIF entre paréntesis; en un
+    sello, la razón social y el identificador de organización
+    (`EMPRESA FICTICIA SL (VATES-B00000000)`).
+  - **En nombre de**, solo con certificado de representación: la entidad y su
+    CIF.
+  - **Emisor**.
+  - **Fecha declarada**, en el formato regional corto del escritorio, el mismo
+    del aviso de firmas previas («14/9/26, 10:32:05»). Es la que declara quien
+    firma, no un sello de tiempo, y por eso lo dice el rótulo.
 
-**«Volver a firmar» vuelve al panel con el original releído del disco.** El
-acuse es de un documento concreto: al cambiar de pestaña o cerrarla, se va.
+  **Un campo ausente no se pinta**: la ficha tiene una fila menos.
+- **Las contrafirmas van dentro de la firma que contrafirman** (CAdES y
+  XAdES): «CONTRAFIRMA 1.1» dentro de «FIRMA 1», con sus mismas filas, tras un
+  filete de 2 px en `--rf-border-strong` a la izquierda y 12 px de sangría. En
+  PDF no hay árbol.
+
+**Ni estado por firma, ni validez, ni sellos de tiempo, ni número de serie.**
+El resumen no verifica: ninguna ficha lleva marca, aspa ni triángulo. El número
+de serie es de `verify -vv`, y el estado por firma es de otra spec
+([#1372](https://github.com/sgomez/rfirma/issues/1372)).
+
+**Tu ficha tiene las mismas filas que las demás.** Lo propio de la firma recién
+hecha —la firma visible, sus páginas, el recuadro— no sale en el resumen; la
+firma estampada se sigue viendo en la hoja del visor, porque es el documento.
+
+Con `verify`, cuando no hay lista:
+
+- **Sin firmas**: el icono de documento, «**Sin firmas**» y debajo, en
+  `--rf-text-muted` con 26 px de sangría, «El documento no tiene firmas.». El
+  mismo patrón que «Sin certificados».
+- **Formato desconocido**: el triángulo, «**Formato no reconocido**» y «No es
+  un PDF ni una firma CAdES o XAdES.».
+- **Fallo al leer las firmas**: la tarjeta del error de firma —borde de 2 px en
+  `--rf-border-strong`—, el triángulo y «**No se han podido leer las firmas**»,
+  el detalle técnico en monoespaciada (lo que la terminal escribe en stderr) y
+  «Copiar detalle». Sin lista.
+
+**El pie, rotulado siempre «Documento»**, con la caja de la carpeta y el
+nombre: tras firmar, el fichero firmado y `Cambiar`, que mueve el destino
+(ADR-0011); con `verify`, el fichero abierto y `Cambiar` oculto sin mover nada.
+La fila de 44 px es la misma en los dos: «Abrir el PDF» (primario; «Abrir el
+fichero» si no es PDF), la carpeta (secundario, 44 px, `title` «Abrir la
+carpeta») y «**Firmar**» (`--ghost`). Los dos primeros usan el portal `OpenURI`:
+bajo el sandbox son la única forma de llegar al fichero sin saberse la ruta.
+
+**«Firmar» vuelve al panel con el documento releído del disco**, como
+`rfirma doc.pdf`. Si el fichero no es PDF, al 55 % y con el `title` «En el
+escritorio solo se firman PDF». El acuse es de un documento concreto: al cambiar
+de pestaña o cerrarla, se va.
 
 ## Componentes y tokens
 
@@ -454,9 +507,28 @@ acuse es de un documento concreto: al cambiar de pestaña o cerrarla, se va.
   el diálogo, que da la razón; el aviso no lleva botón propio.
 - **«Ha cambiado después» y «sin comprobar del todo» no piden confirmación**:
   suben el tono y suman un aviso, pero no son firmas no válidas.
+- **Un solo resumen para después de firmar y para `verify --gui`.** `verify
+  -gui` abría el escritorio con el fichero cargado para firmarlo, como
+  `rfirma doc.pdf`; ahora abre el resumen. Se descartó una pantalla propia de
+  verificación: dos resúmenes del mismo documento que dijeran cosas distintas.
+  Por eso el resumen de después de firmar dejó de ser un acuse de tu firma
+  —«RESUMEN», la insignia PAdES y la línea «Firma visible: En la página 6»— y
+  pasó a listar todas las firmas, con la tuya marcada «Nueva». Con él se
+  retiró la palanca «Ficha 14 (v1.0)», cuya lista de tarjetas con quién y
+  cuándo es esto mismo, y «Volver a firmar» pasó a «Firmar».
+- **Fichas apiladas, todo a la vista.** Se descartaron las fichas plegables
+  (cada firma en una línea, el resto al desplegar) y la lista compacta con la
+  ficha de la elegida debajo: con las una a cuatro firmas de un documento
+  normal, un clic por firma para leer lo que `verify -v` da sin pedirlo.
+- **El pie conserva «Firmar».** Se descartaron el pie sin «Firmar» (solo abrir
+  y carpeta) y quitar el pie entero: tras ver las firmas, lo siguiente suele
+  ser firmar, y el resumen no debe ser un callejón.
+- **Sin número de serie**, aunque se dibujó en la primera tanda: es de
+  `verify -vv`, y la interfaz enseña lo de `verify -v`.
 
 Validado en el lienzo
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
 página **Recorrido de firma**, artboard `Main`, el 25/09/2026. El aviso de
 firmas previas y el paso a «¿Firmar de todos modos?», el 26/09/2026. El
-selector de certificado, el 27/09/2026.
+selector de certificado, el 27/09/2026. El resumen unificado con `verify
+--gui`, el 03/10/2026.

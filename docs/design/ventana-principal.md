@@ -6,6 +6,8 @@ abrir el documento a guardarlo firmado, sin navegar a otra pantalla.
 ## Casos de uso que la usan
 
 - Firmar un PDF en local — de principio a fin.
+- Ver las firmas de un documento desde la terminal — `rfirma verify -i <doc>
+  -gui` abre la ventana con el documento en el resumen.
 
 ## Estructura
 
@@ -122,7 +124,8 @@ de pantalla.
 | Certificados abiertos | ídem | ídem | el buscador en el selector y la lista hacia abajo, flotando sobre el panel |
 | Pidiendo el secreto / secreto incorrecto | ídem | bajo el velo | bajo el velo |
 | Firmando | ídem | bajo el velo, hoja al 45 % | bajo el velo; el diálogo de progreso encima |
-| Firmado | la pestaña pasa a `…-firmado.pdf` con ✓ | documento firmado | «Firmado a las 11:04» y el resumen; el pie ofrece abrir el PDF, la carpeta o volver a firmar |
+| Firmado | la pestaña pasa a `…-firmado.pdf` con ✓ | documento firmado | la franja «Firmado a las 11:04» y el resumen con todas las firmas, la tuya «Nueva»; el pie ofrece abrir el PDF, la carpeta o «Firmar» |
+| `verify --gui` | el documento | el documento; si no es PDF, el icono, el nombre y «Sin vista previa», sin píldora | el mismo resumen sin franja, o «Sin firmas», «Formato no reconocido» o el fallo al leer las firmas; el mismo pie, con «Firmar» al 55 % si no es PDF |
 | Error al firmar | sin ✓ | documento sin tocar | el error sustituye al panel; el pie ofrece «Reintentar» |
 
 **El pie del panel mide lo mismo en todos**: 162 px. Lo que cambia es su fila de
