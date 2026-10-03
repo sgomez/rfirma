@@ -2,7 +2,9 @@
 
 use base64::Engine;
 
-use crate::identity::domain::holder::{common_name_of, holder_of, organization_identifier_of};
+use crate::identity::domain::holder::{
+    attribute, common_name_of, holder_of, organization_identifier_of,
+};
 use crate::signing::domain::bridge::{
     BridgeError, DataRejection, PreSignBlock, PreSignature, SealedPreSignature, SignatureVerdict,
 };
@@ -185,6 +187,7 @@ fn previous_signature_of(entry: &serde_json::Value) -> Result<DocumentSignature,
         name,
         id_number,
         organization_identifier: organization_identifier_of(Some(subject)),
+        organization_name: Some(attribute("O=", subject)).filter(|name| !name.is_empty()),
         issuer: common_name_of(Some(issuer)),
         certificate_serial_number: field(entry, "serialNumber")?.to_owned(),
         signing_time: entry

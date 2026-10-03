@@ -230,6 +230,7 @@ fn a_signature(name: &str, id_number: &str, signing_time: Option<&str>) -> Docum
         name: name.to_owned(),
         id_number: id_number.to_owned(),
         organization_identifier: None,
+        organization_name: None,
         issuer: "AC FNMT Usuarios".to_owned(),
         certificate_serial_number: "0123ABCD".to_owned(),
         signing_time: signing_time.map(str::to_owned),
@@ -507,4 +508,69 @@ fn the_signer_is_named_once_with_the_id_number_without_its_semantics_prefix() {
         "{}",
         printed(&outcome)
     );
+}
+
+#[test]
+fn a_representation_certificate_names_the_entity_on_whose_behalf_it_signs() {
+    let mut signature = a_signature(
+        "00000000T NOMBRE APELLIDOUNO (R: B00000000)",
+        "IDCES-00000000T",
+        None,
+    );
+    signature.organization_identifier = Some("VATES-B00000000".to_owned());
+    signature.organization_name = Some("EMPRESA FICTICIA SL".to_owned());
+
+    let outcome = verified_reading(
+        &["verify", "-v", "-i", "firmado.pdf"],
+        &Reading(Ok(vec![signature])),
+    );
+
+    assert_eq!(
+        printed(&outcome),
+        "Firma valida\n\nFormato: PAdES\n\nFirma 1\n  \
+         Firmante:          NOMBRE APELLIDOUNO (00000000T)\n  \
+         En nombre de:      EMPRESA FICTICIA SL (B00000000)\n  \
+         Emisor:            AC FNMT Usuarios\n"
+    );
+}
+
+#[test]
+fn a_company_seal_is_signed_by_the_company_with_its_organization_identifier() {
+    let mut signature = a_signature("EMPRESA FICTICIA SL - B00000000", "", None);
+    signature.organization_identifier = Some("VATES-B00000000".to_owned());
+    signature.organization_name = Some("EMPRESA FICTICIA SL".to_owned());
+
+    let outcome = verified_reading(
+        &["verify", "-v", "-i", "firmado.pdf"],
+        &Reading(Ok(vec![signature])),
+    );
+
+    assert_eq!(
+        printed(&outcome),
+        "Firma valida\n\nFormato: PAdES\n\nFirma 1\n  \
+         Firmante:          EMPRESA FICTICIA SL (B00000000)\n  \
+         Emisor:            AC FNMT Usuarios\n"
+    );
+}
+
+#[test]
+fn the_serial_number_is_printed_only_from_the_second_level() {
+    let reader = Reading(Ok(vec![a_signature("UNA PERSONA", "", None)]));
+    let with_serial = "  Número de serie:   0123ABCD\n";
+
+    for words in [
+        &["verify", "-i", "firmado.pdf", "-vv"][..],
+        &["verify", "-i", "firmado.pdf", "-v", "-v"][..],
+        &["verify", "-i", "firmado.pdf", "--verbose", "--verbose"][..],
+        &["verify", "-i", "firmado.pdf", "-vvv"][..],
+    ] {
+        let outcome = verified_reading(words, &reader);
+        assert!(
+            printed(&outcome).ends_with(with_serial),
+            "{words:?}: {}",
+            printed(&outcome)
+        );
+    }
+    let single = verified_reading(&["verify", "-i", "firmado.pdf", "-v"], &reader);
+    assert!(!printed(&single).contains("Número de serie"));
 }

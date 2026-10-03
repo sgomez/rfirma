@@ -476,6 +476,7 @@ fn previous_signatures_in_returns_what_the_engine_reports() {
         name: "LOVELACE BYRON ADA".to_owned(),
         id_number: "IDCES-00000000T".to_owned(),
         organization_identifier: None,
+        organization_name: None,
         issuer: "AC FNMT Usuarios".to_owned(),
         certificate_serial_number: "1".to_owned(),
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),

@@ -632,3 +632,46 @@ fn sign_hands_the_password_descriptor_to_the_signer_without_reading_it() {
     assert_eq!(outcome.exit_code, SUCCEEDED, "{:?}", outcome.stderr);
     assert_eq!(*signer.descriptors.borrow(), vec![Some(3)]);
 }
+
+#[test]
+fn verbose_is_unknown_outside_verify() {
+    for words in [
+        &["sign", "-i", "a.pdf", "-o", "b.pdf", "--alias", "yo", "-v"][..],
+        &[
+            "sign",
+            "-i",
+            "a.pdf",
+            "-o",
+            "b.pdf",
+            "--alias",
+            "yo",
+            "--verbose",
+        ][..],
+        &[
+            "cosign", "-i", "a.pdf", "-o", "b.pdf", "--alias", "yo", "-v",
+        ][..],
+        &[
+            "cosign",
+            "-i",
+            "a.pdf",
+            "-o",
+            "b.pdf",
+            "--alias",
+            "yo",
+            "--verbose",
+        ][..],
+        &["listaliases", "-v"][..],
+        &["listaliases", "--verbose"][..],
+        &["listaliases", "-vv"][..],
+    ] {
+        let outcome = attended(words);
+
+        assert_eq!(outcome.exit_code, REFUSED, "{words:?}");
+        assert!(outcome.stdout.is_empty(), "{words:?}");
+        assert!(
+            said(&outcome).contains("no se reconoce"),
+            "{words:?}: {}",
+            said(&outcome)
+        );
+    }
+}
