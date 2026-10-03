@@ -84,6 +84,7 @@ function backendOf(overrides: Partial<SigningBackend> = {}): SigningBackend {
       warningCount: 0,
       tone: "information",
       changedAfterLastSignature: false,
+      findings: [],
     }),
     signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
     discard: async () => {},

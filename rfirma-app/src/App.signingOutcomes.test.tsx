@@ -43,6 +43,7 @@ function aSigner(overrides: Partial<SigningBackend> = {}): SigningBackend {
       warningCount: 0,
       tone: "information",
       changedAfterLastSignature: false,
+      findings: [],
     }),
     signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
     discard: async () => {},
@@ -117,6 +118,8 @@ describe("App, firmando, firmado y error", () => {
       certificateSerialNumber: "1",
       signingTime: "2026-09-14T10:32:05Z",
       status: "valid" as const,
+      validity: "valid" as const,
+      validityReason: null,
       reason: null,
       countersignatures: [],
     });
@@ -126,6 +129,7 @@ describe("App, firmando, firmado y error", () => {
         warningCount: 0,
         tone: "information",
         changedAfterLastSignature: false,
+        findings: [],
       }),
     });
     renderApp(

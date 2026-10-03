@@ -314,7 +314,7 @@ export function App({
     sizeBytes,
     gesturing,
     singleDestinationId,
-    previousSignatures: previousSignatures.signatures,
+    previousSignatures,
     startSigning: signing.start,
   });
   const { stamp, sign } = signFlow;

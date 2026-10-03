@@ -20,6 +20,10 @@ export interface PreviousSignature {
   status: SignatureStatus;
   /** Motivo del original, o `null` si el estado es `valid`. */
   reason: string | null;
+  /** La validez de la firma (ADR-0043). */
+  validity: Validity;
+  /** Por qué no es válida, o `null` si lo es. */
+  validityReason: ValidityReason | null;
   /** Las contrafirmas de esta firma, a cualquier profundidad. */
   countersignatures: readonly PreviousSignature[];
 }
@@ -32,6 +36,24 @@ export type SignatureStatus =
   | "broken"
   | "unverifiable"
   | "notFullyChecked";
+
+/** La validez de una firma: la misma en el aviso, en «Ver firmas», en el resumen y al firmar. */
+export type Validity = "valid" | "expired" | "invalid";
+
+/** Por qué una firma está caducada o no es válida. */
+export type ValidityReason =
+  | { kind: "certificateExpired"; date: string; holder: string | null }
+  | { kind: "modifiedAfterSigning" }
+  | { kind: "damaged" }
+  | { kind: "certificateNotYetValid"; date: string }
+  | { kind: "unknownSignatureType" }
+  | { kind: "cosignNotAdmitted"; closedBy: string | null };
+
+/** Lo que se encuentra en el documento entero y no es de ninguna firma. */
+export type DocumentFinding =
+  | "modifiedAfterLastSignature"
+  | "formFilledAfterSigning"
+  | "contentAddedOnTop";
 
 /** El tono del peor aviso, de menor a mayor gravedad. */
 export type Tone = "information" | "indeterminate" | "attention";
@@ -50,23 +72,25 @@ export interface PreviousSignaturesReport {
   changedAfterLastSignature: boolean;
   /** El formato de firma del documento; sin él, PAdES. */
   format?: SignatureFormat;
+  /** Los hallazgos del documento, primero en cualquier lista de problemas. */
+  findings: readonly DocumentFinding[];
 }
 
-const INVALID_STATUSES: readonly SignatureStatus[] = [
-  "certificateExpired",
-  "certificateNotYetValid",
-  "broken",
-  "unverifiable",
-];
+/** Un problema que «¿Firmar de todos modos?» enseña: un hallazgo o una firma que no es válida. */
+export type SigningProblem =
+  | { kind: "finding"; finding: DocumentFinding }
+  | { kind: "signature"; number: number; signature: PreviousSignature };
 
 /**
- * Las firmas previas no válidas: ni las válidas, ni las que no se han
- * comprobado del todo, que no bloquean la firma.
+ * Los problemas del informe, los hallazgos primero y luego cada firma
+ * caducada o no válida con su número de orden entre todas. Las válidas no salen.
  */
-export function invalidSignatures(
-  signatures: readonly PreviousSignature[],
-): readonly PreviousSignature[] {
-  return signatures.filter((signature) => INVALID_STATUSES.includes(signature.status));
+export function signingProblems(report: PreviousSignaturesReport): readonly SigningProblem[] {
+  const findings = report.findings.map((finding): SigningProblem => ({ kind: "finding", finding }));
+  const signatures = report.signatures.flatMap((signature, index): SigningProblem[] =>
+    signature.validity === "valid" ? [] : [{ kind: "signature", number: index + 1, signature }],
+  );
+  return [...findings, ...signatures];
 }
 
 /** El informe de un documento sin firmas previas, compartido por escritorio y sede. */
@@ -75,4 +99,5 @@ export const NO_PREVIOUS_SIGNATURES: PreviousSignaturesReport = {
   warningCount: 0,
   tone: "information",
   changedAfterLastSignature: false,
+  findings: [],
 };

@@ -1,29 +1,18 @@
-//! Los tres avisos que la firma interpone antes del PIN, abiertos por `useSignFlow`, y si alguno está abierto.
+//! Los dos avisos que la firma interpone antes del PIN, abiertos por `useSignFlow`, y si alguno está abierto.
 
 import type { useSignFlow } from "./App.useSignFlow";
-import { InvalidPreviousSignaturesDialog } from "./signing/InvalidPreviousSignaturesDialog";
-import { UnregisteredSignaturesDialog } from "./signing/UnregisteredSignaturesDialog";
+import { SignAnywayDialog } from "./signing/SignAnywayDialog";
 import { UnsealedPagesDialog } from "./signing/UnsealedPagesDialog";
 
 type SignFlow = ReturnType<typeof useSignFlow>;
 
 export function signFlowPromptOpen(flow: SignFlow): boolean {
-  return (
-    flow.unregisteredPrompt !== null ||
-    flow.sealLossPrompt !== null ||
-    flow.invalidPreviousSignaturesPrompt !== null
-  );
+  return flow.sealLossPrompt !== null || flow.signAnywayPrompt !== null;
 }
 
 export function SignFlowPrompts({ flow, locale }: { flow: SignFlow; locale: string }) {
   return (
     <>
-      {flow.unregisteredPrompt !== null && (
-        <UnregisteredSignaturesDialog
-          onConfirm={() => void flow.signWithUnregisteredSignatures()}
-          onCancel={() => flow.setUnregisteredPrompt(null)}
-        />
-      )}
       {flow.sealLossPrompt !== null && (
         <UnsealedPagesDialog
           fallen={flow.sealLossPrompt.fallen}
@@ -32,12 +21,12 @@ export function SignFlowPrompts({ flow, locale }: { flow: SignFlow; locale: stri
           onCancel={() => flow.setSealLossPrompt(null)}
         />
       )}
-      {flow.invalidPreviousSignaturesPrompt !== null && (
-        <InvalidPreviousSignaturesDialog
-          signatures={flow.invalidPreviousSignaturesPrompt}
+      {flow.signAnywayPrompt !== null && (
+        <SignAnywayDialog
+          problems={flow.signAnywayPrompt}
           locale={locale}
-          onConfirm={() => void flow.signDespiteInvalidPreviousSignatures()}
-          onCancel={() => flow.setInvalidPreviousSignaturesPrompt(null)}
+          onConfirm={() => void flow.signDespiteProblems()}
+          onCancel={() => flow.setSignAnywayPrompt(null)}
         />
       )}
     </>
