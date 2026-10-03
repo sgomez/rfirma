@@ -12,8 +12,8 @@ import "./SignedPanel.css";
 interface SignedPanelProps {
   /** El nombre del fichero firmado. La ruta no se enseña nunca (ADR-0011). */
   documentName: string;
-  /** El instante estampado en el recuadro, para «Firmado a las 11:04». */
-  signedAt: Date;
+  /** El instante estampado en el recuadro, para «Firmado a las 11:04». Sin él es `verify --gui`. */
+  signedAt?: Date;
   /** Las firmas del documento tal y como ha quedado, la propia la última. */
   signatures: readonly PreviousSignature[];
   destination: Destination;
@@ -23,7 +23,12 @@ interface SignedPanelProps {
   onOpenFolder: () => void;
   /** Vuelve al panel de firma **con el original releído del disco** (ID-80). */
   onSign: () => void;
-  onChangeDestination: () => void;
+  /** Mueve el destino; ausente en `verify --gui`, donde el pie no tiene «Cambiar». */
+  onChangeDestination?: () => void;
+  /** Se están leyendo las firmas del documento abierto. */
+  reading?: boolean;
+  /** Por qué no se pudieron leer las firmas del documento abierto. */
+  readFailure?: NamedFailure | null;
   /** Por qué no se pudo abrir lo que se pidió, si es que se pidió algo y falló. */
   failure?: NamedFailure | null;
   onOpenHelp?: () => void;
@@ -39,6 +44,8 @@ export function SignedPanel({
   onOpenFolder,
   onSign,
   onChangeDestination,
+  reading = false,
+  readFailure = null,
   failure = null,
   onOpenHelp,
 }: SignedPanelProps) {
@@ -48,37 +55,60 @@ export function SignedPanel({
   return (
     <div className="panel">
       <div className="panel__scroll">
-        <div className="rf-row rf-gap-xs signed-panel__signed-at">
-          <CheckCircleIcon size={18} />
-          <span className="rf-body">
-            {t("panel.signed.signedAt", { time: formatSignedTime(signedAt, locale) })}
-          </span>
-        </div>
-
-        <section className="panel__section" aria-label={t("panel.signed.title")}>
-          <p className="rf-row rf-gap-xs signed-panel__title">
-            <FileIcon size={16} />
-            <span>{t("panel.signed.title")}</span>
-          </p>
-          <div className="rf-row rf-gap-xs">
-            <span className="rf-badge">{t("panel.signed.format")}</span>
-            <span className="rf-badge">
-              {t("panel.signed.count", { count: signatures.length })}
+        {signedAt !== undefined && (
+          <div className="rf-row rf-gap-xs signed-panel__signed-at">
+            <CheckCircleIcon size={18} />
+            <span className="rf-body">
+              {t("panel.signed.signedAt", { time: formatSignedTime(signedAt, locale) })}
             </span>
           </div>
-          <ol className="signed-panel__cards">
-            {signatures.map((signature, index) => (
-              <SignatureCard
-                // biome-ignore lint/suspicious/noArrayIndexKey: el orden es la identidad de la firma.
-                key={index}
-                number={index + 1}
-                signature={signature}
-                isNew={index === signatures.length - 1}
-                locale={locale}
-              />
-            ))}
-          </ol>
-        </section>
+        )}
+
+        {readFailure ? (
+          <ErrorNotice
+            situation={readFailure.situation}
+            technicalDetail={readFailure.detail}
+            title={t("panel.signed.readFailed.title")}
+            onOpenHelp={onOpenHelp}
+          />
+        ) : !reading && signedAt === undefined && signatures.length === 0 ? (
+          <div className="panel__no-certificates">
+            <div className="panel__notice-title">
+              <FileIcon size={18} />
+              <span className="rf-title">{t("panel.signed.none.title")}</span>
+            </div>
+            <p className="rf-body rf-text-muted panel__notice-body">
+              {t("panel.signed.none.body")}
+            </p>
+          </div>
+        ) : (
+          <section className="panel__section" aria-label={t("panel.signed.title")}>
+            <p className="rf-row rf-gap-xs signed-panel__title">
+              <FileIcon size={16} />
+              <span>{t("panel.signed.title")}</span>
+            </p>
+            {!reading && (
+              <div className="rf-row rf-gap-xs">
+                <span className="rf-badge">{t("panel.signed.format")}</span>
+                <span className="rf-badge">
+                  {t("panel.signed.count", { count: signatures.length })}
+                </span>
+              </div>
+            )}
+            <ol className="signed-panel__cards">
+              {signatures.map((signature, index) => (
+                <SignatureCard
+                  // biome-ignore lint/suspicious/noArrayIndexKey: el orden es la identidad de la firma.
+                  key={index}
+                  number={index + 1}
+                  signature={signature}
+                  isNew={signedAt !== undefined && index === signatures.length - 1}
+                  locale={locale}
+                />
+              ))}
+            </ol>
+          </section>
+        )}
 
         {failure && (
           <ErrorNotice

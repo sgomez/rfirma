@@ -19,6 +19,7 @@ import {
   type Destination,
   type DestinationSource,
   inMemoryDestination,
+  type SignedDocumentOpener,
   type SingleDestination,
   unavailableOpener,
 } from "./signing/destination";
@@ -212,6 +213,7 @@ export function renderApp(
   destinations: DestinationSource = aDestination(),
   initialSignature: VisibleSignature = DEFAULT_VISIBLE_SIGNATURE,
   titlebar: NativeTitlebar | null = null,
+  opener: SignedDocumentOpener = unavailableOpener(),
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -241,7 +243,7 @@ export function renderApp(
       rubrics={rubrics}
       stamps={unavailableStampComposer()}
       signer={signer}
-      opener={unavailableOpener()}
+      opener={opener}
       initialSignature={initialSignature}
       versions={versions}
       version="0.1.0"

@@ -34,8 +34,8 @@ interface PanelFooterSignedProps extends PanelFooterDestinationProps {
   onOpenFolder: () => void;
   /** Vuelve al panel de firma con el original releído del disco (ID-80). */
   onSign: () => void;
-  /** Mueve el destino del documento (ADR-0011). */
-  onChangeDestination: () => void;
+  /** Mueve el destino del documento (ADR-0011); ausente, el pie no ofrece «Cambiar». */
+  onChangeDestination?: () => void;
 }
 
 type PanelFooterProps = PanelFooterSigningProps | PanelFooterSignedProps;
@@ -77,26 +77,30 @@ export function PanelFooter(props: PanelFooterProps) {
           <p className="rf-label panel__destination-label">
             {t(signed ? "panel.signed.document" : "panel.footer.savedIn")}
           </p>
-          <button
-            type="button"
-            className={
-              "rf-btn rf-btn--ghost panel__destination-change" +
-              (signing ? " panel__controls--dim" : "")
-            }
-            onClick={props.onChangeDestination}
-          >
-            {t("actions.change")}
-          </button>
+          {props.onChangeDestination !== undefined && (
+            <button
+              type="button"
+              className={
+                "rf-btn rf-btn--ghost panel__destination-change" +
+                (signing ? " panel__controls--dim" : "")
+              }
+              onClick={props.onChangeDestination}
+            >
+              {t("actions.change")}
+            </button>
+          )}
         </div>
         {writable ? (
           <div className="panel__destination-box">
-            <span
-              className="rf-row rf-gap-xs rf-text-muted panel__destination-folder"
-              title={destination.folder}
-            >
-              <FolderIcon size={15} />
-              <span className="panel__destination-ellipsis">{shortened.folder}</span>
-            </span>
+            {destination.folder !== "" && (
+              <span
+                className="rf-row rf-gap-xs rf-text-muted panel__destination-folder"
+                title={destination.folder}
+              >
+                <FolderIcon size={15} />
+                <span className="panel__destination-ellipsis">{shortened.folder}</span>
+              </span>
+            )}
             <span className="rf-row rf-gap-xs panel__destination-name" title={fullName}>
               <FileIcon size={15} />
               <span className="panel__destination-ellipsis">{shortened.name}</span>

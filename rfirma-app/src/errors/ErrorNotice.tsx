@@ -73,6 +73,8 @@ interface ErrorNoticeProps {
    * además que el documento sigue como estaba.
    */
   documentUnchanged?: boolean;
+  /** Un título propio en lugar del de la situación, sin su cuerpo, con el detalle a la vista y «Copiar detalle». */
+  title?: string;
 }
 
 /**
@@ -103,6 +105,7 @@ export function ErrorNotice({
   onEmptyStore,
   focusOnMount,
   documentUnchanged,
+  title,
 }: ErrorNoticeProps) {
   const { t } = useTranslation();
   const notice = useRef<HTMLDivElement>(null);
@@ -161,13 +164,14 @@ export function ErrorNotice({
       <p className="error-notice__title">
         <AlertIcon />
         <span className="rf-title">
-          {documentUnchanged
-            ? t("errors.signingFailedTitle")
-            : t(`errors.situations.${situation}.title`)}
+          {title ??
+            (documentUnchanged
+              ? t("errors.signingFailedTitle")
+              : t(`errors.situations.${situation}.title`))}
         </span>
       </p>
       {documentUnchanged && <p className="rf-prose">{t(`errors.situations.${situation}.title`)}</p>}
-      {!isOneLine(situation) && !documentUnchanged && (
+      {!isOneLine(situation) && !documentUnchanged && title === undefined && (
         <p className="rf-prose">
           {t(`errors.situations.${situation as Exclude<ErrorSituation, OneLineSituation>}.body`)}
         </p>
@@ -175,11 +179,11 @@ export function ErrorNotice({
       {documentUnchanged && <p className="rf-prose">{t("errors.documentUnchanged")}</p>}
       {!isOneLine(situation) && (
         <>
-          <details className="error-notice__detail">
+          <details className="error-notice__detail" open={title !== undefined || undefined}>
             <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>
             <pre className="error-notice__raw">{technicalDetail}</pre>
           </details>
-          {documentUnchanged && (
+          {(documentUnchanged || title !== undefined) && (
             <div className="rf-row rf-gap-xs error-notice__actions">
               <button
                 type="button"
@@ -191,26 +195,28 @@ export function ErrorNotice({
               {offersToEmptyStore && emptyStoreAction}
             </div>
           )}
-          {!documentUnchanged && (hasHelpLink(situation) || onReload || offersToEmptyStore) && (
-            <div className="rf-row rf-gap-xs error-notice__actions">
-              {hasHelpLink(situation) && (
-                <button
-                  type="button"
-                  className="rf-btn rf-btn--ghost error-notice__help"
-                  onClick={openHelp}
-                >
-                  <ExternalLinkIcon size={14} />
-                  {t("errors.help")}
-                </button>
-              )}
-              {onReload && (
-                <button type="button" className="rf-btn rf-btn--primary" onClick={onReload}>
-                  {t("errors.reload")}
-                </button>
-              )}
-              {offersToEmptyStore && emptyStoreAction}
-            </div>
-          )}
+          {!documentUnchanged &&
+            title === undefined &&
+            (hasHelpLink(situation) || onReload || offersToEmptyStore) && (
+              <div className="rf-row rf-gap-xs error-notice__actions">
+                {hasHelpLink(situation) && (
+                  <button
+                    type="button"
+                    className="rf-btn rf-btn--ghost error-notice__help"
+                    onClick={openHelp}
+                  >
+                    <ExternalLinkIcon size={14} />
+                    {t("errors.help")}
+                  </button>
+                )}
+                {onReload && (
+                  <button type="button" className="rf-btn rf-btn--primary" onClick={onReload}>
+                    {t("errors.reload")}
+                  </button>
+                )}
+                {offersToEmptyStore && emptyStoreAction}
+              </div>
+            )}
         </>
       )}
     </div>

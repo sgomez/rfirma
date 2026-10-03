@@ -90,7 +90,7 @@ export function tauriDocumentDrops(): DocumentDrops {
           if (listening) listener(dropOf(event.payload));
         }),
         listen<InvokedDocumentView>(DOCUMENT_INVOKED, (event) => {
-          if (listening) listener(dropOf(event.payload.opened));
+          if (listening) listener(invokedDropOf(event.payload));
         }),
       ];
       for (const stopping of stoppings) {
@@ -105,9 +105,14 @@ export function tauriDocumentDrops(): DocumentDrops {
     },
     pending: async () => {
       const invoked = await invoke<InvokedDocumentView | null>("read_invocation");
-      return invoked === null ? null : dropOf(invoked.opened);
+      return invoked === null ? null : invokedDropOf(invoked);
     },
   };
+}
+
+/** Lo invocado desde fuera: lo soltado, más si venía a ver las firmas. */
+function invokedDropOf(view: InvokedDocumentView): Drop {
+  return { ...dropOf(view.opened), seeSignatures: view.intent === "seeItsSignatures" };
 }
 
 /** Lo soltado, en el vocabulario de la ventana. */

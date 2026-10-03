@@ -76,10 +76,10 @@ export interface DestinationSource {
  * y más abajo el portal `OpenURI`.
  */
 export interface SignedDocumentOpener {
-  /** Abre el PDF firmado con el visor del sistema. */
-  openDocument(): Promise<void>;
-  /** Abre la carpeta donde quedó, con las firmas anteriores dentro (ID-81). */
-  openFolder(): Promise<void>;
+  /** Abre el PDF firmado con el visor del sistema, o el abierto tras el asa si se da. */
+  openDocument(documentId?: string): Promise<void>;
+  /** Abre la carpeta donde quedó, con las firmas anteriores dentro (ID-81), o la del abierto. */
+  openFolder(documentId?: string): Promise<void>;
 }
 
 /**

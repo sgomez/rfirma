@@ -1022,6 +1022,15 @@ msgstr "Adierazitako data"
 msgid "panel.signed.document"
 msgstr "Dokumentua"
 
+msgid "panel.signed.none.title"
+msgstr "Sinadurarik ez"
+
+msgid "panel.signed.none.body"
+msgstr "Dokumentuak ez du sinadurarik."
+
+msgid "panel.signed.readFailed.title"
+msgstr "Ezin izan dira sinadurak irakurri"
+
 #. {{time}} es la hora, ya formateada (p. ej. "11:04").
 msgid "panel.signed.signedAt"
 msgstr "{{time}}etan sinatuta"
