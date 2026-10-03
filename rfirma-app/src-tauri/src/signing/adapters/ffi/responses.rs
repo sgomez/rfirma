@@ -256,6 +256,10 @@ fn previous_signature_of(entry: &serde_json::Value) -> Result<DocumentSignature,
         organization_name: Some(attribute("O=", subject)).filter(|name| !name.is_empty()),
         issuer: common_name_of(Some(issuer)),
         certificate_serial_number: field(entry, "serialNumber")?.to_owned(),
+        certificate_valid_from: optional_text(entry, "validFrom"),
+        certificate_valid_until: optional_text(entry, "validUntil"),
+        signature_algorithm: optional_text(entry, "signatureAlgorithm"),
+        profile: optional_text(entry, "profile"),
         signing_time: entry
             .get("signingTime")
             .and_then(serde_json::Value::as_str)
@@ -280,6 +284,13 @@ fn previous_signature_of(entry: &serde_json::Value) -> Result<DocumentSignature,
             })?,
         countersignatures: countersignatures_of(entry)?,
     })
+}
+
+fn optional_text(entry: &serde_json::Value, name: &str) -> Option<String> {
+    entry
+        .get(name)
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
 }
 
 fn signing_date_of(entry: &serde_json::Value) -> Result<Option<SigningDate>, BridgeError> {

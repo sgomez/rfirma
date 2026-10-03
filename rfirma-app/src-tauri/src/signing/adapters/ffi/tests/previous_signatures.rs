@@ -38,6 +38,10 @@ fn a_previous_signature_translates_the_subject_and_the_issuer_with_the_holder_ut
             organization_name: Some("FNMT-RCM".to_owned()),
             issuer: "AC FNMT Usuarios".to_owned(),
             certificate_serial_number: "1234567890".to_owned(),
+            certificate_valid_from: None,
+            certificate_valid_until: None,
+            signature_algorithm: None,
+            profile: None,
             signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
             status: Some(SignatureStatus::Valid),
             reason: None,
@@ -339,4 +343,47 @@ fn a_signature_without_the_closing_mark_or_with_an_unknown_kind_of_date_is_a_mal
         r#""closesDocument":false,"signingDate":{"kind":"stamped","at":"2019-01-01T00:00:00Z"}"#
     ))
     .is_err());
+}
+
+#[test]
+fn a_previous_signature_carries_the_validity_algorithm_and_profile_when_the_bridge_sends_them() {
+    let report = parse_previous_signatures(&a_report_with_the_certificate_fields(
+        r#""validFrom":"2025-01-01T00:00:00Z","validUntil":"2030-01-01T00:00:00Z","signatureAlgorithm":"SHA256withRSA","profile":"PAdES B-B-Level","#,
+    ))
+    .expect("es valida");
+
+    let signature = &report.signatures()[0];
+    assert_eq!(
+        signature.certificate_valid_from.as_deref(),
+        Some("2025-01-01T00:00:00Z")
+    );
+    assert_eq!(
+        signature.certificate_valid_until.as_deref(),
+        Some("2030-01-01T00:00:00Z")
+    );
+    assert_eq!(
+        signature.signature_algorithm.as_deref(),
+        Some("SHA256withRSA")
+    );
+    assert_eq!(signature.profile.as_deref(), Some("PAdES B-B-Level"));
+}
+
+#[test]
+fn a_previous_signature_without_those_fields_or_with_them_null_crosses_them_as_nothing() {
+    for fields in ["", r#""validFrom":null,"profile":null,"#] {
+        let report = parse_previous_signatures(&a_report_with_the_certificate_fields(fields))
+            .expect("es valida");
+
+        let signature = &report.signatures()[0];
+        assert_eq!(signature.certificate_valid_from, None);
+        assert_eq!(signature.certificate_valid_until, None);
+        assert_eq!(signature.signature_algorithm, None);
+        assert_eq!(signature.profile, None);
+    }
+}
+
+fn a_report_with_the_certificate_fields(fields: &str) -> String {
+    format!(
+        r#"{{"ok":true,"signatures":[{{"subject":"CN=A","issuer":"CN=B","serialNumber":"1",{fields}"signingTime":null,"status":null,"reason":null,"validity":"valid","closesDocument":false}}],"changedAfterLastSignature":false,"findings":[]}}"#
+    )
 }

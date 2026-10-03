@@ -218,10 +218,12 @@ final class PreviousSignaturesBridge {
     }
 
     /**
-     * Titular, emisor, numero de serie, fecha, estado y motivo viejos, validez, motivo, fecha
-     * declarada o sellada, si cierra el documento y contrafirmas.
+     * Titular, emisor, numero de serie, vigencia del certificado, algoritmo y perfil de la firma,
+     * fecha, estado y motivo viejos, validez, motivo, fecha declarada o sellada, si cierra el
+     * documento y contrafirmas.
      */
-    record Signature(String subject, String issuer, String serialNumber, String signingTime,
+    record Signature(String subject, String issuer, String serialNumber, String validFrom,
+            String validUntil, String signatureAlgorithm, String profile, String signingTime,
             Status status, String reason, Validity validity, Reason validityReason,
             SigningDate signingDate, boolean closesDocument, List<Signature> countersignatures) { }
 
@@ -269,14 +271,15 @@ final class PreviousSignaturesBridge {
         if (certificate == null) {
             return damaged(countersignatures);
         }
+        final String profile = SignatureFormatDetectorPadesCades.resolveASN1Format(signed, signer);
         final List<SignValidity> validities = new ArrayList<>(ValidateBinarySignature.verifySign(
-                signer, certificates, x509(), true,
-                SignatureFormatDetectorPadesCades.resolveASN1Format(signed, signer), withContent));
+                signer, certificates, x509(), true, profile, withContent));
         if (validities.stream().anyMatch(PreviousSignaturesBridge::isOutOfDate)) {
             validities.add(integrityOf(signer, certificate, withContent));
         }
-        return identityOf(certificate, signingTimeOf(signer),
-                worstReason(validities, certificate, false, null), countersignatures);
+        return identityOf(certificate,
+                algorithmName(signer.getDigestAlgOID(), signer.getEncryptionAlgOID()), profile,
+                signingTimeOf(signer), worstReason(validities, certificate, false, null), countersignatures);
     }
 
     private static X509Certificate certificateOf(final SignerInformation signer,
@@ -353,12 +356,17 @@ final class PreviousSignaturesBridge {
         }
     }
 
-    private static Signature identityOf(final X509Certificate signer, final Date signingTime,
-            final Reason worst, final List<Signature> countersignatures) {
+    private static Signature identityOf(final X509Certificate signer, final String algorithm,
+            final String profile, final Date signingTime, final Reason worst,
+            final List<Signature> countersignatures) {
         return new Signature(
                 readable(signer.getSubjectX500Principal()),
                 readable(signer.getIssuerX500Principal()),
                 signer.getSerialNumber().toString(),
+                instant(signer.getNotBefore()),
+                instant(signer.getNotAfter()),
+                algorithm,
+                profile,
                 signingTime == null
                         ? null
                         : DateTimeFormatter.ISO_INSTANT.format(signingTime.toInstant()),
@@ -425,11 +433,13 @@ final class PreviousSignaturesBridge {
                     ? null
                     : elements.get(HexFormat.of().formatHex(info.getPkcs1()));
             if (chain == null || chain.length == 0 || element == null) {
-                signers.add(new Signature("", "", "", null, null, null, Validity.INVALID,
+                signers.add(new Signature("", "", "", null, null, null, null, null, null, null, Validity.INVALID,
                         Reason.of(Problem.DAMAGED), null, false, countersignatures));
                 continue;
             }
-            signers.add(identityOf(chain[0], info.getSigningTime(),
+            signers.add(identityOf(chain[0], xadesAlgorithmOf(element),
+                    SignatureFormatDetectorXades.resolveSignerXAdESFormat(element),
+                    info.getSigningTime(),
                     xadesWorstReason(element, chain[0], externallyDetached), countersignatures));
         }
         return signers;
@@ -553,6 +563,10 @@ final class PreviousSignaturesBridge {
                     readable(signer.getSubjectX500Principal()),
                     readable(signer.getIssuerX500Principal()),
                     signer.getSerialNumber().toString(),
+                    instant(signer.getNotBefore()),
+                    instant(signer.getNotAfter()),
+                    pkcs7.getDigestAlgorithm(),
+                    profile,
                     signingTime == null ? null : DateTimeFormatter.ISO_INSTANT.format(signingTime),
                     statusOf(validity),
                     reasonOf(validity),
@@ -581,7 +595,7 @@ final class PreviousSignaturesBridge {
     }
 
     private static Signature damaged(final List<Signature> countersignatures) {
-        return new Signature("", "", "", null, Status.BROKEN,
+        return new Signature("", "", "", null, null, null, null, null, Status.BROKEN,
                 VALIDITY_ERROR.CORRUPTED_SIGN.name(), Validity.INVALID,
                 Reason.of(Problem.DAMAGED), null, false, countersignatures);
     }
@@ -629,6 +643,39 @@ final class PreviousSignaturesBridge {
                     Reason.of(Problem.UNKNOWN_SIGNATURE_TYPE);
             default -> Reason.of(Problem.DAMAGED);
         };
+    }
+
+    private static final Map<String, String> DIGESTS = Map.of(
+            "1.3.14.3.2.26", "SHA1",
+            "2.16.840.1.101.3.4.2.4", "SHA224",
+            "2.16.840.1.101.3.4.2.1", "SHA256",
+            "2.16.840.1.101.3.4.2.2", "SHA384",
+            "2.16.840.1.101.3.4.2.3", "SHA512");
+
+    /** El nombre {@code SHA256withRSA} de un par digest y cifrado dados por su OID, o los OID si no se conocen. */
+    static String algorithmName(final String digestOid, final String encryptionOid) {
+        final String digest = DIGESTS.get(digestOid);
+        final String encryption = encryptionOid.startsWith("1.2.840.113549.1.1.") ? "RSA"
+                : encryptionOid.startsWith("1.2.840.10045.") ? "ECDSA" : null;
+        return digest == null || encryption == null
+                ? digestOid + "/" + encryptionOid
+                : digest + "with" + encryption;
+    }
+
+    /** El {@code rsa-sha256} de {@code ds:SignatureMethod}, dicho como {@code SHA256withRSA}. */
+    static String xadesAlgorithmOf(final Element signature) {
+        final NodeList methods = signature.getElementsByTagNameNS(
+                XMLConstants.DSIGNNS, "SignatureMethod");
+        if (methods.getLength() == 0) {
+            return null;
+        }
+        final String uri = ((Element) methods.item(0)).getAttribute("Algorithm");
+        final java.util.regex.Matcher named = java.util.regex.Pattern
+                .compile("(rsa|ecdsa)-(sha\\d+)$").matcher(uri);
+        return named.find()
+                ? named.group(2).toUpperCase(java.util.Locale.ROOT) + "with"
+                        + named.group(1).toUpperCase(java.util.Locale.ROOT)
+                : uri;
     }
 
     private static String instant(final Date date) {

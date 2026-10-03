@@ -114,6 +114,14 @@ pub struct DocumentSignature {
     pub issuer: String,
     /// Número de serie del certificado, distinto del `SERIALNUMBER` del sujeto.
     pub certificate_serial_number: String,
+    /// El inicio de la vigencia del certificado, en ISO-8601, si el puente lo devolvió.
+    pub certificate_valid_from: Option<String>,
+    /// El fin de la vigencia del certificado, en ISO-8601, si el puente lo devolvió.
+    pub certificate_valid_until: Option<String>,
+    /// El algoritmo de la firma, como `SHA256withRSA`, si el puente lo devolvió.
+    pub signature_algorithm: Option<String>,
+    /// El perfil de la firma, tal como lo nombra el original, si el puente lo devolvió.
+    pub profile: Option<String>,
     /// Instante de la firma en ISO-8601, si el puente lo devolvió.
     pub signing_time: Option<String>,
     /// El estado de la firma, si el puente la validó: solo valida las de PDF.

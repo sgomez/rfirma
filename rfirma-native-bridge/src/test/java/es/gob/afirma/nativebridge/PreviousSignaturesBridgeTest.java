@@ -60,6 +60,10 @@ class PreviousSignaturesBridgeTest {
         assertEquals(PreviousSignaturesBridge.readable(signer.getIssuerX500Principal()),
                 signature.issuer());
         assertEquals(signer.getSerialNumber().toString(), signature.serialNumber());
+        assertEquals(signer.getNotBefore().toInstant(), Instant.parse(signature.validFrom()));
+        assertEquals(signer.getNotAfter().toInstant(), Instant.parse(signature.validUntil()));
+        assertEquals(ALGORITHM, signature.signatureAlgorithm());
+        assertEquals("PAdES B-B-Level", signature.profile());
         assertTrue(Instant.parse(signature.signingTime()).isBefore(Instant.now().plusSeconds(1)),
                 "la fecha de firma cruza en ISO-8601");
     }

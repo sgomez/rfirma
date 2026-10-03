@@ -61,6 +61,8 @@ import org.graalvm.word.PointerBase;
  *               "messageCode":"&lt;codigo de mensaje&gt;"}
  * previous ok  {"ok":true,"signatures":[{"subject":"&lt;DN RFC 2253&gt;",
  *              "issuer":"&lt;DN RFC 2253&gt;","serialNumber":"&lt;decimal&gt;",
+ *              "validFrom":"&lt;ISO-8601&gt;","validUntil":"&lt;ISO-8601&gt;",
+ *              "signatureAlgorithm":"&lt;SHA256withRSA&gt;","profile":"&lt;perfil&gt;",
  *              "signingTime":"&lt;instante ISO-8601&gt;","status":"&lt;estado&gt;",
  *              "reason":"&lt;VALIDITY_ERROR&gt;","validity":"&lt;validez&gt;",
  *              "validityReason":{"kind":"&lt;motivo&gt;","date":"&lt;ISO-8601&gt;",
@@ -549,6 +551,10 @@ public final class NativeBridge {
             member(json, "subject", signature.subject());
             field(json, "issuer", signature.issuer());
             field(json, "serialNumber", signature.serialNumber());
+            field(json, "validFrom", signature.validFrom());
+            field(json, "validUntil", signature.validUntil());
+            field(json, "signatureAlgorithm", signature.signatureAlgorithm());
+            field(json, "profile", signature.profile());
             field(json, "signingTime", signature.signingTime());
             field(json, "status",
                     signature.status() == null ? null : signature.status().wireName());

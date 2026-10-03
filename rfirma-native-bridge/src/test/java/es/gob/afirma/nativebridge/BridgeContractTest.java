@@ -65,6 +65,7 @@ class BridgeContractTest {
         final List<PreviousSignaturesBridge.Signature> signatures = new ArrayList<>();
         for (final PreviousSignaturesBridge.Status status : PreviousSignaturesBridge.Status.values()) {
             signatures.add(new PreviousSignaturesBridge.Signature("CN=A", "CN=B", "7",
+                    "2025-01-01T00:00:00Z", "2030-01-01T00:00:00Z", "SHA256withRSA", "PAdES B-B-Level",
                     "2026-09-26T10:00:00Z", status,
                     status == PreviousSignaturesBridge.Status.VALID ? null : "NO_MATCH_DATA",
                     PreviousSignaturesBridge.Validity.VALID, null, null, false, List.of()));
@@ -74,7 +75,8 @@ class BridgeContractTest {
                 new PreviousSignaturesBridge.Report(signatures, true, List.of()));
 
         assertEquals("{\"ok\":true,\"signatures\":["
-                + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
+                + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\",\"validFrom\":\"2025-01-01T00:00:00Z\",\"validUntil\":\"2030-01-01T00:00:00Z\","
+                + "\"signatureAlgorithm\":\"SHA256withRSA\",\"profile\":\"PAdES B-B-Level\","
                 + "\"signingTime\":\"2026-09-26T10:00:00Z\",\"status\":\"valid\",\"reason\":null,"
                 + "\"validity\":\"valid\",\"validityReason\":null,"
                 + "\"signingDate\":null,\"closesDocument\":false,\"countersignatures\":[]},"
@@ -89,21 +91,23 @@ class BridgeContractTest {
     @Test
     void the_previous_signatures_report_nests_each_countersignature_and_crosses_no_status_as_null() {
         final PreviousSignaturesBridge.Signature counter = new PreviousSignaturesBridge.Signature(
-                "CN=C", "CN=B", "8", null, null, null, PreviousSignaturesBridge.Validity.VALID,
+                "CN=C", "CN=B", "8", null, null, null, null, null, null, null, PreviousSignaturesBridge.Validity.VALID,
                 null, null, false, List.of());
         final PreviousSignaturesBridge.Signature signer = new PreviousSignaturesBridge.Signature(
-                "CN=A", "CN=B", "7", null, null, null, PreviousSignaturesBridge.Validity.VALID,
+                "CN=A", "CN=B", "7", null, null, null, null, null, null, null, PreviousSignaturesBridge.Validity.VALID,
                 null, null, false, List.of(counter));
 
         final String json = NativeBridge.previousSignaturesJson(
                 new PreviousSignaturesBridge.Report(List.of(signer), false, List.of()));
 
         assertEquals("{\"ok\":true,\"signatures\":["
-                + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
+                + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\",\"validFrom\":null,\"validUntil\":null,"
+                + "\"signatureAlgorithm\":null,\"profile\":null,"
                 + "\"signingTime\":null,\"status\":null,\"reason\":null,"
                 + "\"validity\":\"valid\",\"validityReason\":null,"
                 + "\"signingDate\":null,\"closesDocument\":false,\"countersignatures\":["
-                + "{\"subject\":\"CN=C\",\"issuer\":\"CN=B\",\"serialNumber\":\"8\","
+                + "{\"subject\":\"CN=C\",\"issuer\":\"CN=B\",\"serialNumber\":\"8\",\"validFrom\":null,\"validUntil\":null,"
+                + "\"signatureAlgorithm\":null,\"profile\":null,"
                 + "\"signingTime\":null,\"status\":null,\"reason\":null,"
                 + "\"validity\":\"valid\",\"validityReason\":null,"
                 + "\"signingDate\":null,\"closesDocument\":false,\"countersignatures\":[]}"
@@ -114,11 +118,11 @@ class BridgeContractTest {
     @Test
     void the_previous_signatures_report_tells_a_declared_date_from_a_stamped_one_and_the_closer() {
         final PreviousSignaturesBridge.Signature declared = new PreviousSignaturesBridge.Signature(
-                "CN=A", "CN=B", "7", null, null, null, PreviousSignaturesBridge.Validity.VALID,
+                "CN=A", "CN=B", "7", null, null, null, null, null, null, null, PreviousSignaturesBridge.Validity.VALID,
                 null, new PreviousSignaturesBridge.SigningDate("2026-09-26T10:00:00Z", null),
                 true, List.of());
         final PreviousSignaturesBridge.Signature stamped = new PreviousSignaturesBridge.Signature(
-                "CN=A", "CN=B", "8", null, null, null, PreviousSignaturesBridge.Validity.VALID,
+                "CN=A", "CN=B", "8", null, null, null, null, null, null, null, PreviousSignaturesBridge.Validity.VALID,
                 null, new PreviousSignaturesBridge.SigningDate("2019-01-01T00:00:00Z", "CN=TSA"),
                 false, List.of());
 
@@ -126,12 +130,14 @@ class BridgeContractTest {
                 new PreviousSignaturesBridge.Report(List.of(declared, stamped), false, List.of()));
 
         assertEquals("{\"ok\":true,\"signatures\":["
-                + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
+                + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\",\"validFrom\":null,\"validUntil\":null,"
+                + "\"signatureAlgorithm\":null,\"profile\":null,"
                 + "\"signingTime\":null,\"status\":null,\"reason\":null,"
                 + "\"validity\":\"valid\",\"validityReason\":null,"
                 + "\"signingDate\":{\"kind\":\"declared\",\"at\":\"2026-09-26T10:00:00Z\","
                 + "\"tsa\":null},\"closesDocument\":true,\"countersignatures\":[]},"
-                + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"8\","
+                + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"8\",\"validFrom\":null,\"validUntil\":null,"
+                + "\"signatureAlgorithm\":null,\"profile\":null,"
                 + "\"signingTime\":null,\"status\":null,\"reason\":null,"
                 + "\"validity\":\"valid\",\"validityReason\":null,"
                 + "\"signingDate\":{\"kind\":\"stamped\",\"at\":\"2019-01-01T00:00:00Z\","
@@ -141,7 +147,8 @@ class BridgeContractTest {
     }
 
     private static String entryWith(final String status) {
-        return "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
+        return "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\",\"validFrom\":\"2025-01-01T00:00:00Z\",\"validUntil\":\"2030-01-01T00:00:00Z\","
+                + "\"signatureAlgorithm\":\"SHA256withRSA\",\"profile\":\"PAdES B-B-Level\","
                 + "\"signingTime\":\"2026-09-26T10:00:00Z\",\"status\":\"" + status
                 + "\",\"reason\":\"NO_MATCH_DATA\",\"validity\":\"valid\",\"validityReason\":null,"
                 + "\"signingDate\":null,\"closesDocument\":false,\"countersignatures\":[]}";
@@ -152,7 +159,7 @@ class BridgeContractTest {
         final List<PreviousSignaturesBridge.Signature> signatures = new ArrayList<>();
         for (final PreviousSignaturesBridge.Problem problem
                 : PreviousSignaturesBridge.Problem.values()) {
-            signatures.add(new PreviousSignaturesBridge.Signature("CN=A", "CN=B", "7", null,
+            signatures.add(new PreviousSignaturesBridge.Signature("CN=A", "CN=B", "7", null, null, null, null, null,
                     null, null, problem.validity(),
                     new PreviousSignaturesBridge.Reason(problem, "2020-01-01T00:00:00Z",
                             "CN=H", "CN=Z"),
@@ -177,7 +184,8 @@ class BridgeContractTest {
     }
 
     private static String reasonEntry(final String validity, final String kind) {
-        return "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
+        return "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\",\"validFrom\":null,\"validUntil\":null,"
+                + "\"signatureAlgorithm\":null,\"profile\":null,"
                 + "\"signingTime\":null,\"status\":null,\"reason\":null,\"validity\":\""
                 + validity + "\",\"validityReason\":{\"kind\":\"" + kind
                 + "\",\"date\":\"2020-01-01T00:00:00Z\",\"holder\":\"CN=H\",\"closedBy\":\"CN=Z\"},"
