@@ -965,45 +965,53 @@ msgstr "Sign with the certificate of {{holder}}"
 msgid "panel.footer.addCertificate"
 msgstr "Add a certificate…"
 
-msgid "panel.signed.summary"
-msgstr "Summary"
+msgid "panel.signed.title"
+msgstr "Document signatures"
 
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
 msgstr "PAdES"
 
-#. El rótulo del destino, una vez escrito (docs/design/panel-de-firma.md § El
-#. resumen, tras firmar). No es una promesa como "panel.footer.savedIn": ya
-#. ha ocurrido.
-msgid "panel.signed.savedIn"
-msgstr "Saved in"
+#. Recuento de firmas del documento, en la insignia del resumen.
+msgid "panel.signed.count"
+msgid_plural "panel.signed.count"
+msgstr[0] "1 signature"
+msgstr[1] "{{count}} signatures"
+msgstr[2] "{{count}} signatures"
+
+#. {{number}} es el ordinal de la firma en el documento.
+msgid "panel.signed.signature"
+msgstr "Signature {{number}}"
+
+#. La insignia de la firma recién hecha en el resumen.
+msgid "panel.signed.new"
+msgstr "New"
+
+msgid "panel.signed.field.signer"
+msgstr "Signer"
+
+msgid "panel.signed.field.onBehalfOf"
+msgstr "On behalf of"
+
+msgid "panel.signed.field.issuer"
+msgstr "Issuer"
+
+msgid "panel.signed.field.declaredDate"
+msgstr "Declared date"
+
+#. El rótulo del pie del resumen, con el fichero firmado y «Cambiar».
+msgid "panel.signed.document"
+msgstr "Document"
 
 #. {{time}} es la hora, ya formateada (p. ej. "11:04").
 msgid "panel.signed.signedAt"
 msgstr "Signed at {{time}}"
-
-msgid "panel.signed.visibleSignature.none"
-msgstr "No"
-
-#. {{page}} es el número de la página.
-msgid "panel.signed.visibleSignature.onPage"
-msgstr "On page {{page}}"
-
-msgid "panel.signed.visibleSignature.allPages"
-msgstr "On every page"
-
-#. {{sealed}} es cuántas páginas llevan recuadro, {{total}} cuántas tiene el documento.
-msgid "panel.signed.visibleSignature.somePages"
-msgstr "On {{sealed}} of {{total}} pages"
 
 msgid "panel.signed.openDocument"
 msgstr "Open the PDF"
 
 msgid "panel.signed.openFolder"
 msgstr "Open the folder"
-
-msgid "panel.signed.signAgain"
-msgstr "Sign it again"
 
 msgid "progress.title"
 msgstr "Signing the document…"

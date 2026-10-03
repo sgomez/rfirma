@@ -246,5 +246,20 @@ pub fn previous_signatures(
     )
 }
 
+/// Firmas del documento que se acaba de firmar, la propia incluida.
+#[tauri::command(async)]
+pub fn signed_document_signatures(
+    signing: State<'_, SigningRoot>,
+) -> Result<PreviousSignaturesReportView, Failure> {
+    Ok(
+        crate::signing::application::session::signed_document_signatures_in(
+            signing.files.as_ref(),
+            &signing.isolate,
+            &signing.session,
+        )?
+        .into(),
+    )
+}
+
 #[cfg(test)]
 mod tests;

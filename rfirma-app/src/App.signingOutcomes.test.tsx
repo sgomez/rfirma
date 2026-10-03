@@ -5,6 +5,7 @@ import { aCertificate, document, openPdf, pdfsOf, renderApp } from "./App.testSu
 import { inMemoryRecents } from "./documents/recents";
 import type { Certificate } from "./signing/certificate";
 import type { SigningBackend } from "./signing/flow";
+import { NO_PREVIOUS_SIGNATURES } from "./signing/previousSignatures";
 import { emptyRubricPicker } from "./signing/rubric";
 import type { TokenFailure } from "./signing/token";
 
@@ -43,6 +44,7 @@ function aSigner(overrides: Partial<SigningBackend> = {}): SigningBackend {
       tone: "information",
       changedAfterLastSignature: false,
     }),
+    signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
     discard: async () => {},
     ...overrides,
   };
@@ -93,16 +95,64 @@ describe("App, firmando, firmado y error", () => {
     signGate.resolve({ ok: true, value: undefined });
 
     // Firmado: el resumen y el pie con sus tres salidas.
-    expect(await screen.findByText("Resumen")).toBeInTheDocument();
+    expect(await screen.findByText("Firmas del documento")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abrir el PDF" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abrir la carpeta" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Volver a firmar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Firmar" })).toBeInTheDocument();
     expect(
       screen.queryByRole("dialog", { name: "Firmando el documento…" }),
     ).not.toBeInTheDocument();
 
     // Y la otra pestaña vuelve a estar disponible.
     expect(screen.getByRole("tab", { name: "otro.pdf" })).toBeEnabled();
+  });
+
+  it("lists every signature of the signed document after signing, the user's own marked as new", async () => {
+    const user = userEvent.setup();
+    const aSignature = (name: string) => ({
+      name,
+      idNumber: "00000000T",
+      organizationIdentifier: null,
+      issuer: "AC FNMT Usuarios",
+      certificateSerialNumber: "1",
+      signingTime: "2026-09-14T10:32:05Z",
+      status: "valid" as const,
+      reason: null,
+    });
+    const signer = aSigner({
+      signedDocumentSignatures: async () => ({
+        signatures: [aSignature("GRACE HOPPER"), aSignature("ADA LOVELACE")],
+        warningCount: 0,
+        tone: "information",
+        changedAfterLastSignature: false,
+      }),
+    });
+    renderApp(
+      inMemoryRecents(),
+      [documentPlaced("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      { list: async () => [remembered] },
+      emptyRubricPicker(),
+      signer,
+    );
+
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
+    await waitFor(() => expect(sign).toBeEnabled());
+    await user.click(sign);
+
+    expect(await screen.findByText("2 firmas")).toBeInTheDocument();
+    const cards = screen.getAllByRole("listitem");
+    const [first, second] = cards as [HTMLElement, HTMLElement];
+    expect(within(first).getByText("GRACE HOPPER (00000000T)")).toBeInTheDocument();
+    expect(within(second).getByText("ADA LOVELACE (00000000T)")).toBeInTheDocument();
+    expect(within(second).getByText("Nueva")).toBeInTheDocument();
+    expect(within(first).queryByText("Nueva")).not.toBeInTheDocument();
+    expect(screen.getByText(/^Firmado a las /)).toBeInTheDocument();
+    expect(screen.getByText("Documento")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cambiar" })).toBeVisible();
   });
 
   it("says what happened, that the document is unchanged, and offers Reintentar and Volver", async () => {

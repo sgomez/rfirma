@@ -1,20 +1,58 @@
 /*
- * El panel del documento firmado (docs/design/panel-de-firma.md, estado
- * «Firmado»). Reutiliza el armazón de `SigningPanel.css` —el mismo `.panel`,
- * la misma cabecera y el mismo pie— porque en el artboard es la misma columna
- * con otro contenido, no otra pantalla.
+ * El panel del documento firmado (docs/design/panel-de-firma.md, «El resumen»).
+ * Reutiliza el armazón de `SigningPanel.css` —el mismo `.panel` y el mismo
+ * pie— porque en el artboard es la misma columna con otro contenido.
  */
 
 .signed-panel__signed-at {
   align-items: center;
+  padding: 8px 12px;
+  font-weight: 700;
+  background: var(--rf-surface);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+}
+
+.signed-panel__title {
+  align-items: center;
+  margin: 0;
+  font-size: 14px;
   font-weight: 700;
 }
 
-.signed-panel__visible-row {
-  align-items: center;
-  height: 30px;
+.signed-panel__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.signed-panel__visible-label {
-  flex: 1;
+.signed-panel__card {
+  padding: 10px 12px;
+}
+
+.signed-panel__card-head {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.signed-panel__field {
+  align-items: baseline;
+  gap: 8px;
+}
+
+.signed-panel__field-label {
+  flex: none;
+  width: 104px;
+}
+
+.signed-panel__field-value {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.signed-panel__field-value--signer {
+  font-weight: 600;
 }

@@ -266,10 +266,11 @@ export function App({
 
   const { dropNotice } = useDropNotices(drops, documents.accept, documents.enter, activeId);
 
-  const { signedHere, openFailure, openSigned, signAgain } = useSignedSummary(
+  const { signedHere, signatures, openFailure, openSigned, signAgain } = useSignedSummary(
     signing,
     activeId,
     documents.reopen,
+    signer,
   );
   const { failedHere } = useSigningFailure(signing, activeId);
 
@@ -438,20 +439,16 @@ export function App({
             // activo tampoco se monta, o quedaría una tercera columna al lado
             // del visor vacío (ID-51).
             <SignedPanel
-              document={{
-                name: signedHere.document.name,
-                pages: pdf?.pageCount ?? null,
-                sizeBytes: signedHere.document.sizeBytes,
-              }}
+              documentName={signedHere.document.name}
               signedAt={signingInstant}
-              signature={signature}
-              placement={placement}
+              signatures={signatures}
               destination={
                 destination ?? { folder: settings?.destination ?? "", name: null, writable: true }
               }
               onOpenDocument={() => openSigned(() => opener.openDocument())}
               onOpenFolder={() => openSigned(() => opener.openFolder())}
-              onSignAgain={signAgain}
+              onSign={signAgain}
+              onChangeDestination={() => void chooseSingleDestination()}
               failure={openFailure}
               onOpenHelp={() => void externalDestinations.open("discussions")}
             />

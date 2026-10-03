@@ -967,45 +967,53 @@ msgstr "Asinar co certificado de {{holder}}"
 msgid "panel.footer.addCertificate"
 msgstr "Engadir un certificado…"
 
-msgid "panel.signed.summary"
-msgstr "Resumo"
+msgid "panel.signed.title"
+msgstr "Sinaturas do documento"
 
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
 msgstr "PAdES"
 
-#. El rótulo del destino, una vez escrito (docs/design/panel-de-firma.md § El
-#. resumen, tras firmar). No es una promesa como "panel.footer.savedIn": ya
-#. ha ocurrido.
-msgid "panel.signed.savedIn"
-msgstr "Gardado en"
+#. Recuento de firmas del documento, en la insignia del resumen.
+msgid "panel.signed.count"
+msgid_plural "panel.signed.count"
+msgstr[0] "1 sinatura"
+msgstr[1] "{{count}} sinaturas"
+msgstr[2] "{{count}} sinaturas"
+
+#. {{number}} es el ordinal de la firma en el documento.
+msgid "panel.signed.signature"
+msgstr "Sinatura {{number}}"
+
+#. La insignia de la firma recién hecha en el resumen.
+msgid "panel.signed.new"
+msgstr "Nova"
+
+msgid "panel.signed.field.signer"
+msgstr "Asinante"
+
+msgid "panel.signed.field.onBehalfOf"
+msgstr "En nome de"
+
+msgid "panel.signed.field.issuer"
+msgstr "Emisor"
+
+msgid "panel.signed.field.declaredDate"
+msgstr "Data declarada"
+
+#. El rótulo del pie del resumen, con el fichero firmado y «Cambiar».
+msgid "panel.signed.document"
+msgstr "Documento"
 
 #. {{time}} es la hora, ya formateada (p. ej. "11:04").
 msgid "panel.signed.signedAt"
 msgstr "Asinado ás {{time}}"
-
-msgid "panel.signed.visibleSignature.none"
-msgstr "Non"
-
-#. {{page}} es el número de la página.
-msgid "panel.signed.visibleSignature.onPage"
-msgstr "Na páxina {{page}}"
-
-msgid "panel.signed.visibleSignature.allPages"
-msgstr "En todas as páxinas"
-
-#. {{sealed}} es cuántas páginas llevan recuadro, {{total}} cuántas tiene el documento.
-msgid "panel.signed.visibleSignature.somePages"
-msgstr "En {{sealed}} de {{total}} páxinas"
 
 msgid "panel.signed.openDocument"
 msgstr "Abrir o PDF"
 
 msgid "panel.signed.openFolder"
 msgstr "Abrir o cartafol"
-
-msgid "panel.signed.signAgain"
-msgstr "Volver asinar"
 
 msgid "progress.title"
 msgstr "Asinando o documento…"

@@ -44,6 +44,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async forget_activity() -> Result<(), Failure>
   async unregistered_signatures(document: String) -> Result<bool, Failure>
   async previous_signatures(document: String) -> Result<PreviousSignaturesReportView, Failure>
+  async signed_document_signatures() -> Result<PreviousSignaturesReportView, Failure>
   async close_site_window()
   async site_identify(certificate: String) -> Result<(), Failure>
   async site_decline()

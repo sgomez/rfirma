@@ -984,45 +984,53 @@ msgstr "Sinatu ziurtagiri honekin: {{holder}}"
 msgid "panel.footer.addCertificate"
 msgstr "Gehitu ziurtagiri bat…"
 
-msgid "panel.signed.summary"
-msgstr "Laburpena"
+msgid "panel.signed.title"
+msgstr "Dokumentuaren sinadurak"
 
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
 msgstr "PAdES"
 
-#. El rótulo del destino, una vez escrito (docs/design/panel-de-firma.md § El
-#. resumen, tras firmar). No es una promesa como "panel.footer.savedIn": ya
-#. ha ocurrido.
-msgid "panel.signed.savedIn"
-msgstr "Hemen gorde da"
+#. Recuento de firmas del documento, en la insignia del resumen.
+msgid "panel.signed.count"
+msgid_plural "panel.signed.count"
+msgstr[0] "Sinadura 1"
+msgstr[1] "{{count}} sinadura"
+msgstr[2] "{{count}} sinadura"
+
+#. {{number}} es el ordinal de la firma en el documento.
+msgid "panel.signed.signature"
+msgstr "{{number}}. sinadura"
+
+#. La insignia de la firma recién hecha en el resumen.
+msgid "panel.signed.new"
+msgstr "Berria"
+
+msgid "panel.signed.field.signer"
+msgstr "Sinatzailea"
+
+msgid "panel.signed.field.onBehalfOf"
+msgstr "Honen izenean"
+
+msgid "panel.signed.field.issuer"
+msgstr "Jaulkitzailea"
+
+msgid "panel.signed.field.declaredDate"
+msgstr "Adierazitako data"
+
+#. El rótulo del pie del resumen, con el fichero firmado y «Cambiar».
+msgid "panel.signed.document"
+msgstr "Dokumentua"
 
 #. {{time}} es la hora, ya formateada (p. ej. "11:04").
 msgid "panel.signed.signedAt"
 msgstr "{{time}}etan sinatuta"
-
-msgid "panel.signed.visibleSignature.none"
-msgstr "Ez"
-
-#. {{page}} es el número de la página.
-msgid "panel.signed.visibleSignature.onPage"
-msgstr "{{page}} orrialdean"
-
-msgid "panel.signed.visibleSignature.allPages"
-msgstr "Orrialde guztietan"
-
-#. {{sealed}} es cuántas páginas llevan recuadro, {{total}} cuántas tiene el documento.
-msgid "panel.signed.visibleSignature.somePages"
-msgstr "{{total}}etik {{sealed}} orrialdetan"
 
 msgid "panel.signed.openDocument"
 msgstr "Ireki PDFa"
 
 msgid "panel.signed.openFolder"
 msgstr "Ireki karpeta"
-
-msgid "panel.signed.signAgain"
-msgstr "Sinatu berriro"
 
 msgid "progress.title"
 msgstr "Dokumentua sinatzen…"

@@ -421,6 +421,16 @@ pub fn previous_signatures_in(
         .map_err(CycleError::from)?)
 }
 
+/// Firmas del último documento firmado entregado en esta sesión, la propia incluida.
+pub fn signed_document_signatures_in(
+    files: &dyn DocumentBytes,
+    engine: &dyn PreviousSignaturesEngine,
+    session: &SigningSession,
+) -> Result<DocumentSignatures, CycleFailure> {
+    let landing = signed_document(session)?;
+    previous_signatures_in(files, engine, &Document::passing_through(landing))
+}
+
 /// Extrae el ciclo completado en el token de la sesión activa.
 pub fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, CycleFailure> {
     let mut open = lock(&session.open);

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { aCertificate, document, openPdf, pdfsOf, renderApp } from "./App.testSupport";
 import { inMemoryRecents } from "./documents/recents";
 import type { SigningBackend, SigningOrder } from "./signing/flow";
+import { NO_PREVIOUS_SIGNATURES } from "./signing/previousSignatures";
 import { emptyRubricPicker } from "./signing/rubric";
 
 const TODAY = new Intl.DateTimeFormat("es", { dateStyle: "short" }).format(new Date());
@@ -27,6 +28,7 @@ function recordingSigner(presigned: SigningOrder[]): SigningBackend {
       tone: "information",
       changedAfterLastSignature: false,
     }),
+    signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
     discard: async () => {},
   };
 }

@@ -33,7 +33,9 @@ interface PanelFooterSignedProps extends PanelFooterDestinationProps {
   /** Abre la carpeta donde quedó, con las firmas anteriores dentro (ID-81). */
   onOpenFolder: () => void;
   /** Vuelve al panel de firma con el original releído del disco (ID-80). */
-  onSignAgain: () => void;
+  onSign: () => void;
+  /** Mueve el destino del documento (ADR-0011). */
+  onChangeDestination: () => void;
 }
 
 type PanelFooterProps = PanelFooterSigningProps | PanelFooterSignedProps;
@@ -56,10 +58,9 @@ function unwritableMessage(message: string, folder: string) {
 /**
  * El pie del panel: 162 px en todos los estados
  * (docs/design/panel-de-firma.md § Pie fijo). El destino arriba —«Guardar
- * en» mientras se decide, «Guardado en» una vez escrito, con `Cambiar` oculto
- * sin mover nada (`visibility:hidden`)— y, abajo, la fila de 44 px con la
- * acción del momento: «Firmar», «Reintentar»/«Volver», o los dos
- * caminos hasta el fichero firmado y «Volver a firmar».
+ * en» mientras se decide, «Documento» en el resumen— y, abajo, la fila de 44 px
+ * con la acción del momento: «Firmar», «Reintentar»/«Volver», o los dos
+ * caminos hasta el fichero firmado y «Firmar».
  */
 export function PanelFooter(props: PanelFooterProps) {
   const { t } = useTranslation();
@@ -74,16 +75,15 @@ export function PanelFooter(props: PanelFooterProps) {
       <div className="panel__destination">
         <div className="rf-row panel__destination-label-row">
           <p className="rf-label panel__destination-label">
-            {t(signed ? "panel.signed.savedIn" : "panel.footer.savedIn")}
+            {t(signed ? "panel.signed.document" : "panel.footer.savedIn")}
           </p>
           <button
             type="button"
             className={
               "rf-btn rf-btn--ghost panel__destination-change" +
-              (signed ? " panel__destination-change--hidden" : "") +
               (signing ? " panel__controls--dim" : "")
             }
-            onClick={props.signed ? undefined : props.onChangeDestination}
+            onClick={props.onChangeDestination}
           >
             {t("actions.change")}
           </button>
@@ -133,10 +133,10 @@ export function PanelFooter(props: PanelFooterProps) {
           </button>
           <button
             type="button"
-            className="rf-btn rf-btn--ghost panel__signed-again"
-            onClick={props.onSignAgain}
+            className="rf-btn rf-btn--ghost panel__signed-sign"
+            onClick={props.onSign}
           >
-            {t("panel.signed.signAgain")}
+            {t("panel.footer.sign")}
           </button>
         </div>
       ) : (

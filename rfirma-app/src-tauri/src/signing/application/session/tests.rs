@@ -1,7 +1,7 @@
 use super::{
     admitted_bytes, begin, cancel, config_for, finish, is_live, note_delivered,
-    previous_signatures_in, sign_on_token, signed_document, signed_folder, take_signed_cycle,
-    DocumentToSign, SigningSession,
+    previous_signatures_in, sign_on_token, signed_document, signed_document_signatures_in,
+    signed_folder, take_signed_cycle, DocumentToSign, SigningSession,
 };
 use crate::crossing::Failure;
 use crate::documents::domain::document::Document;
@@ -498,4 +498,33 @@ fn previous_signatures_in_does_not_reach_the_engine_for_a_document_that_is_not_t
     let engine = AnEngineThatReports::default();
 
     assert!(previous_signatures_in(&files, &engine, &document).is_err());
+}
+
+#[test]
+fn the_signatures_of_the_signed_document_are_read_from_where_it_landed() {
+    let session = SigningSession::default();
+    note_delivered(
+        &session,
+        std::path::PathBuf::from("/tmp/contrato-firmado.pdf"),
+    );
+    let files = DocumentsInMemory::default().with("/tmp/contrato-firmado.pdf", b"%PDF-1.7 firmado");
+    let engine = AnEngineThatReports::default();
+
+    signed_document_signatures_in(&files, &engine, &session).expect("el motor contesta");
+
+    assert_eq!(
+        base64::engine::general_purpose::STANDARD
+            .decode(engine.last_document_b64())
+            .expect("es base64"),
+        b"%PDF-1.7 firmado"
+    );
+}
+
+#[test]
+fn there_are_no_signatures_to_read_before_the_first_signature_of_the_session() {
+    let session = SigningSession::default();
+    let files = DocumentsInMemory::default();
+    let engine = AnEngineThatReports::default();
+
+    assert!(signed_document_signatures_in(&files, &engine, &session).is_err());
 }

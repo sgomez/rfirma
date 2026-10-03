@@ -574,10 +574,6 @@
 
 /* Firmado: `Cambiar` se oculta sin mover nada, así la caja del destino no
    salta al perder el botón (docs/design/panel-de-firma.md § El resumen). */
-.panel__destination-change--hidden {
-  visibility: hidden;
-}
-
 .panel__destination-box {
   display: flex;
   flex-direction: column;
@@ -644,7 +640,7 @@
   padding: 0;
 }
 
-.panel__signed-again {
+.panel__signed-sign {
   flex: none;
   padding: 0 10px;
 }
