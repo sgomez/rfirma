@@ -67,9 +67,16 @@ export function PreviousSignaturesNotice({
         <span className="panel__notice-icon">{worstIcon(worst)}</span>
         <span className="rf-prose panel__co-signature-text">
           {t("panel.previousSignatures.alongside", { count: report.signatures.length })}
-          {worst === "expired" && ` · ${t("panel.previousSignatures.expired", { count: expired })}`}
-          {worst === "invalid" &&
-            ` · ${t("panel.previousSignatures.problems", { count: expired + invalid })}`}
+          {worst !== "valid" && (
+            <>
+              {" · "}
+              <strong>
+                {worst === "expired"
+                  ? t("panel.previousSignatures.expired", { count: expired })
+                  : t("panel.previousSignatures.problems", { count: expired + invalid })}
+              </strong>
+            </>
+          )}
         </span>
         <button
           type="button"

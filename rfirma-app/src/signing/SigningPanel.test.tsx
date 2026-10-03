@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
   certificate,
+  expectNoticeLine,
   previousSignatureOf,
   renderPanel,
   reportOf,
@@ -246,7 +247,7 @@ describe("SigningPanel", () => {
       ]),
     });
 
-    expect(screen.getByText("Junto a 3 firmas · 2 caducadas")).toBeInTheDocument();
+    expectNoticeLine("Junto a 3 firmas", "2 caducadas");
     expect(document.querySelector(".panel__co-signature")).toHaveClass(
       "panel__co-signature--expired",
     );
@@ -262,7 +263,7 @@ describe("SigningPanel", () => {
       ]),
     });
 
-    expect(screen.getByText("Junto a 3 firmas · 2 problemas")).toBeInTheDocument();
+    expectNoticeLine("Junto a 3 firmas", "2 problemas");
     expect(document.querySelector(".panel__co-signature")).toHaveClass(
       "panel__co-signature--invalid",
     );
@@ -276,7 +277,7 @@ describe("SigningPanel", () => {
       }),
     });
 
-    expect(screen.getByText("Junto a 1 firma · 1 problema")).toBeInTheDocument();
+    expectNoticeLine("Junto a 1 firma", "1 problema");
     expect(document.querySelector(".panel__co-signature")).toHaveClass(
       "panel__co-signature--invalid",
     );

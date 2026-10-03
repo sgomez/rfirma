@@ -2,7 +2,11 @@ import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
-import { previousSignatureOf, reportOf } from "../signing/SigningPanel.testSupport";
+import {
+  expectNoticeLine,
+  previousSignatureOf,
+  reportOf,
+} from "../signing/SigningPanel.testSupport";
 import { renderWithCatalog } from "../testing/render";
 import type { ErrandStage } from "./errand";
 import { SedeWindow } from "./SedeWindow";
@@ -259,7 +263,7 @@ describe("2 · consent", () => {
         );
         renderWithCatalog(<SedeWindow errands={port} />);
 
-        expect(screen.getByText("Junto a 2 firmas · 1 problema")).toBeInTheDocument();
+        expectNoticeLine("Junto a 2 firmas", "1 problema");
       },
     );
 

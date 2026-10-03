@@ -80,11 +80,6 @@
   white-space: nowrap;
 }
 
-.panel__co-signature--expired .panel__co-signature-text,
-.panel__co-signature--invalid .panel__co-signature-text {
-  font-weight: 700;
-}
-
 .panel__co-signature-view {
   flex: none;
   height: 28px;
