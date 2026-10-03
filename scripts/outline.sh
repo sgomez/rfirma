@@ -122,6 +122,8 @@ END { flushdoc() }
 is_a_test_module() {
     case "/$1" in
         *.test.ts|*.test.tsx) return 0 ;;
+        */src/test/*.java) return 0 ;;
+        *.java) return 1 ;;
         *.rs) ;;
         *) return 1 ;;
     esac
@@ -150,9 +152,9 @@ index() {
                 printf "%s  %s\n", name, header
             }
         ' "$dir/$module"
-    done < <(git -C "$dir" ls-files -- '*.rs' '*.ts' '*.tsx' | LC_ALL=C sort)
+    done < <(git -C "$dir" ls-files -- '*.rs' '*.ts' '*.tsx' '*.java' | LC_ALL=C sort)
     if [ "$count" = 0 ]; then
-        echo "outline: $requested no contiene ningun .rs, .ts ni .tsx versionado que no sea de prueba" >&2
+        echo "outline: $requested no contiene ningun .rs, .ts, .tsx ni .java versionado que no sea de prueba" >&2
         status=1
         return
     fi

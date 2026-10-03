@@ -56,6 +56,9 @@ mixed="$("$outline" scripts/tests/fixtures/sample.rs scripts/tests/fixtures/samp
 assert_contains "$mixed" "    9  pub struct PathPair" "mixed: esqueleto"
 assert_contains "$mixed" "    2  export function Greeting" "mixed: tramo"
 
+java_ranges="$("$outline" scripts/tests/fixtures/index/jvm/src/main/Headed.java:1-2)"
+assert_contains "$java_ranges" "    2  package fixtures;" "ranges: a java file"
+
 txt="$("$outline" scripts/tests/fixtures/sample.txt:1-1)"
 assert_contains "$txt" "    1  " "ranges on non-skeleton file"
 
@@ -85,6 +88,12 @@ assert_contains "$index" "widget.tsx  Un componente con cabecera." "index: reads
 assert_contains "$index" "plain.ts  !! SIN CABECERA //!" "index: flags a ts without header"
 if [[ "$index" == *"widget.test.tsx"* ]]; then
     echo "FALLO (index: skips the tests of the window): $index" >&2
+    exit 1
+fi
+assert_contains "$index" "jvm/src/main/Headed.java  Una clase con cabecera." "index: reads the header of a java"
+assert_contains "$index" "jvm/src/main/Bare.java  !! SIN CABECERA //!" "index: flags a java without header"
+if [[ "$index" == *"HeadedTest.java"* ]]; then
+    echo "FALLO (index: skips the tests under src/test): $index" >&2
     exit 1
 fi
 first="$(printf '%s\n' "$index" | head -1)"
