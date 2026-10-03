@@ -14,9 +14,9 @@ no interviene en ningún punto del proyecto.**
 | Origen del kit | `https://www.sede.fnmt.gob.es/documents/10445900/10649507/Certificados_pruebas_todas_CAs.rar` |
 | Módulo PKCS#11 | `/usr/lib/softhsm/libsofthsm2.so` (paquete `softhsm2` 2.6, Ubuntu) |
 | Configuración SoftHSM | `~/.config/softhsm2/softhsm2.conf` (ruta por defecto: **no hace falta `SOFTHSM2_CONF`**) |
-| Almacén de tokens | `~/.local/share/softhsm/tokens` |
+| Almacén de tokens | `~/.local/share/softhsm/tokens`, compartido por todos los worktrees. `just coverage` (y con ella `crap`, `check-rust` y el pre-push) corre los tests sobre una copia privada en un directorio temporal con su `SOFTHSM2_CONF`, que `scripts/token-per-test.sh` borra al terminar; la copia espera al cerrojo `$SOFTHSM2_CONF.lock` que toma `certs.sh` al instalar |
 | Etiqueta del token | `rfirma-test` |
-| Token de desarrollo | `rfirma-kit`: los dos casos del kit que no traen los tokens de las pruebas, un seudónimo y un representante con CN largo, para verlos en la ventana. Lo instala `just certs install` si el kit está en el equipo y lo quita `just certs uninstall`, junto con los de las pruebas; ninguna prueba lo usa |
+| Token de desarrollo | `rfirma-kit`: los dos casos del kit que no traen los tokens de las pruebas, un seudónimo y un representante con CN largo, para verlos en la ventana. Lo instala `just certs install` si el kit está en el equipo, y solo si falta el token o alguno de sus objetos (clave y certificado por entrada): con el kit completo no escribe y la ranura no cambia. `just certs reinstall` lo borra y lo vuelve a crear; `just certs uninstall` lo quita, junto con los de las pruebas. Ninguna prueba depende de él, pero su certificado de representante es el mismo que el de `rfirma-test-representative`, así que las pruebas no pueden suponer qué etiqueta tendrá la fila de ese certificado |
 | Tokens de representante | `rfirma-test-representative` (los tres perfiles del kit, cada uno con su revocado) y `rfirma-test-representative-2` (el mismo activo de persona jurídica, en un segundo almacén). Los monta `provision-token.sh` desde `testdata/fnmt/`, así que sí los usan las pruebas de grada B (#1090) |
 | PIN de usuario | `1234` |
 | PIN de SO | `3737` |

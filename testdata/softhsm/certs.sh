@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 #
-# Instala (`install`) o quita (`uninstall`) todos los certificados de pruebas en
+# Instala (`install`), reinstala (`reinstall`) o quita (`uninstall`) todos los certificados de pruebas en
 # SoftHSM: los tokens `rfirma-test`, `rfirma-test-ecc`, `rfirma-test-representative`
 # y `rfirma-test-representative-2` de las pruebas y, si el kit de la
 # FNMT esta en el equipo, el token `rfirma-kit` con los dos casos que las
 # pruebas no traen: un seudonimo y un CN largo de representante. El kit no
 # esta en el repositorio; se busca en $RFIRMA_TEST_CERTS o en
 # ~/.local/share/rfirma-test-certs (docs/research/token-pkcs11-pruebas.md).
+#
+# `install` es idempotente: si `rfirma-kit` ya tiene la clave y el certificado de
+# cada entrada, no escribe nada y la ranura no cambia. `reinstall` borra el token
+# y lo vuelve a crear. Ambos toman el cerrojo `$SOFTHSM2_CONF.lock`, que espera
+# `scripts/token-per-test.sh` antes de copiar el almacen.
 
 set -euo pipefail
 
@@ -47,12 +52,46 @@ write_object() {
         --write-object "$1" --type "$2" --id "$3" --label "$4" >/dev/null
 }
 
+lock_store() {
+    command -v flock >/dev/null || return 0
+    mkdir -p "$(dirname "$SOFTHSM2_CONF")"
+    exec 9>"$SOFTHSM2_CONF.lock"
+    flock 9
+}
+
+has_object() {
+    pkcs11-tool --module "$module" --token-label "$token_label" --login --pin "$pin" \
+        --list-objects --type "$1" 2>/dev/null \
+        | awk -v id="$2" -v label="$3" '
+            /^[A-Za-z]/ { if (found_id && found_label) ok = 1; found_id = found_label = 0 }
+            $1 == "label:" { sub(/^[[:space:]]*label:[[:space:]]*/, ""); found_label = ($0 == label) }
+            $1 == "ID:" { found_id = ($2 == id) }
+            END { if (found_id && found_label) ok = 1; exit !ok }'
+}
+
+kit_is_complete() {
+    softhsm2-util --show-slots | grep -q "Label:[[:space:]]*$token_label[[:space:]]*$" || return 1
+    local entry label id index=0
+    for entry in "${selection[@]}"; do
+        IFS='|' read -r label _ _ <<<"$entry"
+        index=$((index + 1))
+        id="$(printf '%02x' "$index")"
+        has_object privkey "$id" "$label" || return 1
+        has_object cert "$id" "$label" || return 1
+    done
+}
+
 install() {
+    lock_store
     "$here/provision-token.sh"
     [ -d "$kit" ] || {
         echo "sin kit de la FNMT en $kit: no se instala $token_label"
         return 0
     }
+    if [ "${1:-}" != force ] && kit_is_complete; then
+        echo "token $token_label ya completo: nada que instalar"
+        return 0
+    fi
     delete_token "$token_label"
     softhsm2-util --init-token --free --label "$token_label" \
         --so-pin "$so_pin" --pin "$pin" >/dev/null
@@ -77,9 +116,13 @@ install() {
 
 case "${1:-}" in
     install) install ;;
-    uninstall) uninstall ;;
+    reinstall) install force ;;
+    uninstall)
+        lock_store
+        uninstall
+        ;;
     *)
-        echo "uso: $0 install|uninstall" >&2
+        echo "uso: $0 install|reinstall|uninstall" >&2
         exit 2
         ;;
 esac

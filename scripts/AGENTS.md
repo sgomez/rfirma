@@ -16,7 +16,7 @@ Los arneses que llaman las recetas del `justfile` (ADR-0013).
 | `isolated-store.sh` | Monta, para un cliente de la suite de conformidad y un almacén (`rsa`, `ec`, `token`, `token_apart`, `ed25519`, `several` o `expired`), su perfil de usar y tirar con su envoltorio y su raíz de confianza, sin lanzar el cliente. Lo llama la consola web de la suite al resolver el cliente, no una receta. |
 | `check-glibc.sh` | Comprueba el suelo de glibc de la librería nativa. |
 | `flatpak-sources.sh` | Regenera las fuentes de cargo vendorizadas del manifiesto flatpak y el sello de `Cargo.lock`. |
-| `token-per-test.sh` | Envoltorio de nextest que da a cada proceso de prueba su propia copia del almacén de SoftHSM. Lo llama `.config/nextest.toml` de `rfirma-app/src-tauri`, no una receta. |
+| `token-per-test.sh` | Ejecuta el comando que recibe con una copia privada del almacén de SoftHSM (directorio temporal con su `SOFTHSM2_CONF`, borrado al salir aunque falle), copiada bajo el cerrojo que toma `testdata/softhsm/certs.sh`. Lo llama la receta `coverage` y, como envoltorio de nextest, `.config/nextest.toml` de `rfirma-app/src-tauri`. |
 | `ci-lanes.sh` | Dice, a partir de los ficheros de un PR o de un push a `main`, qué carriles del CI tienen que correr, los de Linux y los de Windows y macOS. Lo llama el job `scope` de `ci.yml`, no una receta. |
 | `platform-files.sh` | Lista los `.rs` de `rfirma-app/src-tauri` con un `cfg` de plataforma y los módulos que ese `cfg` declara, para `ci-lanes.sh`. Lo llama el job `scope` de `ci.yml`. |
 | `main-moved.sh` | Dice, a partir de las ejecuciones de un workflow, si `main` se ha movido desde la anterior. Lo llaman las puertas de `nightly.yml` y `warm-release-cache.yml`. |
