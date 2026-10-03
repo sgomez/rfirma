@@ -14,6 +14,7 @@ import { inMemoryRecents } from "./documents/recents";
 import type { Certificate } from "./signing/certificate";
 import type { SigningBackend, SigningOrder } from "./signing/flow";
 import type { PreviousSignature } from "./signing/previousSignatures";
+import { NO_PREVIOUS_SIGNATURES } from "./signing/previousSignatures";
 import { emptyRubricPicker } from "./signing/rubric";
 import type { Placement } from "./viewer/signatureBox";
 
@@ -180,6 +181,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         tone: "information",
         changedAfterLastSignature: false,
       }),
+      signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
     renderApp(
@@ -243,6 +245,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         tone: "information",
         changedAfterLastSignature: false,
       }),
+      signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
     renderApp(
@@ -292,6 +295,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         tone: "information",
         changedAfterLastSignature: false,
       }),
+      signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
     renderApp(
@@ -396,6 +400,7 @@ describe("App, con un documento que no se recuerda", () => {
         tone: "information",
         changedAfterLastSignature: false,
       }),
+      signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
     renderApp(
@@ -471,6 +476,7 @@ describe("App · firmas sin registrar", () => {
         tone: "information",
         changedAfterLastSignature: false,
       }),
+      signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
   }
@@ -561,6 +567,7 @@ describe("App · firmas previas no válidas", () => {
         tone: "attention",
         changedAfterLastSignature: false,
       }),
+      signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
   }

@@ -163,6 +163,8 @@ export interface SigningBackend {
    * el que se monta el aviso de firmas previas del panel.
    */
   previousSignatures(document: string): Promise<PreviousSignaturesReport>;
+  /** Las firmas del documento que se acaba de firmar, la propia incluida. */
+  signedDocumentSignatures(): Promise<PreviousSignaturesReport>;
   /**
    * Olvida el ciclo a medias: la cuarta operación **no es una etapa**, es la
    * salida.
@@ -205,6 +207,12 @@ export function unavailableSigningBackend(): SigningBackend {
     padesLowerLeft: () => Promise.reject(new Error("no hay orden de firma expuesta todavia")),
     unregisteredSignatures: async () => false,
     previousSignatures: async () => ({
+      signatures: [],
+      warningCount: 0,
+      tone: "information",
+      changedAfterLastSignature: false,
+    }),
+    signedDocumentSignatures: async () => ({
       signatures: [],
       warningCount: 0,
       tone: "information",

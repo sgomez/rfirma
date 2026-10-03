@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { Certificate } from "./certificate";
 import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./flow";
+import { NO_PREVIOUS_SIGNATURES } from "./previousSignatures";
 import type { StoreSecret } from "./secret";
 import type { TokenFailure } from "./token";
 import { acknowledgementFor, useSigning } from "./useSigning";
@@ -84,6 +85,7 @@ function backendOf(overrides: Partial<SigningBackend> = {}): SigningBackend {
       tone: "information",
       changedAfterLastSignature: false,
     }),
+    signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
     discard: async () => {},
     ...overrides,
   };

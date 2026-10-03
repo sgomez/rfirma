@@ -46,6 +46,7 @@ export function tauriSigningBackend(): SigningBackend {
     unregisteredSignatures: (document) => invoke<boolean>("unregistered_signatures", { document }),
     previousSignatures: (document) =>
       invoke<PreviousSignaturesReport>("previous_signatures", { document }),
+    signedDocumentSignatures: () => invoke<PreviousSignaturesReport>("signed_document_signatures"),
     discard: cancelSigning,
   };
 }

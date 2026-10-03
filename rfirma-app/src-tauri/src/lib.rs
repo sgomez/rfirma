@@ -261,6 +261,7 @@ fn with_the_five_roots(
             desktop::adapters::tauri::withdraw_rfirma,
             signing::adapters::tauri::unregistered_signatures,
             signing::adapters::tauri::previous_signatures,
+            signing::adapters::tauri::signed_document_signatures,
             identity::adapters::tauri::install_certificate,
             identity::adapters::tauri::remove_certificate,
             identity::adapters::tauri::empty_installed_store,

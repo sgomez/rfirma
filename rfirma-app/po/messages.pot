@@ -910,44 +910,52 @@ msgstr ""
 msgid "panel.footer.addCertificate"
 msgstr ""
 
-msgid "panel.signed.summary"
+msgid "panel.signed.title"
 msgstr ""
 
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
 msgstr ""
 
-#. El rótulo del destino, una vez escrito (docs/design/panel-de-firma.md § El
-#. resumen, tras firmar). No es una promesa como "panel.footer.savedIn": ya
-#. ha ocurrido.
-msgid "panel.signed.savedIn"
+#. Recuento de firmas del documento, en la insignia del resumen.
+msgid "panel.signed.count"
+msgid_plural "panel.signed.count"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. {{number}} es el ordinal de la firma en el documento.
+msgid "panel.signed.signature"
+msgstr ""
+
+#. La insignia de la firma recién hecha en el resumen.
+msgid "panel.signed.new"
+msgstr ""
+
+msgid "panel.signed.field.signer"
+msgstr ""
+
+msgid "panel.signed.field.onBehalfOf"
+msgstr ""
+
+msgid "panel.signed.field.issuer"
+msgstr ""
+
+msgid "panel.signed.field.declaredDate"
+msgstr ""
+
+#. El rótulo del pie del resumen, con el fichero firmado y «Cambiar».
+msgid "panel.signed.document"
 msgstr ""
 
 #. {{time}} es la hora, ya formateada (p. ej. "11:04").
 msgid "panel.signed.signedAt"
 msgstr ""
 
-msgid "panel.signed.visibleSignature.none"
-msgstr ""
-
-#. {{page}} es el número de la página.
-msgid "panel.signed.visibleSignature.onPage"
-msgstr ""
-
-msgid "panel.signed.visibleSignature.allPages"
-msgstr ""
-
-#. {{sealed}} es cuántas páginas llevan recuadro, {{total}} cuántas tiene el documento.
-msgid "panel.signed.visibleSignature.somePages"
-msgstr ""
-
 msgid "panel.signed.openDocument"
 msgstr ""
 
 msgid "panel.signed.openFolder"
-msgstr ""
-
-msgid "panel.signed.signAgain"
 msgstr ""
 
 msgid "progress.title"

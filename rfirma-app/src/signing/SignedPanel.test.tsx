@@ -1,167 +1,129 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { formatSignedAt } from "../App.signingOrder";
 import { renderWithCatalog } from "../testing/render";
+import type { PreviousSignature } from "./previousSignatures";
 import { SignedPanel } from "./SignedPanel";
-import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 const noop = () => {};
 
 const SIGNED_AT = new Date("2026-01-01T11:04:00");
 
+function aSignature(overrides: Partial<PreviousSignature> = {}): PreviousSignature {
+  return {
+    name: "ADA LOVELACE",
+    idNumber: "00000000T",
+    organizationIdentifier: null,
+    issuer: "AC FNMT Usuarios",
+    certificateSerialNumber: "1",
+    signingTime: "2026-09-14T10:32:05Z",
+    status: "valid",
+    reason: null,
+    ...overrides,
+  };
+}
+
 function renderPanel(props: Partial<Parameters<typeof SignedPanel>[0]> = {}) {
   return renderWithCatalog(
     <SignedPanel
-      document={{ name: "contrato-firmado.pdf", pages: 27, sizeBytes: 2_400_000 }}
+      documentName="contrato-firmado.pdf"
       signedAt={SIGNED_AT}
-      signature={DEFAULT_VISIBLE_SIGNATURE}
-      placement={null}
+      signatures={[aSignature()]}
       destination={{ folder: "Documentos", name: null, writable: true }}
       onOpenDocument={noop}
       onOpenFolder={noop}
-      onSignAgain={noop}
+      onSign={noop}
+      onChangeDestination={noop}
       {...props}
     />,
   );
 }
 
-// Grada A: el panel son datos y tres devoluciones de llamada; no habla con nadie.
 describe("SignedPanel", () => {
-  it("names the file that was written and not the one that was opened", () => {
-    renderPanel();
+  it("heads the summary with the format and the count of signatures", () => {
+    renderPanel({ signatures: [aSignature(), aSignature({ name: "GRACE HOPPER" })] });
 
-    expect(
-      screen.getByText("contrato-firmado.pdf", { selector: ".panel__document" }),
-    ).toBeInTheDocument();
-  });
-
-  it("shows the pages and the size the postsign already knew", () => {
-    // El tamaño no lo calcula el panel ni se relee del fichero: llega contado
-    // desde la escritura (ID-77).
-    renderPanel();
-
-    expect(screen.getByText("27 páginas · 2,4 MB")).toBeInTheDocument();
-  });
-
-  it("says the format, which is always PAdES", () => {
-    renderPanel();
-
+    expect(screen.getByText("Firmas del documento")).toBeInTheDocument();
     expect(screen.getByText("PAdES")).toBeInTheDocument();
+    expect(screen.getByText("2 firmas")).toBeInTheDocument();
   });
 
-  /**
-   * El encabezado `Resumen` se queda con una sola insignia debajo porque
-   * **guarda el sitio de la ficha 14** (ID-78): ahí irán el número de firmas y
-   * la tarjeta de cada una. Esta prueba es lo que impide que alguien lo quite
-   * por parecer vacío.
-   */
-  it("keeps the summary heading that holds the place of the signature cards", () => {
+  it("says when it was signed above the heading", () => {
     renderPanel();
 
-    expect(screen.getByRole("region", { name: "Resumen" })).toBeInTheDocument();
+    expect(screen.getByText(/^Firmado a las /)).toBeInTheDocument();
   });
 
-  it("does not take up space with what nobody counted", () => {
-    // Ni la insignia con el número de firmas ni las tarjetas de cada firma se
-    // montan: nadie lee todavía las firmas del PDF resultante, y un hueco con
-    // un guion diría «no tiene», que es falso (ID-44).
-    renderPanel();
-
-    expect(screen.queryByText(/firmas?$/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/—|–/)).not.toBeInTheDocument();
-  });
-
-  it("does not invent a page count it was not given", () => {
+  it("lists every signature and marks only the last one as new", () => {
     renderPanel({
-      document: { name: "contrato-firmado.pdf", pages: null, sizeBytes: 2_400_000 },
+      signatures: [aSignature({ name: "GRACE HOPPER" }), aSignature({ name: "ADA LOVELACE" })],
     });
 
-    expect(screen.queryByText(/página/)).not.toBeInTheDocument();
-    // Y el tamaño, que sí se sabe, se sigue enseñando solo.
-    expect(screen.getByText("2,4 MB")).toBeInTheDocument();
+    const cards = screen.getAllByRole("listitem");
+    const [first, second] = cards as [HTMLElement, HTMLElement];
+    expect(cards).toHaveLength(2);
+    expect(within(first).getByText("Firma 1")).toBeInTheDocument();
+    expect(within(first).queryByText("Nueva")).not.toBeInTheDocument();
+    expect(within(second).getByText("Firma 2")).toBeInTheDocument();
+    expect(within(second).getByText("Nueva")).toBeInTheDocument();
   });
 
-  /**
-   * Los tres botones del pie, en el orden y con la jerarquía del ID-79. Los dos
-   * de abrir no son comodidad: bajo el sandbox son la única forma que tiene el
-   * usuario de llegar a un fichero cuya ruta nunca ve (ADR-0011).
-   */
-  it("offers three ways out, in the hierarchy of the artboard", () => {
+  it("shows signer, issuer and declared date, and no serial number nor status", () => {
+    renderPanel();
+
+    expect(screen.getByText("ADA LOVELACE (00000000T)")).toBeInTheDocument();
+    expect(screen.getByText("AC FNMT Usuarios")).toBeInTheDocument();
+    expect(screen.getByText(formatSignedAt(new Date("2026-09-14T10:32:05Z"), "es"))).toBeVisible();
+    expect(screen.queryByText("Válida")).not.toBeInTheDocument();
+    expect(screen.queryByText(/serie/i)).not.toBeInTheDocument();
+  });
+
+  it("shows on behalf of only when the certificate names an entity", () => {
+    renderPanel({
+      signatures: [
+        aSignature({ organizationIdentifier: "VATES-B00000000" }),
+        aSignature({ name: "GRACE HOPPER" }),
+      ],
+    });
+
+    expect(screen.getAllByText("En nombre de")).toHaveLength(1);
+    expect(screen.getByText("VATES-B00000000")).toBeInTheDocument();
+  });
+
+  it("does not paint a field that is absent", () => {
+    renderPanel({ signatures: [aSignature({ signingTime: null })] });
+
+    expect(screen.queryByText("Fecha declarada")).not.toBeInTheDocument();
+    expect(screen.queryByText("En nombre de")).not.toBeInTheDocument();
+  });
+
+  it("no longer shows the visible signature line nor the old heading", () => {
+    renderPanel();
+
+    expect(screen.queryByText("Firma visible")).not.toBeInTheDocument();
+    expect(screen.queryByText("Resumen")).not.toBeInTheDocument();
+  });
+
+  it("labels the footer Document, with Cambiar active", async () => {
+    const change = vi.fn();
+    renderPanel({ onChangeDestination: change });
+
+    expect(screen.getByText("Documento")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cambiar" }));
+
+    expect(change).toHaveBeenCalledOnce();
+  });
+
+  it("offers the PDF, the folder and Firmar, in the hierarchy of the artboard", () => {
     renderPanel();
 
     expect(screen.getByRole("button", { name: "Abrir el PDF" })).toHaveClass("rf-btn--primary");
-    // La carpeta es un botón cuadrado con solo el icono, no un texto más.
     expect(screen.getByRole("button", { name: "Abrir la carpeta" })).toHaveClass(
       "rf-btn--secondary",
     );
-    expect(screen.getByRole("button", { name: "Volver a firmar" })).toHaveClass("rf-btn--ghost");
-  });
-
-  it("shows the saved-in box with Cambiar hidden without moving it", () => {
-    renderPanel();
-
-    expect(screen.getByText("Guardado en")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cambiar" })).toHaveClass(
-      "panel__destination-change--hidden",
-    );
-  });
-
-  it("says when it was signed", () => {
-    renderPanel();
-
-    expect(screen.getByText("Firmado a las 11:04")).toBeInTheDocument();
-  });
-
-  it("shows the visible signature as a read-only line", () => {
-    renderPanel({
-      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true },
-      placement: { rect: { x0: 0, y0: 0, x1: 1, y1: 1 }, pages: { only: [6] } },
-    });
-
-    expect(screen.getByText("En la página 6")).toBeInTheDocument();
-  });
-
-  it("shows how many of the document's pages carry the box", () => {
-    renderPanel({
-      document: { name: "contrato-firmado.pdf", pages: 27, sizeBytes: 2_400_000 },
-      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true },
-      placement: { rect: { x0: 0, y0: 0, x1: 1, y1: 1 }, pages: { only: [1, 2] } },
-    });
-
-    expect(screen.getByText("En 2 de 27 páginas")).toBeInTheDocument();
-  });
-
-  it("says No when the visible signature was off", () => {
-    renderPanel();
-
-    expect(screen.getByText("No")).toBeInTheDocument();
-  });
-
-  it("says all pages when that was the option", () => {
-    renderPanel({
-      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true },
-      placement: { rect: { x0: 0, y0: 0, x1: 1, y1: 1 }, pages: "all" },
-    });
-
-    expect(screen.getByText("En todas las páginas")).toBeInTheDocument();
-  });
-
-  it("does not invent a total when the page count is unknown", () => {
-    renderPanel({
-      document: { name: "contrato-firmado.pdf", pages: null, sizeBytes: 2_400_000 },
-      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true },
-      placement: { rect: { x0: 0, y0: 0, x1: 1, y1: 1 }, pages: { only: [1, 2] } },
-    });
-
-    expect(screen.queryByText("Firma visible")).not.toBeInTheDocument();
-  });
-
-  it("no longer offers signing another document", () => {
-    // Lo hubo y se retira: la bandeja ya ofrece abrir y aceptar arrastre, y dos
-    // caminos para lo mismo es uno de más (ID-79).
-    renderPanel();
-
-    expect(screen.queryByRole("button", { name: "Firmar otro documento" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Firmar" })).toHaveClass("rf-btn--ghost");
+    expect(screen.queryByRole("button", { name: "Volver a firmar" })).not.toBeInTheDocument();
   });
 
   it("opens the signed PDF", async () => {
@@ -183,17 +145,15 @@ describe("SignedPanel", () => {
   });
 
   it("goes back to sign the same document again", async () => {
-    const again = vi.fn();
-    renderPanel({ onSignAgain: again });
+    const sign = vi.fn();
+    renderPanel({ onSign: sign });
 
-    await userEvent.click(screen.getByRole("button", { name: "Volver a firmar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Firmar" }));
 
-    expect(again).toHaveBeenCalledOnce();
+    expect(sign).toHaveBeenCalledOnce();
   });
 
   it("says why it could not open instead of leaving the button doing nothing", () => {
-    // Un botón que no hace nada y no dice por qué deja al usuario sin ninguna
-    // forma de llegar a lo que acaba de firmar.
     renderPanel({
       failure: { situation: "unknown", detail: "no portal responded", attemptsLeft: null },
     });

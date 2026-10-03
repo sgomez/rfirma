@@ -981,45 +981,53 @@ msgstr "Signa amb el certificat de {{holder}}"
 msgid "panel.footer.addCertificate"
 msgstr "Afegeix un certificat…"
 
-msgid "panel.signed.summary"
-msgstr "Resum"
+msgid "panel.signed.title"
+msgstr "Signatures del document"
 
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
 msgstr "PAdES"
 
-#. El rótulo del destino, una vez escrito (docs/design/panel-de-firma.md § El
-#. resumen, tras firmar). No es una promesa como "panel.footer.savedIn": ya
-#. ha ocurrido.
-msgid "panel.signed.savedIn"
-msgstr "Desat a"
+#. Recuento de firmas del documento, en la insignia del resumen.
+msgid "panel.signed.count"
+msgid_plural "panel.signed.count"
+msgstr[0] "1 signatura"
+msgstr[1] "{{count}} signatures"
+msgstr[2] "{{count}} signatures"
+
+#. {{number}} es el ordinal de la firma en el documento.
+msgid "panel.signed.signature"
+msgstr "Signatura {{number}}"
+
+#. La insignia de la firma recién hecha en el resumen.
+msgid "panel.signed.new"
+msgstr "Nova"
+
+msgid "panel.signed.field.signer"
+msgstr "Signant"
+
+msgid "panel.signed.field.onBehalfOf"
+msgstr "En nom de"
+
+msgid "panel.signed.field.issuer"
+msgstr "Emissor"
+
+msgid "panel.signed.field.declaredDate"
+msgstr "Data declarada"
+
+#. El rótulo del pie del resumen, con el fichero firmado y «Cambiar».
+msgid "panel.signed.document"
+msgstr "Document"
 
 #. {{time}} es la hora, ya formateada (p. ej. "11:04").
 msgid "panel.signed.signedAt"
 msgstr "Signat a les {{time}}"
-
-msgid "panel.signed.visibleSignature.none"
-msgstr "No"
-
-#. {{page}} es el número de la página.
-msgid "panel.signed.visibleSignature.onPage"
-msgstr "A la pàgina {{page}}"
-
-msgid "panel.signed.visibleSignature.allPages"
-msgstr "A totes les pàgines"
-
-#. {{sealed}} es cuántas páginas llevan recuadro, {{total}} cuántas tiene el documento.
-msgid "panel.signed.visibleSignature.somePages"
-msgstr "A {{sealed}} de {{total}} pàgines"
 
 msgid "panel.signed.openDocument"
 msgstr "Obrir el PDF"
 
 msgid "panel.signed.openFolder"
 msgstr "Obrir la carpeta"
-
-msgid "panel.signed.signAgain"
-msgstr "Tornar a signar"
 
 msgid "progress.title"
 msgstr "Signant el document…"

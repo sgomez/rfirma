@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { classify, type NamedFailure } from "./errors/classify";
+import type { SigningBackend } from "./signing/flow";
+import type { PreviousSignature } from "./signing/previousSignatures";
 import { acknowledgementFor, type Signing } from "./signing/useSigning";
 
 /**
@@ -11,6 +13,7 @@ export function useSignedSummary(
   signing: Signing,
   activeDocumentId: string | null,
   reopenDocument: () => void,
+  signer: SigningBackend,
 ) {
   // Por qué no se pudo abrir el firmado o su carpeta. Vive aquí y no dentro del
   // resumen porque lo produce quien llama al portal, y el resumen solo lo
@@ -24,6 +27,26 @@ export function useSignedSummary(
   // mientras los dos sean el mismo documento.
   const signedHere = acknowledgementFor(signing.state, activeDocumentId);
   const signedSomewhere = signing.state.kind === "signed";
+
+  // Las firmas del documento tal y como ha quedado, leídas del fichero escrito.
+  // Un fallo al leerlas deja la lista vacía: el resumen sigue sirviendo para
+  // llegar al fichero.
+  const [signatures, setSignatures] = useState<readonly PreviousSignature[]>([]);
+  const readingSignatures = signedHere !== null;
+  useEffect(() => {
+    setSignatures([]);
+    if (!readingSignatures) return;
+    let current = true;
+    signer
+      .signedDocumentSignatures()
+      .then((report) => {
+        if (current) setSignatures(report.signatures);
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [signer, readingSignatures]);
 
   // Y cuando deja de serlo —se elige otro en la bandeja, se olvida el activo,
   // se vacía la lista— el estado se cierra, en vez de quedarse esperando a que
@@ -44,7 +67,7 @@ export function useSignedSummary(
     open().catch((thrown: unknown) => setOpenFailure(classify(thrown)));
   };
 
-  // «Volver a firmar»: se cierra el resumen y **se relee el original del
+  // «Firmar»: se cierra el resumen y **se relee el original del
   // disco** (ID-80). Es abrir el documento otra vez, porque entre una firma y
   // la siguiente el usuario ha podido modificarlo fuera o haberse equivocado al
   // configurar la firma. Lo que decida el recuadro recordado —incluido el aviso
@@ -55,5 +78,5 @@ export function useSignedSummary(
     reopenDocument();
   };
 
-  return { signedHere, openFailure, openSigned, signAgain };
+  return { signedHere, signatures, openFailure, openSigned, signAgain };
 }
