@@ -91,6 +91,21 @@ class PreviousSignaturesBridgeTest {
     }
 
     @Test
+    void the_profile_is_attributed_only_to_the_signature_of_the_highest_revision() throws Exception {
+        final byte[] once = signed(TestFixtures.samplePdf(),
+                TestFixtures.certificateChain(), TestFixtures.privateKey());
+        Thread.sleep(1_100);
+        final byte[] twice = signed(once,
+                TestFixtures.otherCertificateChain(), TestFixtures.otherPrivateKey());
+
+        final List<PreviousSignaturesBridge.Signature> signatures =
+                PreviousSignaturesBridge.read(twice).signatures();
+
+        assertNull(signatures.get(0).profile());
+        assertEquals("PAdES B-B-Level", signatures.get(1).profile());
+    }
+
+    @Test
     void the_subject_names_the_id_number_by_keyword_and_not_as_hex() throws Exception {
         final String subject = PreviousSignaturesBridge.readable(
                 TestFixtures.activeCertificate().getSubjectX500Principal());

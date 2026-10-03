@@ -19,8 +19,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -279,7 +282,8 @@ final class PreviousSignaturesBridge {
         }
         return identityOf(certificate,
                 algorithmName(signer.getDigestAlgOID(), signer.getEncryptionAlgOID()), profile,
-                signingTimeOf(signer), worstReason(validities, certificate, false, null), countersignatures);
+                signingTimeOf(signer), worstReason(validities, certificate, false, null),
+                countersignatures);
     }
 
     private static X509Certificate certificateOf(final SignerInformation signer,
@@ -433,8 +437,9 @@ final class PreviousSignaturesBridge {
                     ? null
                     : elements.get(HexFormat.of().formatHex(info.getPkcs1()));
             if (chain == null || chain.length == 0 || element == null) {
-                signers.add(new Signature("", "", "", null, null, null, null, null, null, null, Validity.INVALID,
-                        Reason.of(Problem.DAMAGED), null, false, countersignatures));
+                signers.add(new Signature("", "", "", null, null, null, null, null, null, null,
+                        Validity.INVALID, Reason.of(Problem.DAMAGED), null, false,
+                        countersignatures));
                 continue;
             }
             signers.add(identityOf(chain[0], xadesAlgorithmOf(element),
@@ -533,6 +538,7 @@ final class PreviousSignaturesBridge {
         }
         final String profile = SignatureFormatDetectorPadesCades.resolvePDFFormat(pdf);
         final Certification certification = certification(reader, fields);
+        final String latestName = latestRevisionName(fields);
 
         final List<Dated> dated = new ArrayList<>();
         for (final String name : fields.getSignatureNames()) {
@@ -566,7 +572,7 @@ final class PreviousSignaturesBridge {
                     instant(signer.getNotBefore()),
                     instant(signer.getNotAfter()),
                     pkcs7.getDigestAlgorithm(),
-                    profile,
+                    name.equals(latestName) ? profile : null,
                     signingTime == null ? null : DateTimeFormatter.ISO_INSTANT.format(signingTime),
                     statusOf(validity),
                     reasonOf(validity),
@@ -583,6 +589,17 @@ final class PreviousSignaturesBridge {
         final Finding suspect = changedAfterLastSignature(reader, fields);
         return new Report(dated.stream().map(Dated::signature).toList(),
                 suspect != null, findings(reader, fields, suspect));
+    }
+
+    /** El perfil del original es el de la firma de mayor revision; solo a esa se le atribuye. */
+    private static String latestRevisionName(final AcroFields fields) {
+        String latest = null;
+        for (final String name : fields.getSignatureNames()) {
+            if (latest == null || fields.getRevision(name) > fields.getRevision(latest)) {
+                latest = name;
+            }
+        }
+        return latest;
     }
 
     private static PdfPKCS7 readableSignature(final AcroFields fields, final String name) {
@@ -652,10 +669,15 @@ final class PreviousSignaturesBridge {
             "2.16.840.1.101.3.4.2.2", "SHA384",
             "2.16.840.1.101.3.4.2.3", "SHA512");
 
+    private static final String RSASSA_PSS_OID = "1.2.840.113549.1.1.10";
+
+    private static final Pattern XADES_ALGORITHM = Pattern.compile("(rsa|ecdsa)-(sha\\d+)$");
+
     /** El nombre {@code SHA256withRSA} de un par digest y cifrado dados por su OID, o los OID si no se conocen. */
     static String algorithmName(final String digestOid, final String encryptionOid) {
         final String digest = DIGESTS.get(digestOid);
-        final String encryption = encryptionOid.startsWith("1.2.840.113549.1.1.") ? "RSA"
+        final String encryption = encryptionOid.startsWith("1.2.840.113549.1.1.")
+                && !RSASSA_PSS_OID.equals(encryptionOid) ? "RSA"
                 : encryptionOid.startsWith("1.2.840.10045.") ? "ECDSA" : null;
         return digest == null || encryption == null
                 ? digestOid + "/" + encryptionOid
@@ -670,11 +692,10 @@ final class PreviousSignaturesBridge {
             return null;
         }
         final String uri = ((Element) methods.item(0)).getAttribute("Algorithm");
-        final java.util.regex.Matcher named = java.util.regex.Pattern
-                .compile("(rsa|ecdsa)-(sha\\d+)$").matcher(uri);
+        final Matcher named = XADES_ALGORITHM.matcher(uri);
         return named.find()
-                ? named.group(2).toUpperCase(java.util.Locale.ROOT) + "with"
-                        + named.group(1).toUpperCase(java.util.Locale.ROOT)
+                ? named.group(2).toUpperCase(Locale.ROOT) + "with"
+                        + named.group(1).toUpperCase(Locale.ROOT)
                 : uri;
     }
 
