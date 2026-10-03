@@ -210,30 +210,23 @@ fn a_pdf_signed_twice_with_the_token() -> PathBuf {
     path
 }
 
-/// Las líneas con la fecha declarada, que es la de una firma recién hecha, comprobada y con un marcador.
-fn with_the_declared_time_checked(lines: Vec<String>, since: DateTime<Utc>) -> Vec<String> {
-    const DECLARED: &str = "  Fecha declarada:   ";
+/// Las líneas con el día de la firma, que es el de una firma recién hecha, comprobado y con un marcador.
+fn with_the_signing_day_checked(lines: Vec<String>, since: DateTime<Utc>) -> Vec<String> {
+    let local_day = |instant: DateTime<Utc>| {
+        instant
+            .with_timezone(&FixedOffset::east_opt(2 * 3600).expect("+02:00 es un desplazamiento"))
+            .format("%Y-%m-%d")
+            .to_string()
+    };
+    let (first, last) = (local_day(since), local_day(Utc::now()));
     lines
         .into_iter()
-        .map(
-            |line| match line.trim_start().strip_prefix(DECLARED.trim_start()) {
-                None => line,
-                Some(declared) => {
-                    let indent = &line[..line.len() - line.trim_start().len()];
-                    let instant =
-                        DateTime::parse_from_str(declared.trim_start(), "%Y-%m-%d %H:%M:%S %:z")
-                            .unwrap_or_else(|error| {
-                                panic!("«{declared}» no es una fecha local: {error}")
-                            });
-                    assert_eq!(instant.offset().local_minus_utc(), 2 * 3600, "{declared}");
-                    assert!(
-                        instant >= since - chrono::Duration::seconds(1) && instant <= Utc::now(),
-                        "{declared} no es el instante de la firma"
-                    );
-                    format!("{indent}{}<instante de la firma>", DECLARED.trim_start())
-                }
-            },
-        )
+        .map(|line| match line.rsplit_once(" · ") {
+            Some((head, day)) if day == first || day == last => {
+                format!("{head} · <día de la firma>")
+            }
+            _ => line,
+        })
         .collect()
 }
 
@@ -247,21 +240,11 @@ fn verbose_prints_the_validity_the_format_and_a_sheet_per_signature_of_a_pdf() {
 
     assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
     assert_eq!(
-        with_the_declared_time_checked(printed_lines(&outcome), since),
+        with_the_signing_day_checked(printed_lines(&outcome), since),
         [
-            "Firma valida",
-            "",
-            "Formato: PAdES",
-            "",
-            "Firma 1",
-            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
-            "  Emisor:            AC FNMT Usuarios",
-            "  Fecha declarada:   <instante de la firma>",
-            "",
-            "Firma 2",
-            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
-            "  Emisor:            AC FNMT Usuarios",
-            "  Fecha declarada:   <instante de la firma>",
+            "PAdES · 2 firmas",
+            "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
+            "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
         ]
     );
 }
@@ -291,17 +274,10 @@ fn verbose_names_the_entity_on_whose_behalf_a_representative_signs() {
 
     assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
     assert_eq!(
-        with_the_declared_time_checked(printed_lines(&outcome), since),
+        with_the_signing_day_checked(printed_lines(&outcome), since),
         [
-            "Firma valida",
-            "",
-            "Formato: PAdES",
-            "",
-            "Firma 1",
-            "  Firmante:          NOMBRE APELLIDOUNO (00000000T)",
-            "  En nombre de:      ENTIDAD DE PRUEBAS (Q0000000J)",
-            "  Emisor:            AC Representación",
-            "  Fecha declarada:   <instante de la firma>",
+            "PAdES · 1 firma",
+            "✓ NOMBRE APELLIDOUNO · por ENTIDAD DE PRUEBAS · <día de la firma>",
         ]
     );
 }
@@ -337,22 +313,11 @@ fn verbose_prints_the_format_and_a_sheet_per_cosignature_of_a_cades() {
 
     assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
     assert_eq!(
-        with_the_declared_time_checked(printed_lines(&outcome), since),
+        with_the_signing_day_checked(printed_lines(&outcome), since),
         [
-            "Firma valida",
-            "Firma valida",
-            "",
-            "Formato: CAdES",
-            "",
-            "Firma 1",
-            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
-            "  Emisor:            AC FNMT Usuarios",
-            "  Fecha declarada:   <instante de la firma>",
-            "",
-            "Firma 2",
-            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
-            "  Emisor:            AC FNMT Usuarios",
-            "  Fecha declarada:   <instante de la firma>",
+            "CAdES · 2 firmas",
+            "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
+            "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
         ]
     );
 }
@@ -388,21 +353,11 @@ fn verbose_prints_the_countersignature_of_a_cades_inside_the_signature_it_counte
 
     assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
     assert_eq!(
-        with_the_declared_time_checked(printed_lines(&outcome), since),
+        with_the_signing_day_checked(printed_lines(&outcome), since),
         [
-            "Firma valida",
-            "",
-            "Formato: CAdES",
-            "",
-            "Firma 1",
-            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
-            "  Emisor:            AC FNMT Usuarios",
-            "  Fecha declarada:   <instante de la firma>",
-            "",
-            "    Contrafirma 1.1",
-            "      Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
-            "      Emisor:            AC FNMT Usuarios",
-            "      Fecha declarada:   <instante de la firma>",
+            "CAdES · 1 firma · 1 contrafirma",
+            "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
+            "    ✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
         ]
     );
 }
@@ -438,21 +393,11 @@ fn verbose_prints_the_countersignature_of_a_xades_inside_the_signature_it_counte
 
     assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
     assert_eq!(
-        with_the_declared_time_checked(printed_lines(&outcome), since),
+        with_the_signing_day_checked(printed_lines(&outcome), since),
         [
-            "Firma valida",
-            "",
-            "Formato: XAdES",
-            "",
-            "Firma 1",
-            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
-            "  Emisor:            AC FNMT Usuarios",
-            "  Fecha declarada:   <instante de la firma>",
-            "",
-            "    Contrafirma 1.1",
-            "      Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
-            "      Emisor:            AC FNMT Usuarios",
-            "      Fecha declarada:   <instante de la firma>",
+            "XAdES · 1 firma · 1 contrafirma",
+            "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
+            "    ✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
         ]
     );
 }
@@ -476,16 +421,10 @@ fn verbose_prints_the_format_and_the_sheet_of_a_signed_invoice() {
 
     assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
     assert_eq!(
-        with_the_declared_time_checked(printed_lines(&outcome), since),
+        with_the_signing_day_checked(printed_lines(&outcome), since),
         [
-            "Firma valida",
-            "",
-            "Formato: FacturaE",
-            "",
-            "Firma 1",
-            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
-            "  Emisor:            AC FNMT Usuarios",
-            "  Fecha declarada:   <instante de la firma>",
+            "FacturaE · 1 firma",
+            "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
         ]
     );
 }
