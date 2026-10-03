@@ -16,6 +16,11 @@ const WITH_VALUE: [&str; 9] = [
 
 const SWITCHES: [&str; 4] = ["-certtui", "-certgui", "-xml", "-gui"];
 
+/// Si es un parámetro de `sign` o `cosign`, en la forma `-opción`.
+pub fn is_an_option(argument: &str) -> bool {
+    WITH_VALUE.contains(&argument) || SWITCHES.contains(&argument)
+}
+
 /// El formato de firma que se pide.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Format {
@@ -85,7 +90,7 @@ impl fmt::Display for ArgumentsRefusal {
                 write!(formatter, "el parámetro {parameter} necesita un valor")
             }
             Self::MissingInput => write!(formatter, "falta -i <fichero>"),
-            Self::MissingOutput => write!(formatter, "falta -o <fichero>, salvo con -xml"),
+            Self::MissingOutput => write!(formatter, "falta -o <fichero>, salvo con --xml"),
             Self::UnsupportedFormat(format) => {
                 write!(formatter, "el formato «{format}» no está soportado")
             }
@@ -103,15 +108,15 @@ impl fmt::Display for ArgumentsRefusal {
             ),
             Self::InvalidDescriptor(value) => write!(
                 formatter,
-                "-password-fd necesita el número de un descriptor, no «{value}»"
+                "--password-fd necesita el número de un descriptor, no «{value}»"
             ),
             Self::NoCertificateSelection => write!(
                 formatter,
-                "falta elegir el certificado: usa uno de -alias, -certgui o -certtui, o -filter"
+                "falta elegir el certificado: usa uno de --alias, --certgui o --certtui, o --filter"
             ),
             Self::ConflictingSelection => write!(
                 formatter,
-                "-alias, -certgui y -certtui se excluyen entre sí, y -alias tampoco admite -filter"
+                "--alias, --certgui y --certtui se excluyen entre sí, y --alias tampoco admite --filter"
             ),
         }
     }

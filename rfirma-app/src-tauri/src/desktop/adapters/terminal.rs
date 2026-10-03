@@ -232,7 +232,7 @@ impl RootsSigner<'_> {
         .map(|_| ())
         .map_err(|error| match error {
             PromptedError::Prompt(prompt) => format!(
-                "no hay terminal ni -password-fd con el que pedir el PIN, y el diálogo de escritorio falla ({prompt})"
+                "no hay terminal ni --password-fd con el que pedir el PIN, y el diálogo de escritorio falla ({prompt})"
             ),
             PromptedError::Attempt(failure) => Failure::from(failure).detail,
         })

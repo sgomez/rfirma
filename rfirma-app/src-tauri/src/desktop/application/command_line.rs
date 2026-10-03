@@ -6,7 +6,8 @@ use base64::Engine as _;
 
 use crate::desktop::application::store_scope::{within_the_scope, ScopeFailure};
 use crate::desktop::domain::command_line::{
-    command_of, file_for_the_window, is_a_help_flag, parameter_left_out, Command, Refusal,
+    command_of, file_for_the_window, is_a_help_flag, normalised, parameter_left_out, Command,
+    Refusal,
 };
 use crate::desktop::domain::sign_arguments::{
     parse_sign_arguments, Format, Selection, SignArguments,
@@ -127,6 +128,7 @@ impl Outcome {
 
 /// Atiende los argumentos que siguen al ejecutable, empezando por la orden.
 pub fn attend(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
+    let arguments = &normalised(arguments);
     let command = match command_of(arguments) {
         Ok(command) => command,
         Err(refusal) => return Outcome::refused(&refusal),

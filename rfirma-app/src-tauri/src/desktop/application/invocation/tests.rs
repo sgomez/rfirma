@@ -436,13 +436,30 @@ fn the_help_no_longer_promises_that_there_is_no_unattended_mode() {
     assert!(!HELP.contains("desatendido"));
     for line in [
         "rfirma <orden> [parámetros…]",
-        "rfirma <orden> -help",
-        "-password-fd <N>",
-        "-certtui",
+        "rfirma <orden> --help",
+        "--password-fd <N>",
+        "--certtui",
         "secret-tool lookup",
         "--file-forwarding",
         "Desviaciones",
     ] {
         assert!(HELP.contains(line), "falta {line}");
     }
+}
+
+#[test]
+fn the_version_is_asked_for_in_either_form() {
+    for flag in ["--version", "-version"] {
+        assert!(version_was_asked_for(["rfirma", flag]), "con {flag}");
+    }
+    assert!(!version_was_asked_for(["rfirma"]));
+    assert!(
+        !version_was_asked_for(["--version"]),
+        "el ejecutable no cuenta"
+    );
+}
+
+#[test]
+fn the_version_text_names_rfirma_and_then_the_autofirma_it_comes_from() {
+    assert_eq!(version_text("1.2.3"), "rfirma 1.2.3\nAutoFirma 1.9.2");
 }
