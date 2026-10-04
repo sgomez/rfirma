@@ -4,77 +4,67 @@ Acompaña las tres etapas de la firma trifásica mientras se ejecutan. Bloquea l
 ventana porque no hay nada que hacer hasta que termine, y porque interrumpir a
 mitad rompe la firma.
 
-## Casos de uso que la usan
+Componente: `rfirma-app/src/signing/SigningProgressDialog.tsx`. Historias:
+`SigningProgressDialog.stories.tsx`, en «Diálogos de firma/4 · Progreso de
+firma», una por etapa en curso.
 
-- Firmar un PDF en local — al pulsar «Firmar», con la sesión del almacén
-  ya abierta. Ocupa el mismo sitio que el [diálogo de secreto](dialogo-pin.md),
-  que lo precede cuando hace falta.
+## Casos de uso que lo usan
 
-## Estructura
+- Firmar un PDF en local, al pulsar «Firmar», con la sesión del almacén ya
+  abierta. Ocupa el mismo sitio que el [diálogo de secreto](dialogo-pin.md), que
+  lo precede cuando hace falta.
 
-`.rf-dialog` de 420 px sobre `.rf-scrim` con `z-index: 20`, por encima de la
-cabecera y sus pestañas:
+## Flujo
 
-1. Título «Firmando el documento…».
-2. Las tres etapas, cada una con su marca.
-3. Barra de progreso fina.
+Tres estados, uno por etapa en curso: prefirma, firma y postfirma. **No tiene
+salida**: ni «Cancelar» ni cruz ni Escape, porque una vez empezada la firma no
+hay marcha atrás. Al terminar, el velo se va y el [panel](panel-de-firma.md)
+enseña el resultado, la firma o el error.
 
-Nada más: no queda ningún gesto que pedirle a quien mira una barra de progreso.
+## Qué enseña
 
-Debajo, la ventana en «firmando»: la hoja al 45 %, los controles de la firma
-visible al 35 % y el botón al 55 % diciendo «Firmando como <nombre>».
+Un velo que cubre la ventana entera, con la cabecera y sus pestañas, y encima:
 
-## Las tres etapas
+1. El título.
+2. Las tres etapas, cada una con su marca: hecha, en curso o pendiente. La que
+   está en curso lleva el peso y se anuncia como paso actual (`aria-current`),
+   para que la forma no sea el único indicador (ver la sección 8 de
+   [design-system.md](design-system.md#8-accesibilidad)).
+3. Una barra de progreso fina, con rol de barra de progreso y nombrada por el
+   título.
+4. Una línea atenuada que pide no retirar la tarjeta.
 
-Lenguaje llano, con el término del dominio entre paréntesis y atenuado para quien
-lea un informe de error:
+## Variantes
 
-| Etapa | Texto |
-| ----- | ----- |
-| Prefirma | Preparando la firma *(prefirma)* |
-| Firma | Firmando |
-| Postfirma | Ensamblando el PDF *(postfirma)* |
+- `Presign`: la primera etapa en curso, las otras pendientes.
+- `Sign`: la primera hecha, la segunda en curso.
+- `Postsign`: las dos primeras hechas, la última en curso.
 
-«Firmando» no lleva paréntesis: es a la vez la palabra llana y la del dominio.
+## Textos
 
-### Geometría
-
-- Cada etapa es una fila con una casilla de marca de 20 px y su texto.
-- **Marcas**: la cumplida, la verificación en `<svg>` de 20 px con trazo 2; la
-  en curso, un disco macizo de 10 px en `--rf-primary`; la pendiente, un aro de
-  10 px con borde `--rf-border-strong`.
-- La etapa en curso va a **peso 700 sin teñir el texto**; la pendiente, con el
-  texto en `--rf-text-muted`.
-- **Barra**: 4 px, `--rf-radius-pill`, canal `--rf-border-subtle` y relleno
-  `--rf-primary`.
-- **La palabra de estado** —«Hecha», «En curso», «Pendiente»— va al final de
-  cada fila aunque el artboard no la dibuje: la sección 8 del
-  [sistema de diseño](design-system.md) prohíbe que la forma sea el único
-  indicador.
-
-## Estados
-
-Tres, uno por etapa en curso. No se puede cancelar una vez empezada la firma. Al
-terminar, el velo se va y el [panel](panel-de-firma.md) enseña «Firmado» o el
-error.
+Claves: `progress.title`, `progress.stages.presign`, `progress.stages.sign`,
+`progress.stages.postsign` y `progress.keepTheCard`. Los textos no se copian
+aquí: se leen en `po/es.po`.
 
 ## Componentes y tokens
 
-`.rf-dialog`, `.rf-scrim`, `.rf-prose`, `.rf-text-muted`, `--rf-primary`,
-`--rf-border-subtle`, `--rf-border-strong`, `--rf-radius-pill`.
+El primitivo `Dialog`, sin salida, y `CheckIcon`; `.rf-title`, `.rf-prose`,
+`.rf-text-muted`, `--rf-primary`, `--rf-border-subtle`, `--rf-border-strong` y
+`--rf-radius-pill`. Las medidas son de `SigningProgressDialog.css`.
 
 ## Decisiones
 
 - **Se enseñan las tres etapas** porque la postfirma regenera el PDF entero y
-  puede tardar: sin desglose, una espera larga parece un cuelgue. Y cuando falla,
-  la fase es lo primero que hace falta; el error del panel la repite en su
-  detalle.
-- **Diálogo con velo, no etapas en el pie** (25/09/2026). Main v4 D atenuaba la
-  ventana sin diálogo; se mantiene el velo para que el secreto, el progreso y el
-  paso al resultado ocurran en el mismo sitio.
-- **Sin tarjeta.** «Firmando en la tarjeta» y «No retires la tarjeta hasta que
-  termine» se fueron con las tarjetas en la v0.4.
-
-Validado en el lienzo
-[Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
-página **Recorrido de firma**, artboard `Main`, palanca «Estado: firmando».
+  puede tardar: sin desglose, una espera larga tras teclear el PIN parece un
+  cuelgue. Y cuando algo falla, saber en qué fase fue es lo primero que hace
+  falta.
+- **Lenguaje llano**: la etapa se nombra por lo que hace, no por el término del
+  dominio.
+- **Diálogo con velo y no etapas en el pie.** Se mantiene el velo para que el
+  secreto, el progreso y el paso al resultado ocurran en el mismo sitio.
+- **Sin salida a propósito.** Retirar la tarjeta a mitad rompe la firma; por eso
+  no hay botones y el primitivo `Dialog` no instala Escape cuando no tiene
+  salida.
+- **La línea de la tarjeta sigue en el código.** Una versión anterior de esta
+  ficha decía que se había ido con las tarjetas de la v0.4; el componente la
+  conserva, y manda el componente.
