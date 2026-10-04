@@ -4,6 +4,7 @@ import { useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { RubricIcon } from "../design-system/icons";
+import { Switch } from "../design-system/Switch";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { Certificate } from "./certificate";
 import { PhraseEditor } from "./PhraseEditor";
@@ -33,6 +34,7 @@ export function ModelFieldset({
   const { t, i18n } = useTranslation();
   const modelName = useId();
   const modelTitle = useId();
+  const rubricLabelId = useId();
   const rule = rubricRuleFor(signature.content, signature.withRubric);
   const rubricLocked = rule.locked === "on";
   const noImageTitle = t("panel.visibleSignature.rubric.noImageTitle");
@@ -167,21 +169,15 @@ export function ModelFieldset({
 
       <div className="panel__rubric">
         <div className="panel__rubric-row">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={rubricLocked || signature.withRubric}
-            aria-label={t("panel.visibleSignature.rubric.toggle")}
+          <Switch
+            labelledBy={rubricLabelId}
+            checked={rubricLocked || signature.withRubric}
             disabled={rubricLocked}
             title={rubricLocked ? t("panel.visibleSignature.rubric.lockedTitle") : undefined}
-            className="panel__rubric-switch"
-            onClick={toggleRubric}
-          >
-            <span className="panel__rubric-track" aria-hidden="true">
-              <span className="panel__rubric-knob" />
-            </span>
-          </button>
+            onChange={toggleRubric}
+          />
           <span
+            id={rubricLabelId}
             className={
               rubricLocked
                 ? "panel__rubric-label panel__rubric-label--locked"

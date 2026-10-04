@@ -178,17 +178,7 @@
 }
 
 .setup-wizard__protection-switch {
-  position: relative;
-  flex: none;
-  width: auto;
-  min-height: 24px;
   margin-top: 2px;
-}
-
-.setup-wizard__protection-switch::before {
-  content: "";
-  position: absolute;
-  inset: -10px;
 }
 
 .setup-wizard__footer {
