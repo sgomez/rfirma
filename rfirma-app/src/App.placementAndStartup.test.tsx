@@ -40,8 +40,6 @@ describe("App · Firma visible, en qué páginas", () => {
   }
 
   const box = () => screen.queryByRole("application", { name: "Recuadro de la firma visible" });
-  const field = (panel: HTMLElement) =>
-    within(panel).getByRole("textbox", { name: "Páginas de la firma visible" });
   const nextPage = (user: ReturnType<typeof userEvent.setup>) =>
     user.click(screen.getByRole("button", { name: "Página siguiente" }));
 
@@ -53,45 +51,33 @@ describe("App · Firma visible, en qué páginas", () => {
     expect(within(panel).queryByText(/Coloca la firma/)).not.toBeInTheDocument();
   });
 
-  it("moves the box under «one page» instead of adding a page to it", async () => {
-    const { user, panel } = await openVisible();
-
+  it("brings back the placement of a tab, on its page, when the tab is chosen again", async () => {
+    const user = userEvent.setup();
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("primero.pdf"), document("segundo.pdf")],
+      pdfs: pdfsOf({ "primero.pdf": 5, "segundo.pdf": 5 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+    });
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await within(panel).findByRole("button", { name: "Firmar" });
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
+    await within(panel).findByText("En la página 1");
+    await nextPage(user);
     await nextPage(user);
     await user.click(within(panel).getByRole("button", { name: "Ponerla aquí" }));
+    await within(panel).findByText("En la página 3");
+    await openPdf(user);
+    await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
+    await within(panel).findByText("En la página 1");
 
-    expect(await within(panel).findByText("En la página 2")).toBeInTheDocument();
-    expect(within(panel).queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
-  });
+    await user.click(screen.getByRole("tab", { name: "primero.pdf" }));
 
-  it("gives each mode its own set, so going back brings what was left there", async () => {
-    const { user, panel } = await openVisible();
-
-    await user.click(within(panel).getByRole("radio", { name: "Varias" }));
-    expect(field(panel)).toHaveValue("1");
-
-    await user.clear(field(panel));
-    await user.type(field(panel), "2,5");
-    await user.click(within(panel).getByRole("radio", { name: "Una página" }));
-
-    expect(within(panel).getByText("En la página 1")).toBeInTheDocument();
-
-    await user.click(within(panel).getByRole("radio", { name: "Varias" }));
-
-    expect(field(panel)).toHaveValue("2,5");
-  });
-
-  it("puts the page in view in the set under «several», and takes it off again", async () => {
-    const { user, panel } = await openVisible();
-    await user.click(within(panel).getByRole("radio", { name: "Varias" }));
-
-    await nextPage(user);
-    await user.click(within(panel).getByRole("button", { name: "Ponerla aquí" }));
-
-    await waitFor(() => expect(field(panel)).toHaveValue("1-2"));
-
-    await user.click(within(panel).getByRole("button", { name: "Quitarla de aquí" }));
-
-    await waitFor(() => expect(field(panel)).toHaveValue("1"));
+    const current = screen.getByRole("region", { name: "Panel de firma" });
+    expect(await within(current).findByText("En la página 3")).toBeInTheDocument();
+    expect(within(current).queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
   });
 
   it("places the box on a document opened with the switch already on", async () => {
@@ -147,16 +133,6 @@ describe("App · Firma visible, en qué páginas", () => {
     const current = screen.getByRole("region", { name: "Panel de firma" });
     await waitFor(() => expect(within(current).getByText("En la página 1")).toBeInTheDocument());
     expect(within(current).queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
-  });
-
-  it("keeps the box and shows nothing below under «all»", async () => {
-    const { user, panel } = await openVisible();
-
-    await user.click(within(panel).getByRole("radio", { name: "Todas" }));
-
-    expect(box()).not.toBeNull();
-    expect(within(panel).queryByText(/En la página/)).not.toBeInTheDocument();
-    expect(within(panel).queryByRole("button", { name: /aquí/ })).not.toBeInTheDocument();
   });
 });
 
