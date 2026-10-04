@@ -2,7 +2,7 @@
 
 import { type KeyboardEvent, useEffect, useRef } from "react";
 import {
-  type PageChoice,
+  type PageMode,
   type Placement,
   sealing,
   sealsPage,
@@ -36,7 +36,7 @@ const NUDGE_FAST = 10;
 interface UseViewerBoxArgs {
   placement: Placement | null;
   onPlace: (placement: Placement | null) => void;
-  pageChoice: PageChoice;
+  pageMode: PageMode;
   placementRequest: { action: "seal" | "unseal" } | null;
   canPlace: boolean;
   onGesture?: (active: boolean) => void;
@@ -57,7 +57,7 @@ interface UseViewerBoxArgs {
 export function useViewerBox({
   placement,
   onPlace,
-  pageChoice,
+  pageMode,
   placementRequest,
   canPlace,
   onGesture,
@@ -179,9 +179,9 @@ export function useViewerBox({
    */
   const placedAt = (rect: UserSpaceRect): Placement => {
     if (placement === null) {
-      return { rect, pages: pageChoice === "all" ? "all" : { only: [page] } };
+      return { rect, pages: pageMode === "all" ? "all" : { only: [page] } };
     }
-    if (pageChoice === "single") return { rect, pages: { only: [page] } };
+    if (pageMode === "single") return { rect, pages: { only: [page] } };
     return { ...sealing(placement, page), rect };
   };
 

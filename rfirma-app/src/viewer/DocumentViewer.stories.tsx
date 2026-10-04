@@ -46,7 +46,7 @@ export const WithSignatureBox: Story = {
 export const SignatureBoxOnAllPages: Story = {
   args: {
     pdf: storyPdf(),
-    pageChoice: "all",
+    pageMode: "all",
     placement: { rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: "all" },
   },
 };

@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import type { PageChoice, Placement } from "../placement/pageSets";
+import type { PageMode, Placement } from "../placement/pageSets";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
 import type { PdfDocument } from "./pdf";
@@ -27,12 +27,12 @@ describe("el recuadro trazado sobre la hoja", () => {
   /** El visor con la colocación en estado, que es como lo monta `App`. */
   function Placing({
     document,
-    pageChoice = "these",
+    pageMode = "these",
     start = null,
     onPlace,
   }: {
     document: PdfDocument;
-    pageChoice?: PageChoice;
+    pageMode?: PageMode;
     start?: Placement | null;
     onPlace?: (next: Placement | null) => void;
   }) {
@@ -41,7 +41,7 @@ describe("el recuadro trazado sobre la hoja", () => {
       <DocumentViewer
         pdf={document}
         placement={placement}
-        pageChoice={pageChoice}
+        pageMode={pageMode}
         onPlace={(next) => {
           setPlacement(next);
           onPlace?.(next);
@@ -114,7 +114,7 @@ describe("el recuadro trazado sobre la hoja", () => {
     const onPlace = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
-      <Placing document={document} start={seated} pageChoice="these" onPlace={onPlace} />,
+      <Placing document={document} start={seated} pageMode="these" onPlace={onPlace} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
     await goToPage(2, renders);
@@ -131,7 +131,7 @@ describe("el recuadro trazado sobre la hoja", () => {
     const onPlace = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
-      <Placing document={document} start={seated} pageChoice="single" onPlace={onPlace} />,
+      <Placing document={document} start={seated} pageMode="single" onPlace={onPlace} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
     await goToPage(3, renders);
@@ -151,7 +151,7 @@ describe("el recuadro trazado sobre la hoja", () => {
       <Placing
         document={document}
         start={{ rect: seated.rect, pages: "all" }}
-        pageChoice="all"
+        pageMode="all"
         onPlace={onPlace}
       />,
     );

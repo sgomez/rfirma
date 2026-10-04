@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatPageRange, parsePageRange } from "../placement/pageRange";
-import type { PageChoice, PageSet, PageSets, Placement } from "../placement/pageSets";
+import type { PageMode, PageSet, PageSets, Placement } from "../placement/pageSets";
 import { sealsPage } from "../placement/pageSets";
 import type { FieldTrouble, PageButton } from "../placement/placementField";
 
 interface UsePlacementFieldArgs {
   documentPages: number;
   pageSets: PageSets;
-  pageChoice: PageChoice;
+  pageMode: PageMode;
   placement: Placement | null;
   viewedPage: number;
   onChoosePages: (pages: PageSet | null) => void;
@@ -29,7 +29,7 @@ interface UsePlacementFieldArgs {
 export function usePlacementField({
   documentPages,
   pageSets,
-  pageChoice,
+  pageMode,
   placement,
   viewedPage,
   onChoosePages,
@@ -55,7 +55,7 @@ export function usePlacementField({
   // conjunto: no nombra ninguna página, lo dice bajo el campo y apaga el botón
   // de firmar.
   const rangeError: FieldTrouble | null =
-    pageChoice !== "these"
+    pageMode !== "these"
       ? null
       : pagesText.trim() === ""
         ? { kind: "empty" }
@@ -83,7 +83,7 @@ export function usePlacementField({
 
   const here = placement !== null && sealsPage(placement.pages, viewedPage);
   const pageButton: PageButton | null =
-    pageChoice === "all" || (pageChoice === "single" && here) || rangeError !== null
+    pageMode === "all" || (pageMode === "single" && here) || rangeError !== null
       ? null
       : here
         ? { label: t("panel.placement.unseal"), act: onUnseal }

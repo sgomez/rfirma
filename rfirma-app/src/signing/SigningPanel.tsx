@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Switch } from "../design-system/Switch";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
-import type { PageChoice, PageSet, PageSets, Placement } from "../placement/pageSets";
+import type { PageMode, PageSet, PageSets, Placement } from "../placement/pageSets";
 import { CertificateNotice } from "./CertificateNotice";
 import { CertificateSelect } from "./CertificateSelect";
 import type { Certificate } from "./certificate";
@@ -88,8 +88,8 @@ interface SigningPanelProps {
    */
   onChoosePages: (pages: PageSet | null) => void;
   /** Cuál de las tres opciones manda sobre el conjunto. */
-  pageChoice: PageChoice;
-  onChangePageChoice: (choice: PageChoice) => void;
+  pageMode: PageMode;
+  onChangePageMode: (choice: PageMode) => void;
   /**
    * La página que se está mirando en el visor. Decide la cara del botón de
    * sellar: si la lleva, ofrece quitarla.
@@ -149,8 +149,8 @@ export function SigningPanel({
   placement,
   pageSets,
   onChoosePages,
-  pageChoice,
-  onChangePageChoice,
+  pageMode,
+  onChangePageMode,
   viewedPage,
   onSeal,
   onUnseal,
@@ -172,7 +172,7 @@ export function SigningPanel({
   const { pagesText, rangeError, pageButton, typePages } = usePlacementField({
     documentPages: document.pages,
     pageSets,
-    pageChoice,
+    pageMode,
     placement,
     viewedPage,
     onChoosePages,
@@ -253,8 +253,8 @@ export function SigningPanel({
                 >
                   <PlacementFieldset
                     pageSets={pageSets}
-                    pageChoice={pageChoice}
-                    onChangePageChoice={onChangePageChoice}
+                    pageMode={pageMode}
+                    onChangePageMode={onChangePageMode}
                     pagesText={pagesText}
                     onTypePages={typePages}
                     rangeError={rangeError}

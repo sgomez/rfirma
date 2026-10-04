@@ -40,14 +40,14 @@ export interface Placement {
 }
 
 /**
- * Cuál de las tres opciones del panel manda sobre el conjunto.
+ * Cuál de los tres modos de páginas del panel manda sobre el conjunto.
  *
  * El visor no la elige —vive en el panel— pero la necesita para dos cosas: la cuarta
  * redacción del botón («Colocar el sello aquí» cuando se sellan todas) y que con `Solo 1
  * página` o `Todas las páginas` una página ya sellada **no ofrezca pastilla**, porque no queda
  * nada que ofrecer.
  */
-export type PageChoice = "single" | "these" | "all";
+export type PageMode = "single" | "these" | "all";
 
 /** ¿Esta página lleva recuadro? */
 export function sealsPage(pages: PageSet, page: number): boolean {
@@ -103,74 +103,74 @@ export function unsealing(placement: Placement, page: number, pageCount: number)
 }
 
 /**
- * El conjunto que guarda **cada opción** del bloque «Colocación».
+ * El conjunto que guarda **cada modo** del bloque «Colocación».
  *
- * Las tres opciones no se turnan sobre un mismo conjunto: cada una recuerda el
- * suyo, y elegir otra **no reescribe la que dejas**. Sin esto, sellar la 2 en
+ * Los tres modos no se turnan sobre un mismo conjunto: cada uno recuerda el
+ * suyo, y elegir otro **no reescribe el que dejas**. Sin esto, sellar la 2 en
  * `Solo 1 página` se sumaba a la 1 en vez de sustituirla, y volver a `Estas
- * páginas` traía lo que hubiera dejado la opción anterior en vez del rango que
+ * páginas` traía lo que hubiera dejado el modo anterior en vez del rango que
  * se tecleó allí.
  *
  * `all` no necesita hueco: su conjunto es la palabra `"all"` y no hay nada que
  * recordar. `single` guarda **un número** y no un `PageSet` porque una página
- * es lo único que esa opción puede llegar a nombrar; el tipo lo dice mejor que
+ * es lo único que ese modo puede llegar a nombrar; el tipo lo dice mejor que
  * una invariante escrita al lado.
  *
  * El **recuadro es uno solo** y no vive aquí: es el mismo rectángulo mirado
- * desde las tres opciones, y cambiar de opción no lo mueve.
+ * desde los tres modos, y cambiar de modo no lo mueve.
  */
 export interface PageSets {
   single: number | null;
   these: PageSet | null;
 }
 
-/** El documento recién abierto: ninguna opción ha nombrado todavía una página. */
+/** El documento recién abierto: ningún modo ha nombrado todavía una página. */
 export const NO_PAGE_SETS: PageSets = { single: null, these: null };
 
-/** El conjunto de la opción activa, que es el único que manda sobre la firma. */
-export function pagesOf(sets: PageSets, choice: PageChoice): PageSet | null {
-  if (choice === "all") return "all";
-  if (choice === "these") return sets.these;
+/** El conjunto del modo activo, que es el único que manda sobre la firma. */
+export function pagesOf(sets: PageSets, mode: PageMode): PageSet | null {
+  if (mode === "all") return "all";
+  if (mode === "these") return sets.these;
   return sets.single === null ? null : { only: [sets.single] };
 }
 
 /**
  * La colocación que ve el resto de la ventana: el recuadro compartido y el
- * conjunto de la opción activa.
+ * conjunto del modo activo.
  *
  * Colocado sigue siendo tener páginas, solo que ahora «tener
- * páginas» se pregunta **por opción**: con el recuadro puesto y `Estas páginas`
+ * páginas» se pregunta **por modo**: con el recuadro puesto y `Estas páginas`
  * sin rango, no hay colocación aunque `single` sí tenga la suya.
  */
 export function placementOf(
   rect: UserSpaceRect | null,
   sets: PageSets,
-  choice: PageChoice,
+  mode: PageMode,
 ): Placement | null {
   if (rect === null) return null;
-  const pages = pagesOf(sets, choice);
+  const pages = pagesOf(sets, mode);
   return pages === null ? null : { rect, pages };
 }
 
-/** Guarda `pages` en la opción activa. Las otras dos **no se tocan**. */
+/** Guarda `pages` en el modo activo. Los otros dos **no se tocan**. */
 export function storing(
   sets: PageSets,
-  choice: PageChoice,
+  mode: PageMode,
   pages: PageSet | null,
   pageCount: number,
 ): PageSets {
   // «Todas» no tiene conjunto que guardar: es la palabra, siempre la misma.
-  if (choice === "all") return sets;
-  if (choice === "these") return { ...sets, these: pages };
+  if (mode === "all") return sets;
+  if (mode === "these") return { ...sets, these: pages };
   return { ...sets, single: pages === null ? null : (sealedPages(pages, pageCount)[0] ?? null) };
 }
 
 /**
- * La opción que se activa, sembrada **solo si nunca tuvo conjunto propio**.
+ * El modo que se activa, sembrada **solo si nunca tuvo conjunto propio**.
  *
  * Es la mitad que sigue debiéndose a la ficha: estrenar `Estas páginas` viniendo
  * de `Solo 1 página` = 3 arranca con `3` escrito. Lo que ya no ocurre es lo
- * contrario —volver a una opción que ya se usó trae **lo suyo**, no lo de la
+ * contrario —volver a un modo que ya se usó trae **lo suyo**, no lo de la
  * anterior—, y por eso la siembra mira primero si hay algo guardado.
  *
  * `fallback` es la página que se está mirando: la única respuesta razonable
@@ -178,13 +178,13 @@ export function storing(
  */
 export function activating(
   sets: PageSets,
-  choice: PageChoice,
+  mode: PageMode,
   previous: PageSet | null,
   pageCount: number,
   fallback: number,
 ): PageSets {
-  if (choice === "all") return sets;
-  if (choice === "these") {
+  if (mode === "all") return sets;
+  if (mode === "these") {
     return sets.these === null ? { ...sets, these: previous } : sets;
   }
   if (sets.single !== null) return sets;
@@ -195,32 +195,32 @@ export function activating(
 /**
  * La colocación **entera**, tal y como la guarda la ventana.
  *
- * Un rectángulo, tres conjuntos —uno por opción— y cuál de ellas manda. Lo que
+ * Un rectángulo, tres conjuntos —uno por modo— y cuál de ellos manda. Lo que
  * cruza a firmar es el `Placement` que sale de las tres, no esto: aquí vive el
  * estado de la interfaz, y ahí fuera solo se puede firmar en un sitio.
  */
 export interface Placing {
   rect: UserSpaceRect | null;
   sets: PageSets;
-  choice: PageChoice;
+  mode: PageMode;
 }
 
 /**
- * La colocación guardada en la fila, repartida en las tres opciones.
+ * La colocación guardada en la fila, repartida en los tres modos.
  *
- * La opción activa es **la que explica el conjunto sin inventar nada**: una
+ * El modo activo es **el que explica el conjunto sin inventar nada**: una
  * página sola es `Solo 1 página`, la palabra `"all"` es `Todas las páginas` y
- * cualquier otra cosa es `Estas páginas`. Las demás arrancan vacías a propósito
+ * cualquier otra cosa es `Estas páginas`. Los demás arrancan vacías a propósito
  * —no se rellenan «por si acaso»— para que la primera vez que se elijan se
  * siembren de esta, que es lo que pide la ficha.
  */
 export function placingFrom(placement: Placement | null, pageCount: number): Placing {
-  if (placement === null) return { rect: null, sets: NO_PAGE_SETS, choice: "single" };
+  if (placement === null) return { rect: null, sets: NO_PAGE_SETS, mode: "single" };
   const { rect, pages } = placement;
-  if (pages === "all") return { rect, sets: NO_PAGE_SETS, choice: "all" };
+  if (pages === "all") return { rect, sets: NO_PAGE_SETS, mode: "all" };
   const only = sealedPages(pages, pageCount);
   if (only.length === 1 && only[0] !== undefined) {
-    return { rect, sets: { single: only[0], these: null }, choice: "single" };
+    return { rect, sets: { single: only[0], these: null }, mode: "single" };
   }
-  return { rect, sets: { single: null, these: pages }, choice: "these" };
+  return { rect, sets: { single: null, these: pages }, mode: "these" };
 }

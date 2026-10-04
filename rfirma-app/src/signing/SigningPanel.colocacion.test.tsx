@@ -43,7 +43,7 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
     const pages = { only: [3, 10] };
     renderPanel({
       signature: visible,
-      pageChoice: "these",
+      pageMode: "these",
       placement: { rect, pages },
       pageSets: { single: 3, these: pages },
       viewedPage: 10,
@@ -61,7 +61,7 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
     const pages = { only: [3, 10] };
     renderPanel({
       signature: visible,
-      pageChoice: "these",
+      pageMode: "these",
       placement: { rect, pages },
       pageSets: { single: 3, these: pages },
       viewedPage: 5,
@@ -85,7 +85,7 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
   });
 
   it("places what the field says, in the everyday print format", () => {
-    const { chosen } = renderLivePanel({ signature: visible, pageChoice: "these" });
+    const { chosen } = renderLivePanel({ signature: visible, pageMode: "these" });
 
     fireEvent.change(field(), { target: { value: "1,2-3,10-20" } });
 
@@ -101,7 +101,7 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
     ["99", "Solo hay 27 páginas"],
     ["1;2", "Separa las páginas con comas"],
   ])("turns the sign button off and says why, short, for %s", (typed, said) => {
-    const { chosen } = renderLivePanel({ signature: visible, pageChoice: "these" });
+    const { chosen } = renderLivePanel({ signature: visible, pageMode: "these" });
 
     fireEvent.change(field(), { target: { value: typed } });
 
@@ -113,7 +113,7 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
   });
 
   it("rewrites the field when a page is taken off from the viewer", () => {
-    const props = { signature: visible, pageChoice: "these" as const };
+    const props = { signature: visible, pageMode: "these" as const };
     const placed = { only: [3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] };
     const { show } = renderPanel({
       ...props,
@@ -132,19 +132,19 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
   it("asks for the option and does not decide the set that goes with it", async () => {
     const user = userEvent.setup();
     const onChoosePages = vi.fn();
-    const onChangePageChoice = vi.fn();
+    const onChangePageMode = vi.fn();
     renderPanel({
       signature: visible,
-      pageChoice: "these",
+      pageMode: "these",
       placement: { rect, pages: { only: [3, 10, 11] } },
       pageSets: { single: 3, these: { only: [3, 10, 11] } },
       onChoosePages,
-      onChangePageChoice,
+      onChangePageMode,
     });
 
     await user.click(screen.getByRole("radio", { name: "Una página" }));
 
-    expect(onChangePageChoice).toHaveBeenCalledWith("single");
+    expect(onChangePageMode).toHaveBeenCalledWith("single");
     expect(onChoosePages).not.toHaveBeenCalled();
   });
 
@@ -162,7 +162,7 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
   });
 
   it("says the empty field instead of taking the box away with it", () => {
-    const { chosen } = renderLivePanel({ signature: visible, pageChoice: "these" });
+    const { chosen } = renderLivePanel({ signature: visible, pageMode: "these" });
 
     fireEvent.change(field(), { target: { value: "" } });
 
