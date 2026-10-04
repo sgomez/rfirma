@@ -14,7 +14,7 @@
  * con más reglas y menos superficie visible del hito.
  */
 
-import { type PageSet, pageSetOf, sealedPages } from "../viewer/signatureBox";
+import { type PageSet, pageSetOf, sealedPages } from "./pageSets";
 
 /**
  * Por qué no se puede resolver lo tecleado. Es una **situación**, con los datos

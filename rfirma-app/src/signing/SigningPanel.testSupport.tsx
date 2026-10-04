@@ -4,7 +4,6 @@ import type { RenderResult } from "@testing-library/react";
 import { screen } from "@testing-library/react";
 import { useState } from "react";
 import { expect } from "vitest";
-import { renderWithCatalog } from "../testing/render";
 import {
   activating,
   type PageChoice,
@@ -13,7 +12,8 @@ import {
   pagesOf,
   placementOf,
   storing,
-} from "../viewer/signatureBox";
+} from "../placement/pageSets";
+import { renderWithCatalog } from "../testing/render";
 import type { Certificate } from "./certificate";
 import type { PreviousSignature, PreviousSignaturesReport } from "./previousSignatures";
 import type { Rubric } from "./rubric";

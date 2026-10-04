@@ -11,12 +11,12 @@ import {
 } from "./App.testSupport";
 import type { DocumentInHand } from "./documents/document";
 import { inMemoryRecents } from "./documents/recents";
+import type { Placement } from "./placement/pageSets";
 import type { Certificate } from "./signing/certificate";
 import type { SigningBackend, SigningOrder } from "./signing/flow";
 import type { PreviousSignature, PreviousSignaturesReport } from "./signing/previousSignatures";
 import { NO_PREVIOUS_SIGNATURES } from "./signing/previousSignatures";
 import { emptyRubricPicker } from "./signing/rubric";
-import type { Placement } from "./viewer/signatureBox";
 
 /**
  * **Grada A del arrastre** (TD-17): los cuatro casos, contados por lo que se ve

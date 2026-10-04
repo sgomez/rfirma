@@ -1,8 +1,8 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { Placement } from "../placement/pageSets";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
-import type { Placement } from "./signatureBox";
 import {
   A4,
   box,

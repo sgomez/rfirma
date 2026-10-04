@@ -1,21 +1,23 @@
 //! Los gestos que colocan el recuadro de la firma visible —arrastrar, redimensionar, trazar y moverlo con las flechas— y sellar o quitar el sello de la página que se mira.
 
 import { type KeyboardEvent, useEffect, useRef } from "react";
+import {
+  type PageChoice,
+  type Placement,
+  sealing,
+  sealsPage,
+  type UserSpaceRect,
+  unsealing,
+} from "../placement/pageSets";
 import type { Viewport } from "./pdf";
 import {
   fitsInPage,
   MIN_BOX_POINTS,
   movedBy,
-  type PageChoice,
   type PixelRect,
-  type Placement,
-  sealing,
-  sealsPage,
   standardBox,
   toPixels,
   toUserSpace,
-  type UserSpaceRect,
-  unsealing,
 } from "./signatureBox";
 import { type BoxDragHandlers, useBoxDrag } from "./useBoxDrag";
 import { useBoxTrace } from "./useBoxTrace";

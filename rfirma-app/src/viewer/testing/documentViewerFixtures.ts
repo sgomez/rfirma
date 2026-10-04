@@ -2,8 +2,8 @@
 
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { expect, vi } from "vitest";
+import type { Placement } from "../../placement/pageSets";
 import type { PdfDocument, PdfPage, RenderTask, Viewport } from "../pdf";
-import type { Placement } from "../signatureBox";
 
 /**
  * Lo que comparten las pruebas de `DocumentViewer` (grada A, `vitest`):

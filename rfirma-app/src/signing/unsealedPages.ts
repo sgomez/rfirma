@@ -26,7 +26,7 @@
  * Esta función es la mitad de interfaz de esa guardia: no impide nada —eso lo
  * hace `PadesBridge` al firmar—, solo la anticipa para que el diálogo de
  * páginas sin sello pueda avisar antes de que ocurra. Es pura y sin React,
- * como `signing/pageRange.ts`: la prueba a fondo va aparte de cualquier
+ * como `placement/pageRange.ts`: la prueba a fondo va aparte de cualquier
  * componente.
  */
 

@@ -1,6 +1,6 @@
 //! Los diez recientes —la fila que se guarda—, las operaciones puras sobre la lista y su puerto, con su doble en memoria. Sin React.
 
-import type { Placement } from "../viewer/signatureBox";
+import type { Placement } from "../placement/pageSets";
 import type { Badge, DocumentInHand } from "./document";
 
 /**

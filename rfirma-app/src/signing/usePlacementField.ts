@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { PageChoice, PageSet, PageSets, Placement } from "../viewer/signatureBox";
-import { sealsPage } from "../viewer/signatureBox";
-import { formatPageRange, parsePageRange } from "./pageRange";
-import type { FieldTrouble, PageButton } from "./placementField";
+import { formatPageRange, parsePageRange } from "../placement/pageRange";
+import type { PageChoice, PageSet, PageSets, Placement } from "../placement/pageSets";
+import { sealsPage } from "../placement/pageSets";
+import type { FieldTrouble, PageButton } from "../placement/placementField";
 
 interface UsePlacementFieldArgs {
   documentPages: number;

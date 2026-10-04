@@ -5,8 +5,8 @@ import { fn } from "storybook/test";
 import { storyRecents } from "../../.storybook/fixtures/documents";
 import { storyPdf } from "../../.storybook/fixtures/pdf";
 import { RecentsSection } from "../documents/RecentRows";
+import type { Placement } from "../placement/pageSets";
 import { DocumentViewer } from "./DocumentViewer";
-import type { Placement } from "./signatureBox";
 
 const meta = {
   title: "Ventana principal/5 · Visor",

@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePlacementControls } from "../App.usePlacementControls";
+import { firstSealedPage, type Placement } from "../placement/pageSets";
 import { PlacementFieldset } from "../signing/PlacementFieldset";
 import { usePlacementField } from "../signing/usePlacementField";
 import { DocumentViewer } from "../viewer/DocumentViewer";
 import type { PdfDocument } from "../viewer/pdf";
-import { firstSealedPage, type Placement } from "../viewer/signatureBox";
 import type { MarkedArea } from "./errand";
 import { SedeBody } from "./SedeFrame";
 import "../signing/SigningPanel.css";
