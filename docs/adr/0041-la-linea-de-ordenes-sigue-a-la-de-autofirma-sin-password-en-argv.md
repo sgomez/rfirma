@@ -43,15 +43,32 @@ argv**.
 4. **stdout es solo para lo que se consume**: el XML de `--xml` o el JSON de
    `--json`. Los mensajes y los registros van a stderr, al contrario que el
    original, que los mezcla.
-   **`--json` es la traducción del `--xml` de la misma orden**: solo existe donde
-   existe `--xml`, se rechaza junto a él y no cambia los códigos de salida. La
-   regla de traducción es mecánica: un elemento con hijos es un objeto con una
-   clave por hijo; uno sin hijos, una cadena con su texto, sin adivinar tipos
-   (`<result>true</result>` es `"result": "true"`); uno que la respuesta de esa
-   orden puede repetir (como `alias`) es siempre una lista, con uno o ninguno; y
-   la raíz se mantiene como clave de primer nivel, para que sea reversible.
-   `<afirma><result>ok</result><response><alias>A</alias><alias>B</alias></response></afirma>`
-   es `{"afirma":{"result":"ok","response":{"alias":["A","B"]}}}`.
+   **`--json` es un formato propio de rFirma**: es un fichero de datos para que
+   un programa compruebe la salida de cualquier orden, `verify` incluida, aunque
+   el original no tenga ahí `--xml`. Se rechaza junto a `--xml` y no cambia los
+   códigos de salida. Sus reglas, comunes a todas las órdenes:
+   - **Solo hay JSON si la orden sale bien.** Si falla, stdout queda vacío, el
+     motivo va a stderr y el código de salida no es 0. En `verify`, una firma
+     inválida o un fichero sin firmas salen bien; unas firmas que no se pueden
+     leer, no.
+   - **Sin sobre:** cada orden saca sus datos en la raíz, sin envoltura
+     `afirma` ni versión del formato. Añadir una clave no rompe a nadie; quitar o
+     renombrar una, sí.
+   - **Claves en inglés y en camelCase**, y valores con su tipo (`true` es un
+     booleano, no `"true"`). Una lista es siempre una lista, aunque tenga uno o
+     ningún elemento; una clave sin valor se omite, no va a `null`.
+   - **Vocabulario de las normas** donde ya nombran el concepto, aunque rFirma
+     no aplique la norma entera: los atributos y campos de X.509 (RFC 5280), los
+     DN de RFC 4514, el número de serie en hexadecimal, los algoritmos con su
+     nombre de RFC y su OID, y los nombres oficiales de los formatos (`PAdES`).
+     Los valores propios, en camelCase. Un certificado sale igual en todas las
+     órdenes.
+   - **Fechas en RFC 3339 y UTC**; texto en UTF-8 sin escapar; una sola línea
+     compacta con salto final.
+   - **El formato de cada orden lo fija su JSON Schema** (draft 2020-12),
+     versionado con el código, y los tests validan contra él la salida real.
+     Se construye con tipos propios de la línea de órdenes, no serializando los
+     del dominio, y el `--xml` no comparte con él nada.
 5. **Es un tercer rol del proceso**, el proceso de terminal: no se une al
    proceso de escritorio, y la única ventana que abre es la de sede, con
    `--certgui`.

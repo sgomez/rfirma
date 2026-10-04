@@ -51,8 +51,8 @@ también su nombre de fichero si el título deja de describirla. No se marcan `S
 ni se conservan ADR históricos junto al vigente: dos ADR sobre la misma decisión son
 ruido en el contexto de quien lea el repositorio después.
 
-Lo que sí se conserva, dentro del ADR reescrito, es **por qué se descartó la opción
-anterior**: eso va en `Considered Options`, que es donde un lector futuro lo busca.
+Tampoco se conservan las opciones descartadas, ni la anterior ni las que no
+llegaron a elegirse: **un ADR dice solo lo que vale**.
 
 ## Flag ADR conflicts
 

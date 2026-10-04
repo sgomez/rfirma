@@ -60,7 +60,7 @@ expect "empaquetado de macos" "java=false web=true rust=false native=false landi
 expect "puente" "java=true web=false rust=false native=true landing=false windows=false macos=false" "rfirma-native-bridge/src/main/java/A.java"
 expect "banco de referencia" "java=true web=false rust=true native=true landing=false windows=false macos=false" "rfirma-native-bridge/testbench/validate.sh"
 expect "pom" "java=true web=true rust=false native=true landing=false windows=false macos=false" "rfirma-native-bridge/pom.xml"
-expect "adr" "java=false web=false rust=true native=false landing=false windows=false macos=false" "docs/adr/0001-x.md"
+expect "adr" "java=false web=false rust=false native=false landing=false windows=false macos=false" "docs/adr/0001-x.md"
 expect "diseno" "java=false web=true rust=false native=false landing=false windows=false macos=false" "docs/design/design-system.md"
 expect "empaquetado" "java=false web=true rust=false native=false landing=false windows=false macos=false" "packaging/gnome/rfirma-sign.py"
 expect "bootstrap" "java=true web=true rust=false native=true landing=false windows=true macos=true" "scripts/bootstrap.sh"

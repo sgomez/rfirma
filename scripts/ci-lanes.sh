@@ -41,7 +41,7 @@ done
 
 inert() {
     case "$1" in
-        docs/adr/* | docs/design/* | rfirma-conformance/console/*) return 1 ;;
+        docs/design/* | rfirma-conformance/console/*) return 1 ;;
         docs/* | rfirma-conformance/* | .claude/* | .agents/* | skills-lock.json) return 0 ;;
         */*) return 1 ;;
         *.md) return 0 ;;
@@ -64,7 +64,7 @@ web_ignores() {
         rfirma-app/src-tauri/*.rs | rfirma-app/src-tauri/*.md | rfirma-app/src-tauri/*.png) return 0 ;;
         rfirma-app/src-tauri/tests/*.snapshot | rfirma-app/src-tauri/tests/*.baseline) return 0 ;;
         rfirma-app/src-tauri/.config/nextest.toml | rfirma-app/src-tauri/clippy.toml) return 0 ;;
-        docs/adr/* | rfirma-native-bridge/* | testdata/*) return 0 ;;
+        rfirma-native-bridge/* | testdata/*) return 0 ;;
     esac
     return 1
 }
