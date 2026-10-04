@@ -5,7 +5,7 @@ junto al validador oficial. Se ejecuta **una vez por etiqueta `v*`**, por una pe
 
 ## Qué entra aquí, y qué no
 
-> Entra en la lista **sólo** lo que necesita un navegador de verdad o una sede de verdad, y por
+> Entra en la lista **sólo** lo que necesita un navegador, una sede o un instalador de verdad, y por
 > tanto no lo puede tener el CI. Si una comprobación cabe en la grada A, B o C, va ahí, **aunque
 > sea incómoda**. Añadir una fila obliga a justificar **en la propia fila** por qué no cabe en
 > ninguna de las tres.
@@ -97,11 +97,30 @@ delante: que el arranque decida abrir la de sede lo miden las gradas A y B
 (`src/app/errand.rs`, TD-72); lo que ninguna puede medir es que esas dos decisiones se vean sobre
 una pantalla de verdad.
 
+### 7. `rfirma` en una consola nueva de Windows
+
+Con el instalador de la etiqueta, en una sesión de Windows:
+
+1. **instalar** y abrir una consola **nueva** de cmd y otra de PowerShell: `rfirma listaliases`
+   responde en las dos sin reiniciar la sesión, y `where.exe rfirma` nombra `rfirma.com` antes que
+   `rfirma.exe`;
+2. **actualizar** con el instalador siguiente (o el mismo, encima): la carpeta de rFirma sigue en el
+   PATH del usuario **una sola vez** (`[Environment]::GetEnvironmentVariable('Path','User')`), y las
+   demás entradas siguen como estaban, `%VARIABLES%` sin expandir incluidas;
+3. **desinstalar**: la carpeta sale del PATH del usuario y nada más cambia en él.
+
+*Por qué no cabe en una grada* (ADR-0041): es el gancho de NSIS sobre un instalador de verdad. Que
+el PATH del usuario llegue a una consola nueva depende del aviso al Explorador, que hereda el
+entorno a lo que se abre después, y distinguir actualizar de desinstalar depende de cómo el
+actualizador de Tauri llama al desinstalador anterior; ninguna de las dos cosas existe fuera de una
+sesión de escritorio con el instalador ejecutado. Que `rfirma.com` gane al `.exe` en cmd y en
+PowerShell sí lo mide el CI de Windows (`just smoke-console`).
+
 ## Condición de salida
 
 Esta lista **no es permanente**. El día que exista un arnés de navegador sin cabeza capaz de
 **conceder el permiso de red local** y de **sembrar el `nssdb`** de forma reproducible, las filas
 1 y 2 bajan a una grada nueva. La 5 no espera a eso: baja al **banco de conformidad** en cuanto
-haya un trámite que cancelar. Este fichero se queda entonces con las que necesitan una sede de
-verdad —la 3 y la 4—. Está escrito aquí y no en el ADR porque es estado de la lista, y lo lee
-quien la ejecuta.
+haya un trámite que cancelar. Este fichero se queda entonces con las que necesitan una sede o un
+instalador de verdad —la 3, la 4 y la 7—. Está escrito aquí y no en el ADR porque es estado de la
+lista, y lo lee quien la ejecuta.

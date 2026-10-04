@@ -69,8 +69,9 @@ just bundle                                            # instalador NSIS en $CAR
 Con una GraalVM CE 25.4, `just native` necesita además
 `NATIVE_IMAGE_OPTIONS=--initialize-at-build-time=es.gob.afirma.signers.tsp.pkcs7.TsaParams`;
 el CI usa la de `GRAALVM_VERSION` de `versions.env`. El instalador es por usuario y no pide administrador: deja
-`rfirma.exe`, `rfirma_crypto.dll` y el runtime de Visual C++ en
-`%LOCALAPPDATA%\rfirma`, y registra `afirma://` si ningún otro programa lo tiene.
+`rfirma.exe`, `rfirma.com` (el binario de consola), `rfirma_crypto.dll` y el runtime de Visual C++ en
+`%LOCALAPPDATA%\rfirma`, añade esa carpeta al PATH del usuario y registra `afirma://` si ningún otro
+programa lo tiene.
 
 En macOS (Apple Silicon) hacen falta las Command Line Tools de Xcode
 (`xcode-select --install`), GraalVM CE 25 en `GRAALVM_HOME`, `JAVA_HOME` o
@@ -148,6 +149,26 @@ fuera, `--file-forwarding` y `@@` hacen que flatpak lo exponga por el portal:
 ```bash
 flatpak run --file-forwarding me.sgomez.rfirma sign -i @@ ~/Descargas/contrato.pdf @@ -o ~/Documents/firmado.pdf
 ```
+
+### En Windows
+
+El instalador deja `rfirma.com`, el binario de consola, junto a `rfirma.exe`, y pone la carpeta de
+rFirma en el PATH del usuario: en una consola abierta después de instalar, `rfirma` resuelve al
+`.com`, que escribe en la consola y devuelve el código de salida. En cmd y en PowerShell se escribe
+igual que en Linux:
+
+```powershell
+rfirma listaliases
+rfirma sign -i contrato.pdf -o contrato-firmado.pdf --alias mi-certificado
+```
+
+`--store windows` (o `auto`) acota al almacén de certificados de Windows, y el PIN de sus
+certificados lo pide Windows. **En Git Bash dentro de Windows Terminal hay que escribir
+`rfirma.com`**: bash no prueba la extensión `.com` y encuentra `rfirma.exe`, el de la ventana, que
+ahí no responde en la consola. En la ventana propia de Git Bash (mintty), `rfirma` funciona tal
+cual, porque `rfirma.exe` responde por las tuberías de mintty.
+
+`--password-fd` y `--certtui` todavía no están en Windows.
 
 ---
 
