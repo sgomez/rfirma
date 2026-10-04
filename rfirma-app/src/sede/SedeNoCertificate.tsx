@@ -1,6 +1,9 @@
 //! 5 · Sin certificado utilizable, porque no hay ninguno o porque la sede los excluyó todos, con sus salidas: instalar otro, volver a buscar o cerrar.
 
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
+import { Row } from "../design-system/Row";
+import { Stack } from "../design-system/Stack";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { NoCertificateReason } from "./errand";
@@ -68,28 +71,23 @@ export function SedeNoCertificate({
       footer={
         <>
           <div className="sede-window__spacer" />
-          <button
+          <Button
             ref={closeOnly ? defaultButton : undefined}
             type="button"
-            className={closeOnly ? "rf-btn rf-btn--primary" : "rf-btn rf-btn--ghost"}
+            variant={closeOnly ? "primary" : "ghost"}
             onClick={onLeave}
           >
             {t("actions.close")}
-          </button>
+          </Button>
           {!closeOnly && (
-            <button
-              ref={defaultButton}
-              type="button"
-              className="rf-btn rf-btn--primary"
-              onClick={onInstall}
-            >
+            <Button ref={defaultButton} variant="primary" onClick={onInstall}>
               {t("sede.noCertificate.install")}
-            </button>
+            </Button>
           )}
         </>
       }
     >
-      <div className="rf-stack sede-no-certificate">
+      <Stack className="sede-no-certificate">
         <p className="rf-title sede-no-certificate__title">
           {excluded
             ? terminal
@@ -115,13 +113,13 @@ export function SedeNoCertificate({
         {/* La microacción va aquí, pegada a lo que arregla, y no en el pie:
             se pulsa cuando se acaba de instalar uno con la ventana abierta. */}
         {!closeOnly && (
-          <div className="rf-row sede-no-certificate__look-again">
-            <button type="button" className="rf-btn rf-btn--ghost" onClick={onLookAgain}>
+          <Row className="sede-no-certificate__look-again">
+            <Button variant="ghost" onClick={onLookAgain}>
               {t("actions.lookAgain")}
-            </button>
-          </div>
+            </Button>
+          </Row>
         )}
-      </div>
+      </Stack>
     </SedeBody>
   );
 }

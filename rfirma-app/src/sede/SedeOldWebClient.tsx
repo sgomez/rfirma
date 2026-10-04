@@ -1,7 +1,10 @@
 //! El aviso de que la página usa un cliente web antiguo, que no detiene el trámite.
 
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { AlertIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
+import { Stack } from "../design-system/Stack";
 import { SedeBody, useDefaultButton } from "./SedeFrame";
 
 /** El aviso de que la página usa un cliente web antiguo, que no detiene el trámite. */
@@ -15,26 +18,21 @@ export function SedeOldWebClient({ onDismiss }: { onDismiss: () => void }) {
       footer={
         <>
           <div className="sede-window__spacer" />
-          <button
-            ref={dismissButton}
-            type="button"
-            className="rf-btn rf-btn--primary"
-            onClick={onDismiss}
-          >
+          <Button ref={dismissButton} variant="primary" onClick={onDismiss}>
             {t("actions.continue")}
-          </button>
+          </Button>
         </>
       }
     >
-      <div className="rf-stack sede-outcome">
-        <div className="rf-row rf-gap-xs sede-outcome__head">
+      <Stack className="sede-outcome">
+        <Row gap="xs" className="sede-outcome__head">
           <span className="sede-outcome__icon">
             <AlertIcon size={24} />
           </span>
           <p className="rf-title sede-outcome__title">{t("sede.oldWebClient.title")}</p>
-        </div>
+        </Row>
         <p className="rf-prose">{t("sede.oldWebClient.body")}</p>
-      </div>
+      </Stack>
     </SedeBody>
   );
 }

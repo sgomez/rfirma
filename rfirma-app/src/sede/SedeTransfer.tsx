@@ -1,6 +1,7 @@
 //! El fichero que la sede quiere guardar o cargar, mientras el diálogo del portal está encima, sin acciones propias.
 
 import { useTranslation } from "react-i18next";
+import { Stack } from "../design-system/Stack";
 import { SedeBody } from "./SedeFrame";
 
 interface SedeTransferProps {
@@ -27,7 +28,7 @@ export function SedeTransfer({ transfer }: SedeTransferProps) {
 
   return (
     <SedeBody steadyFooter footer={null}>
-      <div className="rf-stack sede-transfer">
+      <Stack className="sede-transfer">
         <p className="rf-title sede-transfer__title">{titleOf(transfer, t)}</p>
         {transfer.kind === "saving" && transfer.unwritable === true ? (
           <p className="rf-prose" role="alert">
@@ -36,7 +37,7 @@ export function SedeTransfer({ transfer }: SedeTransferProps) {
         ) : (
           <p className="rf-prose rf-text-muted">{leadOf(transfer, t)}</p>
         )}
-      </div>
+      </Stack>
     </SedeBody>
   );
 }

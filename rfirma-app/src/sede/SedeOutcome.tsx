@@ -2,6 +2,7 @@
 
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import {
   AlertIcon,
   CheckCircleIcon,
@@ -10,6 +11,8 @@ import {
   ExternalLinkIcon,
   FileIcon,
 } from "../design-system/icons";
+import { Row } from "../design-system/Row";
+import { Stack } from "../design-system/Stack";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import { errorText } from "../errors/errorMessage";
 import { formatSize } from "../signing/SigningPanel";
@@ -81,24 +84,19 @@ export function SedeOutcome({
             </p>
           )}
           <div className="sede-window__spacer" />
-          <button
-            ref={closeButton}
-            type="button"
-            className="rf-btn rf-btn--primary"
-            onClick={onClose}
-          >
+          <Button ref={closeButton} variant="primary" onClick={onClose}>
             {t("actions.close")}
-          </button>
+          </Button>
         </>
       }
     >
-      <div className="rf-stack sede-outcome">
-        <div className="rf-row rf-gap-xs sede-outcome__head">
+      <Stack className="sede-outcome">
+        <Row gap="xs" className="sede-outcome__head">
           <span className="sede-outcome__icon">
             <OutcomeIcon kind={outcome.kind} />
           </span>
           <p className="rf-title sede-outcome__title">{title(outcome, t)}</p>
-        </div>
+        </Row>
         {(outcome.kind === "signed" || outcome.kind === "cancelled") &&
           outcome.document !== null && (
             /* Lo único que dice **qué** se acaba de firmar —o dejar sin firmar—
@@ -153,39 +151,35 @@ export function SedeOutcome({
             </p>
             <p className="rf-hint">{t("sede.outcome.refusedNote")}</p>
             <SiteNote situation={outcome.situation} />
-            <div className="rf-stack rf-gap-xs sede-outcome__detail">
-              <div className="rf-row rf-gap-xs sede-outcome__detail-head">
+            <Stack gap="xs" className="sede-outcome__detail">
+              <Row gap="xs" className="sede-outcome__detail-head">
                 <span className="rf-label">{t("errors.technicalDetail")}</span>
-                <button
-                  type="button"
-                  className="rf-btn rf-btn--ghost sede-outcome__copy"
+                <Button
+                  variant="ghost"
+                  className="sede-outcome__copy"
                   onClick={() => void navigator.clipboard.writeText(outcome.detail)}
                 >
                   <CopyIcon size={14} />
                   {t("actions.copy")}
-                </button>
-              </div>
+                </Button>
+              </Row>
               {/* biome-ignore lint/a11y/noNoninteractiveTabindex: la región con desplazamiento tiene que poder enfocarse para leerla con el teclado. */}
               <code className="rf-body sede-outcome__detail-text" tabIndex={0}>
                 {outcome.detail}
               </code>
-            </div>
+            </Stack>
             {outcome.situation === "unknown" && (
-              <div className="rf-row rf-gap-xs sede-outcome__report">
+              <Row gap="xs" className="sede-outcome__report">
                 <p className="rf-hint">{t("sede.outcome.reportHint")}</p>
-                <button
-                  type="button"
-                  className="rf-btn rf-btn--ghost sede-outcome__help"
-                  onClick={openHelp}
-                >
+                <Button variant="ghost" className="sede-outcome__help" onClick={openHelp}>
                   <ExternalLinkIcon size={14} />
                   {t("header.help")}
-                </button>
-              </div>
+                </Button>
+              </Row>
             )}
           </>
         )}
-      </div>
+      </Stack>
     </SedeBody>
   );
 }
@@ -215,7 +209,7 @@ function DocumentRow({ document }: { document: SiteDocument }) {
   const untitled = document.title === null || document.title.trim() === "";
 
   return (
-    <div className="rf-row rf-gap-xs sede-outcome__document">
+    <Row gap="xs" className="sede-outcome__document">
       <span className="sede-outcome__icon">
         <FileIcon size={18} />
       </span>
@@ -228,7 +222,7 @@ function DocumentRow({ document }: { document: SiteDocument }) {
           formatSize(document.sizeBytes, i18n.language),
         ].join(" · ")}
       </span>
-    </div>
+    </Row>
   );
 }
 

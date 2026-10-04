@@ -11,6 +11,9 @@ import { PreviousSignaturesNotice } from "../signing/PreviousSignaturesNotice";
 import { formatSize } from "../signing/SigningPanel";
 // `PreviousSignaturesNotice` no trae su propia hoja: la sede no monta `SigningPanel.tsx`.
 import "../signing/SigningPanel.css";
+import { Button } from "../design-system/Button";
+import { Row } from "../design-system/Row";
+import { Stack } from "../design-system/Stack";
 import type {
   ErrandStage,
   LocalBatchItem,
@@ -71,22 +74,21 @@ export function SedeConsent({
       footer={
         <>
           <div className="sede-window__spacer" />
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
+          <Button variant="ghost" onClick={onCancel}>
             {t("actions.cancel")}
-          </button>
-          <button
+          </Button>
+          <Button
             ref={consentButton}
-            type="button"
-            className="rf-btn rf-btn--primary"
+            variant="primary"
             disabled={!ready}
             onClick={() => chosen !== null && onConsent(chosen.id)}
           >
             {remaining > 0 ? t("sede.consent.countdown", { action, seconds: remaining }) : action}
-          </button>
+          </Button>
         </>
       }
     >
-      <div className="rf-stack sede-consent">
+      <Stack className="sede-consent">
         {terminalOrder !== null ? (
           <TerminalConsentBody
             order={terminalOrder}
@@ -145,7 +147,7 @@ export function SedeConsent({
             )}
           </>
         )}
-      </div>
+      </Stack>
     </SedeBody>
   );
 }
@@ -219,17 +221,17 @@ function BatchCard({ signs }: { signs: number }) {
   const { t } = useTranslation();
 
   return (
-    <div className="rf-stack sede-consent__document">
-      <div className="rf-row rf-gap-xs sede-consent__document-head">
+    <Stack className="sede-consent__document">
+      <Row gap="xs" className="sede-consent__document-head">
         <span className="sede-consent__icon">
           <FileIcon size={20} />
         </span>
-        <div className="rf-stack sede-consent__document-text">
+        <Stack className="sede-consent__document-text">
           <p className="rf-title">{t("sede.consent.batchTitle", { count: signs })}</p>
           <p className="rf-body rf-text-muted">{t("sede.consent.batchNote")}</p>
-        </div>
-      </div>
-    </div>
+        </Stack>
+      </Row>
+    </Stack>
   );
 }
 
@@ -293,12 +295,12 @@ function DocumentCard({
   const roundNote = signatureRoundNote(t, document.round);
 
   return (
-    <div className="rf-stack sede-consent__document">
-      <div className="rf-row rf-gap-xs sede-consent__document-head">
+    <Stack className="sede-consent__document">
+      <Row gap="xs" className="sede-consent__document-head">
         <span className="sede-consent__icon">
           <FileIcon size={20} />
         </span>
-        <div className="rf-stack sede-consent__document-text">
+        <Stack className="sede-consent__document-text">
           <p className={`rf-title${untitled ? " sede-consent__untitled" : ""}`}>
             {untitled ? t("sede.consent.untitled") : document.title}
           </p>
@@ -308,8 +310,8 @@ function DocumentCard({
               formatSize(document.sizeBytes, i18n.language),
             ].join(" · ")}
           </p>
-        </div>
-      </div>
+        </Stack>
+      </Row>
       {roundNote !== null && <p className="rf-body sede-consent__round">{roundNote}</p>}
       {document.previousSignatures.signatures.length > 0 && (
         <PreviousSignaturesNotice
@@ -318,7 +320,7 @@ function DocumentCard({
           presentation="site"
         />
       )}
-    </div>
+    </Stack>
   );
 }
 
