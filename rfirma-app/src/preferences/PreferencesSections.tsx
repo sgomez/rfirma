@@ -4,6 +4,7 @@ import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
+import { Badge } from "../design-system/Badge";
 import { Button } from "../design-system/Button";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
@@ -335,7 +336,7 @@ export function CertificatesSection({
                 <span className="rf-title preferences__certificate-holder">
                   {certificate.holderName}
                   {certificate.status.kind === "expired" && (
-                    <span className="rf-badge">{t("preferences.certificates.expired")}</span>
+                    <Badge>{t("preferences.certificates.expired")}</Badge>
                   )}
                 </span>
                 <span className="rf-body rf-text-muted">
