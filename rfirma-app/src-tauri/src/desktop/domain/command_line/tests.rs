@@ -214,3 +214,61 @@ fn every_appearance_adds_a_level_and_from_two_on_it_is_the_same() {
     assert_eq!(verbosity_of(&["verify", "--verbose", "--verbose"]), 2);
     assert!(verbosity_of(&["verify", "-vvv"]) >= 2);
 }
+
+#[test]
+fn the_manual_documents_every_command_and_flag_of_the_declared_syntax() {
+    let page = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../packaging/repo/site/src/content/docs/manual/linea-de-ordenes.md"),
+    )
+    .expect("la página «Línea de órdenes» del manual");
+
+    let mut missing = Vec::new();
+    for command in COMMANDS {
+        let syntaxes: Vec<&str> = [Platform::Linux, Platform::Windows]
+            .into_iter()
+            .filter_map(|platform| command.syntax(platform))
+            .collect();
+        if syntaxes.is_empty() {
+            continue;
+        }
+        if !mentions(&page, command.name()) {
+            missing.push(format!("la orden `{}`", command.name()));
+        }
+        for syntax in syntaxes {
+            for flag in flags_of(syntax) {
+                let entry = format!("el flag `{flag}` de `{}`", command.name());
+                if !mentions(&page, &flag) && !missing.contains(&entry) {
+                    missing.push(entry);
+                }
+            }
+        }
+    }
+
+    assert!(
+        missing.is_empty(),
+        "falta en la página «Línea de órdenes» del manual: {}",
+        missing.join(", ")
+    );
+}
+
+fn flags_of(syntax: &str) -> Vec<String> {
+    let mut flags: Vec<String> = syntax
+        .split_whitespace()
+        .map(|word| word.trim_matches(|c: char| "[]()|,.;".contains(c)))
+        .filter(|word| word.starts_with('-') && word.len() > 1)
+        .map(str::to_owned)
+        .collect();
+    flags.sort();
+    flags.dedup();
+    flags
+}
+
+fn mentions(page: &str, word: &str) -> bool {
+    let is_part_of_a_word = |c: char| c.is_alphanumeric() || c == '-' || c == '_';
+    page.match_indices(word).any(|(at, _)| {
+        let before = page[..at].chars().next_back();
+        let after = page[at + word.len()..].chars().next();
+        !before.is_some_and(is_part_of_a_word) && !after.is_some_and(is_part_of_a_word)
+    })
+}

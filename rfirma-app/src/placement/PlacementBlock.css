@@ -1,0 +1,124 @@
+/* El bloque «Colocación» (docs/design/panel-de-firma.md), el mismo en el panel de firma y en la ventana de sede. */
+
+.panel__placement {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panel__segmented {
+  display: flex;
+  gap: 2px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-md);
+}
+
+.panel__segment {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--rf-radius-sm);
+  background: transparent;
+  color: var(--rf-text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.panel__segment-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.panel__segment:has(:focus-visible) {
+  outline: 2px solid var(--rf-focus-ring);
+  outline-offset: 2px;
+}
+
+.panel__segment--chosen {
+  background: var(--rf-primary);
+  color: var(--rf-on-primary);
+  font-weight: 700;
+}
+
+.panel__page-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+
+.panel__page-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.panel__page-button {
+  flex: none;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.panel__range {
+  gap: 6px;
+}
+
+.panel__range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel__range-row .panel__page-button {
+  min-height: 36px;
+}
+
+.panel__range-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  font-size: 14px;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-sm);
+}
+
+.panel__range-input--error {
+  border: 2px solid var(--rf-text);
+}
+
+.panel__range-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rf-space-xs);
+  margin: 0;
+  color: var(--rf-text);
+}
+
+.panel__range-error svg {
+  flex: none;
+}
+
+.panel__range-error .rf-body {
+  flex: 1;
+  line-height: 1.4;
+  font-weight: 700;
+}

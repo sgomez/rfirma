@@ -7,6 +7,7 @@ import { AlertIcon } from "../design-system/icons";
 import { Stack } from "../design-system/Stack";
 import { messageFor } from "./placementField";
 import type { PlacementState } from "./usePlacement";
+import "./PlacementBlock.css";
 
 /** Lo que el bloque lee del estado de la colocación. */
 export type PlacementBlockState = Pick<
