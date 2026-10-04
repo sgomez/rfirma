@@ -58,7 +58,7 @@ sus comentarios a las formas que admite la regla 6 de `CLAUDE.md`.
 | `preferences/` | Los ajustes. |
 | `i18n/` | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). Los bloques de comentario que explican el mecanismo están indexados en `i18n/AGENTS.md`. `i18n/locales/*.ts` son generados y no versionados: no se leen ni se editan. |
 | `errors/` | Los fallos que ve el usuario. |
-| `design-system/` | Los iconos, copiados en línea de los artboards, y el bundle CSS del sistema de diseño. |
+| `design-system/` | Los iconos y el bundle CSS del sistema de diseño. |
 | `desktop/` | El escritorio de la persona, en el lado de la interfaz. |
 | `sede/` | La ventana que abre una sede por `afirma://`: una ventana con una secuencia de momentos, no una pantalla por momento. Ficha: `docs/design/ventana-de-sede.md`, que numera los momentos (1, 1c, 2, 2b, 3, 4, 5) como las cabeceras de sus componentes. |
 | `updates/` | La versión nueva: la franja que la anuncia y su instalación. |

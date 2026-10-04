@@ -1,21 +1,8 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-/**
- * **Grada A** (`vitest`, carril rápido).
- *
- * Desde el #85 el CSS de la aplicación **es** el bundle del proyecto de sistema
- * de diseño, versionado en `bundle/` (ID-47). El bundle manda y
- * `docs/design/design-system.md` lo describe; estas pruebas leen los dos y
- * comparan, de modo que quien cambie uno sin el otro lo sabe al momento
- * (TD-12). Nadie tiene que acordarse de actualizar una lista escrita a mano
- * aquí.
- *
- * Lo que el sello (`check-bundle.sh`) no puede saber —que el bundle siga
- * diciendo lo que la ficha promete— lo sabe esto; lo que esto no puede saber
- * —que nadie haya editado el bundle en el sitio equivocado— lo sabe el sello.
- */
+/** **Grada A**: el bundle de `bundle/` y la ficha `docs/design/design-system.md` dicen lo mismo (TD-12). */
 
 const read = (relative: string) =>
   readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
@@ -355,30 +342,6 @@ describe("la tipografía", () => {
       );
     }
   });
-});
-
-describe("las sombras del repositorio", () => {
-  // ID-48: el bundle manda y el `<helmet>` de los artboards es una copia
-  // comprimida, no la fuente. Un solo valor por token en todo el repositorio.
-  const declared = themelessDeclarations(tokens);
-  const artboardsDir = "../../../docs/design/artboards/";
-  const artboards = readdirSync(fileURLToPath(new URL(artboardsDir, import.meta.url)))
-    .map((name) => read(artboardsDir + name))
-    .join("\n");
-
-  it.each(["--rf-shadow-card", "--rf-shadow-elevated"])(
-    "%s vale lo mismo en los artboards que en el bundle",
-    (shadow) => {
-      const copies = [...artboards.matchAll(new RegExp(`${shadow}\\s*:\\s*([^;]+);`, "g"))].map(
-        ([, value]) => normalizeColor(value as string),
-      );
-
-      expect(copies.length, `ningún artboard declara ${shadow}`).toBeGreaterThan(0);
-      for (const copy of copies) {
-        expect(copy).toBe(declared.get(shadow));
-      }
-    },
-  );
 });
 
 describe("el vocabulario de clases", () => {

@@ -80,4 +80,4 @@ Antes de abrir código, en este orden:
 * **Issue tracker:** GitHub Issues de `sgomez/rfirma`, con `gh` (`docs/agents/issue-tracker.md`).
 * **Triage labels:** `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` (`docs/agents/triage-labels.md`).
 * **Domain docs:** `CONTEXT-MAP.md` apunta a los glosarios; los ADR, en `docs/adr/` y `rfirma-conformance/docs/adr/`, con la misma numeración. Al escribir un ADR, `docs/agents/domain.md`.
-* **Prototyping:** un canvas de Claude Design por caso de uso ([proyecto `c0ddbfa7`](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132)) y, validado, una ficha `docs/design/<pantalla>.md` (`docs/agents/prototyping.md`).
+* **Prototyping:** se explora en Claude Design con los componentes reales (proyecto «rFirma Components», sincronizado con `/design-sync`) y, validado, se escribe como código, historias y una ficha `docs/design/<pantalla>.md` (`docs/agents/prototyping.md`).

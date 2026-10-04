@@ -151,9 +151,7 @@ de diálogo 20**. `.rf-scrim` no trae
 
 Dos elevaciones: `--rf-shadow-card` (reposo) y `--rf-shadow-elevated`
 (flotante). Ambas son sombras de cuatro capas y **su valor es el del bundle
-versionado**, que es el único del repositorio: el `<helmet>` de los artboards
-de `docs/design/artboards/` es una copia comprimida para previsualizar y no es
-la fuente. En el tema oscuro las sombras apenas se leen; **la profundidad la
+versionado**, que es el único del repositorio. En el tema oscuro las sombras apenas se leen; **la profundidad la
 aporta el contraste entre `--rf-bg` y `--rf-surface` más el borde**. Empieza
 siempre por una superficie plana y sube solo si el elemento flota de verdad.
 

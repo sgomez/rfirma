@@ -1,5 +1,0 @@
-      <sc-if value="{{ hayFirmar }}" hint-placeholder-val="{{ true }}">
-        <div class="rf-row" style="height:44px;opacity:{{ opacidadFirmar }}">
-          <button type="button" class="rf-btn rf-btn--primary" title="{{ tituloFirmar }}" style="flex:1;min-width:0">{{ textoFirmar }}</button>
-        </div>
-      </sc-if>

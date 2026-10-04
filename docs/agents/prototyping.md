@@ -8,381 +8,86 @@ o el usuario directamente).
 
 La rama **UI** de `prototype` ("¿qué aspecto debería tener esto?") **no** se
 construye como ruta throwaway con `?variant=` dentro de la app React. Se
-prototipa en **Claude Design** y, una vez validada, se describe en un fichero
-de `docs/design/`.
+explora en **Claude Design**, con los componentes reales, y una vez validada se
+escribe como código, historias y ficha.
 
-Claude Design es **solo** la superficie de prototipado: es desechable, sirve
-para que el usuario mire y decida. La referencia duradera vive siempre en el
-repo, en Markdown.
+Claude Design es **solo** la superficie de exploración: es desechable, sirve
+para que el usuario mire y decida. La verdad vive en el repo: el código, sus
+historias de Storybook y las fichas de `docs/design/`.
 
 La decisión y lo que se descartó están en el ADR-0045, que sustituye al ADR-0033.
 
 La rama **lógica** (`LOGIC.md`: máquinas de estado, flujo trifásico, errores de
 PKCS#11) **no** cambia: sigue siendo el fichero HTML único y local que describe
-la skill. El lienzo es para pantallas, no para simuladores.
+la skill. Claude Design es para pantallas, no para simuladores.
 
-## Quién dibuja: el usuario en Claude Design
+## El flujo
 
-Por defecto, **se dibuja y se itera en Claude Design**, donde se ve lo que se
-dibuja y se corrige señalando, y **se consolida en el repositorio con la skill
-`canvas-pull`**: trae los artboards, les pone el `<helmet>` de `_helmet.part`,
-escribe las fichas y abre la PR. Dibujar desde Claude Code, escribiendo HTML
-sin verlo y corrigiendo por texto, es lo que dejó en `canvas` su lista de «no
-veo nada».
-
-La skill `canvas` dibuja solo en dos casos:
-
-- **El dibujo sale del repositorio**: un issue, la spec o el código actual que
-  el agente tiene que leer para dibujar algo con sentido.
-- **Un cambio mecánico en muchos artboards**: el mismo texto o el mismo ajuste
-  en todas las pantallas.
-
-Aun así, en cuanto lo dibujado está en el proyecto, los retoques se hacen en
-Claude Design y se traen con `canvas-pull`.
-
-## Granularidad: un canvas por caso de uso
-
-- **Un canvas = un caso de uso** (un flujo completo: "firmar un PDF con DNIe",
-  "validar una firma existente", "configurar almacenes de claves").
-- **Un artboard = una pantalla en un estado concreto**: vacío, con datos,
-  pidiendo PIN, en error, en progreso. Los estados son lo que de verdad valida
-  una decisión de UI, así que van todos al canvas.
-- **Una ficha `docs/design/<pantalla>.md` = una pantalla**, no un caso de uso.
-  Una pantalla que aparece en varios flujos (el selector de certificados, por
-  ejemplo) tiene **una sola ficha**, que lista los flujos que la usan. No
-  dupliques su descripción por flujo.
-
-Al validar un canvas se escriben o actualizan **varias** fichas, una por
-pantalla del flujo. Es la única asimetría del esquema y es deliberada: el
-canvas se organiza por recorrido, la documentación por pieza reutilizable.
-
-## Dónde viven los canvas
-
-Proyecto de Claude Design del repo:
-
-- **Nombre**: `Autofirma de escritorio en Rust`
-- **URL**: <https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132>
-- **projectId**: `c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132`
-
-**Corrección medida sobre el terreno:** un `.dc.html` **no** es un caso de uso,
-es **un artboard**. El caso de uso es el proyecto entero, y su reparto en
-pantallas-estado lo fija `canvas.json`, que además admite **páginas** con
-nombre. Así que un caso de uso = un fichero `Main.dc.html` (el artboard de
-entrada, obligatorio) más un `<Pantalla>.dc.html` por pantalla-estado, y las
-páginas de `canvas.json` separan conjuntos (variantes frente a estados). Si
-llega un segundo caso de uso y las páginas no bastan para mantenerlos
-separados, entonces sí toca un proyecto por caso de uso.
-
-El `Canvas.dc.html` inicial estaba vacío y se ha borrado: `Main.dc.html` es
-ahora el artboard de entrada.
-
-Si el editor de canvas no llega a mostrar más de un lienzo por proyecto, la
-alternativa es un **proyecto por caso de uso** creado con la skill `design`;
-en ese caso el `projectId` deja de ser único y manda el registro de canvas
-de más abajo. Comprueba con `list_files` antes de asumir nada.
-
-## Cómo publicar un canvas
-
-1. **Redactar los artboards**: skill `design` (ficheros `.dc.html`, un artboard
-   por pantalla-estado del flujo). La skill `design` sirve para **crear o
-   re-sembrar** un lienzo; un lienzo ya publicado se edita en su Artifact.
-
-   El `<helmet>` de un artboard nuevo **se copia de
-   `docs/design/artboards/_helmet.part`, nunca de un `get_file` del proyecto**.
-   La copia del proyecto se queda atrás y no hay nada allí que lo detecte: el
-   02/09/2026 tres artboards entraron con dos tokens de sombra desfasados
-   porque se redactaron mirando al proyecto. La dirección del `<helmet>` es
-   siempre **repo → proyecto**. El cuerpo de un artboard retocado a mano en
-   Claude Design sí baja al repositorio, con la skill `canvas-pull`, que le
-   pone el `<helmet>` de `_helmet.part` y actualiza las fichas.
-2. **Transportar ficheros al proyecto**: herramienta `DesignSync` con el
-   `projectId` de arriba. Orden obligatorio: `list_files` / `get_file` →
-   `finalize_plan` (declarando writes y deletes) → `write_files`. Solo desde
-   la sesión principal: los subagentes no tienen `DesignSync`.
-3. **Pasar `docs/design/artboards/comprueba.sh`** sobre la copia del repo, que
-   verifica que todos llevan el `<helmet>` de `_helmet.part`. Compararlos entre
-   sí no basta: trece ficheros de acuerdo entre ellos dan verde con el sistema
-   de diseño equivocado entero.
-4. **Anotarlo en el registro de canvas** de más abajo.
-5. **Enseñar la URL al usuario** con la lista de artboards, y esperar su
-   veredicto. La validación es siempre humana.
+1. **Cuándo explorar**: solo si hay una decisión de aspecto que mirar antes de
+   escribir código. Lo que la ficha o el sistema de diseño ya resuelven va
+   directo a código.
+2. **Sincronizar antes**: `/design-sync` sube a «rFirma Components» los
+   componentes y las historias de `main`. Se explora sobre eso, no sobre
+   dibujos a mano.
+3. **Explorar**: en Claude Design, con los primitivos y las piezas de dominio
+   reales. Varias variantes radicalmente distintas (3 por defecto, tope 5) para
+   la pantalla que sea el nudo del caso de uso: distinta jerarquía y distinta
+   acción principal, no distinto color.
+4. **Validar**: siempre humana. La persona usuaria elige.
+5. **De lo validado a código**: el componente, sus historias (una por
+   variante, junto al componente) y la ficha.
 
 Si falta la autorización de design (la llamada de lectura falla por scopes),
 dilo y cae a la rama local de `UI.md` en lugar de bloquear el prototipo.
 
-## Variantes
+## Proyectos de Claude Design
 
-Se mantiene la regla de la skill: **varias variantes radicalmente distintas**
-(3 por defecto, tope 5) para la pantalla que sea el nudo del caso de uso —
-distinta jerarquía de información y distinta acción principal, no distinto
-color. Las variantes son artboards paralelos del mismo canvas, etiquetados
-`A` / `B` / `C`. Las pantallas satélite del flujo se dibujan una sola vez,
-siguiendo la variante que se esté evaluando.
+- **Vigente**: «rFirma Components», `projectId`
+  `312bca0c-2f94-494a-820a-e947e03f9ade`. Lo llena `/design-sync` desde
+  Storybook; su configuración está en `.design-sync/`.
+- **Congelados, solo histórico** (no se escriben ni se sincronizan):
+  - «Autofirma de escritorio en Rust», `c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132`,
+    el canvas de artboards.
+  - «rFirma Design System», `ca5219d0-609a-4ce1-957f-e1d1d38e0c8c`, el bundle
+    anterior.
 
 ## Sistema de diseño
 
-- Lo **normativo** es el bundle versionado en
-  `rfirma-app/src/design-system/bundle/` (#85): es el CSS que consume la
-  aplicación y el único sitio donde vive un valor. `docs/design/design-system.md`
-  lo describe —temas, roles de color, tokens `--rf-*`, componentes— y una prueba
-  de grada A impide que se separen. Léela antes de dibujar nada y **no fijes
-  colores a mano**.
-- El bundle y el proyecto de sistema de diseño de Claude Design («rFirma Design
-  System», `projectId` `ca5219d0-609a-4ce1-957f-e1d1d38e0c8c`,
-  `PROJECT_TYPE_DESIGN_SYSTEM`) **son el mismo fichero en dos sitios**, y el
-  sentido es **repo → proyecto**:
-  1. Se cambia el fichero en `rfirma-app/src/design-system/bundle/`.
-  2. Se resella con `just seal-ds-bundle`; sin sellar, `just check-repo` sale en
-     rojo.
-  3. Se sube **ese fichero** al proyecto con `DesignSync` (requiere
-     `/design consent`): `get_file` del remoto y `diff` con el local antes de
-     pisarlo, `finalize_plan` con solo esa ruta y `localDir` en `bundle/`, y
-     `write_files` con `localPath`.
-  No se reexporta el proyecto entero sobre `bundle/`: el remoto se quedó atrás
-  (conservaba el `"! "` de `.rf-hint` que la v0.4 retiró) y lo traería de vuelta.
-- El proyecto lleva ya adjunto el sistema de diseño compilado en
-  `_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/` (tokens,
-  `styles.css`, fuentes). Los artboards consumen esos tokens. Su `<helmet>` es
-  una copia comprimida para previsualizar, no una fuente: si un valor difiere
-  del bundle, gana el bundle.
-- El proyecto es de tipo `PROJECT_TYPE_PROJECT`, **no**
-  `PROJECT_TYPE_DESIGN_SYSTEM`, y el tipo es inmutable. Por tanto el flujo
-  completo de `/design-sync` (subir una librería de componentes local como
-  design system) **no aplica** aquí: `DesignSync` se usa solo como transporte de
-  ficheros del lienzo.
+El CSS de `rfirma-app/src/design-system/bundle/` es código fuente normal, sin
+sello: se edita como cualquier otro fichero y una prueba de grada A impide que
+se separe de `docs/design/design-system.md`. Léela antes de explorar y **no
+fijes colores a mano**.
 
-## Al validar: la ficha de pantalla
+## La ficha de pantalla
 
-Cuando el usuario da por buena una variante, el prototipo ha cumplido. Lo que
-baja a `main` es Markdown, no HTML:
+Una ficha `docs/design/<pantalla>.md` por pantalla, no por caso de uso. Una
+pantalla que aparece en varios flujos tiene **una sola ficha**, que lista los
+flujos que la usan; una ventana con una secuencia de momentos
+(`ventana-de-sede.md`) también tiene una sola.
 
-- Escribe o actualiza **`docs/design/<pantalla>.md`** por cada pantalla del
-  flujo, con esta estructura:
+```markdown
+# <Nombre de la pantalla>
 
-  ```markdown
-  # <Nombre de la pantalla>
+Una frase: qué resuelve y en qué punto del flujo aparece.
 
-  Una frase: qué resuelve y en qué punto del flujo aparece.
+## Casos de uso que la usan
+- <caso de uso> — <en qué paso>
 
-  ## Casos de uso que la usan
-  - <caso de uso> — <en qué paso>
+## Estructura
+Regiones y jerarquía. Acción principal, acciones secundarias.
 
-  ## Estructura
-  Regiones y jerarquía. Acción principal, acciones secundarias.
+## Estados
+Un apartado por estado: qué cambia y qué ve el usuario, con su historia.
 
-  ## Estados
-  Un apartado por estado (vacío, cargando, error, …): qué cambia y qué ve el usuario.
+## Componentes y tokens
+Clases y tokens `--rf-*` del sistema de diseño que emplea. Nada de colores literales.
 
-  ## Componentes y tokens
-  Clases y tokens `--rf-*` del sistema de diseño que emplea. Nada de colores literales.
+## Decisiones
+Qué se descartó y por qué.
+```
 
-  ## Decisiones
-  Qué se descartó y por qué. Enlace al canvas que lo validó.
-  ```
-
-- **Una ventana con una secuencia lleva una sola ficha**, aunque tenga varios
-  artboards. La regla es «una ficha por pantalla» porque lo normal es que cada
-  pantalla se entienda sola; cuando los artboards son **momentos de la misma
-  ventana** —`ventana-de-sede.md`, con sus cinco
-  ([#332](https://github.com/sgomez/rfirma/issues/332))— partirla obligaría a
-  leer todos los ficheros para saber qué ve la persona de principio a fin. La
-  ficha lista entonces los estados en una tabla con su artboard.
-- **Un artboard de trabajo nace para morir.** Si para decidir has creado
-  artboards o páginas aparte, al validar **se funden en el artboard de la
-  pantalla y se borran**, del repositorio y del proyecto, en el mismo turno en
-  que el usuario elige. La pantalla es la misma, y dos sitios donde mirarla son
-  dos fuentes de verdad. Lo que se conserva es el *porqué*, en la anotación de
-  la página que sobrevive.
-- Marca el canvas como `validado` en el registro, con la fecha. El canvas se
-  queda como fuente primaria de la decisión; no se borra ni se promociona a
-  código tal cual. Su URL vive a partir de ahí en la sección "Decisiones" de la
-  ficha, que es donde se lee de verdad.
 - Comenta en el ticket de wayfinder o en el issue de implementación la
-  **respuesta** (qué variante gana y por qué) más los enlaces al canvas y a las
-  fichas, antes de cerrarlo.
+  **respuesta** (qué variante gana y por qué) antes de cerrarlo.
 - Si la decisión introduce vocabulario o una regla visual nueva y transversal,
-  actualiza `docs/design/design-system.md`; si es una decisión de arquitectura,
-  va a `docs/adr/`.
-
-## Registro de canvas
-
-Estado de los prototipos en vuelo. Es estado de proceso, no documentación de
-producto: cuando un caso de uso se valida y sus fichas están escritas, su fila
-puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
-
-| Caso de uso | Canvas | Estado | Fichas |
-| ----------- | ------ | ------ | ------ |
-
-No hay ningún prototipo en vuelo.
-
-El caso de uso **la validez de las firmas en la ventana** se validó el
-**03/10/2026**, sin página de trabajo, en `Main`, `EstadoFirmarDeTodosModos`,
-`SedeConsentimiento` y el nuevo `EstadoVerFirmas`. Tocó las fichas
-`panel-de-firma`, `dialogo-ver-firmas`, `dialogo-firmar-de-todos-modos`,
-`ventana-de-sede`, `ventana-principal` y `design-system`.
-
-El caso de uso **el resumen unificado con `verify --gui`** se validó el
-**03/10/2026**, en `Main` y sin página de trabajo: el resumen de después de
-firmar y el que abre `rfirma verify -i <doc> -gui` son el mismo estado, que
-lista todas las firmas del documento en fichas apiladas con lo de `verify -v`.
-Se retiró la palanca «Ficha 14». Reescribe
-[`panel-de-firma.md`](../design/panel-de-firma.md), que enlaza el canvas desde
-su sección «Decisiones»; de rebote, `ventana-principal` y `visor-de-documento`.
-
-La **fusión del canvas con la app** se validó el **28/09/2026**, dentro de
-`PreferenciasPantalla` y `PrimerArranque` y sin páginas de trabajo: la sección
-*Firma* de Preferencias con el destino en radios, y el asistente del primer
-arranque con el idioma, la segunda pantalla en pasos numerados y la protección
-contra firmas accidentales. Obliga a reescribir el
-[ADR-0011](../adr/0011-destino-del-documento-firmado.md), que queda para la
-implementación; las fichas [`preferencias.md`](../design/preferencias.md) y
-[`primer-arranque.md`](../design/primer-arranque.md) enlazan el canvas desde su
-sección «Decisiones».
-
-El caso de uso **el popover de recientes en Linux** se validó el
-**01/10/2026**, directamente en `_cabecera.part` y sin página de trabajo: los
-recientes de Linux pasan del menú GTK de una línea a un popover propio de dos
-líneas con la ruta de la carpeta, y el ☰ toma su relleno, separación y
-esquinas. Reescribe [`pestanas-de-documentos.md`](../design/pestanas-de-documentos.md)
-y [`cabecera.md`](../design/cabecera.md), que enlazan el canvas desde su
-sección «Decisiones».
-
-El caso de uso **la barra de título en Linux** se validó el **30/09/2026**. Se
-exploró en una página de trabajo, «trabajo · barra de título por escritorio»,
-con el artboard «Main por escritorio», que se fundió en `Main` y se borró con su
-página y su nota: una palanca «Escritorio» en los diez artboards de
-`_cabecera.part`; en Linux, la barra de título nativa de GTK con la tira de
-pestañas debajo; y en los tres escritorios el aviso deja el menú y pasa a un
-botón propio. Reescribe [`cabecera.md`](../design/cabecera.md) y
-[`pestanas-de-documentos.md`](../design/pestanas-de-documentos.md), que enlazan
-el canvas desde su sección «Decisiones»; de rebote, `panel-de-estado`,
-`primer-arranque`, `ventana-principal` y `design-system`. La medición está en
-`docs/research/barra-de-titulo-en-linux.md`.
-
-El caso de uso **la barra única** se validó el **27/09/2026**. Se exploró en
-una página de trabajo, «Main barra unica», que se fundió en `Main` y se borró:
-cabecera y pestañas pasan a una sola barra de 44 px con el botón partido «Abrir
-PDF… ▾», y la barra sale de `_cabecera.part`, estampada en los diez artboards de
-la ventana principal, con o sin documentos. Reescribe el
-[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) y las fichas
-[`cabecera.md`](../design/cabecera.md) y
-[`pestanas-de-documentos.md`](../design/pestanas-de-documentos.md), que enlazan
-el canvas desde su sección «Decisiones»; de rebote,
-[`ventana-principal.md`](../design/ventana-principal.md), `design-system` (las
-capas), `preferencias`, `panel-de-estado`, `retirar-certificado`,
-`primer-arranque`, `panel-de-firma` y los tres diálogos que nombraban la tira.
-
-El caso de uso **el selector de certificado** se validó el **27/09/2026** sin
-pasar por esta tabla: el usuario lo retocó a mano en `Main` y en
-`SedeConsentimiento` y se trajo con `/canvas-pull`, sin página de trabajo que
-fundir. Toca [`panel-de-firma.md`](../design/panel-de-firma.md), que describe el
-componente para las dos ventanas,
-[`ventana-principal.md`](../design/ventana-principal.md) y
-[`ventana-de-sede.md`](../design/ventana-de-sede.md), que enlazan el canvas desde
-su sección «Decisiones», y de rebote `design-system`, `cabecera` y los tres
-diálogos que citaban «Firmar como …».
-
-El caso de uso **firmar un PDF que ya trae firmas** se validó el **26/09/2026**
-y salió de esta tabla. Se exploró en tres páginas de trabajo
-—`trabajo-cofirma-panel`, `trabajo-cofirma-confirmacion` y
-`trabajo-cofirma-sede`— que se fundieron y se borraron: el aviso de firmas
-previas entró en `Main` (y en los estados que lo copian) y en
-`SedeConsentimiento`, y la confirmación quedó como artboard nuevo,
-`EstadoFirmarDeTodosModos`. Sus fichas son
-[`panel-de-firma.md`](../design/panel-de-firma.md),
-[`dialogo-firmar-de-todos-modos.md`](../design/dialogo-firmar-de-todos-modos.md)
-—nueva— y [`ventana-de-sede.md`](../design/ventana-de-sede.md), y las tres
-enlazan el canvas desde su sección «Decisiones».
-
-El caso de uso **la ventana principal repensada** se validó el **26/09/2026**
-y salió de esta tabla. Se exploró en cuatro páginas de trabajo —«Main v3 · A»,
-«Main v3 · B», «Main v3 · C» y el compendio «Main v4 · D»— que se fundieron en
-`Main` y se borraron. `Main` pasa a ser **la ventana entera en un solo
-artboard**, con sus estados como palanca: se fundieron en él `EstadoVacio`,
-`EstadoElegirCertificado`, `EstadoCargandoCertificados`,
-`EstadoSinCertificados`, `EstadoFirmando`, `EstadoExito` y `EstadoErrorFirma`, y
-se borró `EstadoDocumentoCargado`. `EstadoPaginasSinSello` se renombró a
-`EstadoPaginasSinFirmaVisible`, y el resto de la página «Recorrido de firma» y
-de «Estado de rFirma» se redibujó sobre la cabecera de 52 px y la tira de
-pestañas. Sus fichas son
-[`ventana-principal.md`](../design/ventana-principal.md),
-[`cabecera.md`](../design/cabecera.md),
-[`pestanas-de-documentos.md`](../design/pestanas-de-documentos.md) —antes
-`bandeja-de-documentos.md`—,
-[`panel-de-firma.md`](../design/panel-de-firma.md),
-[`visor-de-documento.md`](../design/visor-de-documento.md),
-[`dialogo-progreso-firma.md`](../design/dialogo-progreso-firma.md) y
-[`dialogo-paginas-sin-firma-visible.md`](../design/dialogo-paginas-sin-firma-visible.md),
-y de rebote [`dialogo-pin.md`](../design/dialogo-pin.md),
-[`preferencias.md`](../design/preferencias.md),
-[`panel-de-estado.md`](../design/panel-de-estado.md),
-[`retirar-certificado.md`](../design/retirar-certificado.md),
-[`primer-arranque.md`](../design/primer-arranque.md) y
-[`ventana-de-sede.md`](../design/ventana-de-sede.md), y todas enlazan el canvas
-desde su sección «Decisiones». La regla «firma visible, nunca sello» y las capas
-de la ventana van a [`design-system.md`](../design/design-system.md).
-
-El caso de uso **la retirada desde dentro**
-([#660](https://github.com/sgomez/rfirma/issues/660), mapa
-[#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
-y salió de esta tabla. Deja **un artboard nuevo**, `RetirarCertificado`, en la
-página «Estado de rFirma», que es `PanelEstado` con el velo de la retirada
-encima; no hubo página de trabajo ni artboard de usar y tirar que fundir. De
-rebote toca `PanelEstado`, donde la señal pasa a llamarse «Firma en sedes» y el
-botón del certificado alterna entre instalar y retirar. Sus fichas son
-[`retirar-certificado.md`](../design/retirar-certificado.md) —nueva— y
-[`panel-de-estado.md`](../design/panel-de-estado.md), y las dos enlazan el canvas
-desde su sección «Decisiones».
-
-El caso de uso **el panel de estado y el menú de la cabecera**
-([#659](https://github.com/sgomez/rfirma/issues/659), mapa
-[#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
-y salió de esta tabla. Deja **un artboard nuevo**, `PanelEstado`, en una página
-propia —«Estado de rFirma»—, con dos palancas independientes: el momento del
-panel y la aplicación de firma. Los tres artboards de trabajo que hubo se
-fundieron en él al validar y se borraron del proyecto y del repositorio. De
-rebote toca `EstadoVacio`, cuyo menú pasa a cuatro entradas con divisor, aviso y
-foco por teclado. Sus fichas son
-[`panel-de-estado.md`](../design/panel-de-estado.md) —nueva— y
-[`cabecera.md`](../design/cabecera.md), y las dos enlazan el canvas desde su
-sección «Decisiones»; `design-system.md` estrena de paso el vocabulario de
-veredictos, que es transversal.
-
-El caso de uso **el asistente del primer arranque** ([#658](https://github.com/sgomez/rfirma/issues/658),
-mapa [#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
-y salió de esta tabla: es **una pantalla nueva con un artboard nuevo**,
-`PrimerArranque`, que vive en la página «Recorrido de firma» como cualquier otra
-y tiene ficha propia, [`primer-arranque.md`](../design/primer-arranque.md), con
-el enlace al canvas en su sección «Decisiones». No tocó ninguna otra ficha.
-
-El caso de uso **Preferencias como visor de pestañas**
-([#657](https://github.com/sgomez/rfirma/issues/657)) se validó el **10/09/2026**
-y salió de esta tabla. Se dibujó entero dentro de `PreferenciasPantalla`, con la
-palanca «Sección visible», sin artboard de trabajo que fundir ni que borrar, y
-toca una sola ficha, [`preferencias`](../design/preferencias.md), que enlaza el
-canvas desde su sección «Decisiones».
-
-El caso de uso **v0.5 · la ventana de sede** ([#317](https://github.com/sgomez/rfirma/issues/317))
-se validó el **05/09/2026** y salió de esta tabla. Es la excepción declarada a la
-regla de «una ficha por pantalla»: sus cinco artboards —`SedeEspera`,
-`SedeConsentimiento`, `SedeFirmando`, `SedeDesenlace` y `SedeSinCertificado`— son
-cinco momentos de **una sola ventana**, así que tienen **una sola ficha**,
-[`ventana-de-sede.md`](../design/ventana-de-sede.md)
-([#332](https://github.com/sgomez/rfirma/issues/332)). De rebote se tocaron
-`dialogo-pin` —el `autofocus` del campo del secreto—, `panel-de-firma` —el
-recorte del desplegable de certificados— y `design-system`, que estrena la regla
-de redacción y el componente de desplegable. Las cuatro enlazan el canvas desde
-su sección «Decisiones».
-
-El caso de uso **v0.4 · salir del sandbox** ([#250](https://github.com/sgomez/rfirma/issues/250))
-se validó el 04/09/2026 y salió de esta tabla: sus siete fichas —`ventana-principal`,
-`preferencias`, `acerca-de`, `dialogo-pin`, `dialogo-progreso-firma`,
-`panel-de-firma` y `design-system`— enlazan el canvas desde su sección
-«Decisiones».
-
-El caso de uso **firmar un PDF en local** se validó el 31/08/2026 y salió de
-esta tabla: su canvas está enlazado desde la sección «Decisiones» de cada ficha
-de `docs/design/`, empezando por
-[ventana-principal.md](../design/ventana-principal.md).
-
-Estados: `en revisión` (esperando veredicto del usuario) / `validado (YYYY-MM-DD)`.
+  actualiza `docs/design/design-system.md`; si es de arquitectura, va a
+  `docs/adr/`.

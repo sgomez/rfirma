@@ -120,33 +120,7 @@ sombra ni duración.
 `styles.css` y su cierre de imports: `tokens/color.css` (los dos temas),
 `typography.css`, `spacing.css`, `radius.css`, `shadow.css`, `motion.css`,
 `breakpoint.css`, `fonts/fonts.css` y `_ds_bundle.css`. Léelos antes de dar
-estilo. Cada componente tiene su
-`components/<grupo>/<Nombre>/<Nombre>.prompt.md` con el fragmento canónico.
-
-Las tarjetas de preview están fijadas a `data-theme="dark"`: muestran la
-identidad del sistema, no el modo del visitante.
-
-
----
-
-## Índice de componentes
-
-### Components
-
-- **Badge** — `components/Components/Badge/Badge.prompt.md`
-- **Button** — `components/Components/Button/Button.prompt.md`
-- **Card** — `components/Components/Card/Card.prompt.md`
-- **Dialog** — `components/Components/Dialog/Dialog.prompt.md`
-- **Input** — `components/Components/Input/Input.prompt.md`
-
-### Foundations
-
-- **Colors** — `components/Foundations/Colors/Colors.prompt.md`
-- **Elevation** — `components/Foundations/Elevation/Elevation.prompt.md`
-- **Motion** — `components/Foundations/Motion/Motion.prompt.md`
-- **Radius** — `components/Foundations/Radius/Radius.prompt.md`
-- **Spacing** — `components/Foundations/Spacing/Spacing.prompt.md`
-- **Typography** — `components/Foundations/Typography/Typography.prompt.md`
+estilo.
 
 ## Ficheros
 
@@ -156,4 +130,3 @@ identidad del sistema, no el modo del visitante.
 - `_ds_bundle.css` — capa de componentes y utilidades `rf-*`.
 - `_ds_bundle.js` — expone `window.RFirma` (solo nombres de tokens; **no hay componentes React**).
 - `fonts/fonts.css` — carga Inter (OFL) desde Google Fonts.
-- `components/<grupo>/<Nombre>/` — `<Nombre>.html` (tarjeta de preview) y `<Nombre>.prompt.md` (uso).
