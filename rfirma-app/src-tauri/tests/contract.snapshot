@@ -340,6 +340,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Damaged
       CertificateNotYetValid { date: String }
       UnknownSignatureType
+      UnsupportedAlgorithm
       CosignNotAdmitted { closedBy: Option<String> }
 
   pub enum SigningDateView   (serde: etiqueta "kind")

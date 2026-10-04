@@ -38,6 +38,7 @@ export type ValidityReason =
   | { kind: "damaged" }
   | { kind: "certificateNotYetValid"; date: string }
   | { kind: "unknownSignatureType" }
+  | { kind: "unsupportedAlgorithm" }
   | { kind: "cosignNotAdmitted"; closedBy: string | null };
 
 /** La fecha de una firma: la declara quien firma o la prueba el sello de una TSA. */

@@ -406,6 +406,11 @@ fn one_of_each_reason() -> Vec<KeyedReason> {
             vec![],
         ),
         (
+            ValidityReason::UnsupportedAlgorithm,
+            "signatureReason.unsupportedAlgorithm",
+            vec![],
+        ),
+        (
             ValidityReason::CosignNotAdmitted {
                 closed_by: Some("UNA".to_owned()),
             },
@@ -425,6 +430,7 @@ fn one_of_each_reason() -> Vec<KeyedReason> {
             | ValidityReason::Damaged
             | ValidityReason::CertificateNotYetValid { .. }
             | ValidityReason::UnknownSignatureType
+            | ValidityReason::UnsupportedAlgorithm
             | ValidityReason::CosignNotAdmitted { .. } => {}
         }
     }

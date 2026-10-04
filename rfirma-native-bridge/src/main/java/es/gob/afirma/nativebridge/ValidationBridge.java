@@ -89,6 +89,10 @@ final class ValidationBridge {
             results.add(plainText(new SignValidity(SIGN_DETAIL_TYPE.KO,
                     VALIDITY_ERROR.UNKOWN_SIGNATURE_FORMAT).toString()));
         }
+        else if (PreviousSignaturesBridge.usesBrokenDigest(document)) {
+            results.add(plainText(new SignValidity(SIGN_DETAIL_TYPE.KO,
+                    VALIDITY_ERROR.ALGORITHM_NOT_SUPPORTED).toString()));
+        }
         return results;
     }
 

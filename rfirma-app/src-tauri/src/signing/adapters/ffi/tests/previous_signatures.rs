@@ -155,6 +155,7 @@ fn every_other_reason_crosses_by_its_name() {
         ("modifiedAfterSigning", ValidityReason::ModifiedAfterSigning),
         ("damaged", ValidityReason::Damaged),
         ("unknownSignatureType", ValidityReason::UnknownSignatureType),
+        ("unsupportedAlgorithm", ValidityReason::UnsupportedAlgorithm),
         (
             "certificateNotYetValid",
             ValidityReason::CertificateNotYetValid {

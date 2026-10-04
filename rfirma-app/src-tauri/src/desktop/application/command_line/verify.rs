@@ -350,6 +350,7 @@ fn reason_key(
             vec![("date", in_local_day(date, time_zone))],
         ),
         ValidityReason::UnknownSignatureType => ("signatureReason.unknownSignatureType", vec![]),
+        ValidityReason::UnsupportedAlgorithm => ("signatureReason.unsupportedAlgorithm", vec![]),
         ValidityReason::CosignNotAdmitted { closed_by } => match closed_by {
             Some(closed_by) => (
                 "signatureReason.cosignNotAdmitted",

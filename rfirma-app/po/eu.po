@@ -1164,6 +1164,10 @@ msgstr "Ziurtagiria ezin zen {{date}} baino lehen erabili"
 msgid "signatureReason.unknownSignatureType"
 msgstr "rFirmak ez du sinadura mota hau ezagutzen"
 
+#. Motivo de una firma no válida: resume con MD5 o MD2.
+msgid "signatureReason.unsupportedAlgorithm"
+msgstr "Sinadurak onartzen ez den laburpen-algoritmo bat erabiltzen du (MD5 edo MD2)"
+
 #. Motivo de una firma no válida. {{name}}: quien cerró el documento a más firmas.
 msgid "signatureReason.cosignNotAdmitted"
 msgstr "{{name}}(e)k ez zituen sinadura gehiago onartzen"

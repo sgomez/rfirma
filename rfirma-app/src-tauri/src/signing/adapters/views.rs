@@ -269,6 +269,7 @@ crossing! {
         Damaged,
         CertificateNotYetValid { date: String },
         UnknownSignatureType,
+        UnsupportedAlgorithm,
         CosignNotAdmitted { closed_by: Option<String> },
     }
 }
@@ -285,6 +286,7 @@ impl From<ValidityReason> for ValidityReasonView {
                 Self::CertificateNotYetValid { date }
             }
             ValidityReason::UnknownSignatureType => Self::UnknownSignatureType,
+            ValidityReason::UnsupportedAlgorithm => Self::UnsupportedAlgorithm,
             ValidityReason::CosignNotAdmitted { closed_by } => {
                 Self::CosignNotAdmitted { closed_by }
             }
