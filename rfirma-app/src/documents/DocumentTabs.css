@@ -245,6 +245,9 @@
 }
 
 .open-menu__clear {
+  font-weight: 400;
+  line-height: normal;
+  justify-content: flex-start;
   display: flex;
   align-items: center;
   min-height: 32px;
@@ -264,6 +267,10 @@
 }
 
 .hidden-tab-row {
+  min-height: 0;
+  font-weight: 400;
+  line-height: normal;
+  justify-content: flex-start;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -297,6 +304,10 @@
 }
 
 .recent-row {
+  min-height: 0;
+  font-weight: 400;
+  line-height: normal;
+  justify-content: flex-start;
   display: flex;
   align-items: center;
   gap: 10px;
