@@ -2,7 +2,6 @@
 
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { formatSignedTime } from "../App.signingOrder";
 import { Badge } from "../design-system/Badge";
 import { AlertIcon, CheckCircleIcon, FileIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
@@ -12,6 +11,7 @@ import type { Destination } from "./destination";
 import { PanelFooter } from "./PanelFooter";
 import type { DocumentFinding, PreviousSignature, SignatureFormat } from "./previousSignatures";
 import { SignatureCards } from "./SignatureCards";
+import { formatSignedTime } from "./signedAt";
 import "./SigningPanel.css";
 import "./SignedPanel.css";
 
