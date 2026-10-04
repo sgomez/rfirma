@@ -11,6 +11,7 @@ import { firstSealedPage, type Placement } from "../viewer/signatureBox";
 import type { MarkedArea } from "./errand";
 import { SedeBody } from "./SedeFrame";
 import "../signing/SigningPanel.css";
+import { Button } from "../design-system/Button";
 
 interface SedeMarkingProps {
   pdf: PdfDocument | null;
@@ -60,17 +61,16 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
       footer={
         <>
           <div className="sede-window__spacer" />
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
+          <Button variant="ghost" onClick={onCancel}>
             {t("actions.cancel")}
-          </button>
-          <button
-            type="button"
-            className="rf-btn rf-btn--primary"
+          </Button>
+          <Button
+            variant="primary"
             disabled={placement === null || rangeError !== null || handing}
             onClick={() => void accept()}
           >
             {t("actions.continue")}
-          </button>
+          </Button>
         </>
       }
     >
