@@ -280,7 +280,7 @@ final class PreviousSignaturesBridge {
         if (validities.stream().anyMatch(PreviousSignaturesBridge::isOutOfDate)) {
             validities.add(integrityOf(signer, certificate, withContent));
         }
-        if (isBroken(signer.getDigestAlgOID())) {
+        if (usesBrokenCmsAlgorithm(signer)) {
             validities.add(unsupportedAlgorithm());
         }
         return identityOf(certificate,
@@ -670,33 +670,38 @@ final class PreviousSignaturesBridge {
     private static final Set<String> BROKEN_DIGEST_NAMES = Set.of("MD2", "MD5");
 
     private static final Set<String> BROKEN_DIGEST_OIDS =
-            Set.of("1.2.840.113549.2.2", "1.2.840.113549.2.5");
+            Set.of("1.2.840.113549.2.2", "1.2.840.113549.2.5",
+                    "1.2.840.113549.1.1.2", "1.2.840.113549.1.1.4");
 
     private static final Pattern BROKEN_XML_DIGEST = Pattern.compile("(?i)[#/-](md2|md5)$");
 
-    /** Si el resumen es MD5 o MD2, por su OID o por su nombre. */
+    /** Si el resumen es MD5 o MD2, por su OID (tambien el compuesto md5WithRSA o md2WithRSA) o por su nombre. */
     static boolean isBroken(final String digest) {
         return digest != null && (BROKEN_DIGEST_OIDS.contains(digest)
                 || BROKEN_DIGEST_NAMES.contains(digest.toUpperCase(Locale.ROOT).replace("-", "")));
+    }
+
+    /** Si el resumen o el algoritmo de firma del firmante es MD5 o MD2. */
+    static boolean usesBrokenCmsAlgorithm(final SignerInformation signer) {
+        return isBroken(signer.getDigestAlgOID()) || isBroken(signer.getEncryptionAlgOID());
     }
 
     private static SignValidity unsupportedAlgorithm() {
         return new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.ALGORITHM_NOT_SUPPORTED);
     }
 
-    /** Si el {@code ds:SignatureMethod} o algun {@code ds:DigestMethod} de la firma es MD5 o MD2. */
-    private static boolean usesBrokenXmlDigest(final Element signature) {
-        for (final String method : List.of("SignatureMethod", "DigestMethod")) {
-            final NodeList methods =
-                    signature.getElementsByTagNameNS(XMLConstants.DSIGNNS, method);
-            for (int i = 0; i < methods.getLength(); i++) {
-                if (BROKEN_XML_DIGEST.matcher(
-                        ((Element) methods.item(i)).getAttribute("Algorithm")).find()) {
-                    return true;
-                }
-            }
+    /** Si el {@code ds:SignedInfo} propio de la firma declara MD5 o MD2, en su firma o en sus referencias. */
+    static boolean usesBrokenXmlDigest(final Element signature) {
+        final Element signedInfo = firstChild(signature, "SignedInfo");
+        if (signedInfo == null) {
+            return false;
         }
-        return false;
+        final List<Element> methods = new ArrayList<>(children(signedInfo, "SignatureMethod"));
+        for (final Element reference : children(signedInfo, "Reference")) {
+            methods.addAll(children(reference, "DigestMethod"));
+        }
+        return methods.stream().anyMatch(method ->
+                BROKEN_XML_DIGEST.matcher(method.getAttribute("Algorithm")).find());
     }
 
     /** Si alguna firma del documento, contrafirmas incluidas, resume con MD5 o MD2. */

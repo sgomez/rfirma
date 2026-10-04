@@ -162,6 +162,7 @@ class BridgeContractTest {
                 + reasonEntry("invalid", "damaged") + ","
                 + reasonEntry("invalid", "modifiedAfterSigning") + ","
                 + reasonEntry("invalid", "cosignNotAdmitted") + ","
+                + reasonEntry("invalid", "unsupportedAlgorithm") + ","
                 + reasonEntry("invalid", "unknownSignatureType") + ","
                 + reasonEntry("invalid", "certificateNotYetValid") + ","
                 + reasonEntry("expired", "certificateExpired")

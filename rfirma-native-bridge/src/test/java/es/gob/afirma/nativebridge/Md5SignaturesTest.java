@@ -1,6 +1,7 @@
 package es.gob.afirma.nativebridge;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,12 +23,20 @@ import com.aowagie.text.pdf.PdfStamper;
 import com.aowagie.text.pdf.PdfString;
 import org.spongycastle.asn1.DEROctetString;
 import org.spongycastle.asn1.DERSequence;
+import org.spongycastle.asn1.DERSet;
+import org.spongycastle.asn1.cms.CMSObjectIdentifiers;
+import org.spongycastle.asn1.cms.ContentInfo;
+import org.spongycastle.asn1.cms.SignedData;
+import org.spongycastle.asn1.cms.SignerInfo;
+import org.spongycastle.asn1.nist.NISTObjectIdentifiers;
+import org.spongycastle.asn1.x509.AlgorithmIdentifier;
 import org.spongycastle.asn1.cms.AttributeTable;
 import org.spongycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.spongycastle.cert.jcajce.JcaCertStore;
 import org.spongycastle.cms.CMSProcessableByteArray;
 import org.spongycastle.cms.CMSSignedData;
 import org.spongycastle.cms.CMSSignedDataGenerator;
+import org.spongycastle.cms.SignerInformation;
 import org.spongycastle.cms.DefaultSignedAttributeTableGenerator;
 import org.spongycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
 import org.spongycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -62,6 +71,57 @@ class Md5SignaturesTest {
     }
 
     @Test
+    void a_cades_with_a_composite_md5_signature_algorithm_is_broken_even_with_a_sha256_digest()
+            throws Exception {
+        final CMSSignedData md5 = new CMSSignedData(md5Cades());
+        final SignedData data = SignedData.getInstance(md5.toASN1Structure().getContent());
+        final SignerInfo original = SignerInfo.getInstance(data.getSignerInfos().getObjectAt(0));
+        final SignerInfo sha256Digest = new SignerInfo(original.getSID(),
+                new AlgorithmIdentifier(NISTObjectIdentifiers.id_sha256),
+                original.getAuthenticatedAttributes(),
+                new AlgorithmIdentifier(PKCSObjectIdentifiers.md5WithRSAEncryption),
+                original.getEncryptedDigest(), original.getUnauthenticatedAttributes());
+        final SignedData rebuilt = new SignedData(data.getDigestAlgorithms(),
+                data.getEncapContentInfo(), data.getCertificates(), data.getCRLs(),
+                new DERSet(sha256Digest));
+        final CMSSignedData rebuiltCms = new CMSSignedData(
+                new ContentInfo(CMSObjectIdentifiers.signedData, rebuilt));
+        final SignerInformation signer = rebuiltCms.getSignerInfos().getSigners().iterator().next();
+
+        assertEquals(NISTObjectIdentifiers.id_sha256.getId(), signer.getDigestAlgOID());
+        assertTrue(PreviousSignaturesBridge.usesBrokenCmsAlgorithm(signer));
+    }
+
+    @Test
+    void a_xades_signature_is_not_broken_by_the_md5_of_its_countersignature_or_its_cert_digest()
+            throws Exception {
+        final String ds = "http://www.w3.org/2000/09/xmldsig#";
+        final String xml = "<ds:Signature xmlns:ds=\"" + ds + "\">"
+                + "<ds:SignedInfo><ds:SignatureMethod Algorithm=\"" + ds + "rsa-sha256\"/>"
+                + "<ds:Reference><ds:DigestMethod Algorithm=\"" + ds + "sha256\"/></ds:Reference>"
+                + "</ds:SignedInfo>"
+                + "<ds:Object><ds:CertDigest><ds:DigestMethod Algorithm=\"" + ds + "md5\"/>"
+                + "</ds:CertDigest><ds:Signature><ds:SignedInfo>"
+                + "<ds:SignatureMethod Algorithm=\"" + ds + "rsa-md5\"/></ds:SignedInfo>"
+                + "</ds:Signature></ds:Object></ds:Signature>";
+
+        assertFalse(PreviousSignaturesBridge.usesBrokenXmlDigest(parse(xml)));
+        assertTrue(PreviousSignaturesBridge.usesBrokenXmlDigest(
+                parse(xml.replace("rsa-sha256", "rsa-md5"))));
+        assertTrue(PreviousSignaturesBridge.usesBrokenXmlDigest(
+                parse(xml.replaceFirst("ds:Reference><ds:DigestMethod Algorithm=\"" + ds + "sha256",
+                        "ds:Reference><ds:DigestMethod Algorithm=\"" + ds + "md5"))));
+    }
+
+    private static org.w3c.dom.Element parse(final String xml) throws Exception {
+        final javax.xml.parsers.DocumentBuilderFactory factory =
+                javax.xml.parsers.DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        return factory.newDocumentBuilder().parse(new java.io.ByteArrayInputStream(
+                xml.getBytes(java.nio.charset.StandardCharsets.UTF_8))).getDocumentElement();
+    }
+
+    @Test
     void a_pdf_signed_with_sha256_keeps_being_valid() throws Exception {
         final PreviousSignaturesBridge.Signature signature = PreviousSignaturesBridge.read(
                 signedPdf("SHA256withRSA")).signatures().get(0);
@@ -86,7 +146,7 @@ class Md5SignaturesTest {
 
         assertEquals(clean.size() + 1, md5Pdf.size());
         assertTrue(md5Cades.size() > 1);
-        assertTrue(md5Pdf.get(md5Pdf.size() - 1).length() > 0);
+        assertEquals(md5Pdf.get(md5Pdf.size() - 1), md5Cades.get(md5Cades.size() - 1));
     }
 
     @Test
