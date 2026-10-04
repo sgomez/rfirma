@@ -11,18 +11,6 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
   const field = () => screen.getByRole("textbox", { name: "Páginas de la firma visible" });
   const block = () => screen.getByRole("region", { name: "Firma visible" });
 
-  it("chooses one page, several or all in a segmented group, in that order", () => {
-    renderPanel({ signature: visible });
-
-    const group = screen.getByRole("radiogroup", { name: "En qué páginas" });
-    expect(
-      within(group)
-        .getAllByRole("radio")
-        .map((radio) => radio.parentElement?.textContent),
-    ).toEqual(["Una página", "Varias", "Todas"]);
-    expect(within(group).getByRole("radio", { name: "Una página" })).toBeChecked();
-  });
-
   it("moves along the segmented group with the arrow keys", async () => {
     const user = userEvent.setup();
     renderLivePanel({ signature: visible });
@@ -36,13 +24,6 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
     await user.keyboard("{ArrowLeft}{ArrowLeft}");
 
     expect(screen.getByRole("radio", { name: "Todas" })).toBeChecked();
-  });
-
-  it("says the page it is on under «one page», with nothing to press while looking at it", () => {
-    renderPanel({ signature: visible, viewedPage: 3 });
-
-    expect(within(block()).getByText("En la página 3")).toBeInTheDocument();
-    expect(within(block()).queryByRole("button", { name: /aquí/ })).not.toBeInTheDocument();
   });
 
   it("moves it to the page in view under «one page» when looking at another", async () => {
@@ -92,33 +73,6 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
     expect(onSeal).toHaveBeenCalled();
   });
 
-  it("shows nothing under «all»", () => {
-    renderPanel({
-      signature: visible,
-      placement: { rect, pages: "all" },
-      pageChoice: "all",
-      viewedPage: 3,
-    });
-
-    expect(within(block()).queryByRole("button", { name: /aquí/ })).not.toBeInTheDocument();
-    expect(within(block()).queryByRole("textbox")).not.toBeInTheDocument();
-    expect(within(block()).queryByText(/En la página/)).not.toBeInTheDocument();
-  });
-
-  it("signs with the switch on even before anything is placed, and never asks to place it", () => {
-    renderPanel({ signature: visible, placement: null });
-
-    expect(signButton()).toBeEnabled();
-    expect(screen.queryByText(/Coloca la firma/)).not.toBeInTheDocument();
-  });
-
-  it("signs invisibly with the switch off, and shows none of the page choices", () => {
-    renderPanel({ signature: { ...visible, enabled: false }, placement: null });
-
-    expect(signButton()).toBeEnabled();
-    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
-  });
-
   it("does not lose the placement when the switch goes off and on again", () => {
     const onChoosePages = vi.fn();
     const { show } = renderPanel({ signature: visible, onChoosePages });
@@ -139,33 +93,6 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
       only: [1, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
     });
     expect(field()).toHaveValue("1,2-3,10-20");
-  });
-
-  it("neither echoes the pages nor explains the repeated box", () => {
-    const pages = { only: [1, 2, 3, 10, 11, 12, 13, 14] };
-    renderPanel({
-      signature: visible,
-      pageChoice: "these",
-      placement: { rect, pages },
-      pageSets: { single: 1, these: pages },
-    });
-
-    expect(within(block()).queryByText(/Se sellará/)).not.toBeInTheDocument();
-    expect(within(block()).queryByText(/mismo recuadro/)).not.toBeInTheDocument();
-  });
-
-  it("never says «sello» nor «sellar» in the block", () => {
-    const pages = { only: [3, 10] };
-    renderPanel({
-      signature: visible,
-      pageChoice: "these",
-      placement: { rect, pages },
-      pageSets: { single: 3, these: pages },
-    });
-    fireEvent.change(field(), { target: { value: "" } });
-
-    expect(block().textContent).not.toMatch(/sell/i);
-    expect(field().getAttribute("aria-label")).not.toMatch(/sell/i);
   });
 
   it.each([

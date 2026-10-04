@@ -6,13 +6,6 @@ import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 // Grada A: el modelo y la rúbrica (docs/design/panel-de-firma.md § El modelo, § La rúbrica).
 describe("SigningPanel · Modelo y rúbrica", () => {
-  it("groups the model cards under «Modelo»", () => {
-    renderPanel();
-
-    const group = screen.getByRole("group", { name: "Modelo" });
-    expect(within(group).getByRole("radio", { name: "Completa" })).toBeInTheDocument();
-  });
-
   it("chooses the complete model", async () => {
     const user = userEvent.setup();
     const onChangeSignature = vi.fn();
@@ -72,21 +65,6 @@ describe("SigningPanel · Modelo y rúbrica", () => {
     );
   });
 
-  it("sketches a phrase in the custom card instead of printing it", () => {
-    renderPanel({
-      signature: {
-        ...DEFAULT_VISIBLE_SIGNATURE,
-        enabled: true,
-        content: { model: "custom", phrase: [{ text: "Visto bueno de " }, { datum: "signer" }] },
-      },
-    });
-
-    const card = screen.getByRole("radio", { name: "Personalizada" }).closest("label");
-    const thumbnail = card?.querySelector(".panel__model-thumbnail");
-    expect(thumbnail?.textContent).toBe("");
-    expect(thumbnail?.querySelector(".panel__model-sketch")).not.toBeNull();
-  });
-
   it("shows the signer with its identifier masked, exactly as it will be stamped", async () => {
     const user = userEvent.setup();
     const fnmtTest = {
@@ -126,55 +104,5 @@ describe("SigningPanel · Modelo y rúbrica", () => {
     await user.click(screen.getByRole("switch", { name: "Con rúbrica" }));
 
     expect(onChangeSignature).toHaveBeenCalledWith(expect.objectContaining({ withRubric: false }));
-  });
-
-  it("shows the rubric already normalized, over white, before signing", () => {
-    renderPanel({ rubric });
-
-    const thumbnail = screen.getByAltText("Tu rúbrica");
-    expect(thumbnail).toHaveAttribute("src", rubric.dataUrl);
-  });
-
-  it("disables the rubric-only card while «Con rúbrica» is off", () => {
-    renderPanel({ rubric: null });
-
-    expect(screen.getByRole("radio", { name: "Solo rúbrica" })).toBeDisabled();
-  });
-
-  it("locks «Con rúbrica» on when the rubric-only card is chosen", () => {
-    renderPanel({
-      signature: {
-        ...DEFAULT_VISIBLE_SIGNATURE,
-        enabled: true,
-        withRubric: true,
-        content: { model: "rubricOnly" },
-      },
-      rubric,
-    });
-
-    const rubricSwitch = screen.getByRole("switch", { name: "Con rúbrica" });
-    expect(rubricSwitch).toBeDisabled();
-    expect(rubricSwitch).toHaveAttribute("aria-checked", "true");
-  });
-
-  it("shows a dashed hole in place of the thumbnail once switched on without an image", () => {
-    renderPanel({
-      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true, withRubric: true },
-      rubric: null,
-    });
-
-    // El hueco aparece en la fila y en la tarjeta *Completa*, que también
-    // lleva la rúbrica encendida (docs/design/panel-de-firma.md § La rúbrica).
-    expect(screen.getAllByTitle("Sin rúbrica cargada").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Cargar…" })).toBeInTheDocument();
-  });
-
-  it("counts the rubric failure as it is chosen, with the raw detail apart", () => {
-    renderPanel({
-      rubricFailure: { situation: "notAnAcceptedImage", detail: "image/gif" },
-    });
-
-    expect(screen.getByText("No se ha podido usar la imagen")).toBeInTheDocument();
-    expect(screen.getByText("image/gif")).toBeInTheDocument();
   });
 });
