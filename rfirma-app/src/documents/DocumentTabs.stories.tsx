@@ -13,6 +13,20 @@ const meta = {
     // Cada pestaña lleva su botón de cerrar junto al `tab`, y axe no admite ese hermano dentro del `tablist`.
     a11y: { config: { rules: [{ id: "aria-required-children", enabled: false }] } },
   },
+  decorators: [
+    (Story) => (
+      <div
+        style={{
+          display: "flex",
+          height: 44,
+          background: "var(--rf-bg)",
+          borderBottom: "1px solid var(--rf-border-subtle)",
+        }}
+      >
+        <Story />
+      </div>
+    ),
+  ],
   args: {
     tabs: storyTabs,
     activeId: storyTabs[0]?.id ?? null,
