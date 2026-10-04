@@ -1,0 +1,64 @@
+---
+import Favicons from "../components/Favicons.astro";
+import Logo from "../components/Logo.astro";
+import { defaultLocale, localePath, locales, translator } from "../i18n";
+import "../styles/landing.css";
+
+const t = translator(defaultLocale);
+const canonical = new URL("/404.html", Astro.site);
+---
+
+<!doctype html>
+<html lang={defaultLocale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{t("notFound.title")}</title>
+    <meta name="description" content={t("notFound.description")} />
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href={canonical.href} />
+    <Favicons />
+    <meta name="theme-color" content="#067781" />
+  </head>
+  <body>
+    <div class="rf-root landing" data-theme="light">
+      <main
+        style="min-height:100vh;max-width:40rem;margin:0 auto;padding:clamp(40px,8vw,96px) clamp(16px,4vw,32px);display:flex;flex-direction:column;justify-content:center;gap:24px"
+      >
+        <a
+          href={localePath(defaultLocale)}
+          aria-label={t("nav.home.aria")}
+          style="display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit"
+        >
+          <Logo size={34} disc="#067781" stroke="#ffffff" />
+          <span style="font-size:1.3rem;font-weight:800;letter-spacing:-.02em">rFirma</span>
+        </a>
+        <h1
+          style="margin:0;font-size:clamp(2rem,5vw,3.25rem);font-weight:800;line-height:1.05;letter-spacing:-.04em;text-wrap:balance"
+        >
+          {t("notFound.heading")}
+        </h1>
+        <p style="margin:0;font-size:1.125rem;line-height:1.6;color:var(--rf-text-muted)">
+          {t("notFound.body")}
+        </p>
+        <ul style="list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:12px">
+          {
+            locales.map((locale) => (
+              <li>
+                <a
+                  href={localePath(locale)}
+                  hreflang={locale}
+                  lang={locale}
+                  class={locale === defaultLocale ? "rf-btn rf-btn--primary" : "rf-btn rf-btn--secondary"}
+                  style="text-decoration:none"
+                >
+                  {translator(locale)("notFound.home")}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </main>
+    </div>
+  </body>
+</html>

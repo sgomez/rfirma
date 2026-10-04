@@ -196,4 +196,10 @@ export const ca: Dictionary = {
   "footer.col.origin": "Origen",
   "footer.clienteafirma": "clienteafirma",
   "footer.comparison": "Diferències amb AutoFirma",
+
+  "notFound.title": "Pàgina no trobada — rFirma",
+  "notFound.description": "L'adreça que has obert no existeix a rfirma.sgomez.me.",
+  "notFound.heading": "Aquesta pàgina no existeix",
+  "notFound.body": "Potser l'enllaç està mal escrit o la pàgina ha canviat de lloc.",
+  "notFound.home": "Tornar a la portada",
 };

@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 
+import sitemap from "@astrojs/sitemap";
 import { defineConfig, passthroughImageService } from "astro/config";
 
 /** El sistema de diseño vive fuera de la raíz del sitio y Vite no lo sirve sin permiso. */
@@ -14,6 +15,7 @@ export default defineConfig({
   trailingSlash: "always",
   build: { format: "directory" },
   image: { service: passthroughImageService() },
+  integrations: [sitemap()],
   vite: { server: { fs: { allow: [".", designSystem] } } },
   i18n: {
     defaultLocale: "es",

@@ -8,6 +8,22 @@
     }
 }
 
+# Cabeceras de seguridad y privacidad. Van en un fragmento porque las
+# respuestas de `handle_errors` no heredan las del sitio.
+(cabeceras) {
+    header {
+        # Ocultar huella del servidor
+        -Server
+
+        # Prevención de ataques comunes
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    }
+}
+
 :3000 {
     encode zstd gzip
 
@@ -20,18 +36,7 @@
         respond "OK" 200
     }
 
-    # Cabeceras de seguridad y privacidad
-    header {
-        # Ocultar huella del servidor
-        -Server
-
-        # Prevención de ataques comunes
-        X-Frame-Options "DENY"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=()"
-        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
-    }
+    import cabeceras
 
     # Denegar acceso a ficheros o directorios ocultos (dotfiles)
     @hidden path */.*
@@ -66,5 +71,19 @@
         header @sellado Cache-Control "public, max-age=31536000, immutable"
         @paginas not path /_astro/*
         header @paginas Cache-Control "no-cache, must-revalidate"
+    }
+
+    # La 404 de la landing, con su estado, para cualquier ruta que no exista.
+    # Las de los repositorios siguen respondiendo el 404 desnudo de siempre:
+    # quien las pide es apt, dnf o flatpak, no una persona.
+    handle_errors 404 {
+        import cabeceras
+        @web not path /flatpak/* /apt/* /rpm/* /rfirma.asc /rfirma.flatpakref /windows/*
+        handle @web {
+            root * /srv
+            rewrite * /404.html
+            header Cache-Control "no-cache, must-revalidate"
+            file_server
+        }
     }
 }

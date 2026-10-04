@@ -195,4 +195,10 @@ export const gl: Dictionary = {
   "footer.col.origin": "Orixe",
   "footer.clienteafirma": "clienteafirma",
   "footer.comparison": "Diferenzas con AutoFirma",
+
+  "notFound.title": "Páxina non atopada — rFirma",
+  "notFound.description": "O enderezo que abriches non existe en rfirma.sgomez.me.",
+  "notFound.heading": "Esta páxina non existe",
+  "notFound.body": "Pode que a ligazón estea mal escrita ou que a páxina cambiase de sitio.",
+  "notFound.home": "Volver á portada",
 };

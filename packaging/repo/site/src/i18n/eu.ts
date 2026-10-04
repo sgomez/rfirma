@@ -200,4 +200,10 @@ export const eu: Dictionary = {
   "footer.col.origin": "Jatorria",
   "footer.clienteafirma": "clienteafirma",
   "footer.comparison": "AutoFirmarekiko desberdintasunak",
+
+  "notFound.title": "Ez da orria aurkitu — rFirma",
+  "notFound.description": "Ireki duzun helbidea ez dago rfirma.sgomez.me webgunean.",
+  "notFound.heading": "Orri hau ez dago",
+  "notFound.body": "Baliteke esteka gaizki idatzita egotea edo orria lekuz aldatu izana.",
+  "notFound.home": "Itzuli hasierara",
 };
