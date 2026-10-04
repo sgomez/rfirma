@@ -160,6 +160,8 @@ export const en: Dictionary = {
     "For Debian, Ubuntu and derived distributions. Sets up the repository using the modern <code>deb822</code> format with the GPG key verified in <code>/usr/share/keyrings/</code>.",
   "install.dnf.body":
     "For Fedora and RPM-based derivatives. Sets up the repository with strict cryptographic checking of metadata and packages (<code>gpgcheck=1</code> and <code>repo_gpgcheck=1</code>).",
+  "install.manual":
+    "Detailed steps, key fingerprint and verification are in the manual (in Spanish)",
   "install.soon": "In development",
   "install.windows.title": "rFirma for Windows",
   "install.windows.body":

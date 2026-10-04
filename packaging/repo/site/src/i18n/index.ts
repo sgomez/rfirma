@@ -85,6 +85,9 @@ export function translator(locale: Locale): (key: Key) => string {
 /** Ruta del manual, que solo existe en castellano: lo enlazan las cinco landings. */
 export const manualPath = "/manual/";
 
+/** Ruta de la página de instalación del manual, que enlaza la sección de instalación. */
+export const installationManualPath = "/manual/instalacion/";
+
 /** Ruta absoluta de la landing en un idioma: `/` para el castellano y `/<locale>/` para el resto. */
 export function localePath(locale: Locale): string {
   return locale === defaultLocale ? "/" : `/${locale}/`;

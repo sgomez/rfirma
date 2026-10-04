@@ -160,6 +160,8 @@ export const ca: Dictionary = {
     "Per a Debian, Ubuntu i distribucions derivades. Configura el repositori mitjançant el format modern <code>deb822</code> amb la clau GPG verificada a <code>/usr/share/keyrings/</code>.",
   "install.dnf.body":
     "Per a Fedora i derivades basades en paquets RPM. Configura el repositori amb comprovació criptogràfica estricta de metadades i paquets (<code>gpgcheck=1</code> i <code>repo_gpgcheck=1</code>).",
+  "install.manual":
+    "Instruccions detallades, empremta de la clau i verificació, al manual (en castellà)",
   "install.soon": "En desenvolupament",
   "install.windows.title": "rFirma per a Windows",
   "install.windows.body":

@@ -159,6 +159,7 @@ export const es = {
     "Para Debian, Ubuntu y distribuciones derivadas. Configura el repositorio mediante el formato moderno <code>deb822</code> con la clave GPG verificada en <code>/usr/share/keyrings/</code>.",
   "install.dnf.body":
     "Para Fedora y derivadas basadas en paquetes RPM. Configura el repositorio con comprobación criptográfica estricta de metadatos y paquetes (<code>gpgcheck=1</code> y <code>repo_gpgcheck=1</code>).",
+  "install.manual": "Instrucciones detalladas, huella de la clave y verificación, en el manual",
   "install.soon": "En desarrollo",
   "install.windows.title": "rFirma para Windows",
   "install.windows.body":

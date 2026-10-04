@@ -11,13 +11,14 @@ comprueba el resultado.
 
 ## Qué hay en el manual
 
-- **Instalación**, en Linux, Windows y macOS. _Próximamente._
-- **Firmar un PDF**, con firma visible y rúbrica. _Próximamente._
-- **Ver las firmas** de un documento firmado. _Próximamente._
+- **[Instalación](/manual/instalacion/)**, en Linux, Windows y macOS, con la huella de
+  la clave GPG.
+- **[Firmar un PDF](/manual/firmar-un-pdf/)**, con firma visible y rúbrica.
+- **[Ver las firmas](/manual/ver-las-firmas/)** de un documento firmado.
 - **Firmar en una sede electrónica**: qué pasa al pulsar «Firmar» en la web. _Próximamente._
 - **[Línea de órdenes](/manual/linea-de-ordenes/)**: `sign`, `cosign`,
   `listaliases` y `verify` desde la terminal.
-- **Preferencias**: qué cambia cada opción. _Próximamente._
+- **[Preferencias](/manual/preferencias/)**: qué cambia cada opción.
 - **Problemas frecuentes**. _Próximamente._
 - **Si vienes de AutoFirma**: qué funciona igual y qué no. _Próximamente._
 
