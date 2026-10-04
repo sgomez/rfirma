@@ -15,6 +15,8 @@ const meta = {
         style={{
           width: 1100,
           height: 640,
+          display: "flex",
+          flexDirection: "column",
           position: "relative",
           transform: "translateZ(0)",
           overflow: "hidden",
