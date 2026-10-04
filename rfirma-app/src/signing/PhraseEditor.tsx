@@ -216,7 +216,7 @@ export function PhraseEditor({ phrase, samples, onChange }: PhraseEditorProps) {
         className="panel__phrase-menu"
       >
         {DATA.map((datum) => (
-          <MenuItem key={datum} className="panel__phrase-option" onClick={() => pick(datum)}>
+          <MenuItem key={datum} onClick={() => pick(datum)}>
             <span className="panel__phrase-option-name">{names[datum]}</span>
             <span className="panel__phrase-option-sample">{samples[datum]}</span>
           </MenuItem>

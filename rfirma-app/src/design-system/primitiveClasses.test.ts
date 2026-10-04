@@ -31,7 +31,6 @@ const primitiveOf: Record<string, string> = {
 };
 
 const NOT_A_DIV = "el primitivo pinta un div y aquí el elemento es otro";
-const POPOVER_PANEL = "el panel lo pinta Popover, que no es Card";
 
 /**
  * Lo que las tandas dejaron escrito a mano, con su motivo. Es por fichero y
@@ -53,7 +52,6 @@ const exceptions: Record<string, { classes: string[]; reason: string }> = {
     classes: ["rf-stack", "rf-row", "rf-gap-xs"],
     reason: NOT_A_DIV,
   },
-  "shell/Header.tsx": { classes: ["rf-card", "rf-card--elevated"], reason: POPOVER_PANEL },
 };
 
 function sourcesOutsideTheDesignSystem(): string[] {
