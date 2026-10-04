@@ -6,12 +6,20 @@ rust-version = "1.88"
 description = "rfirma: firma y cofirma de PDFs en PAdES con firma visible."
 license = "EUPL-1.2"
 publish = false
+default-run = "rfirma"
 
 # El binario se llama igual que `command:` en el manifiesto flatpak
 # (packaging/flatpak/me.sgomez.rfirma.yml). Si cambias uno, cambia el otro.
 [[bin]]
 name = "rfirma"
 path = "src/main.rs"
+
+# El de consola de Windows, que el instalador renombra a `rfirma.com` (ADR-0041). Solo se compila
+# con `console`, así que ni `cargo tauri build` ni los paquetes de Linux y macOS lo ven.
+[[bin]]
+name = "rfirma-console"
+path = "src/console_main.rs"
+required-features = ["console"]
 
 [lib]
 name = "rfirma_lib"
@@ -31,6 +39,8 @@ path = "src/lib.rs"
 # Por omision NO, porque entonces `just dev` (`tauri dev`) serviria los assets
 # empotrados en vez del servidor de vite y el recargado en caliente moriria.
 custom-protocol = ["tauri/custom-protocol"]
+# El binario `rfirma-console`, que solo empaqueta el instalador de Windows (ADR-0041).
+console = []
 
 [build-dependencies]
 # ADR-0013: build.rs se queda en tauri-build (y el manifiesto de Windows, ADR-0035). No invoca a Maven ni a

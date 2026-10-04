@@ -394,6 +394,12 @@ test-windows: build-ts
     cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lib --test channel_client --test channel_operations --test service_acknowledgement --lcov --output-path "{{ coverage_out }}/windows/lcov.info"
     cd {{ tauri }} && cargo crap --path '{{ windows_allow }}' --lcov "{{ coverage_out }}/windows/lcov.info" --threshold 30 --fail-above
 
+# La prueba de humo del binario de consola de Windows: `rfirma.com` desde cmd, PowerShell y Git Bash (ADR-0041).
+[group('ci')]
+smoke-console: build-ts
+    cd {{ tauri }} && {{ no_debuginfo }} cargo build --features console --bin rfirma --bin rfirma-console
+    {{ root }}/scripts/console-smoke.sh "$CARGO_TARGET_DIR/debug"
+
 # Pruebas de --lib y del canal local en macOS, sin grada B ni C (ADR-0040).
 [group('ci')]
 test-macos: build-ts

@@ -1,6 +1,7 @@
 //! Casos de uso de `desktop`.
 
 pub mod command_line;
+pub mod console_entry;
 pub mod destination;
 pub mod handlers;
 pub mod invocation;

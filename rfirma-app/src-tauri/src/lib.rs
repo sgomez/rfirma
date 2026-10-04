@@ -17,6 +17,7 @@ mod event_loop;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex, PoisonError};
 
+pub use desktop::adapters::console::run_in_the_console;
 use desktop::adapters::tauri::invoked_document;
 pub use desktop::adapters::terminal::run_the_command_line;
 use desktop::application::invocation::{Invocation, Role};
@@ -52,8 +53,7 @@ pub struct Roots {
     pub prompter: Arc<signing::adapters::gtk_prompter::NativePinDialog>,
 }
 
-/// Compone las cinco raíces de producción sobre las rutas de esta máquina, con la invocación
-/// que traía el escritorio.
+/// Compone las cinco raíces de producción sobre las rutas de esta máquina y su invocación.
 pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
     composed_roots(paths, Some(desktop::adapters::process::this_invocation()))
 }
@@ -140,13 +140,16 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
     }
 }
 
-/// Punto de entrada compartido por el binario y por las pruebas: decide el rol de proceso
-/// (ADR-0024) y monta la raíz de composición que le corresponde, o atiende la orden de terminal.
+/// El contexto de Tauri de los dos binarios, de la única expansión del crate (ADR-0040).
+pub fn context() -> tauri::Context<tauri::Wry> {
+    tauri::generate_context!()
+}
+
+/// Entrada de `rfirma`: decide el rol (ADR-0024) y monta su raíz o atiende la orden de terminal.
 pub fn run() {
     let invocation = desktop::adapters::process::this_invocation();
     let role = desktop::application::invocation::role_of(invocation.clone());
-    // Una sola expansión por crate (ADR-0040).
-    let context = tauri::generate_context!();
+    let context = context();
     if let Role::Terminal(_) = role {
         std::process::exit(run_the_command_line(&invocation.command_line, context));
     }
@@ -285,8 +288,7 @@ fn with_the_five_roots(
         ])
 }
 
-/// Barre las carpetas de paso abandonadas y crea la de este proceso, con el prefijo del rol
-/// dado (ADR-0024).
+/// Barre las carpetas de paso abandonadas y crea la de este proceso con el prefijo del rol (ADR-0024).
 fn own_scratch(role: &str) -> site::adapters::scratch::ProcessFolder {
     let temp = std::env::temp_dir();
     site::adapters::scratch::sweep(&temp, &["site", "desktop"]);
