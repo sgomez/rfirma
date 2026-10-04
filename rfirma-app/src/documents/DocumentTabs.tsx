@@ -1,14 +1,6 @@
 //! La tira de pestañas, con el menú «+N» de las ocultas y el botón partido de abrir salvo en Linux.
 
-import {
-  type RefObject,
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { type RefObject, useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronDownIcon,
@@ -17,6 +9,7 @@ import {
   FolderIcon,
   SignedMarkIcon,
 } from "../design-system/icons";
+import { Popover } from "../design-system/Popover";
 import type { DocumentInHand } from "./document";
 import "./DocumentTabs.css";
 import { RecentRows } from "./RecentRows";
@@ -130,32 +123,15 @@ function HiddenTabsMenu({ hidden, onActivate }: HiddenTabsMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const container = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const close = useCallback(() => setOpen(false), []);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!container.current?.contains(event.target as Node)) close();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        close();
-      }
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, close]);
 
   return (
     <div className="document-tabs__more-menu" ref={container}>
       <button
         type="button"
+        ref={trigger}
         className={
           open
             ? "rf-btn rf-btn--ghost document-tabs__more document-tabs__more--open"
@@ -171,30 +147,36 @@ function HiddenTabsMenu({ hidden, onActivate }: HiddenTabsMenuProps) {
         +{hidden.length}
         <ChevronDownIcon size={14} strokeWidth={2} />
       </button>
-      {open && (
-        <div id={menuId} role="menu" className="open-menu open-menu--right">
-          {hidden.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="menuitem"
-              className="hidden-tab-row"
-              title={tab.name}
-              onClick={() => {
-                close();
-                onActivate(tab.id);
-              }}
-            >
-              <span className="hidden-tab-row__name">{tab.name}</span>
-              {tab.badge === "Signed" && (
-                <span className="hidden-tab-row__signed" role="img" aria-label={t("badges.signed")}>
-                  <SignedMarkIcon />
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
+      <Popover
+        open={open}
+        onClose={close}
+        anchorRef={container}
+        returnFocusRef={trigger}
+        id={menuId}
+        role="menu"
+        className="open-menu open-menu--right"
+      >
+        {hidden.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="menuitem"
+            className="hidden-tab-row"
+            title={tab.name}
+            onClick={() => {
+              close();
+              onActivate(tab.id);
+            }}
+          >
+            <span className="hidden-tab-row__name">{tab.name}</span>
+            {tab.badge === "Signed" && (
+              <span className="hidden-tab-row__signed" role="img" aria-label={t("badges.signed")}>
+                <SignedMarkIcon />
+              </span>
+            )}
+          </button>
+        ))}
+      </Popover>
     </div>
   );
 }
@@ -219,6 +201,7 @@ function SplitOpenButton({
   const [open, setOpen] = useState(false);
   const [alignRight, setAlignRight] = useState(false);
   const container = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const hasRecents = recents.length > 0;
   const close = useCallback(() => setOpen(false), []);
@@ -228,25 +211,6 @@ function SplitOpenButton({
     const { left } = container.current.getBoundingClientRect();
     setAlignRight(left + MENU_WIDTH > window.innerWidth);
   }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!container.current?.contains(event.target as Node)) close();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        close();
-      }
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, close]);
 
   const choose = (action: () => void) => {
     close();
@@ -269,6 +233,7 @@ function SplitOpenButton({
           <span className="document-tabs__split-divider" aria-hidden="true" />
           <button
             type="button"
+            ref={trigger}
             className={
               open
                 ? "document-tabs__split-arrow document-tabs__split-arrow--open"
@@ -283,30 +248,32 @@ function SplitOpenButton({
           >
             <ChevronDownIcon size={14} strokeWidth={2} />
           </button>
-          {open && (
-            <div
-              id={menuId}
-              role="menu"
-              className={alignRight ? "open-menu open-menu--right" : "open-menu"}
+          <Popover
+            open={open}
+            onClose={close}
+            anchorRef={container}
+            returnFocusRef={trigger}
+            id={menuId}
+            role="menu"
+            className={alignRight ? "open-menu open-menu--right" : "open-menu"}
+          >
+            <span className="rf-label open-menu__heading">{t("recents.heading")}</span>
+            <RecentRows
+              recents={recents}
+              openIds={openIds}
+              role="menuitem"
+              onSelect={(row) => choose(() => onSelectRecent(row))}
+            />
+            <hr className="rf-divider open-menu__divider" />
+            <button
+              type="button"
+              role="menuitem"
+              className="open-menu__clear"
+              onClick={() => choose(onClearRecents)}
             >
-              <span className="rf-label open-menu__heading">{t("recents.heading")}</span>
-              <RecentRows
-                recents={recents}
-                openIds={openIds}
-                role="menuitem"
-                onSelect={(row) => choose(() => onSelectRecent(row))}
-              />
-              <hr className="rf-divider open-menu__divider" />
-              <button
-                type="button"
-                role="menuitem"
-                className="open-menu__clear"
-                onClick={() => choose(onClearRecents)}
-              >
-                {t("recents.clear")}
-              </button>
-            </div>
-          )}
+              {t("recents.clear")}
+            </button>
+          </Popover>
         </>
       )}
     </div>
