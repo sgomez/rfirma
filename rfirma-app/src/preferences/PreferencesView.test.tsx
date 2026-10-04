@@ -21,7 +21,7 @@ describe("PreferencesView", () => {
   /**
    * El interruptor es el mismo componente en el panel de firma y aquí, pero los
    * artboards lo separan distinto del texto: `rf-gap-xs` (8 px) en el panel
-   * (`Main.dc.html:306`) y `rf-gap-sm` (16 px) en el diálogo
+   * y `rf-gap-sm` (16 px) en el diálogo
    * (`PreferenciasPantalla`). Un solo valor no puede ser los dos, y arreglar
    * uno rompía el otro: la pantalla pide el suyo, y por eso se comprueba que
    * lo pida, en las dos pestañas donde aparece.

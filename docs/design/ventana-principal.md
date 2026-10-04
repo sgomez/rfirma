@@ -186,6 +186,6 @@ en [panel-de-firma.md](panel-de-firma.md#certificado).
 
 Validado el 25/09/2026; el selector de certificado y la barra única, el
 27/09/2026; la validez de las firmas en el resumen y el diálogo «Ver firmas», el
-03/10/2026. Desde entonces la verdad de la ventana, la cabecera, las pestañas y
-el visor son sus historias; el artboard `Main` solo conserva lo que aún no se ha
-migrado (el panel y los diálogos).
+03/10/2026. Desde entonces la verdad de la ventana, la cabecera, las pestañas, el
+visor, el panel y los diálogos son sus historias, y el artboard `Main` ya no
+existe.

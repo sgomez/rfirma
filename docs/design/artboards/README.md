@@ -54,9 +54,8 @@ y su ficha, [`ventana-de-sede.md`](../ventana-de-sede.md):
 
 | # | Artboard | Estado |
 | - | -------- | ------ |
-| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos (el selector con su buscador), firmando (diálogo con velo), firmado (el resumen, que es también el de `verify --gui`: con firmas, CAdES con contrafirmas, sin firmas, formato desconocido y fallo al leer) y error al firmar; la firma visible y su contenido, la cabecera por escritorio —en Linux la barra de título GTK con la tira de pestañas debajo; en Windows y macOS la barra única—, con el botón partido, «Abiertos recientemente», el desborde de pestañas, el menú y el botón de aviso, la vista sin pestañas, la franja de versión nueva bajo la barra, el destino, el zoom y la vista previa |
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
-| — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4, sobre `Main` lista |
+| — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4, sobre la ventana principal lista |
 | — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde y el idioma, y las dos acciones como pasos numerados —instalar el certificado propio y poner a rFirma por defecto— con la protección contra firmas accidentales aparte |
 
 `PrimerArranque` vive también en la página «Recorrido de firma», pero **no es
