@@ -17,8 +17,9 @@ guardado—. La regla completa son cuatro piezas y no se separan:
 
 - **El puerto vive con su dominio**, no en una carpeta de puertos. Quien lee `documents/`
   encuentra ahí el vocabulario de la bandeja y por dónde entra un documento, junto.
-- **Un adaptador por puerto**, todos en `tauri.ts`, que es la otra cara de las órdenes que
-  cada contexto del backend publica en su `adapters/tauri.rs`.
+- **Un adaptador por puerto**, en los ficheros de adaptadores de la raíz (`tauri*.ts`),
+  agrupados por el dominio del puerto y con un único punto de import, `tauri.ts`: es la otra
+  cara de las órdenes que cada contexto del backend publica en su `adapters/tauri.rs`.
 - **Un doble por puerto**, exportado al lado del puerto (`inMemoryDocumentPicker`,
   `inMemoryRecents`, `emptyRubricPicker`). Las pruebas de la ventana no conocen a Tauri, y por
   eso corren en Vitest sin backend.
