@@ -75,3 +75,4 @@ node_modules/
 # La landing en Astro (packaging/repo/site): salida del build.
 packaging/repo/site/dist/
 packaging/repo/site/.astro/
+rfirma-app/storybook-static/
