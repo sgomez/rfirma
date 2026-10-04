@@ -5,6 +5,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 
 const {
   tauriCertificateStore,
+  tauriDestinations,
   tauriRubricPicker,
   tauriSigningBackend,
   tauriStampComposer,
@@ -320,5 +321,76 @@ describe("el puerto de la rúbrica sobre Tauri", () => {
     invoke.mockResolvedValue(remembered);
 
     await expect(tauriVisibleSignatureMemory().read()).resolves.toEqual(remembered);
+  });
+});
+
+/**
+ * **Grada A**: el destino sobre Tauri. Quien lo compone —la carpeta comprobada
+ * y el nombre con su homónimo resuelto— es `app::documents::where_it_lands`, y
+ * está probado allí; aquí solo se comprueba la costura.
+ */
+describe("el puerto del destino sobre Tauri", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it("asks where the open document will land, by its identifier and never by a path", async () => {
+    invoke.mockResolvedValue({
+      folder: "Documentos",
+      name: "contrato-firmado.pdf",
+      writable: true,
+    });
+
+    const destination = await tauriDestinations().previewFor("1e8b83b9");
+
+    expect(invoke).toHaveBeenCalledWith("preview_destination", {
+      id: "1e8b83b9",
+      destination: null,
+    });
+    expect(destination).toEqual({
+      folder: "Documentos",
+      name: "contrato-firmado.pdf",
+      writable: true,
+    });
+  });
+
+  it("asks with the single destination's id when this signature has one", async () => {
+    invoke.mockResolvedValue({
+      folder: "Escritorio",
+      name: "contrato-firmado.pdf",
+      writable: true,
+    });
+
+    await tauriDestinations().previewFor("1e8b83b9", "single-42");
+
+    expect(invoke).toHaveBeenCalledWith("preview_destination", {
+      id: "1e8b83b9",
+      destination: "single-42",
+    });
+  });
+
+  it("opens the save dialog for a single signature, by the document's identifier", async () => {
+    invoke.mockResolvedValue({
+      id: "single-42",
+      folder: "Escritorio",
+      name: "contrato-firmado.pdf",
+      writable: true,
+    });
+
+    const chosen = await tauriDestinations().chooseSingle("1e8b83b9");
+
+    expect(invoke).toHaveBeenCalledWith("choose_single_destination", { id: "1e8b83b9" });
+    expect(chosen).toEqual({
+      id: "single-42",
+      folder: "Escritorio",
+      name: "contrato-firmado.pdf",
+      writable: true,
+    });
+  });
+
+  it("reads a cancelled save dialog as no choice", async () => {
+    invoke.mockResolvedValue(null);
+
+    await expect(tauriDestinations().chooseSingle("1e8b83b9")).resolves.toBeNull();
   });
 });
