@@ -1,372 +1,132 @@
+import { composeStories } from "@storybook/react-vite";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { fn } from "storybook/test";
+import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import { Header } from "./Header";
+import * as stories from "./Header.stories";
 
-const noop = () => {};
+const { WithoutDocuments, WithDocuments, WithAttention, NativeTitlebarWithDocuments } =
+  composeStories(stories);
 
-// Grada A: React, jsdom y el catálogo. Nada de token ni de puente.
-describe("Header", () => {
-  // Ni certificado ni insignia de documento: el certificado lo dice el
-  // selector del panel, y el estado, la pestaña.
-  it("shows no status badge, ever", () => {
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
+const attentionName = "Estado de rFirma: requiere atención";
 
-    expect(screen.queryByText("Sin firmar")).not.toBeInTheDocument();
-    expect(screen.queryByText("Firmado")).not.toBeInTheDocument();
-  });
+describe("the header as it opens", () => {
+  const withoutAttention = [
+    { name: "without documents", Story: WithoutDocuments, documents: false },
+    { name: "with documents", Story: WithDocuments, documents: true },
+  ];
 
-  // ID-53: el icono es un `<svg>` en línea copiado del artboard, no el `\u2630`
-  // de texto que había antes ni un icono de fuente.
-  it("draws the menu button with an inline svg icon", () => {
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
+  for (const { name, Story, documents } of withoutAttention) {
+    it(`carries a closed menu button with an icon, no app name and no attention button, ${name}`, () => {
+      renderWithCatalog(<Story />);
 
-    const button = screen.getByRole("button", { name: "Men\u00fa" });
-    expect(button.querySelector("svg")).not.toBeNull();
-    expect(button).toHaveTextContent("");
-  });
+      const banner = screen.getByRole("banner");
+      const menu = screen.getByRole("button", { name: "Menú" });
+      expect(menu.querySelector("svg")).not.toBeNull();
+      expect(menu).toHaveTextContent("");
+      expect(menu).toHaveAttribute("aria-expanded", "false");
+      expect(menu).toHaveClass("header__button");
+      expect(menu).not.toHaveClass("header__button--open");
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(screen.queryByRole("menubar")).not.toBeInTheDocument();
+      expect(banner).not.toHaveTextContent("rFirma");
+      expect(screen.queryByText("Sin firmar")).not.toBeInTheDocument();
+      expect(screen.queryByText("Firmado")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: attentionName })).not.toBeInTheDocument();
 
-  // El artboard del estado vac\u00edo dibuja el men\u00fa desplegado, pero eso es una
-  // posibilidad y no un estado inicial: arranca cerrado.
-  it("starts with the menu closed", () => {
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
+      const tabs = screen.queryByRole("tablist");
+      if (documents) {
+        expect(banner).toContainElement(tabs);
+        expect(tabs?.compareDocumentPosition(menu)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      } else {
+        expect(tabs).not.toBeInTheDocument();
+      }
+    });
+  }
 
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Men\u00fa" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
-  });
+  it("carries only the tabs when the menu lives in the native titlebar", () => {
+    renderWithCatalog(<NativeTitlebarWithDocuments />);
 
-  it("has no menu bar, only the menu button", () => {
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    expect(screen.queryByRole("menubar")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
-  });
-
-  it("opens a menu of four entries in two groups with a divider", async () => {
-    const user = userEvent.setup();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Menú" }));
-
-    const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(4);
-    expect(items[0]).toHaveTextContent("Estado de rFirma");
-    expect(items[1]).toHaveTextContent("Preferencias…");
-    expect(items[2]).toHaveTextContent("Comentarios y ayuda");
-    expect(items[3]).toHaveTextContent("Acerca de rFirma");
-    expect(screen.getByRole("separator")).toBeInTheDocument();
-  });
-
-  it("opens the status view from the menu and closes the menu", async () => {
-    const user = userEvent.setup();
-    const openStatus = vi.fn();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={openStatus}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Menú" }));
-    await user.click(screen.getByRole("menuitem", { name: "Estado de rFirma" }));
-
-    expect(openStatus).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-  });
-
-  it("opens the help destination from the menu and closes the menu", async () => {
-    const user = userEvent.setup();
-    const openHelp = vi.fn();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={openHelp}
-        onOpenAbout={noop}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Menú" }));
-    await user.click(screen.getByRole("menuitem", { name: /Comentarios y ayuda/ }));
-
-    expect(openHelp).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-  });
-
-  it("reserves the 14px icon column on all entries and shows the external icon on help", async () => {
-    const user = userEvent.setup();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Menú" }));
-
-    const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(4);
-    for (const item of items) {
-      expect(item.querySelector(".header__entryIcon")).not.toBeNull();
-    }
-
-    const statusItem = screen.getByRole("menuitem", { name: "Estado de rFirma" });
-    expect(statusItem.querySelector(".header__entryIcon svg")).toBeNull();
-
-    const helpItem = screen.getByRole("menuitem", { name: /Comentarios y ayuda/ });
-    expect(helpItem.querySelector(".header__entryIcon svg")).not.toBeNull();
-
-    const prefItem = screen.getByRole("menuitem", { name: "Preferencias…" });
-    expect(prefItem.querySelector(".header__entryIcon svg")).toBeNull();
-
-    const aboutItem = screen.getByRole("menuitem", { name: "Acerca de rFirma" });
-    expect(aboutItem.querySelector(".header__entryIcon svg")).toBeNull();
-  });
-
-  it("has no attention button by default and leaves the menu button unmarked", async () => {
-    const user = userEvent.setup();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    expect(
-      screen.queryByRole("button", { name: "Estado de rFirma: requiere atención" }),
-    ).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Menú" }));
-
-    const statusItem = screen.getByRole("menuitem", { name: "Estado de rFirma" });
-    expect(statusItem.querySelector(".header__entryIcon svg")).toBeNull();
+    expect(screen.getByRole("banner")).toContainElement(screen.getByRole("tablist"));
+    expect(screen.queryByRole("button", { name: "Menú" })).not.toBeInTheDocument();
   });
 
   it("shows the attention button left of the menu button, with its name and tooltip", () => {
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        hasAttention
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
+    renderWithCatalog(<WithAttention />);
 
-    const attention = screen.getByRole("button", { name: "Estado de rFirma: requiere atención" });
-    expect(attention).toHaveAttribute("title", "Estado de rFirma: requiere atención");
+    const attention = screen.getByRole("button", { name: attentionName });
+    expect(attention).toHaveAttribute("title", attentionName);
     const menu = screen.getByRole("button", { name: "Menú" });
     expect(attention.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+});
+
+describe("the header menu", () => {
+  async function openMenu(ui: React.ReactElement) {
+    const user = userEvent.setup();
+    renderWithCatalog(ui);
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    return user;
+  }
+
+  it("opens four entries in two groups, with the external icon only on help", async () => {
+    await openMenu(<WithAttention />);
+
+    const items = screen.getAllByRole("menuitem");
+    expect(items.map((item) => item.textContent?.trim())).toEqual([
+      "Estado de rFirma",
+      "Preferencias…",
+      "Comentarios y ayuda",
+      "Acerca de rFirma",
+    ]);
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Menú" })).toHaveClass("header__button--open");
+    for (const item of items) {
+      expect(item.querySelector(".header__entryIcon")).not.toBeNull();
+    }
+    expect(items.map((item) => item.querySelector(".header__entryIcon svg") !== null)).toEqual([
+      false,
+      false,
+      true,
+      false,
+    ]);
+  });
+
+  const entries = [
+    { entry: "Estado de rFirma", handler: "onOpenStatus" },
+    { entry: "Preferencias…", handler: "onOpenPreferences" },
+    { entry: /Comentarios y ayuda/, handler: "onOpenHelp" },
+    { entry: "Acerca de rFirma", handler: "onOpenAbout" },
+  ] as const;
+
+  for (const { entry, handler } of entries) {
+    it(`calls ${handler} from its entry and closes the menu`, async () => {
+      const spy = fn();
+      const user = await openMenu(<WithoutDocuments {...{ [handler]: spy }} />);
+
+      await user.click(screen.getByRole("menuitem", { name: entry }));
+
+      expect(spy).toHaveBeenCalledOnce();
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    });
+  }
 
   it("opens the status panel from the attention button", async () => {
     const user = userEvent.setup();
-    const openStatus = vi.fn();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        hasAttention
-        onOpenStatus={openStatus}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
+    const onOpenStatus = fn();
+    renderWithCatalog(<WithAttention onOpenStatus={onOpenStatus} />);
 
-    await user.click(screen.getByRole("button", { name: "Estado de rFirma: requiere atención" }));
+    await user.click(screen.getByRole("button", { name: attentionName }));
 
-    expect(openStatus).toHaveBeenCalledTimes(1);
-  });
-
-  it("leaves Estado de rFirma unmarked in the menu even when something needs fixing", async () => {
-    const user = userEvent.setup();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        hasAttention
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Menú" }));
-
-    const statusItem = screen.getByRole("menuitem", { name: "Estado de rFirma" });
-    expect(statusItem.querySelector("svg")).toBeNull();
-  });
-
-  it("opens the preferences dialog from the menu and closes the menu", async () => {
-    const user = userEvent.setup();
-    const openPreferences = vi.fn();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={openPreferences}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Menú" }));
-    await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
-
-    expect(openPreferences).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-  });
-
-  it("opens the about dialog from the menu", async () => {
-    const user = userEvent.setup();
-    const openAbout = vi.fn();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={openAbout}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Menú" }));
-    await user.click(screen.getByRole("menuitem", { name: "Acerca de rFirma" }));
-
-    expect(openAbout).toHaveBeenCalledOnce();
+    expect(onOpenStatus).toHaveBeenCalledTimes(1);
   });
 
   it("closes the open menu with Escape", async () => {
-    const user = userEvent.setup();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
+    const user = await openMenu(<WithoutDocuments />);
 
-    await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-  });
-
-  // El tamaño del botón no es su estado: `cabecera.md` lo fija en 40 px, más
-  // estrecho que el mínimo táctil de `.rf-btn`, y ese ancho lo pone
-  // `header__button`. Si la clase dependiera de `open`, el botón encogería al
-  // abrirse y volvería a crecer al cerrarse.
-  it("keeps the menu button sized by header__button whether the menu is open or closed", async () => {
-    const user = userEvent.setup();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-    const button = screen.getByRole("button", { name: "Menú" });
-
-    expect(button).toHaveClass("header__button");
-    expect(button).not.toHaveClass("header__button--open");
-
-    await user.click(button);
-
-    expect(button).toHaveClass("header__button");
-    expect(button).toHaveClass("header__button--open");
-  });
-
-  it("paints the documents it is given before the menu button, with no app name", () => {
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        documents={<nav aria-label="Documentos abiertos">contrato.pdf</nav>}
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-    const documents = screen.getByRole("navigation", { name: "Documentos abiertos" });
-    const menu = screen.getByRole("button", { name: "Menú" });
-
-    expect(screen.getByRole("banner")).toContainElement(documents);
-    expect(screen.queryByText("rFirma")).not.toBeInTheDocument();
-    expect(documents.compareDocumentPosition(menu)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-  });
-
-  it("carries only the menu button when given no documents", () => {
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    expect(screen.getByRole("banner")).not.toHaveTextContent("rFirma");
-    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
   });
 });
