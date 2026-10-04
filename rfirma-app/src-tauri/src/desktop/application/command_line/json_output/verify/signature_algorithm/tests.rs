@@ -39,12 +39,17 @@ fn rsa_pkcs1_and_ecdsa_with_each_sha_have_their_rfc_name_and_oid() {
 }
 
 #[test]
-fn rsa_pss_names_of_jca_give_rsassa_pss() {
+fn rsa_pss_names_of_jca_and_of_the_bridge_give_rsassa_pss() {
     for jca in [
         "RSASSA-PSS",
         "SHA256withRSAandMGF1",
         "SHA384withRSAandMGF1",
         "SHA512withRSAandMGF1",
+        "2.16.840.1.101.3.4.2.1/1.2.840.113549.1.1.10",
+        "2.16.840.1.101.3.4.2.3/1.2.840.113549.1.1.10",
+        "SHA256with1.2.840.113549.1.1.10",
+        "http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1",
+        "http://www.w3.org/2007/05/xmldsig-more#rsa-pss",
     ] {
         assert_eq!(
             rfc_name_and_oid(jca),

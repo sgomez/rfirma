@@ -35,6 +35,8 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ),
 ];
 
+const PSS_OID: &str = "1.2.840.113549.1.1.10";
+
 const PSS_JCA_NAMES: &[&str] = &[
     "RSASSA-PSS",
     "SHA256withRSAandMGF1",
@@ -42,14 +44,23 @@ const PSS_JCA_NAMES: &[&str] = &[
     "SHA512withRSAandMGF1",
 ];
 
-/// El nombre de las RFC y el OID de un nombre JCA, si la tabla lo conoce.
-pub(super) fn rfc_name_and_oid(jca_name: &str) -> Option<(&'static str, &'static str)> {
-    if PSS_JCA_NAMES.contains(&jca_name) {
+const PSS_XMLDSIG_URI_MARKERS: &[&str] = &["rsa-pss", "rsa-MGF1"];
+
+fn is_rsa_pss(name: &str) -> bool {
+    PSS_JCA_NAMES.contains(&name)
+        || name.ends_with(&format!("/{PSS_OID}"))
+        || name.ends_with(&format!("with{PSS_OID}"))
+        || (name.starts_with("http") && PSS_XMLDSIG_URI_MARKERS.iter().any(|m| name.ends_with(m)))
+}
+
+/// El nombre de las RFC y el OID de un nombre de algoritmo del puente, si la tabla lo conoce.
+pub(super) fn rfc_name_and_oid(bridge_name: &str) -> Option<(&'static str, &'static str)> {
+    if is_rsa_pss(bridge_name) {
         return Some(RSA_PSS);
     }
     KNOWN
         .iter()
-        .find(|(jca, _, _)| *jca == jca_name)
+        .find(|(jca, _, _)| *jca == bridge_name)
         .map(|(_, name, oid)| (*name, *oid))
 }
 
