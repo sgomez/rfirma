@@ -73,6 +73,14 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
     expect(onSeal).toHaveBeenCalled();
   });
 
+  it("offers no page button with the visible signature off, so it cannot place a box", () => {
+    const onSeal = vi.fn();
+    renderPanel({ signature: { ...visible, enabled: false }, viewedPage: 7, onSeal });
+
+    expect(screen.queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Quitarla de aquí" })).not.toBeInTheDocument();
+  });
+
   it("does not lose the placement when the switch goes off and on again", () => {
     const onChoosePages = vi.fn();
     const { show } = renderPanel({ signature: visible, onChoosePages });

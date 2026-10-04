@@ -1,10 +1,9 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { Placement, UserSpaceRect } from "../placement/pageSets";
+import type { Placement } from "../placement/pageSets";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
 import {
-  A4,
   box,
   goToPage,
   noop,
@@ -16,8 +15,8 @@ import {
 /**
  * **Grada A** (`vitest`, carril rápido). Sub-issue #58.
  *
- * Los dos gestos que no trazan: arrastrar/redimensionar el recuadro y la
- * petición de sellar o quitar el sello desde el panel. El trazo, en
+ * Los gestos que no trazan: arrastrar/redimensionar el recuadro y moverlo
+ * con las flechas, y el aviso de que se sale de la página. El trazo, en
  * `DocumentViewerTrace.test.tsx`, y el recorrido/zoom, en `DocumentViewer.test.tsx`.
  */
 
@@ -300,120 +299,43 @@ describe("los tiradores del recuadro", () => {
   });
 });
 
-/** ID-101 e ID-102: la pastilla bajo la hoja, sus tres caras y su cuarta redacción. */
-/**
- * El botón de sellar vive en el panel desde #194; el visor solo atiende la
- * petición que cruza por `placementRequest`, porque es quien tiene el
- * `viewport` que mide la posición estándar del recuadro.
- */
-describe("la petición de sellar o quitar el sello", () => {
-  it("places a document that has none, on this page, at the standard position", async () => {
-    const onSeal = vi.fn();
-    const { document, renders } = recordingDocument();
-    const { rerender } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onSeal={onSeal} onOpen={noop} />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
+describe("el aviso de que el recuadro se sale de la página", () => {
+  const placed: Placement = { rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } };
 
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        onSeal={onSeal}
-        onOpen={noop}
-        placementRequest={{ action: "seal" }}
-      />,
-    );
-
-    const [rect, page] = onSeal.mock.calls[0] as [UserSpaceRect, number];
-    expect(page).toBe(1);
-    // La posición estándar: abajo a la derecha, dentro de la página (ID-102).
-    expect(rect.x1).toBeGreaterThan(A4.width / 2);
-    expect(rect.x1).toBeLessThanOrEqual(A4.width);
-  });
-
-  it("keeps the box where it is and names the page it is looking at", async () => {
-    const onSeal = vi.fn();
+  async function droppedOffThePage() {
     const { document, renders } = recordingDocument(3);
-    const { rerender } = renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } }}
-        onSeal={onSeal}
-        onOpen={noop}
-      />,
+    const view = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={placed} onMove={noop} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
-    await goToPage(2, renders);
+    fireEvent.pointerDown(box(), { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(box(), { pointerId: 1, clientX: 900, clientY: 100 });
+    fireEvent.pointerUp(box(), { pointerId: 1 });
+    await screen.findByRole("alert");
+    return { document, ...view };
+  }
+
+  it("goes away when the placement changes from outside, as the page button does", async () => {
+    const { document, rerender } = await droppedOffThePage();
 
     rerender(
       <DocumentViewer
         pdf={document}
-        placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } }}
-        onSeal={onSeal}
+        placement={{ ...placed, pages: { only: [1, 2] } }}
+        onMove={noop}
         onOpen={noop}
-        placementRequest={{ action: "seal" }}
       />,
     );
 
-    expect(onSeal).toHaveBeenCalledWith({ x0: 50, y0: 60, x1: 250, y1: 140 }, 2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("asks to unseal the page it is looking at", async () => {
-    const onUnseal = vi.fn();
-    const { document, renders } = recordingDocument();
-    const { rerender } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={seated} onUnseal={onUnseal} onOpen={noop} />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
+  it("stays while the placement it was about stays the same", async () => {
+    const { document, rerender } = await droppedOffThePage();
 
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        onUnseal={onUnseal}
-        onOpen={noop}
-        placementRequest={{ action: "unseal" }}
-      />,
-    );
+    rerender(<DocumentViewer pdf={document} placement={placed} onMove={noop} onOpen={noop} />);
 
-    expect(onUnseal).toHaveBeenCalledWith(1);
-  });
-
-  /**
-   * Toda la razón de que cada petición sea un objeto nuevo: pulsar el botón
-   * del panel dos veces tiene que actuar las dos veces, aunque la acción no
-   * haya cambiado.
-   */
-  it("acts again when asked for the same action twice", async () => {
-    const onSeal = vi.fn();
-    const { document, renders } = recordingDocument();
-    const { rerender } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onSeal={onSeal} onOpen={noop} />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        onSeal={onSeal}
-        onOpen={noop}
-        placementRequest={{ action: "seal" }}
-      />,
-    );
-    expect(onSeal).toHaveBeenCalledTimes(1);
-
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        onSeal={onSeal}
-        onOpen={noop}
-        placementRequest={{ action: "seal" }}
-      />,
-    );
-    expect(onSeal).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("alert")).toHaveTextContent(/no puede salir de la página/);
   });
 });
 

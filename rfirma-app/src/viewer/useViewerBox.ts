@@ -1,4 +1,4 @@
-//! Los gestos sobre el recuadro de la firma visible —arrastrar, redimensionar, trazar y moverlo con las flechas— y la petición de sellar o quitar el sello de la página que se mira; informa de ellos, no decide el conjunto de páginas.
+//! Los gestos sobre el recuadro de la firma visible —arrastrar, redimensionar, trazar y moverlo con las flechas—; informa de ellos, no decide el conjunto de páginas ni pone o quita la firma de una página.
 
 import { type KeyboardEvent, useEffect, useRef } from "react";
 import { type Placement, sealsPage, type UserSpaceRect } from "../placement/pageSets";
@@ -8,7 +8,6 @@ import {
   MIN_BOX_POINTS,
   movedBy,
   type PixelRect,
-  standardBox,
   toPixels,
   toUserSpace,
 } from "./signatureBox";
@@ -30,9 +29,6 @@ interface UseViewerBoxArgs {
   placement: Placement | null;
   onMove?: (rect: UserSpaceRect) => void;
   onTrace?: (rect: UserSpaceRect, page: number) => void;
-  onSeal?: (rect: UserSpaceRect, page: number) => void;
-  onUnseal?: (page: number) => void;
-  placementRequest: { action: "seal" | "unseal" } | null;
   canPlace: boolean;
   onGesture?: (active: boolean) => void;
   page: number;
@@ -44,17 +40,13 @@ interface UseViewerBoxArgs {
 
 /**
  * Los tres caminos que colocan el recuadro de la firma visible —arrastrar,
- * redimensionar y trazar— y la pastilla de sellar/quitar sello que los
- * comparte. Hermano de [`useViewerPage`](./useViewerPage.ts), que es quien
- * pinta la hoja sobre la que este recuadro se dibuja.
+ * redimensionar y trazar—. Hermano de [`useViewerPage`](./useViewerPage.ts),
+ * que es quien pinta la hoja sobre la que este recuadro se dibuja.
  */
 export function useViewerBox({
   placement,
   onMove,
   onTrace,
-  onSeal,
-  onUnseal,
-  placementRequest,
   canPlace,
   onGesture,
   page,
@@ -153,18 +145,6 @@ export function useViewerBox({
     onOutOfPage: () => setOutOfPage(true),
   });
 
-  /**
-   * Sellar la página que se está mirando.
-   *
-   * Sin nada colocado, el recuadro nace en su **posición estándar** —no hay
-   * gesto que diga dónde—; con algo colocado, el rectángulo no se mueve.
-   */
-  const seal = () => {
-    if (!viewport) return;
-    setOutOfPage(false);
-    onSeal?.(placement?.rect ?? toUserSpace(viewport, standardBox(viewport)), page);
-  };
-
   /** Informa del recuadro trazado sobre la hoja y de la página donde se trazó. */
   const trace = (traced: PixelRect) => {
     if (!viewport) return;
@@ -190,28 +170,6 @@ export function useViewerBox({
     focusBox.current = false;
     boxElement.current.focus();
   }, [pixels]);
-
-  const unseal = () => {
-    if (placement === null) return;
-    setOutOfPage(false);
-    onUnseal?.(page);
-  };
-
-  // El botón que sella o quita el sello vive en el panel; la petición cruza
-  // como `placementRequest` y se atiende aquí, que es donde vive el `viewport`. Se guarda la
-  // identidad de la petición: pulsar el mismo botón dos veces tiene que actuar las dos veces,
-  // aunque la acción no haya cambiado.
-  const requestedPlacement = useRef(placementRequest);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `seal` y `unseal` se recrean en cada pintada; lo que dispara el efecto es la identidad de `placementRequest`, no ellas.
-  useEffect(() => {
-    if (placementRequest === null || placementRequest === requestedPlacement.current) return;
-    requestedPlacement.current = placementRequest;
-    // Sin firma visible que colocar no hay nada que sellar: atenderla colocaba
-    // un recuadro que después no se pintaba en ninguna parte.
-    if (!canPlace) return;
-    if (placementRequest.action === "seal") seal();
-    else unseal();
-  }, [placementRequest, canPlace]);
 
   /**
    * El recuadro atiende **sólo las flechas**, y `Esc` devuelve el foco a la

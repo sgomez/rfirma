@@ -135,11 +135,6 @@ export function App({
   // Un valor nuevo por cada apertura, también del mismo documento: es lo que
   // repone la colocación.
   const [placedDocument, setPlacedDocument] = useState<PlacedDocument | null>(null);
-  // El botón de sellar vive en el panel y actúa en el visor, que es quien
-  // tiene el `viewport` para medir la posición estándar del recuadro.
-  const [placementRequest, setPlacementRequest] = useState<{
-    action: "seal" | "unseal";
-  } | null>(null);
   const {
     certificate,
     lookForCertificates,
@@ -190,7 +185,8 @@ export function App({
     viewPage,
     moveBox,
     sealPage,
-    unsealPage,
+    sealViewedPage,
+    unsealViewedPage,
     choosePages,
     changePageMode,
     placeOnViewedPage,
@@ -387,10 +383,7 @@ export function App({
             canPlace={signature.enabled}
             onMove={moveBox}
             onTrace={sealPage}
-            onSeal={sealPage}
-            onUnseal={unsealPage}
             onPageChange={viewPage}
-            placementRequest={placementRequest}
             onOpen={openDocument}
             emptyExtra={
               documents.tabs.length === 0 ? (
@@ -488,8 +481,8 @@ export function App({
               pageMode={pageMode}
               onChangePageMode={changePageMode}
               viewedPage={viewedPage}
-              onSeal={() => setPlacementRequest({ action: "seal" })}
-              onUnseal={() => setPlacementRequest({ action: "unseal" })}
+              onSeal={sealViewedPage}
+              onUnseal={unsealViewedPage}
               rubric={rubric}
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}
