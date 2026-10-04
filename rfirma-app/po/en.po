@@ -86,13 +86,17 @@ msgstr "Something went wrong"
 
 #. «Comentarios y ayuda» es header.help, el botón que sale debajo.
 msgid "errors.messages.retry.body"
-msgstr "Try again. If it keeps happening, share the technical detail in “Feedback and help”."
+msgstr ""
+"Try again. If it keeps happening, share the technical detail in “Feedback "
+"and help”."
 
 msgid "errors.messages.handlerNotAvailable.title"
 msgstr "We can't change who opens these links"
 
 msgid "errors.messages.handlerNotAvailable.body"
-msgstr "This build of rFirma can't write that choice: change it in your desktop settings."
+msgstr ""
+"This build of rFirma can't write that choice: change it in your desktop "
+"settings."
 
 #. Mensaje genérico: elegir otra imagen de rúbrica. Lo usan notAnAcceptedImage, damagedImage, imageTooLarge, sourceUnreadable, storeUnwritable y storeUnreadable.
 msgid "errors.messages.otherImage.title"
@@ -216,7 +220,9 @@ msgid "errors.messages.keyringPinMissing.title"
 msgstr "The keyring lost the Store PIN"
 
 msgid "errors.messages.keyringPinMissing.body"
-msgstr "Empty the Store in Preferences → Certificates and install your certificates again."
+msgstr ""
+"Empty the Store in Preferences → Certificates and install your certificates "
+"again."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
@@ -793,7 +799,9 @@ msgstr[2] "{{count}} pages will be left without a visible signature"
 
 #. Cuerpo del diálogo de páginas sin firma visible; el título, en plural, dice cuántas páginas son.
 msgid "sealLoss.body"
-msgstr "The box doesn't fit on pages smaller than the one you placed it on. The signature will be valid throughout the document."
+msgstr ""
+"The box doesn't fit on pages smaller than the one you placed it on. The "
+"signature will be valid throughout the document."
 
 msgid "actions.signAnyway"
 msgstr "Sign anyway"
@@ -1063,7 +1071,8 @@ msgid "preferences.consentCountdown.label"
 msgstr "Wait 3 seconds before signing"
 
 msgid "preferences.honourAutomaticSelection.label"
-msgstr "If only one certificate works and the site allows it, use it without asking"
+msgstr ""
+"If only one certificate works and the site allows it, use it without asking"
 
 msgid "preferences.rememberActivity.label"
 msgstr "Remember my activity"
@@ -1140,7 +1149,10 @@ msgstr "You're on the latest version"
 
 #. Cuerpo del aviso de independencia, bajo about.independenceLead.
 msgid "about.independence"
-msgstr "rFirma isn't related to AutoFirma or to the Spanish Administration, nor is it endorsed by them. Report its bugs in our repository, not to the AutoFirma team."
+msgstr ""
+"rFirma isn't related to AutoFirma or to the Spanish Administration, nor is "
+"it endorsed by them. Report its bugs in our repository, not to the AutoFirma "
+"team."
 
 #. Título del aviso de independencia, en Acerca de y en la bienvenida del asistente; le sigue about.independence.
 msgid "about.independenceLead"
@@ -1174,7 +1186,9 @@ msgid "setup.welcome.title"
 msgstr "Set up rFirma"
 
 msgid "setup.welcome.body"
-msgstr "rFirma is compatible with AutoFirma {{version}}. To use it with government sites, your computer needs to be set up."
+msgstr ""
+"rFirma is compatible with AutoFirma {{version}}. To use it with government "
+"sites, your computer needs to be set up."
 
 msgid "setup.step"
 msgstr "Step {{current}} of {{total}}"
@@ -1346,13 +1360,17 @@ msgid "sede.confirm.messages.pdfShadowAttackSuspect"
 msgstr "It looks like the PDF was modified after its last signature."
 
 msgid "sede.confirm.messages.signingCertifiedPdf"
-msgstr "The PDF you want to sign is certified and does not allow new signatures. Adding yours will invalidate the previous signature."
+msgstr ""
+"The PDF you want to sign is certified and does not allow new signatures. "
+"Adding yours will invalidate the previous signature."
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr "The PDF has a form whose fields were changed after it was signed."
 
 msgid "sede.confirm.messages.unknown"
-msgstr "The signature validator found something you need to confirm before going on ({{code}})."
+msgstr ""
+"The signature validator found something you need to confirm before going on "
+"({{code}})."
 
 msgid "sede.marking.title"
 msgstr "Mark where your signature goes"
@@ -1471,7 +1489,10 @@ msgid "sede.oldWebClient.title"
 msgstr "This page is out of date"
 
 msgid "sede.oldWebClient.body"
-msgstr "The page uses an old version of the part that talks to rFirma, and it may have bugs or not be secure. Press Continue to proceed; if something goes wrong, tell whoever runs the page."
+msgstr ""
+"The page uses an old version of the part that talks to rFirma, and it may "
+"have bugs or not be secure. Press Continue to proceed; if something goes "
+"wrong, tell whoever runs the page."
 
 msgid "sede.refusals.retry"
 msgstr "Go back to the site and try again."
@@ -1483,24 +1504,31 @@ msgid "sede.refusals.closeOther"
 msgstr "Close the other procedure or signing app and try again."
 
 msgid "sede.refusals.otherCertificate"
-msgstr "That certificate can't be used to sign. Go back to the site and choose another one."
+msgstr ""
+"That certificate can't be used to sign. Go back to the site and choose "
+"another one."
 
 #. La causa de seguridad, antes de la acción: la persona no lee el detalle técnico.
 msgid "sede.refusalCauses.sha1"
 msgstr "The site asked for a SHA-1 signature, which is no longer secure."
 
 msgid "sede.refusalCauses.explicitXades"
-msgstr "The site asked for an old type of signature that could pass for another document's."
+msgstr ""
+"The site asked for an old type of signature that could pass for another "
+"document's."
 
 msgid "sede.refusalCauses.invoiceMultisignature"
-msgstr "The site asked to add a second signature to an electronic invoice, which only allows one."
+msgstr ""
+"The site asked to add a second signature to an electronic invoice, which "
+"only allows one."
 
 msgid "sede.refusalCauses.unsupportedCountersignature"
-msgstr "The site asked to sign over someone else's signature on a type of document that doesn't allow it."
+msgstr ""
+"The site asked to sign over someone else's signature on a type of document "
+"that doesn't allow it."
 
 msgid "sede.siteNotes.sha1"
-msgstr ""
-"Ask for SHA256withRSA or higher."
+msgstr "Ask for SHA256withRSA or higher."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""
@@ -1554,81 +1582,3 @@ msgstr[2] "Your --filter leaves none of your {{count}} certificates"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Install another certificate, or close and carry on from the site."
-
-#~ msgid "tabs.open"
-#~ msgstr "Open a PDF"
-
-#~ msgid "panel.visibleSignature.rubric.title"
-#~ msgstr "Rubric image"
-
-#~ msgid "panel.visibleSignature.content"
-#~ msgstr "Contents"
-
-#~ msgid "panel.visibleSignature.fields.rubric"
-#~ msgstr "Rubric"
-
-#~ msgid "panel.visibleSignature.fields.rubricDisabled"
-#~ msgstr "Choose an image first"
-
-#~ msgid "panel.visibleSignature.fields.signerName"
-#~ msgstr "Signer"
-
-#~ msgid "panel.visibleSignature.fields.issuer"
-#~ msgstr "Issuer"
-
-#~ msgid "panel.visibleSignature.fields.signedAt"
-#~ msgstr "Date"
-
-#~ msgid "panel.visibleSignature.fields.reason"
-#~ msgstr "Reason"
-
-#~ msgid "panel.visibleSignature.reason.label"
-#~ msgstr "Reason"
-
-#~ msgid "panel.visibleSignature.reason.placeholder"
-#~ msgstr "Approved"
-
-#~ msgid "trust.notice.title"
-#~ msgstr "When a government site asks you to sign"
-
-#~ msgid "trust.notice.localCa"
-#~ msgstr ""
-#~ "rFirma has installed a local certificate authority on your computer. "
-#~ "That's what lets the browser accept the connection to rFirma when a "
-#~ "government site asks you to sign."
-
-#~ msgid "trust.notice.localNetwork"
-#~ msgstr ""
-#~ "The first time, the browser will ask you to allow local network access. "
-#~ "It asks on behalf of the site, not of rFirma, so you may not recognize "
-#~ "it. Allow it when it appears: one grant is enough, even if the site tries "
-#~ "up to three connections."
-
-#~ msgid "trust.notice.cannotTellIfDenied"
-#~ msgstr ""
-#~ "If you deny it, rFirma can't tell and can't say so: that prompt happens "
-#~ "entirely inside the browser."
-
-#~ msgid "trust.notice.acknowledge"
-#~ msgstr "Got it"
-
-#~ msgid "pin.title"
-#~ msgstr "Enter the PIN"
-
-#~ msgid "pin.signingAs"
-#~ msgstr "{{holder}} · {{idNumber}}"
-
-#~ msgid "pin.subjectBrowser"
-#~ msgstr "Your {{browser}} certificates"
-
-#~ msgid "pin.label"
-#~ msgstr "PIN"
-
-#~ msgid "pin.incorrect"
-#~ msgstr "Wrong PIN"
-
-#~ msgid "pin.incorrectPassword"
-#~ msgstr "Wrong password"
-
-#~ msgid "pin.submit"
-#~ msgstr "Sign"
