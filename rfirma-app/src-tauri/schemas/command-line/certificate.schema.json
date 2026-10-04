@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rfirma.sgomez.me/schemas/command-line/certificate.schema.json",
+  "title": "Certificado",
+  "description": "Un certificado X.509 tal como sale en el --json de cualquier orden de rFirma. Las claves que no se pueden leer del certificado se omiten.",
+  "type": "object",
+  "properties": {
+    "subject": {
+      "description": "El titular, como DN de RFC 4514.",
+      "type": "string"
+    },
+    "issuer": {
+      "description": "El emisor, como DN de RFC 4514.",
+      "type": "string"
+    },
+    "serialNumber": {
+      "description": "El número de serie, en hexadecimal con mayúsculas y bytes completos.",
+      "type": "string",
+      "pattern": "^([0-9A-F]{2})+$"
+    },
+    "notBefore": {
+      "description": "El inicio de la vigencia, en RFC 3339 y UTC.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "notAfter": {
+      "description": "El fin de la vigencia, en RFC 3339 y UTC.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  }
+}

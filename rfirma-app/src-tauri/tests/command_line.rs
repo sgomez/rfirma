@@ -11,6 +11,38 @@ mod config;
 mod cosign;
 #[path = "command_line/formats.rs"]
 mod formats;
+#[path = "command_line/schema.rs"]
+mod schema;
+
+#[test]
+fn listaliases_json_gives_the_token_and_the_rfirma_store_conforming_to_its_schema() {
+    let (home, installed_alias) = a_home_with_an_installed_certificate();
+
+    let outcome = attended_over(
+        &["listaliases", "--json"],
+        home.path(),
+        &ScriptedTerminal::without_a_tty(),
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{:?}", outcome.stderr);
+    let listed = schema::conforming_json("listaliases", &outcome.stdout);
+    let certificates = listed["certificates"].as_array().expect("una lista");
+    let store_of = |alias: &str| {
+        certificates
+            .iter()
+            .find(|certificate| certificate["alias"] == alias)
+            .unwrap_or_else(|| panic!("{alias} no sale en {listed}"))["store"]
+            .clone()
+    };
+    assert_eq!(store_of(&installed_alias), "mozilla");
+    assert_eq!(
+        store_of(CARD_ACTIVE),
+        format!("pkcs11:{}", the_card_module().display()).as_str()
+    );
+    assert!(certificates
+        .iter()
+        .all(|certificate| certificate["notAfter"].is_string()));
+}
 
 #[test]
 fn listaliases_lists_the_test_token_and_the_rfirma_store_one_alias_per_line() {

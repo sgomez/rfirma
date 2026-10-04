@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rfirma.sgomez.me/schemas/command-line/listaliases.schema.json",
+  "title": "rfirma listaliases --json",
+  "description": "Los certificados de los almacenes a los que acota --store, uno por copia.",
+  "type": "object",
+  "properties": {
+    "certificates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "$ref": "certificate.schema.json",
+        "properties": {
+          "alias": {
+            "description": "El alias que acepta --alias.",
+            "type": "string"
+          },
+          "store": {
+            "description": "El almacén, con el nombre que acepta --store: pkcs11:<ruta del módulo>, mozilla para la familia NSS, o windows.",
+            "type": "string",
+            "pattern": "^(pkcs11:.+|mozilla|windows)$"
+          }
+        },
+        "required": ["alias", "store"],
+        "unevaluatedProperties": false
+      }
+    }
+  },
+  "required": ["certificates"],
+  "additionalProperties": false
+}

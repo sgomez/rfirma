@@ -223,6 +223,9 @@ rsa = "0.9"
 # DigestInfo de PKCS#1 v1.5. Sin ella `rsa` no acepta Sha256 como digest con
 # prefijo, que es justo lo que el ID-16 exige contrastar.
 sha2 = { version = "0.10", features = ["oid"] }
+# Las pruebas validan el `--json` de la línea de órdenes contra su JSON Schema
+# (ADR-0041); los esquemas se leen del disco, sin red.
+jsonschema = { version = "0.58", default-features = false }
 
 [lints.clippy]
 too_many_lines = "warn"
