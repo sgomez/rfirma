@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -15,6 +16,7 @@ import {
   PlusIcon,
   UploadIcon,
 } from "../design-system/icons";
+import { Row } from "../design-system/Row";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { StampPreview } from "../signing/stampPreview";
 import type { RubricGap } from "../signing/visibleSignature";
@@ -394,26 +396,26 @@ export function DocumentViewer({
         stamp && <StampPill state={stamp} onCompose={onComposeStamp ?? noop} />
       )}
 
-      <div className="viewer__bar rf-row">
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost viewer__step"
+      <Row className="viewer__bar">
+        <Button
+          variant="ghost"
+          className="viewer__step"
           aria-label={t("viewer.firstPage")}
           disabled={page === 1}
           onClick={() => goTo(1)}
         >
           <ChevronsLeftIcon strokeWidth={2} />
-        </button>
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost viewer__step"
+        </Button>
+        <Button
+          variant="ghost"
+          className="viewer__step"
           aria-label={t("viewer.previousPage")}
           disabled={page === 1}
           onClick={() => goTo(page - 1)}
         >
           <ChevronLeftIcon strokeWidth={2} />
-        </button>
-        <div className="rf-row rf-gap-xs viewer__pages">
+        </Button>
+        <Row gap="xs" className="viewer__pages">
           <input
             className="rf-input viewer__page"
             type="number"
@@ -424,37 +426,37 @@ export function DocumentViewer({
             onChange={(event) => goTo(Number(event.target.value))}
           />
           <span className="rf-body rf-text-muted">{t("viewer.pageOf", { total: pageCount })}</span>
-        </div>
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost viewer__step"
+        </Row>
+        <Button
+          variant="ghost"
+          className="viewer__step"
           aria-label={t("viewer.nextPage")}
           disabled={page === pageCount}
           onClick={() => goTo(page + 1)}
         >
           <ChevronRightIcon strokeWidth={2} />
-        </button>
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost viewer__step"
+        </Button>
+        <Button
+          variant="ghost"
+          className="viewer__step"
           aria-label={t("viewer.lastPage")}
           disabled={page === pageCount}
           onClick={() => goTo(pageCount)}
         >
           <ChevronsRightIcon strokeWidth={2} />
-        </button>
+        </Button>
 
         <span className="viewer__divider rf-divider" />
 
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost viewer__step"
+        <Button
+          variant="ghost"
+          className="viewer__step"
           aria-label={t("viewer.zoomOut")}
           disabled={zoom <= ZOOM_MIN}
           onClick={() => stepZoom(-1)}
         >
           <MinusIcon />
-        </button>
+        </Button>
         {/*
           El porcentaje se teclea: con el zoom continuo, los botones ya no
           alcanzan cualquier valor, y «ponlo al 150 %» tiene que poder escribirse. Se recorta al
@@ -479,34 +481,34 @@ export function DocumentViewer({
             }
           }}
         />
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost viewer__step"
+        <Button
+          variant="ghost"
+          className="viewer__step"
           aria-label={t("viewer.zoomIn")}
           disabled={zoom >= ZOOM_MAX}
           onClick={() => stepZoom(1)}
         >
           <PlusIcon />
-        </button>
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost viewer__step"
+        </Button>
+        <Button
+          variant="ghost"
+          className="viewer__step"
           aria-label={t("viewer.fitWidth")}
           aria-pressed={mode.kind === "fit-width"}
           onClick={() => setMode({ kind: "fit-width" })}
         >
           <FitIcon />
-        </button>
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost viewer__step"
+        </Button>
+        <Button
+          variant="ghost"
+          className="viewer__step"
           aria-label={t("viewer.fitPage")}
           aria-pressed={mode.kind === "fit-page"}
           onClick={() => setMode({ kind: "fit-page" })}
         >
           <FitPageIcon />
-        </button>
-      </div>
+        </Button>
+      </Row>
     </div>
   );
 }

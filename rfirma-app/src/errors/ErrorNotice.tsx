@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import { type ErrorSituation, errorText, MESSAGE_OF } from "./errorMessage";
 import "./ErrorNotice.css";
@@ -70,32 +72,27 @@ export function ErrorNotice({
       <span className="rf-body error-notice__empty-store-question">
         {t("errors.emptyStore.confirmQuestion")}
       </span>
-      <button
-        type="button"
-        className="rf-btn rf-btn--ghost"
-        onClick={() => setConfirmingEmptyStore(false)}
-      >
+      <Button variant="ghost" onClick={() => setConfirmingEmptyStore(false)}>
         {t("actions.cancel")}
-      </button>
-      <button
-        type="button"
-        className="rf-btn rf-btn--primary"
+      </Button>
+      <Button
+        variant="primary"
         onClick={() => {
           setConfirmingEmptyStore(false);
           onEmptyStore?.();
         }}
       >
         {t("errors.emptyStore.button")}
-      </button>
+      </Button>
     </>
   ) : (
-    <button
-      type="button"
-      className="rf-btn rf-btn--ghost error-notice__empty-store"
+    <Button
+      variant="ghost"
+      className="error-notice__empty-store"
       onClick={() => setConfirmingEmptyStore(true)}
     >
       {t("errors.emptyStore.button")}
-    </button>
+    </Button>
   );
 
   const text = errorText(situation, t);
@@ -123,38 +120,30 @@ export function ErrorNotice({
             <pre className="error-notice__raw">{technicalDetail}</pre>
           </details>
           {(documentUnchanged || title !== undefined) && (
-            <div className="rf-row rf-gap-xs error-notice__actions">
-              <button
-                type="button"
-                className="rf-btn rf-btn--ghost error-notice__copy"
-                onClick={copyDetail}
-              >
+            <Row gap="xs" className="error-notice__actions">
+              <Button variant="ghost" className="error-notice__copy" onClick={copyDetail}>
                 {t("errors.copyDetail")}
-              </button>
+              </Button>
               {offersToEmptyStore && emptyStoreAction}
-            </div>
+            </Row>
           )}
           {!documentUnchanged &&
             title === undefined &&
             (hasHelpLink(situation) || onReload || offersToEmptyStore) && (
-              <div className="rf-row rf-gap-xs error-notice__actions">
+              <Row gap="xs" className="error-notice__actions">
                 {hasHelpLink(situation) && (
-                  <button
-                    type="button"
-                    className="rf-btn rf-btn--ghost error-notice__help"
-                    onClick={openHelp}
-                  >
+                  <Button variant="ghost" className="error-notice__help" onClick={openHelp}>
                     <ExternalLinkIcon size={14} />
                     {t("header.help")}
-                  </button>
+                  </Button>
                 )}
                 {onReload && (
-                  <button type="button" className="rf-btn rf-btn--primary" onClick={onReload}>
+                  <Button variant="primary" onClick={onReload}>
                     {t("errors.reload")}
-                  </button>
+                  </Button>
                 )}
                 {offersToEmptyStore && emptyStoreAction}
-              </div>
+              </Row>
             )}
         </>
       )}
