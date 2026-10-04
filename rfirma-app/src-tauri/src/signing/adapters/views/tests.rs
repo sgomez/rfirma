@@ -7,6 +7,8 @@ fn an_expired_signature() -> DocumentSignature {
         organization_identifier: None,
         organization_name: None,
         issuer: "AC FNMT Usuarios".to_owned(),
+        certificate_subject: "CN=FIRMANTE".to_owned(),
+        certificate_issuer: "CN=AC FNMT Usuarios, O=FNMT-RCM, C=ES".to_owned(),
         certificate_serial_number: "1234567890".to_owned(),
         certificate_valid_from: None,
         certificate_valid_until: None,

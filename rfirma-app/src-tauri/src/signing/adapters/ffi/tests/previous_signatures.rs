@@ -35,6 +35,8 @@ fn a_previous_signature_translates_the_subject_and_the_issuer_with_the_holder_ut
             organization_identifier: Some("VATES-A00000000".to_owned()),
             organization_name: Some("FNMT-RCM".to_owned()),
             issuer: "AC FNMT Usuarios".to_owned(),
+            certificate_subject: "CN=LOVELACE BYRON ADA, SERIALNUMBER=IDCES-00000000T, organizationIdentifier=VATES-A00000000, O=FNMT-RCM".to_owned(),
+            certificate_issuer: "CN=AC FNMT Usuarios, OU=Ceres, O=FNMT-RCM, C=ES".to_owned(),
             certificate_serial_number: "1234567890".to_owned(),
             certificate_valid_from: None,
             certificate_valid_until: None,

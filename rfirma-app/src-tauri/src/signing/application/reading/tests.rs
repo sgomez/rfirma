@@ -27,6 +27,8 @@ fn signatures_of_returns_what_the_engine_reports() {
         organization_identifier: None,
         organization_name: None,
         issuer: "AC FNMT Usuarios".to_owned(),
+        certificate_subject: "CN=FIRMANTE".to_owned(),
+        certificate_issuer: "CN=AC FNMT Usuarios, O=FNMT-RCM, C=ES".to_owned(),
         certificate_serial_number: "1".to_owned(),
         certificate_valid_from: None,
         certificate_valid_until: None,

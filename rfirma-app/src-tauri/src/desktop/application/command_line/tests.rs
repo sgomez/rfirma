@@ -305,7 +305,7 @@ mod json;
 mod listaliases;
 mod listaliases_json;
 #[path = "../../../../tests/command_line/schema.rs"]
-mod schema;
+pub(super) mod schema;
 mod sign_config;
 mod sign_formats;
 mod sign_json;

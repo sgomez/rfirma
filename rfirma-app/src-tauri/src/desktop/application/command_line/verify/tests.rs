@@ -283,6 +283,8 @@ fn a_signature(name: &str, id_number: &str, signing_time: Option<&str>) -> Docum
         organization_identifier: None,
         organization_name: None,
         issuer: "AC FNMT Usuarios".to_owned(),
+        certificate_subject: "CN=FIRMANTE".to_owned(),
+        certificate_issuer: "CN=AC FNMT Usuarios, O=FNMT-RCM, C=ES".to_owned(),
         certificate_serial_number: "0123ABCD".to_owned(),
         certificate_valid_from: None,
         certificate_valid_until: None,
@@ -422,4 +424,5 @@ fn verify_in_xml_is_not_available_yet() {
 }
 
 mod in_other_languages;
+mod json;
 mod verbose;
