@@ -1,6 +1,7 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inMemoryExternalDestinationOpener } from "../desktop/externalDestination";
+import { elapse } from "../testing/elapse";
 import { renderWithCatalog } from "../testing/render";
 import {
   type NAMED_BY_THE_DESK,
@@ -9,7 +10,7 @@ import {
   type RefusalSituation,
 } from "./errand";
 import { SedeWindow } from "./SedeWindow";
-import { elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
+import { scriptedErrand, signedDocument } from "./sedeWindowFixtures";
 
 const RETRY = "Vuelve a la sede e inténtalo de nuevo.";
 const CONTACT_SITE = "Contacta con la sede para terminar el trámite.";

@@ -7,10 +7,11 @@ import {
   previousSignatureOf,
   reportOf,
 } from "../signing/SigningPanel.testSupport";
+import { elapse } from "../testing/elapse";
 import { renderWithCatalog } from "../testing/render";
 import type { ErrandStage } from "./errand";
 import { SedeWindow } from "./SedeWindow";
-import { certificate, elapse, scriptedErrand } from "./sedeWindowFixtures";
+import { certificate, scriptedErrand } from "./sedeWindowFixtures";
 
 /** Grada A: el momento 2, el consentimiento, con su cuenta atrás (TD-63). */
 

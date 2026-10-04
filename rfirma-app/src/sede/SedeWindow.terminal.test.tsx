@@ -3,10 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import { previousSignatureOf, reportOf } from "../signing/SigningPanel.testSupport";
+import { elapse } from "../testing/elapse";
 import { renderWithCatalog } from "../testing/render";
 import type { ErrandStage } from "./errand";
 import { SedeWindow } from "./SedeWindow";
-import { certificate, elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
+import { certificate, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
 
 /** Grada A: la variante de origen «orden de terminal» de la ventana de sede (`-certgui`). */
 

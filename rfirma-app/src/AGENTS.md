@@ -118,6 +118,16 @@ capacidad nueva, el orden es: el puerto en su módulo de dominio → `tauri.ts` 
 `main.tsx`. Las fichas de pantalla viven en `docs/design/` (ver
 `docs/AGENTS.md`).
 
+## Historias (ADR-0045)
+
+Las historias viven junto a su componente, como `*.stories.tsx`. `just storybook`
+las abre en local; `src/stories.test.tsx` las pinta todas en jsdom con axe, sin
+contraste, y una historia nueva queda cubierta sin escribir un test.
+`just storybook-a11y` corre axe en navegador con contraste, en claro y en oscuro,
+bajo demanda y fuera del CI. Una historia no importa `vitest`: los dobles que
+comparte con los tests usan los espías de `storybook/test`, y lo que sí es del
+runner (`vi`, `act`) vive aparte, como `testing/elapse.ts`.
+
 ## Trampas al probar
 
 Cada una costó un ciclo de arreglo entero, y ninguna se ve leyendo el código:

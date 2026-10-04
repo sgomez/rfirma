@@ -1,7 +1,7 @@
 //! Los dobles de `SiteCommands` y los momentos de ejemplo que comparten las pruebas de `siteErrands` y de `errandConversion`.
 
-import type { Mock } from "vitest";
-import { vi } from "vitest";
+import type { Mock } from "storybook/test";
+import { fn } from "storybook/test";
 import type { Certificate } from "../signing/certificate";
 import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import { recordingDocument } from "../viewer/testing/documentViewerFixtures";
@@ -38,28 +38,28 @@ export const opened = recordingDocument().document;
 
 /** Las órdenes, dobladas, y el asa para empujar momentos por el evento. */
 function doubled(overrides: Partial<SiteCommands> = {}) {
-  const stop: Mock = vi.fn();
+  const stop: Mock = fn();
   let emit: ((view: SiteErrandView) => void) | null = null;
   const calls: Record<keyof SiteCommands, Mock> = {
-    watch: vi.fn(),
-    readErrand: vi.fn(),
-    identify: vi.fn(),
-    confirmSignatures: vi.fn(),
-    markArea: vi.fn(),
-    decline: vi.fn(),
-    beginSigning: vi.fn(),
-    signWithPin: vi.fn(),
-    finishSigning: vi.fn(),
-    saveFile: vi.fn(),
-    loadFiles: vi.fn(),
-    installCertificate: vi.fn(),
-    lookAgain: vi.fn(),
-    installLocalCa: vi.fn(),
-    closeWindow: vi.fn(),
-    dismissWarning: vi.fn(),
-    describeDocument: vi.fn(),
-    openDocument: vi.fn(),
-    previousSignatures: vi.fn(),
+    watch: fn(),
+    readErrand: fn(),
+    identify: fn(),
+    confirmSignatures: fn(),
+    markArea: fn(),
+    decline: fn(),
+    beginSigning: fn(),
+    signWithPin: fn(),
+    finishSigning: fn(),
+    saveFile: fn(),
+    loadFiles: fn(),
+    installCertificate: fn(),
+    lookAgain: fn(),
+    installLocalCa: fn(),
+    closeWindow: fn(),
+    dismissWarning: fn(),
+    describeDocument: fn(),
+    openDocument: fn(),
+    previousSignatures: fn(),
   };
   const commands: SiteCommands = {
     watch: (onView) => {
