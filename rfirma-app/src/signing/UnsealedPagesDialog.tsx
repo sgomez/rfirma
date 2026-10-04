@@ -1,8 +1,10 @@
 //! El diálogo de páginas sin sello, justo antes de firmar: cuántas del conjunto elegido se quedan sin firma visible.
 
-import { useId } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
+import { Dialog } from "../design-system/Dialog";
 import { AlertIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
 import "./UnsealedPagesDialog.css";
 
 interface UnsealedPagesDialogProps {
@@ -30,38 +32,32 @@ interface UnsealedPagesDialogProps {
  */
 export function UnsealedPagesDialog({ fallen, onConfirm, onCancel }: UnsealedPagesDialogProps) {
   const { t } = useTranslation();
-  const titleId = useId();
 
   return (
-    <div className="rf-scrim">
-      <div
-        className="rf-dialog unsealed-pages-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
-        <div className="unsealed-pages-dialog__heading">
-          <span className="unsealed-pages-dialog__alert" aria-hidden="true">
-            <AlertIcon size={24} />
-          </span>
-          <p className="rf-title" id={titleId}>
-            {t("sealLoss.title", { count: fallen })}
-          </p>
-        </div>
-
-        <p className="rf-prose">{t("sealLoss.body")}</p>
-
-        <hr className="rf-divider" />
-
-        <div className="rf-row unsealed-pages-dialog__actions">
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
-            {t("actions.cancel")}
-          </button>
-          <button type="button" className="rf-btn rf-btn--primary" onClick={onConfirm}>
-            {t("actions.signAnyway")}
-          </button>
-        </div>
+    <Dialog
+      label={t("sealLoss.title", { count: fallen })}
+      onClose={onCancel}
+      className="unsealed-pages-dialog"
+    >
+      <div className="unsealed-pages-dialog__heading">
+        <span className="unsealed-pages-dialog__alert" aria-hidden="true">
+          <AlertIcon size={24} />
+        </span>
+        <p className="rf-title">{t("sealLoss.title", { count: fallen })}</p>
       </div>
-    </div>
+
+      <p className="rf-prose">{t("sealLoss.body")}</p>
+
+      <hr className="rf-divider" />
+
+      <Row className="unsealed-pages-dialog__actions">
+        <Button variant="ghost" onClick={onCancel}>
+          {t("actions.cancel")}
+        </Button>
+        <Button variant="primary" onClick={onConfirm}>
+          {t("actions.signAnyway")}
+        </Button>
+      </Row>
+    </Dialog>
   );
 }

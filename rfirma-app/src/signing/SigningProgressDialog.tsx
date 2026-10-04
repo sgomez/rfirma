@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
+import { Dialog } from "../design-system/Dialog";
 import { CheckIcon } from "../design-system/icons";
 import { SIGNING_STAGES, type SigningStage } from "./flow";
 import "./SigningProgressDialog.css";
@@ -33,55 +34,48 @@ export function SigningProgressDialog({ stage }: SigningProgressDialogProps) {
   const current = SIGNING_STAGES.indexOf(stage);
 
   return (
-    <div className="rf-scrim">
+    <Dialog label={t("progress.title")} className="progress-dialog">
+      <p className="rf-title" id={titleId}>
+        {t("progress.title")}
+      </p>
+
+      <ol className="progress-dialog__stages">
+        {SIGNING_STAGES.map((each, index) => {
+          const state = index < current ? "done" : index === current ? "running" : "pending";
+          return (
+            <li
+              className={`progress-dialog__stage progress-dialog__stage--${state}`}
+              key={each}
+              aria-current={state === "running" ? "step" : undefined}
+            >
+              <span className="progress-dialog__mark" aria-hidden="true">
+                {state === "done" ? (
+                  <CheckIcon size={20} strokeWidth={2} />
+                ) : (
+                  <span className="progress-dialog__dot" />
+                )}
+              </span>
+              <span className="rf-prose">{t(`progress.stages.${each}`)}</span>
+            </li>
+          );
+        })}
+      </ol>
+
       <div
-        className="rf-dialog progress-dialog"
-        role="dialog"
-        aria-modal="true"
+        className="progress-dialog__bar"
+        role="progressbar"
+        aria-valuemin={1}
+        aria-valuemax={SIGNING_STAGES.length}
+        aria-valuenow={current + 1}
         aria-labelledby={titleId}
       >
-        <p className="rf-title" id={titleId}>
-          {t("progress.title")}
-        </p>
-
-        <ol className="progress-dialog__stages">
-          {SIGNING_STAGES.map((each, index) => {
-            const state = index < current ? "done" : index === current ? "running" : "pending";
-            return (
-              <li
-                className={`progress-dialog__stage progress-dialog__stage--${state}`}
-                key={each}
-                aria-current={state === "running" ? "step" : undefined}
-              >
-                <span className="progress-dialog__mark" aria-hidden="true">
-                  {state === "done" ? (
-                    <CheckIcon size={20} strokeWidth={2} />
-                  ) : (
-                    <span className="progress-dialog__dot" />
-                  )}
-                </span>
-                <span className="rf-prose">{t(`progress.stages.${each}`)}</span>
-              </li>
-            );
-          })}
-        </ol>
-
-        <div
-          className="progress-dialog__bar"
-          role="progressbar"
-          aria-valuemin={1}
-          aria-valuemax={SIGNING_STAGES.length}
-          aria-valuenow={current + 1}
-          aria-labelledby={titleId}
-        >
-          <span
-            className="progress-dialog__bar-fill"
-            style={{ width: `${((current + 1) / SIGNING_STAGES.length) * 100}%` }}
-          />
-        </div>
-
-        <p className="rf-prose rf-text-muted">{t("progress.keepTheCard")}</p>
+        <span
+          className="progress-dialog__bar-fill"
+          style={{ width: `${((current + 1) / SIGNING_STAGES.length) * 100}%` }}
+        />
       </div>
-    </div>
+
+      <p className="rf-prose rf-text-muted">{t("progress.keepTheCard")}</p>
+    </Dialog>
   );
 }
