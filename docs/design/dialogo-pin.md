@@ -25,9 +25,9 @@ comparten momento:
 | `.p12` instalado en rFirma | **al firmar** | `Firmar` |
 
 Los dos primeros abren sesión para poder **enumerar**, así que el diálogo puede
-aparecer **antes de que exista lista de certificados**: se dibuja sobre la
-ventana buscando certificados, con el botón «Buscando certificados…» inactivo en
-el pie. El tercero es el contrario: un
+aparecer **antes de que exista lista de certificados**: se abre sobre la
+ventana buscando certificados, con el botón de firmar inactivo en el pie. El
+tercero es el contrario: un
 almacén NSS de un solo fichero lista sus certificados sin secreto —sólo las
 claves privadas lo exigen (ID-195)—, así que ahí el secreto llega al final,
 cuando ya se sabe con qué se firma.
@@ -53,8 +53,8 @@ cliente GTK lo replica (`docs/research/pinentry-gtk-temas-empaquetado.md`).
 
 ## Estructura
 
-1. Título en la barra del gestor de ventanas: «Introduce el PIN» o «Introduce
-   la contraseña».
+1. Título en la barra del gestor de ventanas, con la palabra que elige la clase
+   de almacén (PIN o contraseña).
 2. Icono de credencial del tema y, a su lado, **qué se está abriendo**, en los
    términos de quien firma: el titular en negrita y, debajo y atenuado, su
    número de documento. **Es el mismo dato que enseña el desplegable**, leído
@@ -62,7 +62,7 @@ cliente GTK lo replica (`docs/research/pinentry-gtk-temas-empaquetado.md`).
    no da titular, la línea **no se pone** y en su lugar va el título.
 3. Campo enmascarado, que nace con el foco.
 4. **Nada debajo del campo** salvo el mensaje de fallo, cuando lo hay.
-5. Abajo a la derecha, «Cancelar» y el primario, marcado como acción sugerida
+5. Abajo a la derecha, cancelar y el primario, marcado como acción sugerida
    del tema.
 
 ### La botonera va al pie, no a una barra de cabecera
@@ -101,9 +101,8 @@ módulo y pide PIN; un perfil de Firefox o de Chromium, un `nssdb` suelto o un
 
 ### Lo que el diálogo no nombra
 
-Ni la clase de módulo criptográfico ni la etiqueta del token. «Módulo PKCS#11 ·
-SoftHSM (rfirma-test)» era vocabulario de implementación y, encima, el nombre de
-un token de pruebas. Lo que se nombra es la cosa de la persona, o no se nombra
+Ni la clase de módulo criptográfico ni la etiqueta del token: eran vocabulario
+de implementación y, encima, el nombre de un token de pruebas. Lo que se nombra es la cosa de la persona, o no se nombra
 nada.
 
 ### Geometría
@@ -118,25 +117,22 @@ intento, así que no hay salto que evitar.
 - **Pidiendo el secreto**: campo vacío y **nada bajo él**. Ni pista, ni promesa,
   ni instrucciones de uso.
 - **Secreto incorrecto**: el campo toma la clase `error` del tema —el borde que
-  el escritorio use para eso, sin glifo— y bajo el campo, en negrita, «PIN
-  incorrecto» o «Contraseña incorrecta». Nada más.
+  el escritorio use para eso, sin glifo— y bajo el campo, en negrita, el
+  mensaje de fallo de la palabra del almacén. Nada más.
 
 **No hay contador de reintentos, y no es un hueco por rellenar: es estructural**
 (ID-191). Los intentos restantes los cuenta el DNIe, que está fuera del alcance
 de la v0.4; un almacén local no los tiene, y la información de token de PKCS#11
-tampoco los trae. Hasta la v0.3 esta ficha prometía «te quedan **2 intentos**
-antes de que la tarjeta se bloquee» y además argumentaba que había que
-enseñarlos; el argumento era bueno y el dato no existe, así que se retiran los
-dos. No se sustituye por ninguna promesa parecida —«puede que se bloquee», «ten
-cuidado»— porque avisar de un límite que no se sabe contar es peor que callar.
+tampoco los trae. Hasta la v0.3 esta ficha prometía enseñar los intentos que
+quedaban antes de que la tarjeta se bloquease; el argumento era bueno y el dato
+no existe, así que se retiran los dos. No se sustituye por ninguna promesa
+parecida porque avisar de un límite que no se sabe contar es peor que callar.
 
 Tampoco cruza: `SecretView` no lleva contador, y el ciclo reintenta hasta que se
 acierta o se cancela.
 
-**Tampoco hay pistas.** La que había —«El PIN se usa solo para esta firma y no
-se guarda en ningún sitio»— tranquilizaba sobre lo evidente; la que se llegó a
-escribir para el `.p12` —que la contraseña se teclea en cada firma— narraba el
-mecanismo. Ninguna de las dos cambia lo que la persona puede hacer en esta
+**Tampoco hay pistas.** La que había tranquilizaba sobre lo evidente; la que se
+llegó a escribir para el `.p12` narraba el mecanismo. Ninguna de las dos cambia lo que la persona puede hacer en esta
 pantalla, así que ninguna se queda.
 
 ## Componentes
@@ -156,23 +152,24 @@ encontrado— no están dibujados. Están pendientes en el mapa. **Tarjeta
 bloqueada ya no está en esa lista**: la v0.4 retira tarjetas y DNIe del alcance
 y del dibujo (ID-201 a ID-204).
 
-## Decisiones
+## Textos y dibujo
 
-Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página
-**Recorrido de firma**, artboards «6 · Pidiendo PIN» y «7 · PIN incorrecto», con
-la palanca **Clase de almacén** que recorre las tres situaciones y cambia
-también el fondo: la ventana buscando certificados en las dos de «antes de
-listar», la ventana lista para firmar en la del `.p12`. El estado «buscando
-certificados» de la [ventana principal](ventana-principal.md) no repite el
-diálogo: dos pantallas contando lo mismo con dos textos distintos serían dos
-verdades.
+**Esta ficha no tiene historias.** El diálogo es una ventana nativa de GTK y
+Storybook solo pinta React: su aspecto lo da el tema del escritorio. Los textos
+no salen del catálogo `po/` de la interfaz sino de `gtk_prompter.rs`, en
+`rfirma-app/src-tauri/src/signing/adapters/`, que los trae en los cinco idiomas
+con su prueba. Los dos artboards que lo dibujaban —el del secreto y el del
+secreto incorrecto— se retiraron: dibujaban una capa web que ya no existe.
+
+El estado «buscando certificados» de la [ventana principal](ventana-principal.md)
+no repite el diálogo: dos pantallas contando lo mismo con dos textos distintos
+serían dos verdades.
 
 Decidido en el [#250](https://github.com/sgomez/rfirma/issues/250) (ID-188,
 ID-190, ID-191, ID-195).
 
-El **`autofocus` del campo del secreto** se añadió al validar la
-[ventana de sede](ventana-de-sede.md) el 05/09/2026
-([#317](https://github.com/sgomez/rfirma/issues/317)), sobre el mismo artboard
-«6 · Pidiendo PIN». Se descartó darle al diálogo de sede una palanca de contexto
-propia: la pantalla es idéntica a la del recorrido local, y con ella se fue la
-frase que explicaba que cancelar cancela.
+El **foco inicial del campo del secreto** se decidió al validar la
+[ventana de sede](ventana-de-sede.md)
+([#317](https://github.com/sgomez/rfirma/issues/317)). Se descartó darle al
+diálogo de sede una variante propia: la pantalla es idéntica a la del recorrido
+local, y con ella se fue la frase que explicaba que cancelar cancela.

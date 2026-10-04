@@ -1,5 +1,11 @@
 # Ventana principal
 
+**La verdad del dibujo es el código y sus historias:**
+`shell/MainWindow.stories.tsx` («Ventana principal/1 · Ventana»), con las piezas
+en las historias que su número ordena en la misma carpeta de la barra lateral
+(cabecera, pestañas, recientes, visor, franja de versión y aviso de error). Esta
+ficha cuenta el flujo y el porqué; los textos salen del catálogo y no se copian.
+
 La única ventana de rFirma. Aloja el recorrido completo de firmar un PDF, de
 abrir el documento a guardarlo firmado, sin navegar a otra pantalla.
 
@@ -15,16 +21,9 @@ Una sola barra —la cabecera con las pestañas— y, debajo, el visor y el pane
 Así en Windows y macOS; en Linux, la barra de título nativa de GTK y, debajo, una
 tira con solo las pestañas (ver la [cabecera](cabecera.md#en-linux)).
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ rFirma · Abrir PDF… ▾ · pestañas · +N ▾            ☰    │  44 px
-├─────────────────────────────────────────────────────────┤
-│ franja de notificación (solo si hay algo que notificar)  │  41 px
-├──────────────────────────────────────┬──────────────────┤
-│ visor                                │ panel de firma   │
-│ flexible                             │ 380 px           │
-└──────────────────────────────────────┴──────────────────┘
-```
+De arriba abajo: la barra (la cabecera con las pestañas), la franja de
+notificación **solo si hay algo que notificar**, y debajo, en dos columnas, el
+visor —flexible— y el panel de firma, de ancho fijo.
 
 **Sin documento no hay panel.** El visor ocupa todo el ancho con la zona de
 soltar y los recientes, y la cabecera, el botón de abrir sin ninguna pestaña. El panel no se monta: no
@@ -67,7 +66,7 @@ diálogos se pintan en flujo, detrás de la ventana.
 - Cabecera de 44 px sobre `--rf-bg`, borde inferior de 1 px en
   `--rf-border-subtle`.
 - Visor flexible sobre `--rf-bg`. Panel de 380 px fijos, borde izquierdo de 1 px
-  en `--rf-border-subtle`.
+  en `--rf-border-subtle`. Las historias enmarcan la ventana a su tamaño mínimo.
 - Solo el papel del documento fuerza `data-theme="light"`.
 - **La ventana abre a 1280×720 y no baja de 1100×560.** El mínimo de ancho
   protege al visor, que es la región principal; el de alto deja caber la ventana
@@ -83,9 +82,13 @@ inferior de 1 px en `--rf-border-subtle`, 41 px de alto. Cuando no hay nada que
 notificar no se monta y el contenido sube.
 
 Lleva icono, una frase, **una sola acción** secundaria y una `×` para
-descartarla. Su único inquilino es el aviso de versión nueva: «Hay una versión
-nueva de rFirma: **0.4.1**», con «Cómo actualizar», que lleva a
-[Acerca de](acerca-de.md).
+descartarla (`actions.dismiss`). Su único inquilino es el aviso de versión nueva
+(`updates.newVersion`). Si la versión se puede instalar desde la aplicación, la
+acción es la de instalar (`updates.install.action`); si no, es el paso a
+[Acerca de](acerca-de.md) (`notifications.newVersion.action`), donde están las
+órdenes de alta del repositorio. Una historia por caso: `Installable` y
+`NotInstallable` de la franja, y `NewVersionInstallable` y
+`NewVersionNotInstallable` sobre la ventana.
 
 No es un sitio para errores del recorrido: el error de firma va en el panel, y
 los fallos de Preferencias dentro de su sección. Los diagnósticos tampoco
@@ -111,24 +114,30 @@ que haya lista; un `.p12` instalado lo pide **al firmar**. Ver
 
 ## Estados
 
-Todos viven en el artboard `Main`, palanca «Estado». El recorrido nunca cambia
-de pantalla.
+El recorrido nunca cambia de pantalla: los estados son combinaciones del
+contenido de las regiones. Los de la **ventana** y los del **visor** tienen
+historia; los del **panel** y los **diálogos** siguen dibujados en el artboard
+`Main` hasta que se migre su ficha.
 
-| Estado | Pestañas | Visor | Panel |
-| --- | --- | --- | --- |
-| Vacío | ninguna; el botón de abrir sí | zona de soltar y recientes | no se monta |
-| Buscando certificados | el documento | documento | editable; el selector dice «Buscando certificados…» con indicador y «Firmar» está al 55 %. Encima, el diálogo de secreto si el almacén lo pide para listar |
-| Sin certificados | ídem | documento | «Sin certificados» arriba; el pie ofrece «Añadir un certificado…» y «Volver a buscar» |
-| Sin certificado elegido | ídem | documento, sin firma visible: su interruptor está desactivado hasta elegir | el selector dice «Elige un certificado» y «Firmar» está al 55 % |
-| Listo | ídem | documento, con la firma visible si está encendida | el selector con el certificado elegido, y «Firmar» |
-| Certificados abiertos | ídem | ídem | el buscador en el selector y la lista hacia abajo, flotando sobre el panel |
-| Pidiendo el secreto / secreto incorrecto | ídem | bajo el velo | bajo el velo |
-| Viendo las firmas previas | ídem | bajo el velo | bajo el velo; encima, el diálogo [«Ver firmas»](dialogo-ver-firmas.md) |
-| ¿Firmar de todos modos? | ídem | bajo el velo | bajo el velo; encima, [el diálogo](dialogo-firmar-de-todos-modos.md), si alguna firma previa tiene un problema |
-| Firmando | ídem | bajo el velo, hoja al 45 % | bajo el velo; el diálogo de progreso encima |
-| Firmado | la pestaña pasa a `…-firmado.pdf` con ✓ | documento firmado | la franja «Firmado a las 11:04», los hallazgos del documento y el resumen con todas las firmas y su validez, la tuya «Nueva»; el pie ofrece abrir el PDF, la carpeta o «Firmar» |
-| `verify --gui` | el documento | el documento; si no es PDF, el icono, el nombre y «Sin vista previa», sin píldora | el mismo resumen sin franja, o «Sin firmas», «Formato no reconocido» o el fallo al leer las firmas; el mismo pie, con «Firmar» al 55 % si no es PDF |
-| Error al firmar | sin ✓ | documento sin tocar | el error sustituye al panel; el pie ofrece «Reintentar» |
+| Estado | Pestañas | Visor | Panel | Historia |
+| --- | --- | --- | --- | --- |
+| Vacío | ninguna; el botón de abrir sí | zona de soltar y recientes | no se monta | `Empty` |
+| Vacío con aviso | ídem | ídem | no se monta | `WithAttention` |
+| Versión nueva | ídem | ídem | no se monta | `NewVersionInstallable`, `NewVersionNotInstallable` |
+| Linux | solo la tira bajo la barra GTK | ídem | ídem | `NativeTitlebar` |
+| Con documento | el documento | documento, con o sin firma visible | editable | visor: `WithDocument`, `WithSignatureBox` |
+| Buscando certificados | el documento | documento | el selector dice que busca, y firmar está inactivo. Encima, el diálogo de secreto si el almacén lo pide para listar | `Main` |
+| Sin certificados | ídem | documento | el aviso de que no hay certificados arriba; el pie ofrece añadir uno y volver a buscar | `Main` |
+| Sin certificado elegido | ídem | documento, sin firma visible: su interruptor está desactivado hasta elegir | el selector pide elegir | `Main` |
+| Listo | ídem | documento, con la firma visible si está encendida | el selector con el certificado elegido, y firmar | `Main` |
+| Certificados abiertos | ídem | ídem | el buscador en el selector y la lista flotando sobre el panel | `Main` |
+| Pidiendo el secreto / secreto incorrecto | ídem | bajo el velo | bajo el velo | [ficha del secreto](dialogo-pin.md): ventana nativa, sin historia |
+| Viendo las firmas previas | ídem | bajo el velo | bajo el velo; encima, [Ver firmas](dialogo-ver-firmas.md) | `Main` |
+| ¿Firmar de todos modos? | ídem | bajo el velo | bajo el velo; encima, [el diálogo](dialogo-firmar-de-todos-modos.md) | `Main` |
+| Firmando | ídem | bajo el velo, hoja atenuada | bajo el velo; el diálogo de progreso encima | `Main` |
+| Firmado | la pestaña pasa al documento firmado, con su marca | documento firmado | la franja de hora, los hallazgos y el resumen con todas las firmas y su validez, la tuya como nueva | `Main` |
+| `verify --gui` | el documento | el documento; si no es PDF, el icono y el nombre sin vista previa | el mismo resumen sin franja, o el aviso de que no hay firmas, de formato no reconocido o del fallo al leer las firmas | visor: `WithoutPreview` |
+| Error al firmar | sin marca | documento sin tocar | el error sustituye al panel; el pie ofrece reintentar | aviso: `SigningFailed`, `SigningFailedWithoutRetry` |
 
 **El pie del panel mide lo mismo en todos**: 162 px. Lo que cambia es su fila de
 botones, de 44 px.
@@ -175,8 +184,8 @@ partido de V4 D: quien pulsaba «Firmar como…» en lugar de la flecha firmaba 
 un certificado que no quería. El detalle y el resto de lo que se decidió están
 en [panel-de-firma.md](panel-de-firma.md#certificado).
 
-Validado en el lienzo
-[Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
-página **Recorrido de firma**, artboard `Main`, el 25/09/2026; el selector de
-certificado y la barra única, el 27/09/2026; la validez de las firmas en el
-resumen y el diálogo «Ver firmas», el 03/10/2026.
+Validado el 25/09/2026; el selector de certificado y la barra única, el
+27/09/2026; la validez de las firmas en el resumen y el diálogo «Ver firmas», el
+03/10/2026. Desde entonces la verdad de la ventana, la cabecera, las pestañas y
+el visor son sus historias; el artboard `Main` solo conserva lo que aún no se ha
+migrado (el panel y los diálogos).

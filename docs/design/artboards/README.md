@@ -57,8 +57,6 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | 5b | `EstadoPaginasSinFirmaVisible` | Antes de firmar: las páginas donde la firma visible no cabe |
 | 5c | `EstadoFirmarDeTodosModos` | Antes de firmar: el documento trae alguna firma caducada o no válida, o un hallazgo, y se pide confirmación |
 | 5d | `EstadoVerFirmas` | El diálogo «Ver firmas»: las firmas que ya trae el documento, con su validez, sobre `Main` lista |
-| 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén —, sobre `Main` buscando certificados o lista, según el almacén |
-| 7 | `EstadoPinIncorrecto` | Secreto incorrecto, con el mismo fondo que el 6 |
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
 | — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4, sobre `Main` lista |
 | S1 | `SedeEspera` | Ventana de sede: esperando el canal, y las dos recetas de reparación cuando no se abre |
