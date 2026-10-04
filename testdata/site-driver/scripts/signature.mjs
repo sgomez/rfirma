@@ -17,6 +17,7 @@ import {
   aCertifiedPdf,
   aPasswordProtectedPdf,
   aPdfWithAnUnregisteredSignature,
+  aPdfWithTwoSignaturesListedOldestFirst,
   aTamperedCadesSignature,
   theChallenge,
   theCmsSignatureOfTheSite,
@@ -984,6 +985,13 @@ export const SIGNATURE_SCRIPTS = {
   ),
   cosigncadescheckingexpired: aPublishedScript(
     cosigning("CAdES", "checkSignatures=true", aCadesSignedWithTheExpiredCertificate),
+  ),
+  cosignpadescheckingseveralsigned: aPublishedScript(
+    cosigning(
+      "PAdES",
+      "checkSignatures=true\nheadless=true",
+      aPdfWithTwoSignaturesListedOldestFirst,
+    ),
   ),
   cosignfacturae: aPublishedScript(cosigning("FacturaE", withoutAChoice(), theInvoice)),
   cosignxadesoveranonsignature: aPublishedScript(

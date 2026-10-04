@@ -75,6 +75,15 @@ sleep 1.1
 sign pades "$WORK/closed.pdf" "$EXPIRED" "$EXPIRED_PIN" \
     "$OUT/pades-certified-twice-then-cosigned-expired.pdf" allowSigningCertifiedPdfs=true
 
+sign pdf "$WORK/with-field.pdf" EarlierSignature
+sign pades "$WORK/with-field.pdf" "$ACTIVE" "$ACTIVE_PIN" "$WORK/signed-in-field.pdf" \
+    signatureField=EarlierSignature
+sleep 1.1
+sign pades "$WORK/signed-in-field.pdf" "$PSEUDONYM" "$PSEUDONYM_PIN" \
+    "$OUT/pades-two-signatures-oldest-listed-first.pdf" signaturePage=1 \
+    signaturePositionOnPageLowerLeftX=100 signaturePositionOnPageLowerLeftY=400 \
+    signaturePositionOnPageUpperRightX=300 signaturePositionOnPageUpperRightY=500
+
 printf 'rfirma: contenido firmado en CAdES\n' > "$WORK/content.txt"
 sign cades implicit "$WORK/content.txt" "$EXPIRED" "$EXPIRED_PIN" "$OUT/cades-expired.csig"
 sign cades implicit "$WORK/content.txt" "$ACTIVE" "$ACTIVE_PIN" "$WORK/cades-active.csig"

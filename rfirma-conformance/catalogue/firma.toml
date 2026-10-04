@@ -440,6 +440,22 @@ store = "expired"
 expects.completes = {}
 
 [[check]]
+id = "check_signatures_cosigns_a_pdf_with_several_signatures_and_nothing_after_them"
+set = "firma"
+citation = "ValidatePdfSignature.java:166-169; ProtocolInvocationLauncherSign.java:409-483, 787-796"
+explained_by.autofirma = "BUG-37"
+statement = """
+Con checkSignatures=true y headless=true, la cofirma de un PDF que solo recibió firmas, sin nada
+después de la última, continúa: la validación previa compara con la revisión de la última firma,
+sin importar en qué orden lista las firmas el documento.
+"""
+
+[check.drive]
+mode = "v4"
+script = "cosignpadescheckingseveralsigned"
+expects.completes = {}
+
+[[check]]
 id = "a_certified_pdf_answers_saf_50_when_headless"
 set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:787-796; PdfUtil.java:214-229"

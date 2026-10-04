@@ -21,9 +21,12 @@ import com.aowagie.text.Paragraph;
 import com.aowagie.text.Rectangle;
 import com.aowagie.text.pdf.PRIndirectReference;
 import com.aowagie.text.pdf.PdfAnnotation;
+import com.aowagie.text.pdf.PdfArray;
+import com.aowagie.text.pdf.PdfDictionary;
 import com.aowagie.text.pdf.PdfFormField;
 import com.aowagie.text.pdf.PdfName;
 import com.aowagie.text.pdf.PdfReader;
+import com.aowagie.text.pdf.PdfString;
 import com.aowagie.text.pdf.PdfWriter;
 
 /**
@@ -55,6 +58,10 @@ final class TestFixtures {
 
     /** Nombre de campo que el {@code HashMap} de {@code AcroFields} pone antes que {@code Signature1}. */
     static final String FIRST_SIGNATURE_FIELD = "EarlierSignature";
+
+    static final String TEXT_FIELD = "Nombre";
+
+    private static final Rectangle TEXT_FIELD_BOX = new Rectangle(100, 300, 300, 330);
 
     private TestFixtures() { }
 
@@ -128,19 +135,47 @@ final class TestFixtures {
      * nueva solapada con ella, sin nada despues: iText lista primero el campo de la antigua.
      */
     static byte[] pdfWithAVisibleCosignOverTheFirstSignature() throws Exception {
+        final byte[] once = signedInTheFirstSignatureField();
+        Thread.sleep(1_100);
+        return pades(once, otherCertificateChain(), otherPrivateKey(),
+                visibleAt(new Rectangle(150, 620, 350, 720)));
+    }
+
+    /**
+     * Una firma en un campo visible de nombre {@link #FIRST_SIGNATURE_FIELD} y {@code cosigns}
+     * cofirmas visibles apartadas de ella y entre si, sin nada despues de la ultima.
+     */
+    static byte[] pdfWithVisibleCosignsApartFromTheFirstSignature(final int cosigns)
+            throws Exception {
+        byte[] pdf = signedInTheFirstSignatureField();
+        for (int cosign = 0; cosign < cosigns; cosign++) {
+            Thread.sleep(1_100);
+            final int bottom = 450 - 150 * cosign;
+            pdf = pades(pdf, otherCertificateChain(), otherPrivateKey(),
+                    visibleAt(new Rectangle(100, bottom, 300, bottom + 100)));
+        }
+        return pdf;
+    }
+
+    private static byte[] signedInTheFirstSignatureField() throws Exception {
         final Properties inTheField = new Properties();
         inTheField.setProperty("signatureField", FIRST_SIGNATURE_FIELD);
-        final byte[] once = pades(pdfWithAnEmptySignatureField(FIRST_SIGNATURE_FIELD,
+        return pades(pdfWithAnEmptySignatureField(FIRST_SIGNATURE_FIELD,
                 new Rectangle(100, 600, 300, 700)), certificateChain(), privateKey(), inTheField);
-        Thread.sleep(1_100);
+    }
 
-        final Properties overlapping = new Properties();
-        overlapping.setProperty("signaturePage", "1");
-        overlapping.setProperty("signaturePositionOnPageLowerLeftX", "150");
-        overlapping.setProperty("signaturePositionOnPageLowerLeftY", "620");
-        overlapping.setProperty("signaturePositionOnPageUpperRightX", "350");
-        overlapping.setProperty("signaturePositionOnPageUpperRightY", "720");
-        return pades(once, otherCertificateChain(), otherPrivateKey(), overlapping);
+    private static Properties visibleAt(final Rectangle box) {
+        final Properties visible = new Properties();
+        visible.setProperty("signaturePage", "1");
+        visible.setProperty("signaturePositionOnPageLowerLeftX", corner(box.getLeft()));
+        visible.setProperty("signaturePositionOnPageLowerLeftY", corner(box.getBottom()));
+        visible.setProperty("signaturePositionOnPageUpperRightX", corner(box.getRight()));
+        visible.setProperty("signaturePositionOnPageUpperRightY", corner(box.getTop()));
+        return visible;
+    }
+
+    private static String corner(final float coordinate) {
+        return Integer.toString(Math.round(coordinate));
     }
 
     private static byte[] pdfWithAnEmptySignatureField(final String name, final Rectangle box)
@@ -186,37 +221,88 @@ final class TestFixtures {
 
     /**
      * Repinta la pagina en una revision incremental posterior a la firma, que es
-     * el ataque que el original llama PDF Shadow Attack. La revision se escribe a
-     * mano porque el PDF firmado cierra con un flujo de referencias cruzadas y una
-     * tabla clasica encadenada a el no la lee ni iText.
+     * el ataque que el original llama PDF Shadow Attack.
      */
     static byte[] withThePageRepaintedAfterSigning(final byte[] pdf) throws Exception {
         final PdfReader reader = new PdfReader(pdf);
         final int page =
                 ((PRIndirectReference) reader.getPageN(1).get(PdfName.CONTENTS)).getNumber();
+        final String painting = "1 0 0 RG 1 0 0 rg 50 50 400 300 re f\n";
+        return withAnObjectRewrittenAfterSigning(pdf, page,
+                "<< /Length " + painting.length() + " >>\nstream\n" + painting + "endstream");
+    }
+
+    /** Un PDF con el campo de texto {@link #TEXT_FIELD}, firmado dos veces sin firma visible. */
+    static byte[] pdfWithATextFieldSignedTwice() throws Exception {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        final Document document = new Document();
+        final PdfWriter writer = PdfWriter.getInstance(document, out);
+        document.open();
+        document.add(new Paragraph("Formulario de prueba de rfirma."));
+        final PdfFormField field = PdfFormField.createTextField(writer, false, false, 0);
+        field.setWidget(TEXT_FIELD_BOX, new PdfName("I"));
+        field.setFieldName(TEXT_FIELD);
+        field.setValueAsString("antes");
+        field.setFlags(PdfAnnotation.FLAGS_PRINT);
+        field.setPage(1);
+        writer.addAnnotation(field);
+        document.close();
+
+        final byte[] once = pades(out.toByteArray(), certificateChain(), privateKey(),
+                new Properties());
+        Thread.sleep(1_100);
+        return pades(once, otherCertificateChain(), otherPrivateKey(), new Properties());
+    }
+
+    /** Cambia el valor de {@link #TEXT_FIELD} en una revision incremental sin firmar. */
+    static byte[] withTheTextFieldFilledInAfterSigning(final byte[] pdf) throws Exception {
+        final PdfReader reader = new PdfReader(pdf);
+        final PdfArray fields =
+                reader.getCatalog().getAsDict(PdfName.ACROFORM).getAsArray(PdfName.FIELDS);
+        for (int i = 0; i < fields.size(); i++) {
+            final PdfDictionary field =
+                    (PdfDictionary) PdfReader.getPdfObject(fields.getPdfObject(i));
+            final PdfString name = field.getAsString(PdfName.T);
+            if (name != null && TEXT_FIELD.equals(name.toUnicodeString())) {
+                return withAnObjectRewrittenAfterSigning(pdf,
+                        ((PRIndirectReference) fields.getPdfObject(i)).getNumber(),
+                        "<< /FT /Tx /T (" + TEXT_FIELD + ") /V (despues) /Type /Annot"
+                                + " /Subtype /Widget /F 4 /Rect [100 300 300 330] /P "
+                                + reader.getPageOrigRef(1).getNumber() + " 0 R >>");
+            }
+        }
+        throw new IllegalStateException("sin campo " + TEXT_FIELD);
+    }
+
+    /**
+     * Reescribe un objeto en una revision incremental. Se escribe a mano porque el PDF
+     * firmado cierra con un flujo de referencias cruzadas y una tabla clasica encadenada
+     * a el no la lee ni iText.
+     */
+    private static byte[] withAnObjectRewrittenAfterSigning(final byte[] pdf, final int number,
+            final String body) throws Exception {
+        final PdfReader reader = new PdfReader(pdf);
         final int root = ((PRIndirectReference) reader.getTrailer().get(PdfName.ROOT)).getNumber();
         final int table = reader.getXrefSize();
 
-        final String painting = "1 0 0 RG 1 0 0 rg 50 50 400 300 re f\n";
-        final String repainted = "\n" + page + " 0 obj\n<< /Length " + painting.length()
-                + " >>\nstream\n" + painting + "endstream\nendobj\n";
-        final int pageOffset = pdf.length + 1;
-        final int tableOffset = pdf.length + repainted.length();
+        final String rewritten = "\n" + number + " 0 obj\n" + body + "\nendobj\n";
+        final int objectOffset = pdf.length + 1;
+        final int tableOffset = pdf.length + rewritten.length();
 
         final ByteArrayOutputStream rows = new ByteArrayOutputStream();
         rows.write(new byte[] {0, 0, 0, 0, 0, (byte) 0xff, (byte) 0xff});
-        rows.write(inUse(pageOffset));
+        rows.write(inUse(objectOffset));
         rows.write(inUse(tableOffset));
 
         final String opening = table + " 0 obj\n<< /Type /XRef /Size " + (table + 1)
-                + " /Index [0 1 " + page + " 1 " + table + " 1] /W [1 4 2] /Root " + root
+                + " /Index [0 1 " + number + " 1 " + table + " 1] /W [1 4 2] /Root " + root
                 + " 0 R /Prev " + reader.getLastXref() + " /Length " + rows.size()
                 + " >>\nstream\n";
         final String closing = "\nendstream\nendobj\nstartxref\n" + tableOffset + "\n%%EOF\n";
 
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(pdf);
-        out.write(repainted.getBytes(StandardCharsets.ISO_8859_1));
+        out.write(rewritten.getBytes(StandardCharsets.ISO_8859_1));
         out.write(opening.getBytes(StandardCharsets.ISO_8859_1));
         out.write(rows.toByteArray());
         out.write(closing.getBytes(StandardCharsets.ISO_8859_1));

@@ -16,6 +16,7 @@ titular no se usa en ningún punto del proyecto.
 | `pades-stamped-while-in-force.pdf` | Una firma PAdES hecha con `expired-rsa.p12` y sellada con fecha `2019-06-01T00:00:00Z`, cuando el certificado aún estaba en vigor, por una TSA de un solo uso (`CN=rfirma backdated TSA`) que fabrica `ReferenceSigner pades-stamped-at`. El original la da por caducada; rFirma, válida (ADR-0043). |
 | `pades-certified-then-cosigned.pdf` | Certificada sin cambios permitidos (`certificationLevel=1`) con `active-rsa.p12` y cofirmada después con `pseudonym-rsa.p12` (`allowSigningCertifiedPdfs=true`). La cofirma no está admitida. |
 | `pades-certified-twice-then-cosigned-expired.pdf` | Certificada primero admitiendo formularios (`certificationLevel=2`) con `active-rsa.p12`, después sin cambios permitidos con `pseudonym-rsa.p12`, y cofirmada al final con `expired-rsa.p12`. Cierra el documento la segunda certificación, la última. |
+| `pades-two-signatures-oldest-listed-first.pdf` | Firmada con `active-rsa.p12` en un campo visible preparado, `EarlierSignature`, y cofirmada después con `pseudonym-rsa.p12` en una firma visible nueva apartada de ella, sin nada detrás. `AcroFields.getSignatureNames` lista primero la firma antigua, la de la revisión 1. |
 
 ## Cómo se regenera
 

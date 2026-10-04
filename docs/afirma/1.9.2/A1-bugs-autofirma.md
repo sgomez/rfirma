@@ -707,7 +707,7 @@ dirigido al defecto.
 
 ### BUG-37: La comparación con la última revisión firmada toma la primera firma de una lista sin orden
 
-* **No observable:** en el protocolo solo se llega por `checkSignatures`, que en rFirma delega en el mismo `ValidatePdfSignature.validate` del original; la comparación propia de rFirma es la del aviso de firmas previas de la firma de escritorio, que no pasa por `afirma://`, y la cubren las pruebas del puente.
+* **Observable:** por `checkSignatures`, desde que rFirma elige en el puente la revisión con la que compara (`LastSignedRevision`, que busca la última firma por `getRevision` antes de llamar a `ValidatePdfSignature.validate`). Con un PDF de varias firmas, nada detrás de la última y la más antigua primera en la lista, AutoFirma pide confirmación, o responde `SAF_50` con `headless=true`, donde rFirma cofirma. Lo mide `check_signatures_cosigns_a_pdf_with_several_signatures_and_nothing_after_them`.
 * **Estado en `master`:** **Sigue presente.** `ValidatePdfSignature.java:168-170` sigue tomando `signNames.get(0)` como la firma de la última revisión.
 * **Código fuente:** `afirma-crypto-validation` · `es.gob.afirma.signvalidation.ValidatePdfSignature.java:117, 166-169` (método `validate(byte[], Properties)`); `afirma-lib-itext` 1.7 · `com.aowagie.text.pdf.AcroFields.getSignatureNames()`.
 * **Descripción:** `validate` lee los nombres de las firmas con `af.getSignatureNames()` y, si hay revisiones posteriores a la de `signNames.get(0)`, extrae esa revisión con `af.extractRevision(signNames.get(0))` y la entrega a `DataAnalizerUtil.checkPdfShadowAttack`, que la compara página a página con el documento actual. El comentario de esa rama da por hecho que la posición 0 es la firma más reciente:
