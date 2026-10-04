@@ -395,6 +395,14 @@ class PreviousSignaturesBridgeTest {
     }
 
     @Test
+    void a_signature_whose_byte_range_reaches_beyond_every_offset_is_damaged() throws Exception {
+        final byte[] pdf = ByteRangeSamples.withAByteRangeBeyondEveryOffset(
+                ByteRangeSamples.signed(TestFixtures.samplePdf()));
+
+        assertOnlySignatureIsDamaged(pdf);
+    }
+
+    @Test
     void a_signature_followed_by_spare_bytes_after_the_last_eof_is_valid() throws Exception {
         final byte[] pdf = ByteRangeSamples.withSpareBytesAfterTheLastEof(
                 ByteRangeSamples.signed(TestFixtures.samplePdf()));

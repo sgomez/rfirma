@@ -103,6 +103,13 @@ final class ByteRangeSamples {
         return altered;
     }
 
+    /** La ultima firma con su segundo tramo 2^32 bytes mas alla y un fin que no cabe en un {@code long}. */
+    static byte[] withAByteRangeBeyondEveryOffset(final byte[] pdf) {
+        final long[] range = lastRange(pdf);
+        return withTheByteRangeWritten(pdf, "[0 " + range[1] + " " + ((1L << 32) + range[2]) + " "
+                + Long.MAX_VALUE + "]");
+    }
+
     /**
      * La ultima firma rehecha sobre el rango que da {@code change} a partir del suyo, con el CMS
      * nuevo en el mismo hueco de {@code /Contents}: el rango es otro y la firma cuadra con el.

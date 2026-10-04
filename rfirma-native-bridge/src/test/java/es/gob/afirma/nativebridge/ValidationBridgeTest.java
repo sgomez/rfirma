@@ -398,6 +398,17 @@ class ValidationBridgeTest {
     }
 
     @Test
+    void a_pdf_whose_byte_range_reaches_beyond_every_offset_is_invalid() throws Exception {
+        final byte[] pdf =
+                ByteRangeSamples.withAByteRangeBeyondEveryOffset(signed(TestFixtures.samplePdf()));
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.INVALID, verdict.outcome());
+        assertEquals("CORRUPTED_SIGN", verdict.reason());
+    }
+
+    @Test
     void the_site_accepts_a_pdf_whose_byte_range_ends_inside_its_revision() throws Exception {
         final byte[] pdf = ByteRangeSamples.resignedOver(signed(TestFixtures.samplePdf()),
                 range -> new long[] {0, range[1], range[2], range[3] - "%%EOF\n".length()});

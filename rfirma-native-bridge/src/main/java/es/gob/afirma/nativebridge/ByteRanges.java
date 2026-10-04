@@ -21,13 +21,13 @@ final class ByteRanges {
 
     private static final byte[] EOF_MARKER = "%%EOF".getBytes(StandardCharsets.US_ASCII);
 
-    /** Lo que se exige: en el protocolo, solo lo que ningun PDF legitimo incumple (ADR-0044). */
+    /** Lo que se exige: en el protocolo, solo lo que ningún PDF legítimo incumple (ADR-0044). */
     enum Strictness {
         PROTOCOL,
         LOCAL
     }
 
-    /** Los campos de firma o de sello cuyo rango no cubre su revision; ninguno si el PDF no se lee. */
+    /** Los campos de firma o de sello cuyo rango no cubre su revisión; ninguno si el PDF no se lee. */
     static List<String> uncoveredIn(final byte[] pdf, final Strictness strictness) {
         final AcroFields fields;
         try {
@@ -47,29 +47,30 @@ final class ByteRanges {
 
     static boolean coversItsRevision(final byte[] pdf, final PdfDictionary signature,
             final Strictness strictness) {
-        final long[] range = integersOf(signature.getAsArray(PdfName.BYTERANGE));
+        final long[] range = offsetsWithin(pdf.length, signature.getAsArray(PdfName.BYTERANGE));
         final PdfString contents = signature.getAsString(PdfName.CONTENTS);
         if (range == null || contents == null || range[0] != 0) {
             return false;
         }
         final long gapStart = range[1];
         final long gapEnd = range[2];
-        final long end = gapEnd + range[3];
-        if (gapStart >= gapEnd || end > pdf.length) {
+        if (gapStart >= gapEnd || range[3] > pdf.length - gapEnd) {
             return false;
         }
+        final long end = gapEnd + range[3];
         return isExactlyTheHexString(pdf, (int) gapStart, (int) gapEnd, contents.getOriginalBytes())
                 && (strictness == Strictness.PROTOCOL || endsARevision(pdf, (int) end));
     }
 
-    private static long[] integersOf(final PdfArray range) {
+    /** Los cuatro enteros del rango, o ninguno si alguno no es un offset entre 0 y {@code length}. */
+    private static long[] offsetsWithin(final int length, final PdfArray range) {
         if (range == null || range.size() != 4) {
             return null;
         }
         final long[] integers = new long[4];
         for (int i = 0; i < integers.length; i++) {
             final PdfNumber number = range.getAsNumber(i);
-            if (number == null || number.doubleValue() < 0
+            if (number == null || number.doubleValue() < 0 || number.doubleValue() > length
                     || number.doubleValue() != Math.rint(number.doubleValue())) {
                 return null;
             }
@@ -108,7 +109,7 @@ final class ByteRanges {
         return c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == '\f' || c == 0;
     }
 
-    /** Justo tras un {@code %%EOF}, con su fin de linea o sin el. */
+    /** Justo tras un {@code %%EOF}, con su fin de línea o sin él. */
     private static boolean endsARevision(final byte[] pdf, final int end) {
         int marker = end;
         for (int eol = 0; eol < 2 && marker > 0 && isEndOfLine(pdf[marker - 1]); eol++) {
