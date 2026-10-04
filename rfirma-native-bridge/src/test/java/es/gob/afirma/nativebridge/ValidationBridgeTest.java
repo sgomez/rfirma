@@ -8,10 +8,13 @@ import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Properties;
 
+import org.spongycastle.cms.CMSSignedData;
+import org.spongycastle.cms.SignerInformation;
 import org.junit.jupiter.api.Test;
 
 /** Las salidas del veredicto, sobre firmas hechas aqui mismo. */
@@ -152,6 +155,73 @@ class ValidationBridgeTest {
                 "sign", TestFixtures.expiredCertificateChain(), TestFixtures.expiredPrivateKey());
 
         assertExpiredOnlyWhenChecked(signed, "XAdES Enveloping");
+    }
+
+    @Test
+    void a_cades_with_a_byte_of_its_content_changed_is_invalid() throws Exception {
+        final byte[] altered = withOneByteChanged(implicitCades(), TestFixtures.challenge());
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(altered, "CAdES", false);
+
+        assertEquals(ValidationBridge.INVALID, verdict.outcome());
+        assertEquals("NO_MATCH_DATA", verdict.reason());
+    }
+
+    @Test
+    void a_cades_with_its_signature_value_altered_is_invalid() throws Exception {
+        final byte[] signature = implicitCades();
+        final byte[] value =
+                ((SignerInformation) new CMSSignedData(signature).getSignerInfos().getSigners()
+                        .iterator().next()).getSignature();
+
+        final ValidationBridge.Verdict verdict =
+                ValidationBridge.validate(withOneByteChanged(signature, value), "CAdES", false);
+
+        assertEquals(ValidationBridge.INVALID, verdict.outcome());
+    }
+
+    @Test
+    void a_cades_with_a_byte_of_its_content_changed_is_invalid_with_an_expired_certificate()
+            throws Exception {
+        final byte[] altered = withOneByteChanged(expiredImplicitCades(), TestFixtures.challenge());
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(altered, "CAdES", false);
+
+        assertEquals(ValidationBridge.INVALID, verdict.outcome());
+        assertEquals("NO_MATCH_DATA", verdict.reason());
+    }
+
+    @Test
+    void an_intact_cades_with_an_expired_certificate_is_valid_when_certificates_are_not_checked()
+            throws Exception {
+        final ValidationBridge.Verdict verdict =
+                ValidationBridge.validate(expiredImplicitCades(), "CAdES", false);
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(), "motivo: " + verdict.reason());
+    }
+
+    private static byte[] implicitCades() throws Exception {
+        final Properties implicitMode = new Properties();
+        implicitMode.setProperty("mode", "implicit");
+        return CadesCycle.sign(TestFixtures.challenge(), implicitMode, "sign");
+    }
+
+    private static byte[] expiredImplicitCades() throws Exception {
+        final Properties implicitMode = new Properties();
+        implicitMode.setProperty("mode", "implicit");
+        return CadesCycle.signedBy(TestFixtures.challenge(), implicitMode,
+                "sign", TestFixtures.expiredCertificateChain(), TestFixtures.expiredPrivateKey());
+    }
+
+    private static byte[] withOneByteChanged(final byte[] document, final byte[] inside) {
+        final byte[] altered = document.clone();
+        for (int at = 0; at + inside.length <= altered.length; at++) {
+            if (Arrays.equals(altered, at, at + inside.length, inside, 0, inside.length)) {
+                altered[at + inside.length / 2] ^= 0x01;
+                return altered;
+            }
+        }
+        throw new IllegalStateException("el contenido no esta en la firma");
     }
 
     @Test

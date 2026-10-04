@@ -410,6 +410,36 @@ act.consent = "AutoFirma rechaza la cofirma antes de pedir certificado y sin ens
 expects.code = "SAF_39"
 
 [[check]]
+id = "check_signatures_stops_a_cosign_over_a_tampered_cades"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:409-483"
+statement = """
+Con checkSignatures=true, una cofirma CAdES sobre una firma implícita con un byte del contenido
+cambiado se aborta con SAF_39 en vez de firmar encima.
+"""
+
+[check.drive]
+mode = "v4"
+script = "cosigncadescheckingtampered"
+expects.code = "SAF_39"
+
+[[check]]
+id = "check_signatures_cosigns_over_a_cades_with_an_expired_certificate"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:409-483"
+explained_by.rfirma = "ADR-0044"
+statement = """
+Con checkSignatures=true, una cofirma CAdES sobre una firma implícita íntegra cuyo certificado
+firmante ha caducado continúa: la caducidad no es un problema de integridad.
+"""
+
+[check.drive]
+mode = "v4"
+script = "cosigncadescheckingexpired"
+store = "expired"
+expects.completes = {}
+
+[[check]]
 id = "a_certified_pdf_answers_saf_50_when_headless"
 set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:787-796; PdfUtil.java:214-229"

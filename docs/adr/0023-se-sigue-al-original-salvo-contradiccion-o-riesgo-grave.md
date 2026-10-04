@@ -109,6 +109,9 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
   certificado caducado de la regla 1,
   `expired_certificates_are_hidden_only_without_filters`. Su NO CONFORME en
   rFirma cuenta como explicado.
+- En el protocolo afirma, rFirma puede ser más permisiva que el original pero nunca
+  más estricta sin un criterio que ningún documento legítimo pueda disparar; el caso
+  de `checkSignatures` y el certificado caducado está en el ADR-0044.
 - Si una versión posterior del original retira SHA-1 de su catálogo, o la
   XAdES explícita, este ADR se reescribe midiéndolo contra ese tag.
 

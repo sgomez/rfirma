@@ -1,4 +1,4 @@
-//! `checkSignatures=true` de `sign(format=PAdES)`: sigue hasta firmar si la firma previa se sostiene, y la rechaza si no.
+//! `checkSignatures=true` sobre las firmas previas: sigue hasta firmar si se sostienen, y rechaza las que no.
 
 #[allow(dead_code, unused_imports)]
 mod support;
@@ -124,5 +124,71 @@ async fn the_published_client_is_refused_a_document_whose_previous_signature_doe
         broken.field("message"),
         WireAnswer::refused(SafCode::InvalidSignature).on_the_wire(),
         "una firma previa que ya no cuadra tenia que contestar ERROR_INVALID_SIGNATURE"
+    );
+}
+
+/// Lo que el cliente publicado recibe al cofirmar con `checkSignatures=true` la CAdES que
+/// prepara `script`.
+async fn cosigning_checking_the_signatures(script: &str) -> Event {
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let signer = Arc::new(Mutex::new(None));
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, script);
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_sign_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    channel.close();
+    verdict
+}
+
+/// Una CAdES con un byte del contenido cambiado no se cofirma: el `errorCallback` recibe `SAF_39`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_is_refused_a_cosign_over_a_tampered_cades() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let broken = cosigning_checking_the_signatures("cosigncadescheckingtampered").await;
+
+    assert_eq!(
+        broken.name(),
+        "error",
+        "la CAdES alterada tenia que acabar en el errorCallback, y acabo en {}",
+        broken.name()
+    );
+    assert_eq!(
+        broken.field("message"),
+        WireAnswer::refused(SafCode::InvalidSignature).on_the_wire(),
+        "una CAdES alterada tenia que contestar ERROR_INVALID_SIGNATURE"
+    );
+}
+
+/// Una CAdES íntegra con el certificado caducado se cofirma: la caducidad no cuenta.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_cosigns_a_cades_whose_certificate_has_expired() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let held = cosigning_checking_the_signatures("cosigncadescheckingexpired").await;
+
+    assert_eq!(
+        held.name(),
+        "success",
+        "la CAdES integra con el certificado caducado tenia que cofirmarse, y acabo en {}: {}",
+        held.name(),
+        held.field("message")
     );
 }

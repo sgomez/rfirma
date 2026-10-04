@@ -13,9 +13,11 @@ import {
 } from "../lib/cms.mjs";
 import { aCondition, bytesOf, emit, settle, settlingTheError } from "../lib/events.mjs";
 import {
+  aCadesSignedWithTheExpiredCertificate,
   aCertifiedPdf,
   aPasswordProtectedPdf,
   aPdfWithAnUnregisteredSignature,
+  aTamperedCadesSignature,
   theChallenge,
   theCmsSignatureOfTheSite,
   theInvoice,
@@ -976,6 +978,12 @@ export const SIGNATURE_SCRIPTS = {
   cosignautowithoutasignature: aPublishedScript(cosigning("auto", "", theXmlDocument)),
   cosignpadeschecking: aPublishedScript(
     cosigning("PAdES", "checkSignatures=true", thePdfOfTheTest),
+  ),
+  cosigncadescheckingtampered: aPublishedScript(
+    cosigning("CAdES", "checkSignatures=true", aTamperedCadesSignature),
+  ),
+  cosigncadescheckingexpired: aPublishedScript(
+    cosigning("CAdES", "checkSignatures=true", aCadesSignedWithTheExpiredCertificate),
   ),
   cosignfacturae: aPublishedScript(cosigning("FacturaE", withoutAChoice(), theInvoice)),
   cosignxadesoveranonsignature: aPublishedScript(

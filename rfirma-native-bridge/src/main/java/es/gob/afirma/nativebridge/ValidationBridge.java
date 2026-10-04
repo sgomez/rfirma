@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.spongycastle.cms.CMSException;
+import org.spongycastle.cms.CMSSignedData;
+import org.spongycastle.cms.SignerInformation;
+
 import es.gob.afirma.core.RuntimeConfigNeededException;
 import es.gob.afirma.core.RuntimeConfigNeededException.RequestType;
 import es.gob.afirma.signvalidation.SignValider;
@@ -112,11 +116,42 @@ final class ValidationBridge {
             throws IOException, RuntimeConfigNeededException {
         return switch (valider) {
             case ValidatePdfSignature pdf -> pdf.validate(document, headless(checkCertificates));
-            case ValidateBinarySignature binary -> binary.validate(document, checkCertificates);
+            case ValidateBinarySignature binary -> integrityOnlyUnless(checkCertificates, binary, document);
             case ValidateXMLSignature xml -> xml.validate(document, checkCertificates);
             default -> throw new IllegalStateException(
                     "validador sin trato propio: " + valider.getClass().getName());
         };
+    }
+
+    /** Sin {@code checkCertificates} la caducidad no cuenta pero la integridad si (ADR-0044). */
+    private static List<SignValidity> integrityOnlyUnless(final boolean checkCertificates,
+            final ValidateBinarySignature binary, final byte[] document) throws IOException {
+        final List<SignValidity> validities = binary.validate(document, true);
+        if (checkCertificates || validities.stream().noneMatch(PreviousSignaturesBridge::isOutOfDate)) {
+            return validities;
+        }
+        final List<SignValidity> integrity = new ArrayList<>(validities);
+        integrity.removeIf(PreviousSignaturesBridge::isOutOfDate);
+        integrity.addAll(integrityOfEachSigner(document));
+        return integrity;
+    }
+
+    private static List<SignValidity> integrityOfEachSigner(final byte[] signature) {
+        final CMSSignedData signed;
+        try {
+            signed = new CMSSignedData(signature);
+        }
+        catch (final CMSException e) {
+            return List.of(new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.UNKOWN_ERROR));
+        }
+        final boolean withContent = signed.getSignedContent() != null;
+        final List<SignValidity> integrity = new ArrayList<>();
+        for (final SignerInformation signer : signed.getSignerInfos().getSigners()) {
+            integrity.add(PreviousSignaturesBridge.integrityOf(signer,
+                    PreviousSignaturesBridge.certificateOf(signer, signed.getCertificates()),
+                    withContent));
+        }
+        return integrity;
     }
 
     private static Properties headless(final boolean checkCertificates) {
