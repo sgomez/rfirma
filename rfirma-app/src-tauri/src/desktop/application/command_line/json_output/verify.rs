@@ -3,11 +3,14 @@
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde::Serialize;
 
+use self::signature_algorithm::rfc_name_and_oid;
 use super::{in_hexadecimal, CertificateOutput};
 use crate::signing::domain::{
     DocumentFinding, DocumentSignature, DocumentSignatures, SignatureStandard, SigningDate,
     Validity, ValidityReason,
 };
+
+mod signature_algorithm;
 
 /// Lo que saca `verify --json`.
 #[derive(Serialize)]
@@ -78,6 +81,23 @@ struct SignerOutput {
 #[derive(Serialize)]
 struct AlgorithmOutput {
     name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    oid: Option<&'static str>,
+}
+
+impl AlgorithmOutput {
+    fn of(jca_name: &str) -> Self {
+        match rfc_name_and_oid(jca_name) {
+            Some((name, oid)) => Self {
+                name: name.to_owned(),
+                oid: Some(oid),
+            },
+            None => Self {
+                name: jca_name.to_owned(),
+                oid: None,
+            },
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -142,8 +162,8 @@ impl VerifiedSignature {
             },
             signature_algorithm: signature
                 .signature_algorithm
-                .clone()
-                .map(|name| AlgorithmOutput { name }),
+                .as_deref()
+                .map(AlgorithmOutput::of),
             signing_time: SigningTimeOutput::of(signature),
             closes_document: signature.closes_document,
             countersignatures: signature.countersignatures.iter().map(Self::of).collect(),

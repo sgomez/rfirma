@@ -131,8 +131,13 @@
           "type": "object",
           "properties": {
             "name": {
-              "description": "El nombre del algoritmo de la firma.",
+              "description": "El nombre de las RFC del algoritmo de la firma; el nombre JCA que dio el puente si no está en la tabla.",
               "type": "string"
+            },
+            "oid": {
+              "description": "El OID del algoritmo. No aparece si el algoritmo no está en la tabla.",
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)+$"
             }
           },
           "required": ["name"],
