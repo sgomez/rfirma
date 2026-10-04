@@ -56,8 +56,8 @@ const meta = {
     placement: null,
     pageSets: { single: null, these: null },
     onChoosePages: fn(),
-    pageChoice: "single",
-    onChangePageChoice: fn(),
+    pageMode: "single",
+    onChangePageMode: fn(),
     viewedPage: 3,
     onSeal: fn(),
     onUnseal: fn(),
@@ -110,7 +110,7 @@ export const VisibleSignatureOnePage: Story = { args: singlePageSeal };
 export const VisibleSignatureSeveralPages: Story = {
   args: {
     signature: visible,
-    pageChoice: "these",
+    pageMode: "these",
     pageSets: severalPages,
     placement: placementOf(RECT, severalPages, "these"),
   },
@@ -119,7 +119,7 @@ export const VisibleSignatureSeveralPages: Story = {
 export const VisibleSignatureEveryPage: Story = {
   args: {
     signature: visible,
-    pageChoice: "all",
+    pageMode: "all",
     pageSets: { single: 3, these: null },
     placement: placementOf(RECT, { single: 3, these: null }, "all"),
   },
@@ -134,7 +134,7 @@ export const VisibleSignatureNotPlaced: Story = {
 export const RangeOutOfDocument: Story = {
   args: {
     signature: visible,
-    pageChoice: "these",
+    pageMode: "these",
     document: { id: "doc-1", name: "contrato.pdf", pages: 6, sizeBytes: 2_400_000 },
     pageSets: { single: 3, these: { only: [10, 40] } },
     placement: placementOf(RECT, { single: 3, these: { only: [10, 40] } }, "these"),

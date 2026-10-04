@@ -65,30 +65,30 @@ describe("el conjunto de páginas", () => {
 });
 
 /**
- * El conjunto propio de cada opción (#188).
+ * El conjunto propio de cada modo (#188).
  *
- * Las tres funciones son la respuesta entera al fallo: sin ellas, la opción
- * activa reescribía la que dejabas y `Solo 1 página` acababa nombrando tres.
+ * Las tres funciones son la respuesta entera al fallo: sin ellas, el modo
+ * activo reescribía el que dejabas y `Solo 1 página` acababa nombrando tres.
  */
 describe("los tres conjuntos del bloque «Colocación»", () => {
   const rect = { x0: 100, y0: 100, x1: 300, y1: 180 };
   const sets: PageSets = { single: 3, these: { only: [2, 5] } };
 
-  it("reads the set of the option in charge, and only that one", () => {
+  it("reads the set of the mode in charge, and only that one", () => {
     expect(pagesOf(sets, "single")).toEqual({ only: [3] });
     expect(pagesOf(sets, "these")).toEqual({ only: [2, 5] });
     expect(pagesOf(sets, "all")).toBe("all");
   });
 
-  it("has no placement without a box, and none for an option that names no page", () => {
+  it("has no placement without a box, and none for a mode that names no page", () => {
     expect(placementOf(null, sets, "single")).toBeNull();
-    // ID-92 preguntado por opción: el recuadro está puesto, pero «Estas
+    // ID-92 preguntado por modo: el recuadro está puesto, pero «Estas
     // páginas» no nombra ninguna, así que con ella delante no hay colocación.
     expect(placementOf(rect, { single: 3, these: null }, "these")).toBeNull();
     expect(placementOf(rect, sets, "these")).toEqual({ rect, pages: { only: [2, 5] } });
   });
 
-  it("stores in the option in charge and leaves the other two alone", () => {
+  it("stores in the mode in charge and leaves the other two alone", () => {
     expect(storing(sets, "single", { only: [7] }, 8)).toEqual({
       single: 7,
       these: { only: [2, 5] },
@@ -101,18 +101,18 @@ describe("los tres conjuntos del bloque «Colocación»", () => {
     expect(storing(sets, "all", "all", 8)).toBe(sets);
   });
 
-  /** Una página es lo único que esa opción puede nombrar, venga lo que venga. */
+  /** Una página es lo único que ese modo puede nombrar, venga lo que venga. */
   it("keeps a single page under «one page only», never a set", () => {
     expect(storing(sets, "single", { only: [4, 9] }, 12).single).toBe(4);
     expect(storing(sets, "single", "all", 12).single).toBe(1);
     expect(storing(sets, "single", null, 12).single).toBeNull();
   });
 
-  it("seeds an option the first time it is chosen, and never again", () => {
+  it("seeds a mode the first time it is chosen, and never again", () => {
     // Se estrena: hereda la 3 del conjunto que venía, que es lo que pide la
     // ficha —«el campo arranca con esa misma página escrita»—.
     expect(activating(NO_PAGE_SETS, "these", { only: [3] }, 8, 1).these).toEqual({ only: [3] });
-    // Ya tenía el suyo: vuelve lo suyo, y no lo que dejó la opción anterior.
+    // Ya tenía el suyo: vuelve lo suyo, y no lo que dejó el modo anterior.
     expect(activating(sets, "these", { only: [3] }, 8, 1).these).toEqual({ only: [2, 5] });
     expect(activating(sets, "single", "all", 8, 1).single).toBe(3);
   });

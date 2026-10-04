@@ -5,30 +5,30 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { AlertIcon } from "../design-system/icons";
 import { Stack } from "../design-system/Stack";
-import type { PageChoice, PageSets } from "../placement/pageSets";
+import type { PageMode, PageSets } from "../placement/pageSets";
 import { type FieldTrouble, messageFor, type PageButton } from "../placement/placementField";
 
 interface PlacementFieldsetProps {
   pageSets: PageSets;
-  pageChoice: PageChoice;
-  onChangePageChoice: (choice: PageChoice) => void;
+  pageMode: PageMode;
+  onChangePageMode: (mode: PageMode) => void;
   pagesText: string;
   onTypePages: (value: string) => void;
   rangeError: FieldTrouble | null;
   pageButton: PageButton | null;
 }
 
-const CHOICES = [
-  { choice: "single", label: "panel.placement.single" },
-  { choice: "these", label: "panel.placement.these" },
-  { choice: "all", label: "panel.placement.all" },
+const MODES = [
+  { mode: "single", label: "panel.placement.single" },
+  { mode: "these", label: "panel.placement.these" },
+  { mode: "all", label: "panel.placement.all" },
 ] as const;
 
 /** El segmentado «Una página | Varias | Todas» y la línea o el campo que va debajo. */
 export function PlacementFieldset({
   pageSets,
-  pageChoice,
-  onChangePageChoice,
+  pageMode,
+  onChangePageMode,
   pagesText,
   onTypePages,
   rangeError,
@@ -46,26 +46,26 @@ export function PlacementFieldset({
   return (
     <>
       <div className="panel__segmented" role="radiogroup" aria-label={t("panel.placement.title")}>
-        {CHOICES.map(({ choice, label }) => (
+        {MODES.map(({ mode, label }) => (
           <label
-            key={choice}
+            key={mode}
             className={
-              pageChoice === choice ? "panel__segment panel__segment--chosen" : "panel__segment"
+              pageMode === mode ? "panel__segment panel__segment--chosen" : "panel__segment"
             }
           >
             <input
               type="radio"
               className="panel__segment-input"
               name={group}
-              checked={pageChoice === choice}
-              onChange={() => onChangePageChoice(choice)}
+              checked={pageMode === mode}
+              onChange={() => onChangePageMode(mode)}
             />
             {t(label)}
           </label>
         ))}
       </div>
 
-      {pageChoice === "single" && pageSets.single !== null && (
+      {pageMode === "single" && pageSets.single !== null && (
         <div className="panel__page-line">
           <span className="panel__page-text">
             {t("panel.placement.singlePage", { page: pageSets.single })}
@@ -74,7 +74,7 @@ export function PlacementFieldset({
         </div>
       )}
 
-      {pageChoice === "these" && (
+      {pageMode === "these" && (
         <Stack className="panel__range">
           <div className="panel__range-row">
             <input

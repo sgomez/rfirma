@@ -30,12 +30,12 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   const [placementRequest, setPlacementRequest] = useState<{
     action: "seal" | "unseal";
   } | null>(null);
-  const { placing, pageChoice, placement, rememberPlacement, choosePages, changePageChoice } =
+  const { placing, pageMode, placement, rememberPlacement, choosePages, changePageMode } =
     usePlacementControls(pdf, keepNowhere, viewedPage);
   const { pagesText, rangeError, pageButton, typePages } = usePlacementField({
     documentPages: pdf?.pageCount ?? 0,
     pageSets: placing.sets,
-    pageChoice,
+    pageMode,
     placement,
     viewedPage,
     onChoosePages: choosePages,
@@ -81,7 +81,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
               pdf={pdf}
               placement={placement}
               onPlace={rememberPlacement}
-              pageChoice={pageChoice}
+              pageMode={pageMode}
               onPageChange={setViewedPage}
               placementRequest={placementRequest}
               onOpen={noop}
@@ -99,8 +99,8 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
                 <p className="rf-label panel__heading">{t("panel.placement.title")}</p>
                 <PlacementFieldset
                   pageSets={placing.sets}
-                  pageChoice={pageChoice}
-                  onChangePageChoice={changePageChoice}
+                  pageMode={pageMode}
+                  onChangePageMode={changePageMode}
                   pagesText={pagesText}
                   onTypePages={typePages}
                   rangeError={rangeError}

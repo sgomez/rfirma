@@ -6,7 +6,7 @@ import { useState } from "react";
 import { expect } from "vitest";
 import {
   activating,
-  type PageChoice,
+  type PageMode,
   type PageSet,
   type PageSets,
   pagesOf,
@@ -98,8 +98,8 @@ function panelWith(props: PanelProps) {
       placement={{ rect, pages: { only: [3] } }}
       pageSets={{ single: 3, these: null }}
       onChoosePages={noop}
-      pageChoice="single"
-      onChangePageChoice={noop}
+      pageMode="single"
+      onChangePageMode={noop}
       viewedPage={3}
       onSeal={noop}
       onUnseal={noop}
@@ -126,7 +126,7 @@ export function renderPanel(
 }
 
 /**
- * El panel con **las tres opciones de verdad** detrás, que es como vive en
+ * El panel con **los tres modos de verdad** detrás, que es como vive en
  * `App.tsx`.
  *
  * Teclear en el campo son varias pulsaciones seguidas y cada una emite el
@@ -138,27 +138,27 @@ export function renderPanel(
 export function renderLivePanel(props: PanelProps = {}) {
   const chosen: (PageSet | null)[] = [];
   function Live() {
-    const choice = props.pageChoice ?? "single";
+    const mode = props.pageMode ?? "single";
     const [sets, setSets] = useState<PageSets>({
       single: 3,
-      these: choice === "these" ? { only: [3] } : null,
+      these: mode === "these" ? { only: [3] } : null,
     });
-    // La opción elegida también vive fuera del panel, como en `App.tsx`: sin
+    // El modo elegido también vive fuera del panel, como en `App.tsx`: sin
     // eso, volver a pulsar «Solo 1 página» no dispara nada —el radio sigue
     // marcado— y el viaje de ida y vuelta no se podría probar.
-    const [pageChoice, setPageChoice] = useState<PageChoice>(choice);
+    const [pageMode, setPageMode] = useState<PageMode>(mode);
     return panelWith({
       ...props,
-      placement: placementOf(rect, sets, pageChoice),
+      placement: placementOf(rect, sets, pageMode),
       pageSets: sets,
       onChoosePages: (next) => {
         chosen.push(next);
-        setSets(storing(sets, pageChoice, next, 27));
+        setSets(storing(sets, pageMode, next, 27));
       },
-      pageChoice,
-      onChangePageChoice: (next) => {
-        setSets(activating(sets, next, pagesOf(sets, pageChoice), 27, 3));
-        setPageChoice(next);
+      pageMode,
+      onChangePageMode: (next) => {
+        setSets(activating(sets, next, pagesOf(sets, pageMode), 27, 3));
+        setPageMode(next);
       },
     });
   }

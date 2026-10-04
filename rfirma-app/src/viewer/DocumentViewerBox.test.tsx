@@ -268,7 +268,7 @@ describe("el conjunto de páginas en la hoja", () => {
         placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: "all" }}
         onPlace={noop}
         onOpen={noop}
-        pageChoice="all"
+        pageMode="all"
       />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));

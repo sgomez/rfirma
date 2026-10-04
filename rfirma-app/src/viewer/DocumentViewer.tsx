@@ -21,7 +21,7 @@ import { ErrorNotice } from "../errors/ErrorNotice";
 import type { StampPreview } from "../signing/stampPreview";
 import type { RubricGap } from "../signing/visibleSignature";
 import "./DocumentViewer.css";
-import type { PageChoice, Placement } from "../placement/pageSets";
+import type { PageMode, Placement } from "../placement/pageSets";
 import type { PdfDocument } from "./pdf";
 import { StampPill } from "./StampPill";
 import { GRIP_PX } from "./signatureBox";
@@ -59,7 +59,7 @@ interface DocumentViewerProps {
    *
    * El visor no la elige: la lee para saber si sellar sustituye o añade. Por omisión, `these`.
    */
-  pageChoice?: PageChoice;
+  pageMode?: PageMode;
   /**
    * La página que se está mirando ha cambiado.
    *
@@ -177,7 +177,7 @@ export function DocumentViewer({
   onPlace,
   onOpen,
   emptyExtra = null,
-  pageChoice = "these",
+  pageMode = "these",
   onPageChange,
   placementRequest = null,
   canPlace = true,
@@ -219,7 +219,7 @@ export function DocumentViewer({
   const { boxElement, sheet, ghost, pixels, drag, tracing, gesturing, nudge } = useViewerBox({
     placement,
     onPlace,
-    pageChoice,
+    pageMode,
     placementRequest,
     canPlace,
     onGesture,

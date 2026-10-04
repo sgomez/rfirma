@@ -183,11 +183,11 @@ export function App({
   const {
     placing,
     setPlacing,
-    pageChoice,
+    pageMode,
     placement,
     rememberPlacement,
     choosePages,
-    changePageChoice,
+    changePageMode,
     placeOnViewedPage,
   } = usePlacementControls(pdf, documents.place, viewedPage);
 
@@ -209,7 +209,7 @@ export function App({
       setPdf(null);
       setPdfFailure(null);
       setSizeBytes(null);
-      setPlacing({ rect: null, sets: NO_PAGE_SETS, choice: "single" });
+      setPlacing({ rect: null, sets: NO_PAGE_SETS, mode: "single" });
       return;
     }
     if (!isAPdf(active)) {
@@ -224,7 +224,7 @@ export function App({
       setPdf(opened.ok ? opened.pdf : null);
       setPdfFailure(opened.ok ? null : opened.failure);
       setSizeBytes(opened.ok ? opened.sizeBytes : null);
-      // Se guarda una sola colocación, la firmada; las otras dos opciones se siembran de ella.
+      // Se guarda una sola colocación, la firmada; los otros dos modos se siembran de ella.
       setPlacing(placingFrom(active.placement, opened.ok ? opened.pdf.pageCount : 0));
       setViewedPage(firstSealedPage(active.placement) ?? 1);
       // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
@@ -384,7 +384,7 @@ export function App({
             placement={placement}
             canPlace={signature.enabled}
             onPlace={rememberPlacement}
-            pageChoice={pageChoice}
+            pageMode={pageMode}
             onPageChange={setViewedPage}
             placementRequest={placementRequest}
             onOpen={openDocument}
@@ -481,8 +481,8 @@ export function App({
               placement={placement}
               pageSets={placing.sets}
               onChoosePages={choosePages}
-              pageChoice={pageChoice}
-              onChangePageChoice={changePageChoice}
+              pageMode={pageMode}
+              onChangePageMode={changePageMode}
               viewedPage={viewedPage}
               onSeal={() => setPlacementRequest({ action: "seal" })}
               onUnseal={() => setPlacementRequest({ action: "unseal" })}
