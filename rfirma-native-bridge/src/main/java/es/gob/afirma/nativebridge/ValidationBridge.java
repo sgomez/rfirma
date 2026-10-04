@@ -1,6 +1,7 @@
 //! El veredicto de conjunto del validador del original sobre un documento (válido, inválido, sin firmas o pendiente de confirmar) y el texto de cada resultado que imprime `verify`; no dice de qué firmante es cada uno: eso es `PreviousSignaturesBridge`.
 package es.gob.afirma.nativebridge;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,9 +11,14 @@ import java.util.Properties;
 import org.spongycastle.cms.CMSException;
 import org.spongycastle.cms.CMSSignedData;
 import org.spongycastle.cms.SignerInformation;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 import es.gob.afirma.core.RuntimeConfigNeededException;
 import es.gob.afirma.core.RuntimeConfigNeededException.RequestType;
+import es.gob.afirma.signers.xml.Utils;
+import es.gob.afirma.signers.xml.XMLConstants;
 import es.gob.afirma.signvalidation.SignValider;
 import es.gob.afirma.signvalidation.SignValidity;
 import es.gob.afirma.signvalidation.SignValidity.SIGN_DETAIL_TYPE;
@@ -117,10 +123,41 @@ final class ValidationBridge {
         return switch (valider) {
             case ValidatePdfSignature pdf -> pdf.validate(document, headless(checkCertificates));
             case ValidateBinarySignature binary -> integrityOnlyUnless(checkCertificates, binary, document);
-            case ValidateXMLSignature xml -> xml.validate(document, checkCertificates);
+            case ValidateXMLSignature xml -> xmlValidities(xml, document, checkCertificates);
             default -> throw new IllegalStateException(
                     "validador sin trato propio: " + valider.getClass().getName());
         };
+    }
+
+    /**
+     * El veredicto del validador del original mas la ligadura de la clave: una firma
+     * que no se sostiene con la clave del certificado que se enseña como firmante no vale.
+     */
+    private static List<SignValidity> xmlValidities(final ValidateXMLSignature xml,
+            final byte[] document, final boolean checkCertificates) {
+        final List<SignValidity> validities =
+                new ArrayList<>(xml.validate(document, checkCertificates));
+        if (!signaturesBindToTheirSigners(document)) {
+            validities.add(new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.NO_MATCH_DATA));
+        }
+        return validities;
+    }
+
+    private static boolean signaturesBindToTheirSigners(final byte[] document) {
+        final Document doc;
+        try {
+            doc = Utils.getNewDocumentBuilder().parse(new ByteArrayInputStream(document));
+        }
+        catch (final Exception e) {
+            return true;
+        }
+        final NodeList signatures = doc.getElementsByTagNameNS(XMLConstants.DSIGNNS, "Signature");
+        for (int i = 0; i < signatures.getLength(); i++) {
+            if (!XmlSignerKeyBinding.holds((Element) signatures.item(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Sin {@code checkCertificates} la caducidad no cuenta pero la integridad si (ADR-0044). */

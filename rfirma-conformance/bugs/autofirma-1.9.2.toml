@@ -184,3 +184,8 @@ master = "present"
 id = "BUG-37"
 title = "La comparación con la última revisión firmada toma la primera firma de una lista sin orden"
 master = "present"
+
+[[bug]]
+id = "BUG-38"
+title = "La validación XML verifica con un KeyValue que no es la clave del certificado del firmante"
+master = "present"

@@ -722,3 +722,33 @@ dirigido al defecto.
   3. Cuando la primera de la lista es una firma anterior, las revisiones que añadieron las firmas posteriores se comparan como cambios hechos después de firmar, y el validador informa de una modificación en un documento que solo recibió firmas.
   4. El resultado de la comprobación cambia con solo renombrar un campo de firma, sin tocar el contenido.
 * **Causa raíz:** La firma de la última revisión se identifica por su posición en una lista que sale de un `HashMap`, en vez de por `af.getRevision(name)`, que el mismo método ya usa más abajo para la certificación.
+
+### BUG-38: La validación XML verifica con un `KeyValue` que no es la clave del certificado del firmante
+
+* **Comprobación del catálogo:** `check_signatures_stops_a_cosign_over_a_xades_whose_key_is_not_its_certificate_key`.
+* **Estado en `master`:** **Sigue presente.** `ValidateXMLSignature.java:299-317` sigue eligiendo la clave de verificación del primer `KeyValue` o del primer certificado de `X509Data`, sin ligarla al certificado que se enseña como firmante.
+* **Código fuente:** `afirma-crypto-validation` · `es.gob.afirma.signvalidation.ValidateXMLSignature.java:101-103, 274-322` (método `validate(byte[], boolean)` y clase anidada `KeyValueKeySelector`); `afirma-crypto-core-xml` · `es.gob.afirma.signers.xml.Utils.java:563-615` (método `getSimpleSignInfoNode`).
+* **Descripción:** `validate` construye el `DOMValidateContext` de cada `ds:Signature` con un `KeyValueKeySelector` y comprueba con él el valor de la firma:
+  ```java
+  final DOMValidateContext valContext = new DOMValidateContext(
+          new KeyValueKeySelector(),
+          nl.item(i)
+          );
+  ```
+  `KeyValueKeySelector.select` recorre el contenido del `KeyInfo` y devuelve la clave pública del **primer** `KeyValue` que encuentra o, si no hay ninguno, la del **primer** certificado de `X509Data`, según cuál aparezca antes:
+  ```java
+  if (xmlStructure instanceof KeyValue) {
+      ...
+      return new SimpleKeySelectorResult(publicKey);
+  }
+  else if (xmlStructure instanceof X509Data) {
+      ...
+      return new SimpleKeySelectorResult(((Certificate)o).getPublicKey());
+  }
+  ```
+  El firmante que se enseña, en cambio, sale siempre del `X509Data`: `Utils.getSimpleSignInfoNode` recoge los nodos `X509Certificate` del `KeyInfo` y toma el primero como certificado de firma. Nada comprueba que la clave que eligió el `KeyValueKeySelector` sea la clave pública de ese certificado.
+* **Comportamiento y consecuencia:**
+  1. Con un `KeyInfo` que solo trae `X509Data`, el caso normal, la clave que verifica es la de ese certificado y las dos coinciden.
+  2. Con un `KeyValue` por delante del `X509Data`, la firma se comprueba con la clave del `KeyValue` mientras que el firmante que se muestra es el titular del certificado del `X509Data`: una firma válida se atribuye a un certificado cuya clave no la verificó.
+  3. El mismo `KeyValueKeySelector` lo usan la validación de documento (`validate`) y la de firma suelta (`validateSign`), de modo que el veredicto de conjunto, el informe de firmas previas y la orden `verify` heredan la elección de clave.
+* **Causa raíz:** La clave de verificación se toma del primer elemento del `KeyInfo` sin ligarla al certificado que después se presenta como firmante, en vez de comprobar el valor de la firma con la clave pública de ese certificado.

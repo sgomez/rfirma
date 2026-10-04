@@ -111,3 +111,9 @@ id = "a_key_of_an_unsupported_type_answers_saf_51"
 outcome = "no-conforme"
 cause = "BUG-35"
 note = "SunPKCS11 no carga la clave Ed25519 del token y el fallo de carga se reporta como SAF_08 antes de comprobar el tipo de clave."
+
+[[known]]
+id = "check_signatures_stops_a_cosign_over_a_xades_whose_key_is_not_its_certificate_key"
+outcome = "no-conforme"
+cause = "BUG-38"
+note = "El KeyValueKeySelector comprueba con el KeyValue del KeyInfo, da la firma por buena y cofirma, aunque el certificado que enseña como firmante sea de otro titular."

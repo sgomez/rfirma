@@ -408,6 +408,8 @@ const theTwoParallelSignersVerified = measuringAll(
 );
 const theXadesEnvelopingSignature = () => theReferenceSignature("xades-enveloping.xml");
 
+const theForeignKeyXadesSignature = () => theReferenceSignature("xades-foreign-key.xml");
+
 /** Una firma `family` sobre `content` con el algoritmo `algorithm`, cuyo resumen es `hash`. */
 const digesting = (algorithm, hash, format, family, content, data = () => null) =>
   aPublishedScript(
@@ -996,6 +998,9 @@ export const SIGNATURE_SCRIPTS = {
   cosignfacturae: aPublishedScript(cosigning("FacturaE", withoutAChoice(), theInvoice)),
   cosignxadesoveranonsignature: aPublishedScript(
     cosigning("XAdES", withoutAChoice(), theChallenge),
+  ),
+  cosignxadescheckingforeignkey: aPublishedScript(
+    cosigning("XAdES", "checkSignatures=true", theForeignKeyXadesSignature),
   ),
   cosigncadeswithoutthedata: aPublishedScript(theCosignWithoutTheDataScript),
   countersigncadestree: aPublishedScript(
