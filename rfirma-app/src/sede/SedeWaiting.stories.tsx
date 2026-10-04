@@ -1,18 +1,24 @@
-//! La historia de la sede en su momento 1, la espera del canal.
+//! Las historias de la sede antes de la petición: el aviso del cliente web antiguo y la espera del canal, con sus dos reparaciones.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { SedeWindow } from "./SedeWindow";
-import { inSedeWindow } from "./sedeStoryFrame";
-import { storyErrand } from "./sedeStoryPort";
+import type { SedeView } from "./SedeView";
+import { sedeStoryMeta } from "./sedeStoryFrame";
+import { sedeErrand } from "./sedeStoryPort";
 
-const meta = {
-  title: "Sede/1 · Espera",
-  component: SedeWindow,
-  decorators: [inSedeWindow],
-  parameters: { layout: "centered" },
-  args: { errands: storyErrand({ kind: "waiting" }) },
-} satisfies Meta<typeof SedeWindow>;
+const meta = { title: "Sede/1 · Espera", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
 
 export default meta;
 
-export const Waiting: StoryObj<typeof meta> = {};
+type Story = StoryObj<typeof meta>;
+
+export const OldWebClient: Story = { args: { errand: sedeErrand({ kind: "oldWebClient" }) } };
+
+export const Waiting: Story = {
+  args: { errand: sedeErrand({ kind: "waiting" }, { origin: null }) },
+};
+
+export const Unreachable: Story = { args: { errand: sedeErrand({ kind: "unreachable" }) } };
+
+export const NoChannel: Story = {
+  args: { errand: sedeErrand({ kind: "noChannel", reason: "channelNotOpened" }) },
+};

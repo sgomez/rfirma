@@ -1,625 +1,383 @@
 # Ventana de sede
 
 La ventana que abre rFirma cuando una **sede electrónica** lo invoca con
-`afirma://`. Es la única interfaz nueva del hito v0.5 «Que llame la sede»
-([#317](https://github.com/sgomez/rfirma/issues/317), mapa
-[#308](https://github.com/sgomez/rfirma/issues/308)), y cubre el trámite entero:
-la espera del canal, el consentimiento, la firma, el desenlace y la salida sin
-certificado utilizable.
+`afirma://`, o una orden de terminal con `-certgui`. Cubre el trámite entero: la
+espera del canal, el consentimiento, la firma, el desenlace y la salida sin
+certificado utilizable. Lo que se ve de cada momento lo dicen sus historias, no
+esta ficha: ver «Historias». Aquí van el flujo entre momentos y el porqué de cada
+decisión.
 
-**Una sola ficha para toda la ventana, no una por momento.** Lo decidió el
-[#332](https://github.com/sgomez/rfirma/issues/332): es **una ventana con una
-secuencia**, no cinco pantallas independientes, y partirla obligaría a leer dos
-ficheros para saber qué ve la persona de principio a fin. Esto es la excepción
+**Una sola ficha para toda la ventana, no una por momento.** Es una ventana con
+una secuencia, no cinco pantallas independientes, y partirla obligaría a leer
+varios ficheros para saber qué ve la persona de principio a fin. Es la excepción
 declarada a la regla de «una ficha por pantalla» de
 [prototyping.md](../agents/prototyping.md).
 
 ## Casos de uso que la usan
 
-- **Firmar desde una sede electrónica** (v0.5) — de principio a fin.
-- **Ceder los datos de identidad a una sede** (`selectcert`) — el mismo recorrido
-  sin el momento de firma: se elige certificado, se envían sus datos y se acaba.
-  **No es identificarse**: la operación devuelve el certificado público X.509 y
-  nada más —no hay reto, ni firma, ni ninguna prueba de que la clave privada sea
-  tuya—, así que la ventana nombra lo que ocurre, una cesión de datos personales,
-  y no promete una identificación
-  ([#730](https://github.com/sgomez/rfirma/issues/730)).
-- **Firmar desde la terminal con `-certgui`** (`rfirma sign|cosign … -certgui`,
-  ADR-0041) — solo el consentimiento y el PIN; ver «Origen «orden de terminal»».
+- **Firmar desde una sede electrónica**, de principio a fin: `sign` y `cosign`.
+- **Ceder los datos de identidad a una sede** (`selectcert`): el mismo recorrido
+  sin el momento de firma. **No es identificarse**: la operación devuelve el
+  certificado público X.509 y nada más —ni reto, ni firma, ni prueba de que la
+  clave privada sea de quien consiente—, así que la ventana nombra una cesión de
+  datos personales y no promete una identificación.
+- **Firmar un lote**, remoto o local, con el mismo consentimiento.
+- **Guardar o cargar ficheros** por orden de la sede, donde la ventana solo
+  nombra lo que el diálogo del portal está preguntando.
+- **Firmar desde la terminal con `-certgui`** (ADR-0041): solo el consentimiento y
+  el secreto; ver «Origen orden de terminal».
 
-No la usa el recorrido de firma local: ahí la interfaz es
-[`ventana-principal.md`](ventana-principal.md) y su
-[`panel-de-firma.md`](panel-de-firma.md), y esta ventana **no sustituye nunca**
-lo que hubiera abierto en ellas.
+No la usa el recorrido de firma local, que es de
+[`ventana-principal.md`](ventana-principal.md) y [`panel-de-firma.md`](panel-de-firma.md).
 
 ## Qué resuelve
 
-Hoy AutoFirma, invocado por una sede, enseña un selector de certificados a
-secas: **no dice quién pide la firma, ni qué se va a firmar, ni que haya una
-sede detrás**; y entre que se acepta y que la sede responde no aparece nada en
-absoluto. Esta ventana pone las dos cosas que faltan —una **confirmación
-escrita** antes de firmar y **acuse visible** después— sin arrastrar la ventana
-principal a un trámite que es ajeno y corto.
+AutoFirma, invocado por una sede, enseña un selector de certificados a secas: no
+dice quién pide la firma, ni qué se va a firmar, ni que haya una sede detrás; y
+entre que se acepta y que la sede responde no aparece nada. Esta ventana pone lo
+que falta: una **confirmación escrita** antes de firmar y un **acuse visible**
+después, sin arrastrar la ventana principal a un trámite ajeno y corto.
 
 ## Forma de la ventana
 
-**Ventana tipo diálogo de 520 × 420 px, con la barra de título del sistema.**
-No lleva la cabecera de la aplicación, ni menú, ni bandeja de recientes, ni pie
-de destino: sugerir que hay más dentro invita a buscar cosas que no están. Dos
-regiones fijas en los cinco momentos:
+**Diálogo de 520 × 420 px con la barra de título del sistema**, sin cabecera de
+aplicación, menú, bandeja de recientes ni pie de destino: sugerir que hay más
+dentro invita a buscar cosas que no están. Dos regiones fijas en todos los
+momentos: un **cuerpo** que se desplaza en vertical y un **pie** con raya
+superior y las acciones a la derecha. En los momentos de firma y de salida el pie
+mide **56 px clavados**, para que aparecer o desaparecer una acción no mueva nada.
 
-1. **Cuerpo**, `flex:1`, con 16 px de relleno arriba y abajo y `--rf-space-md` a
-   los lados: la caja útil son **≈329 px**.
-2. **Pie**, con raya superior y las acciones a la derecha. En los momentos de
-   firma y de salida mide **56 px clavados**, con `height` fijo, para que
-   aparecer y desaparecer «Cancelar» no mueva nada de sitio.
+- **La barra de título es del escritorio, no del frontal.** Una barra pintada en
+  HTML no la conoce el gestor de ventanas: la ventana no se podía arrastrar. Con
+  las decoraciones del sistema vienen el título, la cruz, el menú del gestor y el
+  arrastre, ya en el idioma y el tema del escritorio; y la ventana mide lo que se
+  le pide, sin el inset que GNOME/Wayland daba a las ventanas sin decorar.
+- **El cuerpo no recorta** (`overflow: hidden` fuera): el desplegable de
+  certificados flota por encima de la ventana, y recortarlo fue un defecto medido
+  ([design-system.md](design-system.md#desplegable)).
+- **Llena el hueco que le da la ventana** en lugar de fijar los 520 × 420 en el
+  CSS: fijar el tamaño en dos sitios dejó un fondo desnudo alrededor cuando las
+  cifras no coincidían.
+- **Las historias la enseñan centrada, con su tamaño y un marco de ventana.**
 
-**La barra de título la pone el escritorio, no el frontal.** Se dibujó una
-propia de 32 px con el nombre y la cruz, y era un error: una barra pintada en
-HTML no la conoce el gestor de ventanas, así que la ventana **no se podía
-mover, ni arrastrar, ni nada de lo que se espera de una ventana**. Con las
-decoraciones del sistema vienen el título, la cruz, el menú del gestor y el
-arrastre, ya en el idioma y el tema del escritorio. Además, quitarlas hacía que
-GNOME/Wayland diera 26 px de inset por lado —+52 en cada eje, constante sea cual
-sea el tamaño pedido—, y con ese margen el diálogo quedaba flotando dentro de un
-marco vacío; con las decoraciones puestas, la ventana mide lo que se le pide.
+## Flujo entre momentos
 
-En los artboards la ventana se dibuja centrada sobre un lienzo de 720 × 600 px
-que representa el escritorio, para que se vea su tamaño real.
+Los momentos los publica el backend por `SiteErrandPort`; la ventana los obedece
+y no lleva relojes propios de espera. La numeración es la de las historias y la
+de las cabeceras de los componentes.
+
+1. **Aviso del cliente web antiguo (0).** Si la página trae un cliente anterior al
+   mínimo, el aviso sale antes de abrir el canal y retiene el arranque sin
+   detenerlo: mientras se lee, la sede no encuentra a nadie escuchando. Descartarlo
+   —con su botón o con Escape— deja el trámite en la espera normal.
+2. **Espera del canal (1).** Mientras el canal no se abre. Si el reloj de respaldo
+   del backend vence sin que el navegador conecte, el momento pasa a «no ha
+   llegado»; si rFirma ya sabe que no va a abrirse (sin puertos o sin CA local),
+   se enseña la reparación sin esperar. Cerrar abandona el trámite.
+3. **Marcar el área de la firma visible (1c).** Solo si la sede pide firma PAdES
+   con firma visible. Llega antes del consentimiento y reutiliza el visor de la
+   ventana principal. Cancelar cierra el diálogo del área, no el trámite
+   (ADR-0019).
+4. **Consentimiento (2).** El corazón del trámite. Siempre aparece, también con un
+   solo certificado; consentir lleva a la firma.
+5. **Confirmar lo que señala el validador (2b).** Solo cuando el original no
+   firmaría sin confirmación. Continuar repite la validación y el backend publica
+   el siguiente momento; cancelar contesta `CANCEL` a la sede y deja el desenlace
+   «cancelado».
+6. **Firmando (3).** Dos tramos: rFirma firma, y la respuesta viaja a la sede.
+   Guardar y cargar ficheros pasan por una variante propia, donde la persona
+   contesta en el diálogo del portal.
+7. **Desenlace (4).** Firmado, cancelado, lote, guardado, cargado o rechazado. Se
+   cierra solo a los 15 segundos, salvo los rechazos que piden actuar.
+8. **Sin certificado utilizable (5).** Alternativa al consentimiento cuando no hay
+   nada que elegir. Salir abandona el trámite.
 
 ### Cuatro invariantes
 
-1. **Una sede no provoca una firma silenciosa sin permiso de la persona.** La
-   pantalla de consentimiento aparece también cuando sólo hay un certificado,
-   aunque la sede pida la selección automática con `headless` o
-   `mandatoryCertSelection=false`; solo se la salta, con un único candidato, si
-   la persona lo ha permitido en Preferencias y la pantalla no tiene ningún
-   aviso que enseñar, como el de las firmas no registradas (ADR-0032).
-2. **No hay bandeja, ni destino, ni memoria.** El documento que manda la sede
-   no se recuerda en ninguna parte y no entra en recientes. **El visor solo
-   aparece cuando la sede pide marcar el área de la firma visible** (momento
-   1c), y es el de la ventana principal sin su botonera de abrir documentos.
-3. **Nunca se enumera lo que la sede descartó**, ni el criterio con que lo
-   descartó. Eso es política de la sede, no información de quien firma.
-4. **Los dos canales van desacompasados a propósito.** Lo que la sede recibe
-   —la firma, `CANCEL` o el código de error— sale de inmediato, sin esperar a
-   que nadie cierre nada ([#316](https://github.com/sgomez/rfirma/issues/316)).
-   Esta ventana no es el acuse: es donde vive la precisión que el código de
-   error no puede llevar. **La excepción es el rechazo de la petición misma**
-   —parámetros mal formados (`SAF_03`), operación que no existe (`SAF_04`),
-   servlet en el propio equipo (`SAF_13`)—, siempre que nazca al analizarla: el
-   original lo enseña en su diálogo de error y no contesta hasta que se cierra,
-   y rFirma hace lo mismo con su desenlace de rechazo.
+1. **Una sede no provoca una firma silenciosa.** El consentimiento aparece aunque
+   la sede pida selección automática; solo se salta, con un único candidato, si la
+   persona lo permitió en Preferencias y no hay ningún aviso que enseñar
+   (ADR-0032).
+2. **No hay bandeja, ni destino, ni memoria.** El documento de la sede no se
+   recuerda ni entra en recientes. El visor solo aparece en el momento 1c.
+3. **Nunca se enumera lo que la sede descartó**, ni su criterio: es política de la
+   sede, no información de quien firma.
+4. **Los dos canales van desacompasados a propósito.** Lo que recibe la sede (la
+   firma, `CANCEL` o el código de error) sale de inmediato; la ventana no es el
+   acuse, es donde vive la precisión que el código no puede llevar. La excepción
+   es el rechazo de la petición misma al analizarla: el original lo enseña en su
+   diálogo de error y no contesta hasta que se cierra, y rFirma hace lo mismo.
 
-### Un solo documento por petición
+## Decisiones y su porqué
 
-`dat` trae **un** PDF. El `batch` está **fuera de la v0.5** (contrato del
-protocolo §6; «Out of scope» del mapa #308). Se dibujó igualmente como
-comprobación de resistencia, y la respuesta está medida: **la ventana no crece
-con N documentos**, mengua. El `batch` viaja con URL de prefirma y de posfirma y
-los documentos los resuelve el `DocumentManager` **del servidor de la sede**, así
-que rFirma no recibe los PDF sino una definición de lote: no hay título, ni
-páginas, ni tamaño que listar. Si algún día entra, la ventana enseña **un
-recuento** —«12 documentos»— y nada más: ni lista, ni nombres, ni desplazamiento.
+### Espera y reparación
 
-## Estructura, momento a momento
-
-### 1 · Esperando el canal — `SedeEspera`
-
-Qué se ve mientras el canal no se abre, y qué se ve cuando ya no va a abrirse.
-
-- **Cuándo se hace visible la ventana**: en lanzamientos con canal, la ventana
-  se crea inicialmente oculta (`.visible(false)`). Se hace visible (`show()`):
-  1. Con el primer mensaje válido del navegador (eco u operación), revelándose
-     directamente en el momento de consentimiento.
-  2. Si expira el plazo del reloj de respaldo del backend (~30 s) sin que el
-     navegador conecte, revelándose con «La petición no ha llegado».
-  3. De inmediato en lanzamientos sin canal (servidor intermedio, callejón sin
-     puertos o sin CA local, rechazos directos).
-  El retardo de gracia antes de pintar desaparece: la ventana nunca es visible
-  antes de que haya algo que enseñar.
-- **Quién decide «no ha llegado»**: lo decide el backend mediante su reloj de
-  respaldo, no la ventana con un temporizador propio. El backend publica el
-  momento `unreachable` por el mismo puerto que los demás momentos y la ventana
-  lo obedece. **Nunca se cierra sola.**
-- El camino de reparación **no diagnostica**: rFirma no puede saber si el
-  permiso se denegó, así que es un **conmutador de dos recetas** —Chrome y
-  Firefox— y la persona elige la suya. Sólo texto, sin capturas: el aviso del
-  navegador se describe **por su forma** («la franja bajo la barra de
-  direcciones», «el panel junto a la barra») citando el botón `Permitir`.
-- **El bloque de la CA local va aparte del conmutador y primero en Chrome**: sin
-  CA el navegador ni llega a preguntar.
-- La dirección `chrome://settings/content/loopbackNetwork` **se copia, no se
-  pulsa**: un `chrome://` no es navegable desde fuera.
+- **La ventana nace oculta y se revela cuando hay algo que enseñar.** Un retardo
+  de gracia para pintar no hace falta: la ventana nunca es visible antes de tener
+  contenido.
+- **Quien decide «no ha llegado» es el backend**, no un temporizador del frontal.
+  Nunca se cierra sola.
+- **La reparación no diagnostica.** rFirma no puede saber si el permiso del
+  navegador se denegó, así que son dos recetas, Chrome y Firefox, y la persona
+  elige la suya. Solo texto, sin capturas: el aviso del navegador se describe por
+  su forma y se cita el botón que hay que pulsar.
+- **El bloque de la CA local va aparte y primero en Chrome**: sin CA el navegador
+  ni llega a preguntar.
+- **La dirección de ajustes de Chrome se copia, no se pulsa**: un `chrome://` no
+  es navegable desde fuera.
 - **La frase obligatoria vive en el pie**, no como tercer paso de cada receta:
-  «Tras permitir, vuelve a la sede y pulsa **Reintentar**». `Reintentar` es un
-  botón **de la sede**, y por eso esta ventana no lo tiene.
-- Cerrar durante la espera **abandona el trámite** y libera el `idsession`, sin
-  confirmación.
+  «reintentar» es un botón de la sede, y esta ventana no lo tiene.
+- **Quien avisa de que el canal no se abre es esta ventana, no el escritorio**: el
+  aviso llega donde duele y con la reparación al lado, así que el escritorio no
+  estrena ninguna franja de diagnóstico para lo mismo.
+- **Límite de espacio medido**: con la caja útil de unos 329 px, la receta de
+  Chrome deja seis píxeles de margen. Si la prosa crece, lo primero que cae bajo
+  el pliegue es el botón de copiar, que es justo lo que hay que enseñar.
 
-Medido con la caja útil de 328–333 px: «esperando» ocupa 207 px, la receta de
-Firefox 260 px y la de Chrome **322 px** — le quedan seis píxeles. Si la prosa
-vuelve a crecer, lo primero que cae bajo el pliegue es el botón `Copiar` y la
-ruta por el candado, que es justo lo que hay que enseñar.
+### Consentimiento
 
-### 1b · La página está desactualizada — sin artboard
+- **Orden del cuerpo**: origen, certificado, nota de acotado si la hay, caja del
+  documento con sus firmas previas; pie fijo con cancelar y la acción principal.
+  La nota de acotado va debajo del desplegable porque habla de lo que la lista
+  contiene y se lee después de verla.
+- **El origen se nombra a secas**: atribuye sin afirmar, porque el `Origin` es
+  falsificable. Dice también el formato pedido, para que nadie firme a ciegas un
+  reto de autenticación creyendo que es un documento. Sin origen válido queda una
+  etiqueta serena en la misma línea, sin caja ni icono: una caja con dos líneas
+  daba la misma información con más ruido.
+- **El documento se nombra solo por lo que dice de sí mismo** (título de los
+  metadatos, páginas, tamaño). La petición no trae el nombre del fichero, y
+  fabricar uno sería inventarlo. Sin título y sin origen no se rellena ningún
+  silencio con un invento.
+- **La cofirma y la contrafirma se distinguen antes de consentir**: firmar junto a
+  las firmas existentes no es firmar sobre ellas, y es la única diferencia que la
+  persona puede juzgar. La contrafirma dice además sobre cuáles.
+- **El selector de certificado es el de la ventana principal, el mismo
+  componente** ([`panel-de-firma.md`](panel-de-firma.md#certificado)). La lista
+  mide como mucho 300 px y queda anclada bajo el campo, flotando aunque el cuerpo
+  se desplace. El rótulo es el mismo también en `selectcert`: el título y la línea
+  de qué se envía ya distinguen el caso.
+- **La rama de identidad nombra la cesión de datos**, no una identificación que
+  no ocurre. Negarla con una frase («esto no es una firma») es la verborrea que
+  la regla de redacción de [design-system.md](design-system.md) ya echó de la
+  ventana: decir lo que se hace basta.
+- **Las firmas previas son el aviso compacto del panel de firma**, el mismo, con
+  el mismo diálogo «Ver firmas» ([`dialogo-ver-firmas.md`](dialogo-ver-firmas.md)),
+  dentro de la caja del documento. El porqué está en
+  [`panel-de-firma.md`](panel-de-firma.md#decisiones). Un lote no trae los PDF, así
+  que no hay firmas previas que contar.
+- **La sede no bloquea ni pide confirmación por una firma no válida**, como
+  AutoFirma: esta pantalla ya es un consentimiento y lo informa. «¿Firmar de todos
+  modos?» es solo de la ventana principal.
+- **Una firma que rFirma no sabe leer no es un rechazo**: es desconocimiento
+  nuestro, y rechazar dejaría a rFirma rechazando documentos que AutoFirma sí
+  firma. La advertencia vive dentro del mismo consentimiento, con tono de
+  información y no de alarma, y esa firma cuenta como un problema más en el aviso.
+- **El lote remoto solo da un recuento**: rFirma no recibe los PDF, sino una
+  definición de lote que resuelve el servidor de la sede, así que no hay títulos
+  que listar. El lote local sí trae el resumen de cada elemento, en una lista
+  desplazable dentro del marco fijo, sin tapar el desplegable ni el pie.
+- **Se firma con el teclado, y por eso hay cuenta atrás.** Con el certificado
+  recordado elegido, la acción principal se lleva el foco y un Intro consiente.
+  Para que ese Intro no llegue por descuido, la acción nace desactivada con la
+  cuenta atrás en su etiqueta y a los tres segundos queda activa y con el foco;
+  si la persona ya movió el foco, no se le quita. Se apaga en
+  [Preferencias](preferencias.md).
+- **Una acción principal por pantalla**: `--primary` para ella, `--ghost` para
+  salir y para las microacciones, y `--secondary` no se usa en ningún momento de
+  esta ventana.
 
-Cuando la invocación trae `jvc` menor que 1 —un `autoscript.js` anterior al
-mínimo del original—, la ventana se enseña al arrancar con un aviso: título
-«Esta página está desactualizada», una frase que dice que la pieza que habla con
-rFirma es antigua y puede tener errores o no ser segura, que se puede seguir y a
-quién avisar si algo falla, y un único botón, `Entendido`, en `--primary`.
+### Marcar el área
 
-**El aviso retiene el arranque, no lo detiene.** Como el diálogo modal del
-original, sale antes de abrir el canal: mientras se lee, la sede no encuentra
-a nadie escuchando. `Entendido` y la cruz hacen lo mismo: descartan el aviso y
-el trámite arranca como uno normal, con su espera.
+- **Es el único momento en que la ventana crece**, porque en la caja útil no cabe
+  una página que se pueda marcar. Se reparte como la ventana principal: visor a
+  la izquierda y barra a la derecha con el bloque «En qué páginas» del panel de
+  firma.
+- **Ni modelo ni rúbrica**: lo que va dentro del recuadro lo pone la sede
+  (ADR-0019).
+- **Cerrar con la cruz es pulsar cancelar**, como cerrar el diálogo del área en el
+  original. Con la firma visible obligatoria y sin área en la petición, la sede
+  recibe `SAF_43` y queda el desenlace «cancelado»; en los demás casos sigue el
+  consentimiento.
 
+### Confirmar
 
-El corazón del ticket: la pantalla que hoy no existe. De arriba abajo: el
-origen, el selector «Certificado», la nota de acotado si la hay, la caja
-del documento con sus firmas previas y, en el pie fijo, `Cancelar` y la acción
-principal. Si el contenido no cabe —con las firmas desplegadas—, el cuerpo se
-desplaza y el pie no se mueve.
+- **Se pregunta con las palabras del original**, elegidas por el código del
+  mensaje que cruza la frontera. Un código que rFirma no sepa redactar sale con
+  una frase genérica que lo nombra, porque es lo único que permite reportarlo:
+  rFirma no reinterpreta ni gradúa un aviso cuyo sentido conoce el original.
+- **Llega antes del consentimiento**, así que no hay documento que resumir ni
+  certificado que elegir. El original pregunta lo del PDF certificado después de
+  elegir certificado porque lo descubre al firmar; rFirma lo descubre al leer y
+  pregunta antes, con el mismo resultado para la sede.
+- **Con `headless=true` no hay pregunta**: la sede recibe `SAF_50`. Con
+  `allowSigningCertifiedPdfs=false`, el PDF certificado se rechaza sin preguntar
+  con `SAF_35`.
 
-- **Origen**: `sede.ejemplo.gob.es pide tu firma de un documento PDF.` (o `de
-  un reto de autenticación`, `de un documento XML`, `de una factura
-  electrónica`, según el formato de la petición; o `pide tus datos de
-  identidad.` para `selectcert`). Nombrar el origen a secas **atribuye sin
-  afirmar**, que es lo que pedía el
-  [#312](https://github.com/sgomez/rfirma/issues/312); decir el formato es lo
-  que pedía el [#531](https://github.com/sgomez/rfirma/issues/531) — nadie
-  firma a ciegas un reto de autenticación pensando que es un documento. El
-  lote no lo dice, porque el momento no trae formato: sigue diciendo «lote de
-  N». Cuando la petición no dice de dónde viene, lo dice la misma línea
-  `.rf-title` de 15 px, en el mismo sitio y sin caja ni icono: «**Una página sin
-  identificar** pide tu firma.», o «…pide tus datos de identidad.» en
-  `selectcert`.
-- **Documento**: sólo lo que el PDF dice de sí mismo —título de sus metadatos si
-  lo trae, páginas, tamaño, y si ya viene firmado, el aviso de **firmas
-  previas** dentro de la misma caja (abajo)—.
-  **No hay nombre de fichero ni ruta**, porque el protocolo no los trae: el
-  `extraData` con el nombre va en la **respuesta**, no en la petición.
-- **Contrafirma**: cuando la sede pide `countersign`, el aviso no es el de la
-  cofirma —firmar *junto a* las firmas que hay— sino el de firmar **sobre**
-  ellas, y dice sobre cuáles: «Ya viene firmado: la tuya será una contrafirma
-  sobre todas las firmas que ya tiene» para el objetivo `tree`, y «sobre las
-  últimas firmas que tiene» para `leafs`. Es la única diferencia que la persona
-  puede juzgar antes de consentir, y sin ella las dos peticiones se leerían
-  igual.
-- **Lote local**: además de «lote de N», una lista desplazable con una fila
-  por elemento —su identificador y qué se le pide, «un documento PDF (firma)»,
-  «un reto de autenticación (cofirma)», «una factura electrónica (contrafirma
-  de todas las firmas)»…—, dentro del marco fijo de la ventana
-  y sin tapar el desplegable ni el pie. El lote remoto sigue sin lista: sólo
-  el local trae, aparte de la cuenta, el resumen de cada elemento
-  ([#549](https://github.com/sgomez/rfirma/issues/549)).
-- **Certificado**, justo debajo del origen: **el selector de la ventana
-  principal, el mismo componente**, descrito en
-  [`panel-de-firma.md`](panel-de-firma.md#certificado): la caja de dos líneas,
-  el buscador al abrir, las filas con la entidad primero, las etiquetas de
-  almacén y la caducidad, y los grupos «Disponibles» / «No se pueden usar». Aquí
-  la lista mide 300 px como mucho y queda anclada debajo del campo,
-  **flotando** aunque el cuerpo se desplace, como manda el
-  [desplegable del sistema de diseño](design-system.md#desplegable). El rótulo
-  dice «Certificado» también en `selectcert`: el título «…pide tus datos de
-  identidad» y la línea de qué se envía ya distinguen el caso.
-- **Qué se envía**, en una línea: «Se enviarán tu **nombre**, tu **NIF**, el
-  **emisor** del certificado y su **número de serie**».
-- **Acción principal**: `Firmar`, o `Enviar mis datos` cuando la operación es
-  `selectcert`. `Cancelar` en `--ghost`.
-- **Se firma con el teclado.** Con el certificado recordado ya elegido en el
-  desplegable, la acción principal se lleva el foco y un Intro consiente sin
-  tocar el ratón. Para que ese Intro no llegue por descuido, la acción nace
-  **desactivada con una cuenta atrás** en su propia etiqueta —`Firmar (3)`,
-  `(2)`, `(1)`— y a los tres segundos se queda en `Firmar`, activa y con el
-  foco; si la persona ya ha llevado el foco a otro sitio, no se lo quita. La
-  cuenta atrás se apaga en Preferencias ([preferencias.md](preferencias.md)),
-  y entonces la acción nace activa y con el foco.
-
-**Las firmas previas**, dentro de la caja del documento, son el aviso compacto
-de [`panel-de-firma.md`](panel-de-firma.md#el-aviso-de-firmas-previas), el
-mismo: una línea con el icono de la peor validez, «Junto a **N firmas**»,
-« · **M caducadas**» o « · **M problemas**», y «Ver firmas →», que abre el mismo
-diálogo [«Ver firmas»](dialogo-ver-firmas.md) de la ventana principal; no se
-dibuja otro sobre la sede. El tono va en el icono y en el borde de la caja.
-«Ya lo firmaste tú» va en una franja al pie de la caja. Las reglas —qué cuenta
-como problema, la validez de cada firma y qué es «ya lo firmaste tú»— son las
-del panel.
-
-**La sede no bloquea ni pide confirmación** por una firma no válida, como
-AutoFirma cuando lo invoca una sede: esta pantalla ya es un consentimiento, lo
-informa, y el botón sigue diciendo `Firmar`. «¿Firmar de todos modos?» es solo
-de la ventana principal. Un lote no trae los PDF, así que no hay firmas previas
-que contar.
-
-Cinco situaciones dibujadas: un certificado; varios **acotados por la sede** —con
-la nota «*sede* ha limitado los certificados válidos» **debajo** del desplegable,
-porque es una nota sobre lo que la lista contiene y se lee después de verla—;
-entrega de identidad sin firma; el PDF **sin título y sin origen**, que junta
-los dos silencios y **no rellena ninguno con un invento**; y **ya firmado y con
-alguna firma no reconocida** (#355, #363).
-
-En esta quinta situación el PDF trae alguna firma cuyo `/SubFilter` rFirma no
-sabe leer. **No es un rechazo**: esto es desconocimiento nuestro, y rechazarlo
-dejaría a rFirma rechazando documentos que AutoFirma sí firma (ID-298). A
-diferencia del PDF certificado, que invalida con certeza y por eso tiene su
-propia pregunta (2b), aquí la pregunta vive **dentro del mismo
-consentimiento** — no hay un
-sexto momento. La frase es de información, no de alarma: «rFirma no reconoce
-alguna de las firmas que ya tiene este documento, y al añadir la tuya podrían
-dejar de verse como válidas», con el mismo icono de información y el mismo
-borde de 1 px que el origen sin identificar (ID-302). El botón sigue diciendo
-`Firmar`, y **«firmas sin registrar» no aparece en la interfaz**. Cancelar aquí
-es cancelar el trámite, como en cualquier otra situación del consentimiento.
-En el aviso compacto, esa firma cuenta como un problema más, y en «Ver firmas»
-es una ficha «No válida» con el motivo «rFirma no conoce este tipo de firma».
-
-### 1c · Marcar el área de la firma visible — sin artboard
-
-Solo cuando la sede pide una firma PAdES con `visibleSignature=want` u
-`optional`. Llega **antes** del consentimiento, como el diálogo de colocación
-del original, y es el único momento en el que la ventana **crece**: pasa a
-1080 × 660 px mientras dura y vuelve a 520 × 420 al salir, porque en la caja útil
-de 329 px no cabe una página que se pueda marcar. Se reparte como la ventana
-principal: el visor a la izquierda y una barra de 380 px a la derecha, con el
-mismo relleno que el panel de firma, que es donde irá el modelo cuando lo haya.
-
-- **Barra**: el título «Marca dónde va tu firma», debajo una frase que dice que
-  la página pide que la firma se vea y cómo se traza el recuadro, y el bloque
-  «En qué páginas» del panel de firma (`panel-de-firma.md`) —«Una página»,
-  «Varias», «Todas»— con su línea o su campo.
-- **Visor**: el de la ventana principal (`visor-de-documento.md`) con el PDF de
-  la sede, sin firma visible de vista previa: la persona traza el recuadro
-  sobre una página y puede moverlo, redimensionarlo y cambiar de página. El
-  recuadro va a las páginas que diga el segmentado, como en el diálogo del
-  original, que también escribe `signaturePages`. Ni modelo ni rúbrica: lo que
-  va dentro del recuadro lo pone la sede (ADR-0019).
-- **Acción principal**: `Continuar`, desactivada hasta que hay recuadro y
-  mientras el campo de «Varias» no nombre páginas válidas. Lleva
-  al consentimiento, y el área marcada sustituye a la que trajera la petición.
-- `Cancelar` en `--ghost` **no cancela el trámite**: cierra el diálogo del área,
-  y lo que sigue depende de la petición (ADR-0019). Con `want` y sin área en la
-  petición, la sede recibe `SAF_43` y queda el desenlace «cancelado»; en los
-  demás casos se pasa al consentimiento, y se firma donde decía la petición o
-  sin firma visible.
-- Cerrar la ventana con la X en este paso es pulsar `Cancelar`, como cerrar el
-  diálogo del área en el original: con `SAF_43` la ventana se cierra; en los
-  demás casos sigue abierta, ya en el consentimiento.
-- Si el PDF no se deja abrir, el cuerpo lo dice en una línea y solo queda
-  `Cancelar`.
-
-### 2b · Hay que confirmar — sin artboard
-
-Sólo cuando el original no firmaría **sin que la persona lo confirme**: la sede
-pide `checkSignatures=true` y el validador no da por buenas las firmas que el
-documento ya trae (PDF sospechoso de haber sido modificado tras la última firma,
-o formulario cuyos campos cambiaron después de firmarse), o el PDF está
-**certificado** y la sede no dijo nada de `allowSigningCertifiedPdfs`. Con
-`headless=true` no hay pregunta: la sede recibe `SAF_50` y aquí no se enseña
-nada; con `allowSigningCertifiedPdfs=false`, el PDF certificado se rechaza sin
-preguntar con `SAF_35`.
-
-El original hace la pregunta del PDF certificado después de elegir el
-certificado, porque la descubre al firmar; rFirma la descubre al leer el
-documento y la hace antes, con el mismo resultado para la sede.
-
-Llega **antes** del consentimiento, así que no hay documento que resumir ni
-certificado que elegir: sólo la pregunta y dos salidas. La pregunta se enseña
-**con las palabras del original**, traducidas a los cinco idiomas y elegidas por
-el código del mensaje que cruza la frontera; un código que rFirma todavía no
-sepa redactar sale con una frase genérica que lo nombra, porque es lo único que
-permite reportarlo. rFirma no reinterpreta ni gradúa el aviso: quien sabe lo que
-ha visto es el original.
-
-- `Continuar` —acción principal— fija la clave que el original pide y **repite
-  la validación**; el momento que sigue lo publica el backend, y con las firmas
-  ya confirmadas es el consentimiento.
-- `Cancelar` es contestar `CANCEL` a la sede, y por eso deja el desenlace
-  «cancelado» en pantalla como cualquier otra negativa: no es marcharse de una
-  espera, es haber dicho que no a lo que se tenía delante.
-
-### 3 · Firmando — `SedeFirmando`
-
-Qué enseña la ventana entre que la persona acepta y que la firma vuelve a la
-sede. Hoy no enseña nada, y ése es exactamente el fallo.
+### Firmando
 
 - **No es el diálogo de progreso de la ventana principal.** Allí se listan las
-  tres fases —prefirma, firma, posfirma— porque la persona ha pedido un fichero
-  y el reparto trifásico explica por qué tarda. Aquí no hay destino que enseñar
-  y contar «prefirma» sería estado interno del motor. Ver
-  [dialogo-progreso-firma.md](dialogo-progreso-firma.md).
-- **Dos momentos, y ninguno es criptográfico**: «Firmando», con el certificado
-  que la persona acaba de elegir —lo único que puede reconocer como suyo—, y
-  «Enviando la firma a *sede*», que importa porque es el tramo en el que ya no
-  depende de rFirma.
-- **La barra avanza de verdad** entre los dos, 45 % y 88 %: si marcaran lo mismo,
-  las dos fases se verían iguales.
-- **Hasta dónde se puede parar**: mientras rFirma firma, `Cancelar` es limpio
-  —la sede no ha recibido nada—. Cuando la respuesta ya va de camino no hay nada
-  que cancelar, y **el pie se queda vacío** en vez de ofrecer un botón que
-  mentiría.
-- **Cero acciones principales** en toda la pantalla.
+  fases trifásicas porque hay un fichero que guardar; aquí contar la «prefirma»
+  sería estado interno del motor
+  ([`dialogo-progreso-firma.md`](dialogo-progreso-firma.md)).
+- **Dos momentos y ninguno criptográfico**: firmar, con el certificado que la
+  persona acaba de elegir —lo único que reconoce como suyo—, y devolver la firma,
+  que importa porque es el tramo que ya no depende de rFirma. La barra avanza de
+  verdad entre ambos para que no se vean iguales.
+- **Hasta dónde se puede parar**: mientras rFirma firma, cancelar es limpio —la
+  sede no ha recibido nada—. Con la respuesta ya en camino no hay nada que
+  cancelar y el pie se queda vacío en vez de ofrecer un botón que mentiría.
+- **Guardar y cargar no preguntan en esta ventana** (ADR-0011): la orden abre el
+  diálogo del portal y aquí solo se nombra el fichero que propone la sede, nunca
+  una ruta.
 
-### 4 · Desenlace — `SedeDesenlace`
+### Desenlace
 
-Tres desenlaces, y en los tres la sede ya ha recibido su respuesta.
+- **Tres tipos de final y en todos la sede ya tiene su respuesta.** Firmado y
+  cancelado llevan la fila del documento —es lo único que dice qué se acaba de
+  firmar—; el rechazo no, porque ahí nunca llegó a haber documento.
+- **Firmado dice que rFirma no guarda copia**, la única frase que no se deduce
+  mirando: la aplicación sí tiene recientes y aquí no entra nada. El cancelado no
+  añade nada, porque el título ya lo dice.
+- **El rechazo se enseña aunque la persona no pueda arreglarlo**: acaba de
+  arrancarse un programa en su equipo a petición de una web, y un rFirma que
+  aparece y desaparece en silencio es indistinguible de uno roto. Lo accionable es
+  el detalle copiable, para llevárselo a quien mantiene la sede.
+- **Cada rechazo propio de la sede lleva una acción** (reintentar, contactar con la
+  sede, cerrar la otra aplicación, elegir otro certificado) y es lo que protege
+  `REFUSAL_ACTION_OF`. Los rechazos del token, el puente y el documento se cuentan
+  con el título que les da la ventana principal, sin redactarlos dos veces. Solo
+  cae en la frase genérica lo que ni el backend sabe clasificar.
+- **Las firmas que rFirma se niega a hacer** (SHA-1, XAdES explícita, cofirma o
+  contrafirma de factura, contrafirma fuera de CAdES, CMS y XAdES; ADR-0023) dicen
+  que no es un fallo de quien firma, con una nota para quien mantiene la sede.
+- **La caja del detalle es de la sede y solo de la sede.** El enlace a comentarios
+  y ayuda, que solo aparece cuando ni se sabe qué se rechazó, va fuera: eso no se
+  lleva a la sede, se reporta a rFirma.
+- **Se cierra solo a los 15 segundos, no a los 5**: con 5 no da tiempo a leer, y
+  el caso que lo decide es el rechazo, donde irse solo reproduciría el síntoma que
+  el aviso venía a evitar. Los rechazos que piden actuar o que llevan la ayuda se
+  quedan abiertos. El botón de cerrar es el único `--primary`.
+- **El rechazo de la petición misma por un canal ya abierto no contesta hasta
+  cerrar**: el `SAF_NN` sale al pulsar cerrar o al cerrar la ventana; si llegan
+  varios, se enseñan y se contestan de uno en uno. Los demás rechazos de
+  transporte se contestan en el acto y no enseñan nada, porque el original
+  tampoco.
 
-| Desenlace | Título | Lo que añade |
-| --------- | ------ | ------------ |
-| Firmado | «Firmado y enviado» | «La firma ya está en *sede*» y, como nota, **«rFirma no guarda copia»** — la única frase de las tres que no se deduce mirando, porque la aplicación **sí** tiene bandeja de recientes y aquí no entra nada |
-| Cancelado | «Has cancelado la firma» | Nada: el título ya lo dice |
-| Rechazo | «rFirma ha rechazado la petición» | La incompatibilidad enunciada nombrando el origen, más un **detalle copiable** |
+### Sin certificado
 
-En **firmado** y en **cancelado** el cuerpo enseña además **la fila del
-documento** —título de los metadatos, páginas y tamaño, la misma del
-consentimiento—: es lo único que dice *qué* se acaba de firmar, y hace falta
-justo en la pantalla que avisa de que rFirma no guarda copia. En el **rechazo**
-no la hay, porque ahí nunca llegó a haber documento. Cada desenlace se encabeza
-con su icono: visto, aspa y triángulo.
+- **No es una variante del consentimiento**: no hay nada que consentir ni elegir,
+  el desplegable no pinta nada y el botón principal no puede decir «firmar».
+- **Las dos causas se sienten distintas porque la salida lo es.** «No tienes
+  ninguno» tiene arreglo que no depende de la sede. «La sede los excluyó todos»
+  ofrece lo mismo, porque el recién instalado quizá sí valga, y dice cuántos
+  certificados tiene la persona —estado de su almacén—, sin decir qué rechazó la
+  sede de cada uno. Los caducados no se entregan nunca (ADR-0023).
+- **Volver a buscar es una microacción del cuerpo**, por si se instaló un
+  certificado con la ventana abierta; cerrar está en el pie.
+- **Salir abandona el trámite**, por el pie o por la cruz del sistema: la sede no
+  ha recibido nada todavía. Solo el desenlace cierra sin cancelar.
 
-El **rechazo** cubre los del transporte (#316) —filtro no reconocido,
-`signaturePages=append`, versión de protocolo no soportada, falta `format`, un
-segundo `afirma://` con un trámite vivo—, que ocurren **antes** de que haya nada
-que consentir. El argumento para enseñarlo no es que la persona pueda
-arreglarlo, porque no puede: es que **acaba de arrancarse un programa en su
-equipo a petición de una web**, y un rFirma que aparece y desaparece en silencio
-es indistinguible de uno roto. Lo único accionable es el detalle copiable, para
-llevárselo a quien mantiene la sede.
+### Origen orden de terminal
 
-Los rechazos que nacen **durante** el trámite tienen también su frase: los del
-propio trámite nombran el origen, y los del token, el puente y el documento se
-cuentan con el mismo título que les da la ventana principal («El PIN no es
-correcto»), sin redactarlos dos veces, también dentro de un lote. En un lote,
-lo que no tiene frase propia se queda en «la firma del lote no ha llegado a
-completarse». Fuera de él, solo cae en la frase genérica lo que ni el backend
-sabe clasificar (`unknown`).
+La acción es de la persona, que acaba de escribir la orden: no hay frase de
+origen ni nada dirigido a la sede, y no se repite lo que la orden ya dice.
 
-El **rechazo de la petición misma** que llega por un canal ya abierto usa este
-mismo desenlace, pero la sede todavía no tiene su respuesta: el `SAF_NN` sale
-cuando la persona pulsa `Cerrar` o cierra la ventana, como con el diálogo de
-error del original. Con WebSocket la ventana se oculta antes de contestar, y la
-siguiente operación del canal vuelve a enseñarla; si llegan varios rechazos
-seguidos, se enseñan y se contestan de uno en uno, en orden. Lo mismo vale
-para las firmas que rFirma se niega a hacer —la firma con SHA-1 y la XAdES
-explícita (ADR-0023), la cofirma o contrafirma de una factura electrónica y la contrafirma fuera de
-CAdES, CMS y XAdES—, tanto si el documento lo manda la sede como si lo elige la
-persona: su frase dice que no es un fallo de quien firma, y debajo de «Para
-quien mantiene la sede:» va una nota con lo que la sede puede cambiar. Los demás
-rechazos —formato que no existe, versión mínima, versión de protocolo, y los que
-nacen al procesar la petición aunque compartan código— se contestan en el acto
-y no enseñan nada, porque el original tampoco los enseña.
-
-**La caja del detalle es de la sede, y solo de la sede**: dentro van la etiqueta
-`Detalle` con el botón de copiar a su derecha y, debajo, el texto a ancho
-completo. El enlace a `Comentarios y ayuda` —que solo aparece cuando ni siquiera
-se sabe qué se rechazó— va **fuera** de la caja, en su propia línea: eso no se le
-lleva a la sede, se reporta a rFirma.
-
-**La ventana se cierra sola a los 15 segundos**, no a los 5: con 5 no da tiempo a
-leer, y que hiciera falta más tiempo era la prueba de que sobraba texto. El
-botón dice `Cerrar` —«Cerrar ahora» sobraba— y es el único `--primary` de la
-pantalla.
-
-### 5 · Sin certificado utilizable — `SedeSinCertificado`
-
-**No es una variante del consentimiento**: es otra situación. Ahí hay algo que
-consentir y un certificado que elegir; aquí no hay ni una cosa ni la otra, el
-desplegable no pinta nada y el botón principal no puede decir `Firmar`.
-
-Las dos opciones **se tienen que sentir distintas porque la salida es distinta**:
-
-- **No tienes ninguno.** Tiene arreglo y el arreglo no depende de la sede: hay
-  acción principal —`Instalar un certificado…`, el único `--primary`— y la
-  microacción `Volver a buscar` en `--ghost`, copiada de «4 · Sin certificados»,
-  por si se instaló mientras la ventana estaba abierta.
-- **La sede los ha excluido todos.** Instalar otro tampoco depende de la sede
-  —puede que el nuevo sí valga—, así que ofrece la misma acción principal
-  —`Instalar un certificado…`— y la misma microacción `Volver a buscar`. Lo que
-  cambia es el mensaje: se dice cuántos tienes —«tus 3 certificados»—, porque
-  eso es estado del almacén de la persona, y si el recién instalado tampoco
-  vale, el número sube y la pantalla se queda abierta con el mismo mensaje
-  actualizado, sin decir qué fue lo que la sede rechazó de cada uno.
-
-`Cerrar` está en el pie de las dos, porque en las dos hay que poder salir con
-una etiqueta y no sólo por la cruz. `Volver a buscar` es una **microacción del
-cuerpo**, no del pie. Y salir de aquí **abandona el trámite**: la sede no ha
-recibido nada todavía, así que las dos puertas —el pie y la cruz del sistema—
-liberan el `idsession`, igual que durante la espera y el consentimiento. La del
-pie pasa por el frontal; la del sistema llega al backend como `CloseRequested`,
-y allí abandona el trámite igual. Sólo el desenlace
-cierra sin cancelar, que es donde la sede ya tiene su respuesta.
-
-**Todos caducados** es una tercera situación, en la sede y en la terminal:
-«Tus N certificados han caducado», sin cuerpo, con el reloj de «caducado» y las
-acciones de «ninguno». Los caducados no se entregan nunca (ADR-0023).
-
-### Origen «orden de terminal» — `-certgui`
-
-Opción «orden de terminal» de la palanca «Origen» de `SedeConsentimiento` y
-`SedeSinCertificado`. La acción es de la persona, que acaba de escribir la
-orden: no hay frase de origen ni nada dirigido a la sede —ni URL, ni «Para quien
-mantiene la sede»—, y no se repite lo que ya dice la orden.
-
-- **Consentimiento.** Título «Firmar \<nombre de `-i`\>» en una línea, recortado
-  por el medio conservando principio, final y extensión, con la ruta completa en
-  el tooltip (palanca «Orden de terminal · ruta y nombre»). Debajo, el selector
-  de certificados como en la sede: sin caducados, los revocados en «No se pueden
-  usar» y preseleccionado el recordado. Las firmas previas, si las hay, en su
-  caja debajo del selector. Botón `Firmar`. Ni rutas, ni destino, ni nota de
-  `-filter`.
-- **PIN.** El diálogo de siempre (abajo).
-- **La ventana solo elige.** Se cierra al aceptar el PIN o al cancelar, y el
-  resultado sale en la terminal: no hay «firmando» ni desenlace en ventana.
-- **Sin certificado utilizable** se abre la ventana, también lanzada sin
-  terminal: «ninguno» y «todos caducados» como en la sede, sin cuerpo;
-  «excluidos» es que el `-filter` no deja ninguno —«Tu --filter no deja ninguno
-  de tus N certificados»—, solo con `Cerrar`.
-- **`-config` con `visibleSignature` o `checkSignatures`** no añade pantallas: el
-  recuadro sale del `-config`, y pulsar `Firmar` con el aviso de firmas previas
-  a la vista es confirmar.
+- **Consentimiento**: el título nombra el documento de `-i`, recortado por el
+  medio conservando principio, final y extensión, con la ruta completa en el
+  tooltip. Sin rutas, destino ni nota de `-filter`.
+- **La ventana solo elige**: se cierra al aceptar el secreto o al cancelar, y el
+  resultado sale en la terminal; no hay firmando ni desenlace en ventana.
+- **Sin certificado utilizable** se abre la ventana aunque no haya terminal.
+  «Excluidos» es que el `-filter` no deja ninguno, y solo ofrece cerrar.
+- **`-config` con firma visible o comprobación de firmas** no añade pantallas.
 
 ### El diálogo del secreto no cambia
 
-Cuando el almacén pide PIN o contraseña, **es exactamente el diálogo de
-[dialogo-pin.md](dialogo-pin.md)**, sin ninguna diferencia: mismo objetivo,
-mismo texto, mismo pie. No tiene artboard propio ni palanca de contexto en esta
-página, y la frase que se llegó a escribir para el caso de sede —que cancelar
-cancela— se borró por explicar lo evidente.
+Es exactamente [dialogo-pin.md](dialogo-pin.md): sin artboard propio ni palanca de
+contexto, porque dos sitios donde mirar la misma pantalla serían dos verdades.
 
-## Estados
+### Lo que se descartó
 
-| Estado | Artboard | Acción principal |
-| ------ | -------- | ---------------- |
-| Esperando el canal | `SedeEspera` · `momento = esperando` | ninguna; `Cancelar` en `--ghost` |
-| La página está desactualizada | sin artboard | `Entendido` |
-| El canal no se abre (Chrome / Firefox) | `SedeEspera` · `no-va-chrome`, `no-va-firefox` | `Instalar…` (la CA local) |
-| Consentimiento de firma | `SedeConsentimiento` · `forma = confirmacion` | `Firmar` |
-| Consentimiento con firmas previas | `SedeConsentimiento` · `firmasPrevias` | `Firmar`; «Ver firmas →» abre el diálogo de la ventana principal |
-| Consentimiento de cesión de datos | `SedeConsentimiento` · `situacion = entregar identidad` | `Enviar mis datos` |
-| Marcar el área de la firma visible | sin artboard | `Continuar` |
-| Hay que confirmar | sin artboard | `Continuar` |
-| Firmando | `SedeFirmando` · `firmando · se puede cancelar` | ninguna; `Cancelar` en `--ghost` |
-| Devolviendo a la sede | `SedeFirmando` · `devolviendo a la sede` | ninguna; el pie queda vacío |
-| Firmado / cancelado / rechazado | `SedeDesenlace` | `Cerrar` |
-| Sin ningún certificado | `SedeSinCertificado` · `ninguno` | `Instalar un certificado…` |
-| Todos excluidos por la sede | `SedeSinCertificado` · `excluidos` | `Instalar un certificado…` |
-| Todos caducados | `SedeSinCertificado` · `todos caducados` | `Instalar un certificado…` |
-| Terminal: consentimiento | `SedeConsentimiento` · `origen = orden de terminal` | `Firmar` |
-| Terminal: sin ningún certificado o todos caducados | `SedeSinCertificado` · `origen = orden de terminal` | `Instalar un certificado…` |
-| Terminal: todos excluidos por `-filter` | `SedeSinCertificado` · `orden de terminal` · `excluidos` | ninguna; `Cerrar` |
+- **Una frase de origen, filas de carpeta y destino o «firmando» en ventana para
+  la terminal**: atribuían a un tercero lo que lanza la propia persona, repetían
+  rutas recién escritas y ensanchaban sin necesidad el contrato del elector
+  gráfico.
+- **El nombre del fichero en el botón**: el botón lo recorta a unos 40 caracteres.
+- **Reutilizar el selector de certificados de AutoFirma tal cual**, sin decir
+  quién pide ni qué se firma.
+- **No enseñar nada mientras se firma**: es el fallo actual.
+- **Listar las fases criptográficas durante la firma**: son estado interno del
+  motor.
+- **Mutilar el desplegable para que cupiera** (152 y luego 156 px con
+  desplazamiento propio): las dos veces era tapar el fallo real.
+- **Una quinta situación de consentimiento para «cero tras el filtro»**: es otra
+  situación y vive en un solo sitio, «sin certificado».
+- **Un lote de documentos listado para el lote remoto**: su respuesta es un
+  recuento.
+- **Prosa que pone en guardia sin dar información**: la regla de redacción está en
+  [design-system.md](design-system.md).
+- **Temporizadores propios en la ventana** para decidir «no ha llegado» o para
+  retrasar el pintado.
+- **Una caja aparte para el origen sin identificar** y **la línea fija «ya lleva
+  una firma»**, sustituida por el aviso de firmas previas.
 
 ## Componentes y tokens
 
-Clases: `.rf-root`, `.rf-row`, `.rf-stack`, `.rf-gap-xs|sm`, `.rf-surface`,
-`.rf-title`, `.rf-prose`, `.rf-body`, `.rf-hint`, `.rf-label`, `.rf-text-muted`,
-`.rf-input`, `.rf-btn` con `--primary` y `--ghost`.
+La ventana se compone con los primitivos `Button`, `Stack` y `Row` del sistema de
+diseño, el selector de certificado compartido con el panel de firma, el visor del
+documento en el momento 1c y el aviso de firmas previas del panel. Los iconos son
+los del sistema de diseño.
+
+Clases `rf-*` de texto y campo —`rf-title`, `rf-prose`, `rf-hint`, `rf-label`,
+`rf-input`— y las propias de la ventana en `SedeWindow.css`.
 
 Tokens: `--rf-bg`, `--rf-surface`, `--rf-text`, `--rf-text-muted`,
 `--rf-border-subtle`, `--rf-border-strong`, `--rf-primary`, `--rf-on-primary`,
-`--rf-radius-md|lg|pill`, `--rf-shadow-elevated`, `--rf-space-xs|sm|md`.
+`--rf-radius-md|lg|pill`, `--rf-shadow-elevated`, `--rf-space-xs|sm|md`. Ni un
+color ni una sombra literales.
 
-**Un solo criterio de botones**, copiado de `Main`, «2b · Elegir certificado» y
-«5b · Páginas sin firma visible», sin inventar ninguno: **una** acción principal por
-pantalla en `--primary`; `--ghost` para salir, cancelar y para las microacciones
-en línea (`Copiar`, `Ver`, `Cambiar`); `--secondary` sólo para una alternativa de
-peso al lado de la principal, que en esta ventana **no existe en ninguna
-pantalla**.
+## Historias
 
-Ni un color ni una sombra literales: el panel del desplegable se ordena con
-`z-index:6` y
-`--rf-shadow-elevated`.
+La verdad de lo que se ve es el código y estas historias, junto a sus componentes
+en `rfirma-app/src/sede/`. Todas pintan `SedeView`, la vista de la ventana, que
+recibe el trámite y sus órdenes por props y no conoce ningún puerto de Tauri;
+`SedeWindow` es la parte conectada a `SiteErrandPort`. `SedeView` se exporta en
+`design-sync.entry.ts`.
 
-## Decisiones
+| Momento | Historias |
+| --- | --- |
+| 0 y 1 · aviso del cliente antiguo y espera | `SedeWaiting.stories.tsx`: `OldWebClient`, `Waiting`, `Unreachable`, `NoChannel` |
+| 1c · marcar el área | `SedeMarking.stories.tsx`: `Marking`, `UnreadableDocument` |
+| 2 · consentimiento | `SedeConsent.stories.tsx`: una por certificado, varios, acotado, sin título, cofirma, contrafirma sobre todas o sobre las últimas, firmas previas válidas o con problema, lote remoto y local, cesión de identidad, sin origen, cuenta atrás y orden de terminal |
+| 2b · confirmar | `SedeConfirm.stories.tsx`: `ShadowAttackSuspect`, `ModifiedForm`, `CertifiedPdf`, `UnknownMessage` |
+| 3 · firmando, guardar y cargar | `SedeSigning.stories.tsx`: `Signing`, `Returning`, `Saving*`, `Loading*` |
+| 4 · desenlace | `SedeOutcome.stories.tsx`: un final por tipo y un rechazo por cada acción, el desconocido, el del escritorio y el de sin origen |
+| 5 · sin certificado | `SedeNoCertificate.stories.tsx`: `NoneInstalled`, `ExcludedBySite`, `InstallFailed` y las dos de terminal |
 
-Validado el **05/09/2026** en el canvas
-[Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
-página **«Ventana de sede · v0.5»**, con los cinco artboards `SedeEspera`,
-`SedeConsentimiento`, `SedeFirmando`, `SedeDesenlace` y `SedeSinCertificado`. La
-copia legible sin cuenta está en
-[`docs/design/artboards/`](artboards/README.md), y las anotaciones de esa página
-guardan cada medida.
+`src/stories.test.tsx` las pinta todas con axe, así que una historia nueva queda
+revisada sin escribir otro test. Los datos de ejemplo están en
+`sedeStoryData.ts`, el marco de 520 × 420 en `sedeStoryFrame.tsx` y los espías de
+las órdenes en `sedeStoryPort.ts`.
 
-**Quien avisa de que el canal no se abre es esta ventana, no el escritorio**
-([#661](https://github.com/sgomez/rfirma/issues/661)). `SedeEspera` ya distingue
-«esperando» de «ya no va a abrirse» y ofrece `Instalar…` con la receta del
-navegador que toque: el aviso llega en el momento que duele y con la reparación
-al lado. Por eso rFirma de escritorio no estrena ninguna franja de diagnóstico
-para lo mismo, y el diseño de esta pantalla no cambia.
+## Claves i18n
 
-**La rama de identidad, reescrita el 16/09/2026**
-([#730](https://github.com/sgomez/rfirma/issues/730)). `selectcert` devuelve el
-certificado público y nada más, así que «Identificarse» y «Te identificarás con»
-nombraban un acto que no ocurre, y lo hacían justo delante de quien está
-decidiendo si consentir. Las cuatro cadenas de la rama pasan a nombrar la cesión
-de datos —«pide tus datos de identidad», «Enviarás los datos de» (hoy
-«Certificado», abajo), «Enviar mis datos»—; la línea de **qué se envía** se queda literal, porque ya era exacta. La
-rama de firma no cambia.
+Todos los textos salen del catálogo; el castellano está en `po/es.po`. Por
+momento:
 
-**Firmar un PDF que ya trae firmas, validado el 26/09/2026** en la misma
-página, sobre `SedeConsentimiento`. Cambian tres cosas y el estilo no: el orden
-—el certificado sube detrás del origen—, la lista abierta, que pasa a ser la
-flotante de la ventana principal, y las firmas previas dentro de la caja del
-documento con el comportamiento del panel. Sin origen, una línea en lugar de la
-caja. Palancas de estado nuevas: `firmasPrevias`, `verFirmas`, `desplegable` y
-`origen`.
-
-**La validez de las firmas previas, validada el 03/10/2026** en la misma
-página, sobre `SedeConsentimiento`: el aviso desplegable pasa a ser el aviso
-compacto del panel, con «Ver firmas →» y el mismo diálogo que la ventana
-principal. Desaparece la palanca `verFirmas`, porque ya no hay nada que
-plegar. El porqué, en [`panel-de-firma.md`](panel-de-firma.md#decisiones) y en
-[`dialogo-ver-firmas.md`](dialogo-ver-firmas.md#decisiones).
-
-**El selector de certificado, validado el 27/09/2026** en la misma página,
-sobre `SedeConsentimiento`, a la vez que en `Main`. Es un solo componente para
-las dos ventanas y funciona como antes; cambian el aspecto, los datos —la
-entidad primero, las etiquetas de almacén, la caducidad—, la agrupación, que
-marca el que no se puede usar con su icono y no con opacidad, y el buscador, que
-es lo único nuevo. La cabecera se simplifica: «Firmarás con» y «Enviarás los
-datos de» pasan a «Certificado», porque el título y la línea de qué se envía ya
-dicen si se firma o se ceden datos. El porqué de cada cambio está en
-[`panel-de-firma.md`](panel-de-firma.md#decisiones).
-
-**El origen «orden de terminal», validado el 03/10/2026**
-([#1348](https://github.com/sgomez/rfirma/issues/1348)) en la misma página,
-como palanca de `SedeConsentimiento` y `SedeSinCertificado`, sin artboards
-nuevos. Regla de texto: breve y sin repetir lo que la persona acaba de escribir.
-
-**Lo que se descartó, y por qué:**
-
-- **Una frase de origen para la terminal** («Una orden de terminal pide…»):
-  atribuía a un tercero lo que lanza la propia persona.
-- **Filas de nombre, carpeta y destino, la transformación y «solo el nombre»**
-  en la terminal: repetían rutas que la persona acaba de escribir.
-- **El nombre del fichero en el botón**: el botón lo recorta a unos 40
-  caracteres.
-- **«Firmando» y desenlace en ventana para la terminal**: más pantallas y un
-  contrato más ancho del elector gráfico, que solo devuelve la elección o la
-  cancelación.
-
-- **«Ya lleva 1 firma: la tuya será una cofirma»**, una línea fija que no decía
-  si las firmas servían. La sustituye el aviso de firmas previas.
-- **La caja «Origen sin identificar»**, con icono y dos líneas: la misma
-  información cabe en la línea del origen, cambiando el sujeto.
-
-- **Añadir una frase que desmienta la identificación** («esto no es una firma» y
-  parecidas). Decir lo que se hace basta; negar lo que no se hace es la
-  verborrea que la regla de redacción de
-  [design-system.md](design-system.md) ya echó de esta ventana.
-- **Reutilizar el selector de certificados tal cual** (palanca `forma`, opción
-  «hoy · selector de certificado»). Es lo que hace AutoFirma y se dibujó para
-  poder compararlo: no dice **quién** pide, ni **qué** se firma, ni que haya una
-  sede detrás. La palanca se conserva como registro de la comparación.
-- **No enseñar nada mientras se firma** (palanca `momento`, opción «hoy · la
-  ventana no aparece»), dibujada como el hueco vacío de 520 × 420 que es. Ése es
-  el fallo actual.
-- **Listar las tres fases criptográficas** durante la firma, como hace el
-  diálogo de la ventana principal: aquí no hay destino que enseñar y las fases
-  son estado interno del motor.
-- **Cerrar sola a los 5 segundos.** No daba tiempo a leer, y el caso que decide
-  es «rechazo × se cierra sola»: cerrarse sola reproduciría el síntoma que el
-  aviso venía a evitar.
-- **Mutilar el desplegable** para que cupiera: a 152 px dentro de la ventana, y
-  luego a 156 px con desplazamiento propio cuando las firmas previas hicieron
-  desplazable el cuerpo. Las dos veces era tapar el fallo real
-  ([design-system.md](design-system.md#desplegable)).
-- **Una quinta situación de consentimiento, «cero tras el filtro de la sede».**
-  No era una variante del consentimiento sino otra situación, y se mudó entera a
-  `SedeSinCertificado` · `excluidos`: el caso vive en un solo sitio.
-- **Un artboard propio para el PIN** con una palanca de contexto. La pantalla es
-  idéntica a la del recorrido local; dos sitios donde mirarla serían dos
-  verdades.
-- **Un lote de documentos** (palanca `lote`), que estaba fuera del hito cuando se
-  validó el canvas. Para el lote **remoto** la palanca sigue vigente —su
-  respuesta es un recuento, nunca una lista—; el lote **local**, añadido
-  después, sí trae la lista por lo que impide colar un documento inesperado.
-- **Toda la prosa que ponía en guardia sin dar información.** El detalle está en
-  la regla de redacción de [design-system.md](design-system.md), con los ejemplos
-  de esta tanda.
-- **Temporizadores en la ventana para decidir «no ha llegado» y retardo de gracia**
-  ([#587](https://github.com/sgomez/rfirma/issues/587),
-  [#589](https://github.com/sgomez/rfirma/issues/589)). La ventana se crea oculta
-  y se revela cuando hay algo que enseñar (primer mensaje o expiración del plazo de
-  respaldo en el backend); la ventana obedece el momento publicado y no lleva
-  relojes propios de espera.
+- **Cliente antiguo y espera**: `sede.oldWebClient.*`, `sede.waiting.*`,
+  `sede.unreachable.*` y `sede.repair.*`.
+- **Marcar el área**: `sede.marking.*`.
+- **Consentimiento**: `sede.consent.*` (origen según la operación y el formato en
+  `asksSignature*`, `asksIdentity` y las variantes `unknownOrigin*`; lo del
+  documento en `untitled`, `counterSignature*` y `signingKind.*`; el lote en
+  `batch*` y `localBatchRound*`; lo que se envía en `willSend`; la acotación en
+  `narrowed*`; la cuenta atrás en `countdown`; la terminal en `terminalTitle`).
+- **Confirmar**: `sede.confirm.messages.*`.
+- **Firmando y ficheros**: `sede.signing.with`, `sede.returning.*`,
+  `sede.saving.*` y `sede.loading.*`.
+- **Desenlace**: `sede.outcome.*`, y para los rechazos `sede.refusals.*`,
+  `sede.refusalCauses.*` y `sede.siteNotes.*`.
+- **Sin certificado**: `sede.noCertificate.*`.
+- **Acciones comunes**: `actions.sign`, `actions.cancel`, `actions.close`,
+  `actions.continue`, `actions.dismiss`, `actions.lookAgain` y `actions.copy`.

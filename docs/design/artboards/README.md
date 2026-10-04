@@ -47,9 +47,10 @@ Cuando llegue la v1.0 habrá que decidir de nuevo si sigue haciendo falta.
 
 ## Qué es cada fichero
 
-`canvas.json` numera los estados y los reparte en **cuatro** páginas. El orden de
-la página «Recorrido de firma» es el de la ficha `ventana-principal.md`; la
-página «Ventana de sede · v0.5» va aparte porque es otra ventana:
+`canvas.json` numera los estados y los reparte en **tres** páginas. El orden de
+la página «Recorrido de firma» es el de la ficha `ventana-principal.md`. La
+ventana de sede ya no tiene artboards: su verdad son sus historias de Storybook
+y su ficha, [`ventana-de-sede.md`](../ventana-de-sede.md):
 
 | # | Artboard | Estado |
 | - | -------- | ------ |
@@ -61,21 +62,9 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | 7 | `EstadoPinIncorrecto` | Secreto incorrecto, con el mismo fondo que el 6 |
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
 | — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4, sobre `Main` lista |
-| S1 | `SedeEspera` | Ventana de sede: esperando el canal, y las dos recetas de reparación cuando no se abre |
-| S2 | `SedeConsentimiento` | Ventana de sede: el consentimiento — quién pide, qué se firma (o qué datos se ceden) y con qué certificado; también con origen «orden de terminal» (`-certgui`) |
-| S3 | `SedeFirmando` | Ventana de sede: firmando y devolviendo la firma a la sede |
-| S4 | `SedeDesenlace` | Ventana de sede: firmado, cancelado o petición rechazada |
-| S5 | `SedeSinCertificado` | Ventana de sede: sin ningún certificado, todos caducados, o todos excluidos por la sede (o por `-filter` en la terminal) |
 | — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde y el idioma, y las dos acciones como pasos numerados —instalar el certificado propio y poner a rFirma por defecto— con la protección contra firmas accidentales aparte |
 | E1 | `PanelEstado` | El panel de estado: la tabla de las cuatro señales de la instalación, con sus cinco veredictos, sus reparaciones y el botón del certificado que alterna entre instalar y retirar |
 | E2 | `RetirarCertificado` | El panel de estado con el velo de la retirada encima: pregunta, avance almacén a almacén y desenlace, con y sin fallo |
-
-Los cinco de `Sede*` viven en la página **«Ventana de sede · v0.5»** y su ficha
-es [`ventana-de-sede.md`](../ventana-de-sede.md), **una sola para los cinco**:
-es una ventana con una secuencia, no cinco pantallas
-([#332](https://github.com/sgomez/rfirma/issues/332)). Miden 720 × 600 px, no
-1180 × 700: la ventana es de 520 × 420 y se dibuja centrada sobre un lienzo que
-representa el escritorio, para que se vea su tamaño real.
 
 `PrimerArranque` vive también en la página «Recorrido de firma», pero **no es
 un paso del recorrido**: es la pantalla del primer arranque, la misma ventana de
