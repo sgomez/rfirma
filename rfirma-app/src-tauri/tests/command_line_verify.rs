@@ -3,6 +3,11 @@
 #[path = "native_cycle/support.rs"]
 mod support;
 
+#[path = "command_line_verify/json.rs"]
+mod json;
+#[path = "command_line/schema.rs"]
+mod schema;
+
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, FixedOffset, Utc};

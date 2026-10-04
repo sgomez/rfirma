@@ -1,10 +1,11 @@
-//! La orden `verify`: valida las firmas de un fichero y deja lo que el original imprime de cada una, no el XML de `-xml`.
+//! La orden `verify`: valida las firmas de un fichero y deja lo que el original imprime de cada una, o el modelo de firmas previas en `--json`; no el XML de `-xml`.
 
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
 
-use super::{CommandLinePorts, Outcome};
+use super::json_output::{compact, VerifiedDocument};
+use super::{CommandLinePorts, Outcome, SUCCEEDED};
 use crate::desktop::domain::command_line::{
     documented, value_of, verbosity, Refusal, INPUT, JSON, XML,
 };
@@ -23,13 +24,10 @@ pub const UNKNOWN_FORMAT: &str = "Firma no valida: los datos proporcionados no s
                                   con ningún formato de firma reconocido";
 
 pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
-    if let Some(parameter) = [XML, JSON]
-        .into_iter()
-        .find(|parameter| arguments.iter().any(|argument| argument == parameter))
-    {
+    if arguments.iter().any(|argument| argument == XML) {
         return Outcome::failed(format!(
             "rfirma: el parámetro {} de «verify» todavía no está disponible en esta versión",
-            documented(parameter)
+            documented(XML)
         ));
     }
     let Some(input) = value_of(arguments, INPUT) else {
@@ -41,6 +39,9 @@ pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome 
             return Outcome::failed(format!("rfirma: no se puede leer «{input}» ({detail})"))
         }
     };
+    if arguments.iter().any(|argument| argument == JSON) {
+        return in_json(&document, input, ports);
+    }
     let Some(format) = format_to_verify(&document) else {
         if verbosity(arguments) > 0 {
             return Outcome::printed(&[translated(
@@ -59,6 +60,26 @@ pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome 
         Err(error) => Outcome::failed(format!(
             "rfirma: no se han podido validar las firmas de «{input}» ({error})"
         )),
+    }
+}
+
+fn in_json(document: &[u8], input: &str, ports: &CommandLinePorts) -> Outcome {
+    let verified = if format_to_verify(document).is_none() {
+        VerifiedDocument::unrecognized()
+    } else {
+        match ports.reader.signatures_in(document) {
+            Ok(signatures) => VerifiedDocument::of(&signatures),
+            Err(error) => {
+                return Outcome::failed(format!(
+                    "rfirma: no se han podido leer las firmas de «{input}» ({error})"
+                ))
+            }
+        }
+    };
+    Outcome {
+        exit_code: SUCCEEDED,
+        stdout: compact(&verified),
+        stderr: Vec::new(),
     }
 }
 

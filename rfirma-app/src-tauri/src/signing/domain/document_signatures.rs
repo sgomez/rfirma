@@ -71,6 +71,10 @@ pub struct DocumentSignature {
     pub organization_name: Option<String>,
     /// La autoridad emisora del certificado.
     pub issuer: String,
+    /// El sujeto del certificado, como DN de RFC 4514.
+    pub certificate_subject: String,
+    /// El emisor del certificado, como DN de RFC 4514.
+    pub certificate_issuer: String,
     /// Número de serie del certificado, distinto del `SERIALNUMBER` del sujeto.
     pub certificate_serial_number: String,
     /// El inicio de la vigencia del certificado, en ISO-8601, si el puente lo devolvió.

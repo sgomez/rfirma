@@ -12,6 +12,9 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::StoreClass;
 use crate::signing::domain::bridge::Format;
 
+mod verify;
+pub(super) use verify::VerifiedDocument;
+
 /// Lo que saca `listaliases --json`.
 #[derive(Serialize)]
 pub(super) struct ListedAliases {

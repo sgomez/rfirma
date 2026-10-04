@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rfirma.sgomez.me/schemas/command-line/verify.schema.json",
+  "title": "rfirma verify --json",
+  "description": "Las firmas de un fichero, con su validez, en árbol con sus contrafirmas. Unos datos que no son una firma, o un PDF sin firmas, salen con la lista vacía.",
+  "type": "object",
+  "properties": {
+    "standard": {
+      "description": "El formato de firma del fichero, o unrecognized si no es de ninguno.",
+      "enum": ["PAdES", "CAdES", "XAdES", "unrecognized"]
+    },
+    "validity": {
+      "description": "El peor valor de todas las firmas, contrafirmas incluidas. No aparece si no hay firmas.",
+      "$ref": "#/$defs/validity"
+    },
+    "findings": {
+      "description": "Lo que se ve en el documento entero y no se cuelga de ninguna firma.",
+      "type": "array",
+      "items": {
+        "enum": ["modifiedAfterLastSignature", "formFilledAfterSigning", "contentAddedOnTop"]
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/signature" }
+    }
+  },
+  "required": ["standard", "findings", "signatures"],
+  "additionalProperties": false,
+  "$defs": {
+    "validity": {
+      "enum": ["valid", "expired", "invalid"]
+    },
+    "instant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "reason": {
+      "description": "Por qué la firma está caducada o no es válida: el más grave de sus problemas.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "certificateExpired",
+            "certificateNotYetValid",
+            "modifiedAfterSigning",
+            "damaged",
+            "unknownSignatureType",
+            "unsupportedAlgorithm",
+            "cosignNotAdmitted"
+          ]
+        }
+      },
+      "required": ["type"],
+      "oneOf": [
+        {
+          "properties": {
+            "type": { "const": "certificateExpired" },
+            "date": {
+              "description": "El fin de la vigencia del certificado caducado.",
+              "$ref": "#/$defs/instant"
+            },
+            "holder": {
+              "description": "El nombre común del titular del certificado caducado, si no es el firmante.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "type": { "const": "certificateNotYetValid" },
+            "date": {
+              "description": "El inicio de la vigencia del certificado.",
+              "$ref": "#/$defs/instant"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "type": { "const": "cosignNotAdmitted" },
+            "closedBy": {
+              "description": "El nombre común de quien cerró el documento.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "modifiedAfterSigning",
+                "damaged",
+                "unknownSignatureType",
+                "unsupportedAlgorithm"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "signature": {
+      "type": "object",
+      "properties": {
+        "validity": { "$ref": "#/$defs/validity" },
+        "reason": { "$ref": "#/$defs/reason" },
+        "signer": {
+          "description": "Los atributos del sujeto del certificado de firma.",
+          "type": "object",
+          "properties": {
+            "commonName": { "type": "string" },
+            "serialNumber": {
+              "description": "El atributo serialNumber del sujeto, no el número de serie del certificado.",
+              "type": "string"
+            },
+            "organizationIdentifier": { "type": "string" },
+            "organizationName": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "certificate": {
+          "type": "object",
+          "$ref": "certificate.schema.json",
+          "unevaluatedProperties": false
+        },
+        "signatureAlgorithm": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "El nombre del algoritmo de la firma.",
+              "type": "string"
+            }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        },
+        "signingTime": {
+          "type": "object",
+          "properties": {
+            "at": { "$ref": "#/$defs/instant" },
+            "source": {
+              "description": "declared si la declara quien firma; timestamp si la prueba el sello de una TSA.",
+              "enum": ["declared", "timestamp"]
+            },
+            "tsa": {
+              "description": "El nombre común de la TSA que selló la firma.",
+              "type": "string"
+            }
+          },
+          "required": ["at", "source"],
+          "additionalProperties": false
+        },
+        "closesDocument": {
+          "description": "Si es la firma de certificación que no admite más firmas.",
+          "type": "boolean"
+        },
+        "countersignatures": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/signature" }
+        }
+      },
+      "required": ["validity", "signer", "certificate", "closesDocument", "countersignatures"],
+      "if": { "properties": { "validity": { "const": "valid" } } },
+      "then": { "not": { "required": ["reason"] } },
+      "additionalProperties": false
+    }
+  }
+}

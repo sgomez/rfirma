@@ -369,7 +369,7 @@ Lista los certificados de los almacenes, o solo los de --store.
 ";
 
 const VERIFY_SYNTAX: &str = "\
-Uso: rfirma verify -i <fichero> [-v | -vv | --verbose] [--xml]
+Uso: rfirma verify -i <fichero> [-v | -vv | --verbose] [--xml | --json]
      rfirma verify --gui -i <fichero>
 
 Valida las firmas del fichero de -i, con la caducidad del certificado del
@@ -380,6 +380,9 @@ Con -v, añade el formato y una ficha por firma: firmante, en nombre de quién
 firma si es un certificado de representación, emisor y fecha declarada. Con -vv
 (o -v -v, --verbose --verbose), añade el número de serie del certificado. Esa
 parte no es estable: no la analices con un programa.
+
+Con --json, saca en una línea el formato, la validez de cada firma y de sus
+contrafirmas, el firmante, el certificado y la fecha; -v no lo cambia.
 ";
 
 #[cfg(test)]
