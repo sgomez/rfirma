@@ -60,24 +60,19 @@ const invokedToSee = (name: string) => ({
 /** `verify --gui` sobre la ventana entera: el resumen sin franja ni «Cambiar». */
 describe("App, con verify --gui", () => {
   function render(signer: SigningBackend, opener?: SignedDocumentOpener) {
-    return renderApp(
-      inMemoryRecents([row("factura.pdf", { folder: "Contratos" })]),
-      [],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      { list: async () => [{ ...aCertificate, remembered: true }] },
-      emptyRubricPicker(),
+    return renderApp({
+      recents: inMemoryRecents([row("factura.pdf", { folder: "Contratos" })]),
+      documents: [],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: { list: async () => [{ ...aCertificate, remembered: true }] },
+      rubrics: emptyRubricPicker(),
       signer,
-      invokedToSee("factura.pdf"),
-      inMemoryDocumentDrops(invokedToSee("factura.pdf")),
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      null,
+      invoked: invokedToSee("factura.pdf"),
+      drops: inMemoryDocumentDrops(invokedToSee("factura.pdf")),
+      titlebar: null,
       opener,
-    );
+    });
   }
 
   it("opens straight onto the summary of the document's signatures, with no strip, badge or Cambiar", async () => {
@@ -145,17 +140,17 @@ describe("App, con verify --gui", () => {
 
   describe("with a file that is not a PDF", () => {
     function renderNotAPdf(signer: SigningBackend) {
-      return renderApp(
-        inMemoryRecents([row("datos.csig", { folder: "Contratos" })]),
-        [],
-        pdfsOf({}),
-        {},
-        { list: async () => [{ ...aCertificate, remembered: true }] },
-        emptyRubricPicker(),
+      return renderApp({
+        recents: inMemoryRecents([row("datos.csig", { folder: "Contratos" })]),
+        documents: [],
+        pdfs: pdfsOf({}),
+        settings: {},
+        certificates: { list: async () => [{ ...aCertificate, remembered: true }] },
+        rubrics: emptyRubricPicker(),
         signer,
-        invokedToSee("datos.csig"),
-        inMemoryDocumentDrops(invokedToSee("datos.csig")),
-      );
+        invoked: invokedToSee("datos.csig"),
+        drops: inMemoryDocumentDrops(invokedToSee("datos.csig")),
+      });
     }
 
     const cadesWith =

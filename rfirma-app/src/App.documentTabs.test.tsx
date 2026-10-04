@@ -21,11 +21,11 @@ async function openRecentlyOpenedMenu(user: ReturnType<typeof userEvent.setup>) 
 describe("App, con varios documentos abiertos", () => {
   it("keeps several documents open and changes document when the tab changes", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("primero.pdf"), document("segundo.pdf")],
-      pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("primero.pdf"), document("segundo.pdf")],
+      pdfs: pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+    });
     await openPdf(user);
     await openPdf(user);
     await waitFor(() => expect(panelShows("segundo.pdf")).toBe(true));
@@ -39,11 +39,11 @@ describe("App, con varios documentos abiertos", () => {
 
   it("underlines only the active tab, and leaves the rest muted", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("primero.pdf"), document("segundo.pdf")],
-      pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("primero.pdf"), document("segundo.pdf")],
+      pdfs: pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+    });
     await openPdf(user);
     await openPdf(user);
     await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
@@ -58,7 +58,11 @@ describe("App, con varios documentos abiertos", () => {
   it("names each tab after its file, whole in its tooltip, with a check when it is signed", async () => {
     const user = userEvent.setup();
     const long = `contrato-de-arrendamiento-${"largo-".repeat(8)}.pdf`;
-    renderApp(inMemoryRecents(), [document(long, { badge: "Signed" })], pdfsOf({ [long]: 1 }));
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document(long, { badge: "Signed" })],
+      pdfs: pdfsOf({ [long]: 1 }),
+    });
 
     await openPdf(user);
 
@@ -70,11 +74,11 @@ describe("App, con varios documentos abiertos", () => {
 
   it("closes a tab with its cross and puts the neighbouring document in front", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("primero.pdf"), document("segundo.pdf")],
-      pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("primero.pdf"), document("segundo.pdf")],
+      pdfs: pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+    });
     await openPdf(user);
     await openPdf(user);
     await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
@@ -87,7 +91,11 @@ describe("App, con varios documentos abiertos", () => {
 
   it("goes back to the drop zone once the last tab is closed", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 2 }));
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+    });
     await openPdf(user);
     await screen.findByRole("region", { name: "Panel de firma" });
 
@@ -121,7 +129,12 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
   });
 
   it("has no arrow with Recordar mi actividad apagado, even with recents already saved", async () => {
-    renderApp(inMemoryRecents([row("a.pdf")]), [], pdfsOf({}), { rememberActivity: false });
+    renderApp({
+      recents: inMemoryRecents([row("a.pdf")]),
+      documents: [],
+      pdfs: pdfsOf({}),
+      settings: { rememberActivity: false },
+    });
 
     await screen.findByRole("button", { name: "Abrir PDF…" });
     expect(
@@ -131,12 +144,12 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
 
   it("lists the recents with their date and their check", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents([
+    renderApp({
+      recents: inMemoryRecents([
         row("hoy.pdf", { lastUsed: now() }),
         row("ayer.pdf", { lastUsed: now() - DAY, badge: "Signed" }),
       ]),
-    );
+    });
     await screen.findByRole("region", { name: "Abiertos recientemente" });
 
     const menu = await openRecentlyOpenedMenu(user);
@@ -151,7 +164,11 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
 
   it("opens a recent in a new tab", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([row("a.pdf")]), [], pdfsOf({ "a.pdf": 3 }));
+    renderApp({
+      recents: inMemoryRecents([row("a.pdf")]),
+      documents: [],
+      pdfs: pdfsOf({ "a.pdf": 3 }),
+    });
     await screen.findByRole("region", { name: "Abiertos recientemente" });
 
     const menu = await openRecentlyOpenedMenu(user);
@@ -163,11 +180,11 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
 
   it("says Abierto for a recent that already has a tab, and takes the user to it", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("primero.pdf"), document("segundo.pdf")],
-      pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("primero.pdf"), document("segundo.pdf")],
+      pdfs: pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+    });
     await openPdf(user);
     await openPdf(user);
     await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
@@ -184,7 +201,7 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
 
   it("shows the folder under the name when it is known, and as its title", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([row("hoy.pdf", { folder: "Documentos" })]));
+    renderApp({ recents: inMemoryRecents([row("hoy.pdf", { folder: "Documentos" })]) });
     await screen.findByRole("region", { name: "Abiertos recientemente" });
 
     const menu = await openRecentlyOpenedMenu(user);
@@ -196,7 +213,7 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
 
   it("shows only the name and no title when the folder is unknown, under the portal", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([row("hoy.pdf", { folder: null, lastUsed: now() })]));
+    renderApp({ recents: inMemoryRecents([row("hoy.pdf", { folder: null, lastUsed: now() })]) });
     await screen.findByRole("region", { name: "Abiertos recientemente" });
 
     const menu = await openRecentlyOpenedMenu(user);
@@ -209,7 +226,7 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
 
   it("dims a recent that is no longer where it was, and does not open it", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([row("usb.pdf", { available: false })]));
+    renderApp({ recents: inMemoryRecents([row("usb.pdf", { available: false })]) });
     await screen.findByRole("region", { name: "Abiertos recientemente" });
 
     const menu = await openRecentlyOpenedMenu(user);
@@ -222,7 +239,9 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
 
   it("says No se encuentra instead of the folder, even when the folder is known", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([row("usb.pdf", { available: false, folder: "Documentos" })]));
+    renderApp({
+      recents: inMemoryRecents([row("usb.pdf", { available: false, folder: "Documentos" })]),
+    });
     await screen.findByRole("region", { name: "Abiertos recientemente" });
 
     const menu = await openRecentlyOpenedMenu(user);
@@ -235,7 +254,7 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
   it("empties the recents from Vaciar la lista, and hides the arrow when none are left", async () => {
     const user = userEvent.setup();
     const recents = inMemoryRecents([row("a.pdf")]);
-    renderApp(recents);
+    renderApp({ recents });
     await screen.findByRole("region", { name: "Abiertos recientemente" });
 
     await user.click(
@@ -251,7 +270,7 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
 
   it("closes with Escape", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([row("a.pdf")]));
+    renderApp({ recents: inMemoryRecents([row("a.pdf")]) });
     await openRecentlyOpenedMenu(user);
 
     await user.keyboard("{Escape}");
@@ -262,7 +281,7 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
 
 describe("App, sin documentos abiertos", () => {
   it("shows the drop zone and the recents in the middle of the viewer", async () => {
-    renderApp(inMemoryRecents([row("a.pdf", { lastUsed: now() })]));
+    renderApp({ recents: inMemoryRecents([row("a.pdf", { lastUsed: now() })]) });
 
     const viewer = screen.getByRole("region", { name: "Visor del documento" });
     expect(
@@ -275,7 +294,11 @@ describe("App, sin documentos abiertos", () => {
 
   it("opens a recent from the empty viewer in a tab", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([row("a.pdf")]), [], pdfsOf({ "a.pdf": 3 }));
+    renderApp({
+      recents: inMemoryRecents([row("a.pdf")]),
+      documents: [],
+      pdfs: pdfsOf({ "a.pdf": 3 }),
+    });
     const recents = await screen.findByRole("region", { name: "Abiertos recientemente" });
 
     await user.click(within(recents).getByRole("button", { name: /^a\.pdf/ }));
@@ -296,7 +319,12 @@ describe("App, sin documentos abiertos", () => {
   });
 
   it("shows only the drop zone with Recordar mi actividad apagado, even with recents already saved", async () => {
-    renderApp(inMemoryRecents([row("a.pdf")]), [], pdfsOf({}), { rememberActivity: false });
+    renderApp({
+      recents: inMemoryRecents([row("a.pdf")]),
+      documents: [],
+      pdfs: pdfsOf({}),
+      settings: { rememberActivity: false },
+    });
 
     await screen.findByRole("button", { name: /Arrastra un PDF o pulsa para abrirlo/ });
     expect(
@@ -329,11 +357,11 @@ function stubTabStripWidth() {
 const FIVE = ["uno.pdf", "dos.pdf", "tres.pdf", "cuatro.pdf", "cinco.pdf"];
 
 async function openFive(user: ReturnType<typeof userEvent.setup>) {
-  renderApp(
-    inMemoryRecents(),
-    FIVE.map((name) => document(name)),
-    pdfsOf(Object.fromEntries(FIVE.map((name) => [name, 1]))),
-  );
+  renderApp({
+    recents: inMemoryRecents(),
+    documents: FIVE.map((name) => document(name)),
+    pdfs: pdfsOf(Object.fromEntries(FIVE.map((name) => [name, 1]))),
+  });
   for (const _ of FIVE) await openPdf(user);
   await screen.findByRole("tab", { name: "cinco.pdf", selected: true });
 }
@@ -382,17 +410,17 @@ describe("App, con más pestañas de las que caben", () => {
   it("opens the +N menu aligned to it, listing the hidden tabs in order with a check for the signed ones", async () => {
     const resizeStrip = stubTabStripWidth();
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [
         document("uno.pdf"),
         document("dos.pdf"),
         document("tres.pdf", { badge: "Signed" }),
         document("cuatro.pdf"),
         document("cinco.pdf"),
       ],
-      pdfsOf(Object.fromEntries(FIVE.map((name) => [name, 1]))),
-    );
+      pdfs: pdfsOf(Object.fromEntries(FIVE.map((name) => [name, 1]))),
+    });
     for (const _ of FIVE) await openPdf(user);
     await screen.findByRole("tab", { name: "cinco.pdf", selected: true });
     resizeStrip(780);
