@@ -1,0 +1,25 @@
+.rf-progress {
+  height: 4px;
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-border-subtle);
+  overflow: hidden;
+}
+
+.rf-progress__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-primary);
+  transition: width var(--rf-duration-base) var(--rf-easing);
+}
+
+.rf-progress--framed {
+  height: 6px;
+  background: var(--rf-surface);
+  border: 1px solid var(--rf-border-subtle);
+}
+
+.rf-progress--framed .rf-progress__fill {
+  border-radius: 0;
+  transition: none;
+}

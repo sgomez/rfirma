@@ -249,7 +249,7 @@ CSS con `var(--rf-*)`.
 | Superficies | `.rf-surface`, `.rf-card`, `.rf-card--elevated`, `.rf-card--interactive` |
 | Botones | `.rf-btn` + `--primary\|--secondary\|--ghost\|--pill\|--disabled` |
 | Formularios | `.rf-field`, `.rf-field--error`, `.rf-label`, `.rf-input`, `.rf-hint` |
-| Otros | `.rf-badge`, `.rf-badge--primary`, `.rf-dialog`, `.rf-scrim` |
+| Otros | `.rf-badge`, `.rf-badge--primary`, `.rf-progress`, `.rf-progress--framed`, `.rf-dialog`, `.rf-scrim` |
 
 `.rf-root` es obligatoria en la raíz de toda pantalla: establece lienzo, familia
 tipográfica y color heredado.
