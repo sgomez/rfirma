@@ -23,6 +23,14 @@ export const ExcludedBySite: Story = {
   args: { errand: sedeErrand({ kind: "noCertificate", reason: "excluded", owned: 2 }) },
 };
 
+export const ExcludedOnlyCertificate: Story = {
+  args: { errand: sedeErrand({ kind: "noCertificate", reason: "excluded", owned: 1 }) },
+};
+
+export const ExcludedManyCertificates: Story = {
+  args: { errand: sedeErrand({ kind: "noCertificate", reason: "excluded", owned: 3 }) },
+};
+
 export const InstallFailed: Story = {
   args: {
     errand: sedeErrand({ kind: "noCertificate", reason: "none", owned: 0 }),
