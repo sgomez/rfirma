@@ -161,3 +161,23 @@ export function aTamperedCadesSignature() {
 export function aCadesSignedWithTheExpiredCertificate() {
   return readFileSync(join(here, "../previous-signatures/cades-expired.csig"));
 }
+
+/** La entrada que el PDF de abajo deja dentro del hueco del `/ByteRange`, fuera de lo firmado. */
+const THE_UNSIGNED_ENTRY = " /Unsigned (Texto que la firma no cubre)";
+
+/**
+ * El PDF firmado de las firmas previas con su `/Contents` recortado y, detrás, una entrada visible:
+ * el hueco del `/ByteRange` es mayor que `/Contents` y la firma sigue cuadrando. El CMS de la
+ * muestra es BER de longitud indefinida, así que se recorta su relleno y no su longitud.
+ */
+export function aPdfWhoseByteRangeLeavesBytesOut() {
+  const pdf = Buffer.from(
+    readFileSync(join(here, "../previous-signatures/pades-long-term-active.pdf")),
+  );
+  const text = pdf.toString("latin1");
+  const declared = text.slice(text.lastIndexOf("/ByteRange")).match(/\[\s*(\d+)\s+(\d+)\s+(\d+)/);
+  const [gapStart, gapEnd] = [Number(declared[2]), Number(declared[3])];
+  const cms = `${text.slice(gapStart + 1, gapEnd - 1).replace(/(?:00)+$/, "")}${"00".repeat(32)}`;
+  pdf.write(`<${cms}>${THE_UNSIGNED_ENTRY}`.padEnd(gapEnd - gapStart, " "), gapStart, "latin1");
+  return pdf;
+}

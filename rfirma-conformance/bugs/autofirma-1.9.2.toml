@@ -189,3 +189,8 @@ master = "present"
 id = "BUG-38"
 title = "La validación XML verifica con un KeyValue que no es la clave del certificado del firmante"
 master = "present"
+
+[[bug]]
+id = "BUG-39"
+title = "La validación de PDF no comprueba que el /ByteRange cubra el documento"
+master = "present"

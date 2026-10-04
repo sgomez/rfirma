@@ -752,3 +752,14 @@ dirigido al defecto.
   2. Con un `KeyValue` por delante del `X509Data`, la firma se comprueba con la clave del `KeyValue` mientras que el firmante que se muestra es el titular del certificado del `X509Data`: una firma válida se atribuye a un certificado cuya clave no la verificó.
   3. El mismo `KeyValueKeySelector` lo usan la validación de documento (`validate`) y la de firma suelta (`validateSign`), de modo que el veredicto de conjunto, el informe de firmas previas y la orden `verify` heredan la elección de clave.
 * **Causa raíz:** La clave de verificación se toma del primer elemento del `KeyInfo` sin ligarla al certificado que después se presenta como firmante, en vez de comprobar el valor de la firma con la clave pública de ese certificado.
+
+### BUG-39: La validación de PDF no comprueba que el `/ByteRange` cubra el documento
+
+* **Comprobación del catálogo:** `check_signatures_stops_a_cosign_over_a_pdf_whose_byte_range_leaves_bytes_out`.
+* **Estado en `master`:** **Sigue presente.** `ValidatePdfSignature.java:264-270` sigue validando cada firma con `verifySignature` y sin llamar a `signatureCoversWholeDocument`.
+* **Código fuente:** `afirma-crypto-validation` · `es.gob.afirma.signvalidation.ValidatePdfSignature.java:101, 117, 191-193` (método `validate(byte[], Properties)`) y `267-273` (método `validateSign`); `afirma-lib-itext` 1.7 · `com.aowagie.text.pdf.AcroFields.verifySignature(String, String)` y `AcroFields.signatureCoversWholeDocument(String)`.
+* **Descripción:** `validate` recorre las firmas de `af.getSignatureNames()` y llama a `validateSign` con cada una, que empieza por `signAcrofields.verifySignature(signName)`. En `afirma-lib-itext` 1.7, `verifySignature` construye el `PdfPKCS7` con el valor de `/Contents` y le pasa los bytes que declara el `/ByteRange` de la firma, sin comprobar el rango: ni que tenga cuatro enteros, ni que empiece en 0, ni que el hueco entre sus dos tramos sea exactamente la cadena hexadecimal de `/Contents`, ni que el segundo tramo acabe al final de una revisión. La misma clase trae `signatureCoversWholeDocument`, y ningún punto del validador la llama. EN 319 142-1 §6.3 k) exige que el rango cubra el fichero entero de la revisión firmada salvo el valor de `/Contents`.
+* **Comportamiento y consecuencia:**
+  1. Los bytes del fichero que quedan fuera del `/ByteRange` no entran en el resumen firmado, y el validador da la firma por válida con independencia de lo que contengan.
+  2. Con `checkSignatures=true`, la cofirma o la contrafirma de un PDF cuyo hueco del `/ByteRange` es mayor que `/Contents` sigue adelante y firma encima, en vez de responder `SAF_39`.
+* **Causa raíz:** El validador delega en `verifySignature`, que solo comprueba la criptografía sobre los bytes que el propio rango declara, y no añade ninguna comprobación de su alcance.

@@ -441,6 +441,21 @@ act.consent = "AutoFirma rechaza la cofirma antes de pedir certificado y sin ens
 expects.code = "SAF_39"
 
 [[check]]
+id = "check_signatures_stops_a_cosign_over_a_pdf_whose_byte_range_leaves_bytes_out"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:409-483; ValidatePdfSignature.java:191-193, 267-273"
+explained_by.autofirma = "BUG-39"
+statement = """
+Con checkSignatures=true, una cofirma PAdES sobre un PDF firmado cuyo hueco del /ByteRange es mayor
+que /Contents, y deja dentro bytes sin firmar, se aborta con SAF_39 en vez de firmar encima.
+"""
+
+[check.drive]
+mode = "v4"
+script = "cosignpadescheckingbyterange"
+expects.code = "SAF_39"
+
+[[check]]
 id = "check_signatures_cosigns_over_a_cades_with_an_expired_certificate"
 set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:409-483"

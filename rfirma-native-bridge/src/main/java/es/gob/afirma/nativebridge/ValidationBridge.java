@@ -55,10 +55,14 @@ final class ValidationBridge {
     /** El veredicto, con la clave a fijar y el codigo de mensaje del original solo en el tercero. */
     record Verdict(String outcome, String reason, String param, String messageCode) { }
 
-    /** Con {@code checkCertificates} mira tambien la caducidad del certificado firmante. */
+    /** Con {@code checkCertificates}, tambien la caducidad; en PDF, antes, cada {@code /ByteRange}. */
     static Verdict validate(final byte[] document, final String format,
             final boolean checkCertificates) throws IOException {
         final SignValider valider = validerFor(format);
+        if (valider instanceof ValidatePdfSignature
+                && !ByteRanges.uncoveredIn(document, ByteRanges.Strictness.PROTOCOL).isEmpty()) {
+            return new Verdict(INVALID, VALIDITY_ERROR.CORRUPTED_SIGN.name(), null, null);
+        }
         valider.setRelaxed(true);
         try {
             return verdictOf(relaxedValidities(valider, document, checkCertificates));
@@ -73,17 +77,26 @@ final class ValidationBridge {
 
     /**
      * Lo que imprime de cada firma la orden {@code verify} del original: sin modo
-     * relajado y con la caducidad del certificado firmante.
+     * relajado, con la caducidad del certificado firmante y, en PDF, con cada {@code /ByteRange}.
      */
     static List<String> results(final byte[] document, final String format) throws IOException {
         final List<String> results = new ArrayList<>();
+        final SignValider valider = validerFor(format);
         try {
-            for (final SignValidity validity : validities(validerFor(format), document, true)) {
+            for (final SignValidity validity : validities(valider, document, true)) {
                 results.add(plainText(validity.toString()));
             }
         }
         catch (final RuntimeConfigNeededException e) {
             throw new IllegalStateException("el validador sin modo relajado ha pedido confirmacion", e);
+        }
+        if (valider instanceof ValidatePdfSignature) {
+            final int uncovered =
+                    ByteRanges.uncoveredIn(document, ByteRanges.Strictness.LOCAL).size();
+            for (int i = 0; i < uncovered; i++) {
+                results.add(plainText(new SignValidity(SIGN_DETAIL_TYPE.KO,
+                        VALIDITY_ERROR.CORRUPTED_SIGN).toString()));
+            }
         }
         if (results.isEmpty()) {
             results.add(plainText(new SignValidity(SIGN_DETAIL_TYPE.KO,

@@ -23,6 +23,12 @@ cause = "BUG-37"
 note = "Compara la revisión de la firma más antigua con el documento entero, ve la segunda firma visible como un cambio y, con headless=true, responde SAF_50."
 
 [[known]]
+id = "check_signatures_stops_a_cosign_over_a_pdf_whose_byte_range_leaves_bytes_out"
+outcome = "no-conforme"
+cause = "BUG-39"
+note = "La validación previa da la firma por buena sin mirar el alcance del /ByteRange, y la cofirma sigue."
+
+[[known]]
 id = "a_pades_signature_that_cannot_be_timestamped_reports_the_failure"
 outcome = "no-conforme"
 cause = "BUG-36"
