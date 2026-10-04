@@ -3,10 +3,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { SedeView } from "./SedeView";
 import { blankPdf } from "./sedeStoryData";
-import { sedeStoryMeta } from "./sedeStoryFrame";
+import { sedeAreaStoryMeta } from "./sedeStoryFrame";
 import { sedeErrand } from "./sedeStoryPort";
 
-const meta = { title: "Sede/1c · Marcar la firma", ...sedeStoryMeta } satisfies Meta<
+const meta = { title: "Sede/1c · Marcar la firma", ...sedeAreaStoryMeta } satisfies Meta<
   typeof SedeView
 >;
 

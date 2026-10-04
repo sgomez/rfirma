@@ -4,28 +4,33 @@ import type { Decorator } from "@storybook/react-vite";
 import { SedeView } from "./SedeView";
 import { sedeViewActions } from "./sedeStoryPort";
 
-/** 520 × 420 con borde y sombra; el `transform` hace del marco el bloque contenedor de su `position: fixed`. */
-const inSedeWindow: Decorator = (Story) => (
-  <div
-    style={{
-      width: 520,
-      height: 420,
-      position: "relative",
-      transform: "translateZ(0)",
-      overflow: "hidden",
-      border: "1px solid var(--rf-border-subtle)",
-      borderRadius: "var(--rf-radius-lg)",
-      boxShadow: "var(--rf-shadow-elevated)",
-    }}
-  >
-    <Story />
-  </div>
-);
+/** La ventana con borde y sombra; el `transform` hace del marco el bloque contenedor de su `position: fixed`. */
+const inSedeWindow =
+  (width: number, height: number): Decorator =>
+  (Story) => (
+    <div
+      style={{
+        width,
+        height,
+        position: "relative",
+        transform: "translateZ(0)",
+        overflow: "hidden",
+        border: "1px solid var(--rf-border-subtle)",
+        borderRadius: "var(--rf-radius-lg)",
+        boxShadow: "var(--rf-shadow-elevated)",
+      }}
+    >
+      <Story />
+    </div>
+  );
 
 /** Lo que toda historia de sede comparte: el componente, el marco, el centrado y las órdenes espía. */
 export const sedeStoryMeta = {
   component: SedeView,
-  decorators: [inSedeWindow],
+  decorators: [inSedeWindow(520, 420)],
   parameters: { layout: "centered" },
   args: { ...sedeViewActions, consentCountdown: false },
 };
+
+/** El mismo marco a 1080 × 660, el tamaño al que crece la ventana mientras se marca el área. */
+export const sedeAreaStoryMeta = { ...sedeStoryMeta, decorators: [inSedeWindow(1080, 660)] };
