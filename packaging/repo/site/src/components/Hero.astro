@@ -133,6 +133,9 @@ const trust = ["hero.trust.oss", "hero.trust.keys", "hero.trust.formats", "hero.
           src={mainWindow}
           alt={t("hero.screenshot.alt")}
           loading="eager"
+          format="webp"
+          widths={[640, 960, 1280]}
+          sizes="(min-width: 960px) 600px, 100vw"
           style="width:100%;height:auto;display:block"
         />
       </div>

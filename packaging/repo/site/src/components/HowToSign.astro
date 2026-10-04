@@ -62,6 +62,9 @@ const screenshots = [step1, step2, step3, step4];
               data-steps={String(index)}
               hidden={index !== 0}
               loading={index === 0 ? "eager" : "lazy"}
+              format="webp"
+              widths={[640, 960, 1280]}
+              sizes="(min-width: 960px) 600px, 100vw"
               style="width:100%;height:auto;vertical-align:top"
             />
           ))

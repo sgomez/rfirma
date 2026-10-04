@@ -1,20 +1,19 @@
 import { fileURLToPath } from "node:url";
 
 import sitemap from "@astrojs/sitemap";
-import { defineConfig, passthroughImageService } from "astro/config";
+import { defineConfig } from "astro/config";
 
 /** El sistema de diseño vive fuera de la raíz del sitio y Vite no lo sirve sin permiso. */
 const designSystem = fileURLToPath(
   new URL("../../../rfirma-app/src/design-system", import.meta.url),
 );
 
-// El sitio es estático puro: lo sirve Caddy desde la imagen (ADR-0015), así que
-// no hay servidor de imágenes que optimice nada en caliente.
+// El sitio es estático puro: lo sirve Caddy desde la imagen (ADR-0015), y sharp
+// optimiza las imágenes al compilar.
 export default defineConfig({
   site: "https://rfirma.sgomez.me",
   trailingSlash: "always",
   build: { format: "directory" },
-  image: { service: passthroughImageService() },
   integrations: [sitemap()],
   vite: { server: { fs: { allow: [".", designSystem] } } },
   i18n: {
