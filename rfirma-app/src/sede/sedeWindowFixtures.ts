@@ -1,8 +1,7 @@
 //! Los dobles de `SiteErrandPort` y los momentos de ejemplo que comparten las pruebas de `SedeWindow`.
 
-import { act } from "@testing-library/react";
-import type { Mock } from "vitest";
-import { vi } from "vitest";
+import type { Mock } from "storybook/test";
+import { fn } from "storybook/test";
 import type { Certificate } from "../signing/certificate";
 import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import type { Errand, ErrandStage, SiteDocument, SiteErrandPort } from "./errand";
@@ -44,15 +43,15 @@ export function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {})
     | "dismissWarning",
     Mock
   > = {
-    consent: vi.fn(),
-    confirmSignatures: vi.fn(),
-    markArea: vi.fn(),
-    cancel: vi.fn(),
-    close: vi.fn(),
-    lookAgain: vi.fn(),
-    installCertificate: vi.fn(),
-    installLocalCa: vi.fn(),
-    dismissWarning: vi.fn(),
+    consent: fn(),
+    confirmSignatures: fn(),
+    markArea: fn(),
+    cancel: fn(),
+    close: fn(),
+    lookAgain: fn(),
+    installCertificate: fn(),
+    installLocalCa: fn(),
+    dismissWarning: fn(),
   };
   const port: SiteErrandPort = {
     ...noErrand(),
@@ -81,10 +80,3 @@ export const signedDocument: SiteDocument = {
   round: { kind: "sign" },
   previousSignatures: NO_PREVIOUS_SIGNATURES,
 };
-
-/** Deja pasar el tiempo con los relojes falsos, y deja que React repinte. */
-export async function elapse(ms: number) {
-  await act(async () => {
-    vi.advanceTimersByTime(ms);
-  });
-}

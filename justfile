@@ -626,6 +626,11 @@ seal-ds-bundle:
 storybook: po-import
     cd {{ app }} && pnpm exec storybook dev --no-open -p 6006
 
+# Corre axe en navegador, con contraste, sobre todas las historias en claro y en oscuro; bajo demanda, no entra en el CI.
+[group('dev')]
+storybook-a11y: po-import
+    cd {{ app }} && node tools/storybook-a11y.mjs
+
 # Abre la ventana con recarga en caliente; los argumentos van a la aplicacion.
 [group('dev')]
 dev *args: check-native po-import

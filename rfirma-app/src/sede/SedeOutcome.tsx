@@ -165,7 +165,10 @@ export function SedeOutcome({
                   {t("actions.copy")}
                 </button>
               </div>
-              <code className="rf-body sede-outcome__detail-text">{outcome.detail}</code>
+              {/* biome-ignore lint/a11y/noNoninteractiveTabindex: la región con desplazamiento tiene que poder enfocarse para leerla con el teclado. */}
+              <code className="rf-body sede-outcome__detail-text" tabIndex={0}>
+                {outcome.detail}
+              </code>
             </div>
             {outcome.situation === "unknown" && (
               <div className="rf-row rf-gap-xs sede-outcome__report">
