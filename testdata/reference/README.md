@@ -30,6 +30,7 @@ el certificado personal del titular no se usa en ningún punto del proyecto.
 | `xades-enveloping.countersign-tree.xml` | Contrafirma XAdES, `target=tree` | `xades-enveloping.xml` |
 | `xades-enveloping.countersign-leafs.xml` | Contrafirma XAdES, `target=leafs` | `xades-enveloping.xml` |
 | `facturae.xsig` | FacturaE | `invoice.xml` |
+| `xades-foreign-key.xml` | XAdES Enveloping con el `KeyValue` de `active-rsa` delante y el certificado de `pseudonym-rsa` en `X509Data` | `document.xml` |
 
 ## Cómo se regenera
 

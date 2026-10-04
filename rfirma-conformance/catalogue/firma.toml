@@ -424,6 +424,23 @@ script = "cosigncadescheckingtampered"
 expects.code = "SAF_39"
 
 [[check]]
+id = "check_signatures_stops_a_cosign_over_a_xades_whose_key_is_not_its_certificate_key"
+set = "firma"
+citation = "ValidateXMLSignature.java:101-103, 274-322"
+explained_by.autofirma = "BUG-38"
+statement = """
+Con checkSignatures=true, una cofirma sobre una XAdES cuya clave de verificación no es la del
+certificado que se enseña como firmante se aborta con SAF_39: la clave que verifica tiene que ser
+la pública del certificado que se muestra.
+"""
+
+[check.drive]
+mode = "v4"
+script = "cosignxadescheckingforeignkey"
+act.consent = "AutoFirma rechaza la cofirma antes de pedir certificado y sin enseñar ningún diálogo. Si aparece uno que pida confirmar la multifirma, acéptalo."
+expects.code = "SAF_39"
+
+[[check]]
 id = "check_signatures_cosigns_over_a_cades_with_an_expired_certificate"
 set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:409-483"

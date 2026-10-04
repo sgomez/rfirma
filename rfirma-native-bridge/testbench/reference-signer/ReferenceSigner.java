@@ -81,6 +81,7 @@ public final class ReferenceSigner {
             case "cades" -> cades(args);
             case "xades" -> xades(args);
             case "xades-extra-certificate" -> xadesExtraCertificate(args);
+            case "xades-foreign-key" -> xadesForeignKey(args);
             case "facturae" -> facturae(args);
             case "pdf" -> pdf(args);
             case "pades" -> pades(args);
@@ -98,6 +99,7 @@ public final class ReferenceSigner {
                   ReferenceSigner cades <implicit|explicit> <entrada> <p12> <pin> <salida>
                   ReferenceSigner xades <detached|enveloping|enveloped> <entrada.xml> <p12> <pin> <salida>
                   ReferenceSigner xades-extra-certificate <entrada.xml> <p12> <pin> <cert.pem> <salida>
+                  ReferenceSigner xades-foreign-key <entrada.xml> <p12> <pin> <cert.pem> <salida>
                   ReferenceSigner facturae <invoice.xml> <p12> <pin> <salida>
                   ReferenceSigner pdf <salida> [campo de firma vacio]
                   ReferenceSigner pades <entrada.pdf> <p12> <pin> <salida> [clave=valor ...]
@@ -145,6 +147,60 @@ public final class ReferenceSigner {
         byte[] result = new AOXAdESSigner().sign(
                 data, ALGORITHM, pke.getPrivateKey(), longer, extraParams);
         Files.write(Path.of(args[5]), result);
+    }
+
+    private static void xadesForeignKey(String[] args) throws Exception {
+        Properties extraParams = new Properties();
+        extraParams.setProperty("format", AOSignConstants.SIGN_FORMAT_XADES_ENVELOPING);
+        extraParams.setProperty("addKeyInfoKeyValue", "true");
+        extraParams.setProperty("keepKeyInfoUnsigned", "true");
+        byte[] data = Files.readAllBytes(Path.of(args[1]));
+        KeyStore.PrivateKeyEntry pke = loadKey(args[2], args[3]);
+        byte[] signed = new AOXAdESSigner().sign(
+                data, ALGORITHM, pke.getPrivateKey(), pke.getCertificateChain(), extraParams);
+
+        Certificate foreign;
+        try (InputStream in = new FileInputStream(args[4])) {
+            foreign = CertificateFactory.getInstance("X.509").generateCertificate(in);
+        }
+
+        javax.xml.parsers.DocumentBuilderFactory factory =
+                javax.xml.parsers.DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        org.w3c.dom.Document xml = factory.newDocumentBuilder()
+                .parse(new java.io.ByteArrayInputStream(signed));
+        String ns = "http://www.w3.org/2000/09/xmldsig#";
+        org.w3c.dom.Element signature =
+                (org.w3c.dom.Element) xml.getElementsByTagNameNS(ns, "Signature").item(0);
+        org.w3c.dom.Element keyInfo = firstChild(signature, ns, "KeyInfo");
+        org.w3c.dom.Element x509Data = firstChild(keyInfo, ns, "X509Data");
+        keyInfo.insertBefore(firstChild(keyInfo, ns, "KeyValue"), x509Data);
+        org.w3c.dom.Element certificate =
+                (org.w3c.dom.Element) x509Data.getElementsByTagNameNS(ns, "X509Certificate").item(0);
+        certificate.setTextContent(java.util.Base64.getEncoder().encodeToString(foreign.getEncoded()));
+
+        org.w3c.dom.ls.DOMImplementationLS ls =
+                (org.w3c.dom.ls.DOMImplementationLS) xml.getImplementation().getFeature("LS", "3.0");
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        org.w3c.dom.ls.LSOutput output = ls.createLSOutput();
+        output.setByteStream(out);
+        output.setEncoding("UTF-8");
+        ls.createLSSerializer().write(xml, output);
+        Files.write(Path.of(args[5]), out.toByteArray());
+    }
+
+    private static org.w3c.dom.Element firstChild(
+            org.w3c.dom.Element parent, String ns, String localName) {
+        org.w3c.dom.NodeList children = parent.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            org.w3c.dom.Node child = children.item(i);
+            if (child instanceof org.w3c.dom.Element element
+                    && ns.equals(element.getNamespaceURI())
+                    && localName.equals(element.getLocalName())) {
+                return element;
+            }
+        }
+        return null;
     }
 
     private static String xadesFormat(String mode) {

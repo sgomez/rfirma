@@ -13,6 +13,7 @@ SIGNER="$ROOT/rfirma-native-bridge/testbench/reference-signer"
 AUTOFIRMA_VERSION="$("$ROOT/scripts/pinned-version.sh" AUTOFIRMA_VERSION)"
 REF="$ROOT/testdata/reference"
 CERT="$ROOT/testdata/fnmt/active-rsa.p12"
+FOREIGN_CERT="$ROOT/testdata/fnmt/pseudonym-rsa.p12"
 PIN="1234"
 
 mkdir -p "$REF"
@@ -200,6 +201,13 @@ sign countersign xades tree "$REF/xades-enveloping.xml" "$CERT" "$PIN" \
     "$REF/xades-enveloping.countersign-tree.xml"
 sign countersign xades leafs "$REF/xades-enveloping.xml" "$CERT" "$PIN" \
     "$REF/xades-enveloping.countersign-leafs.xml"
+
+# Una XAdES con el KeyValue de "$CERT" delante del KeyInfo y el certificado de otro titular en
+# X509Data: la clave que verifica no es la del certificado que se enseña como firmante.
+openssl pkcs12 -in "$FOREIGN_CERT" -passin pass:"$PIN" -nokeys -clcerts 2>/dev/null \
+    | openssl x509 -outform PEM > "$SIGNER/target/foreign-cert.pem"
+sign xades-foreign-key "$REF/document.xml" "$CERT" "$PIN" \
+    "$SIGNER/target/foreign-cert.pem" "$REF/xades-foreign-key.xml"
 
 # --- FacturaE ------------------------------------------------------------
 sign facturae "$REF/invoice.xml" "$CERT" "$PIN" "$REF/facturae.xsig"

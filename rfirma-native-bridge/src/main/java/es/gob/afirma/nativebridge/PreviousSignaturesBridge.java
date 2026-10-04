@@ -462,6 +462,9 @@ final class PreviousSignaturesBridge {
             }
         }
         reasons.addAll(keyInfoReasons(signature, signer));
+        if (!XmlSignerKeyBinding.holds(signature, signer.getPublicKey())) {
+            reasons.add(Reason.of(Problem.DAMAGED));
+        }
         return worstOf(reasons);
     }
 
