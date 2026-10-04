@@ -3,10 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RenderErrorBoundary } from "../errors/RenderErrorBoundary";
 import type { Certificate } from "../signing/certificate";
+import { elapse } from "../testing/elapse";
 import { renderWithCatalog } from "../testing/render";
 import { OUTCOME_CLOSE_MS } from "./errand";
 import { SedeWindow } from "./SedeWindow";
-import { elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
+import { scriptedErrand, signedDocument } from "./sedeWindowFixtures";
 
 /**
  * Grada A: el momento 5 (sin certificado utilizable), el fallo de un hijo y la
