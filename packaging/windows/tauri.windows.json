@@ -6,7 +6,8 @@
     "resources": {
       "../../rfirma-native-bridge/target/lib/rfirma/rfirma_crypto.dll": "rfirma_crypto.dll",
       "target/windows-runtime/vcruntime140.dll": "vcruntime140.dll",
-      "target/windows-runtime/vcruntime140_1.dll": "vcruntime140_1.dll"
+      "target/windows-runtime/vcruntime140_1.dll": "vcruntime140_1.dll",
+      "target/windows-runtime/rfirma.com": "rfirma.com"
     },
     "windows": {
       "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },

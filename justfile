@@ -532,7 +532,7 @@ bundle quick="false": check-native build-ts
         echo "$formato: $paquete ($(du -h "$paquete" | cut -f1))"
     done
 
-# Construye el instalador NSIS con el bundler de Tauri y el runtime de Visual C++ al lado (ADR-0035).
+# Construye el instalador NSIS con el bundler de Tauri, y el runtime de Visual C++ y rfirma.com al lado (ADR-0035, ADR-0041).
 [windows]
 [group('ci')]
 bundle: check-native build-ts
@@ -550,6 +550,10 @@ bundle: check-native build-ts
     rm -rf "$runtime"
     mkdir -p "$runtime"
     cp "$crt/vcruntime140.dll" "$crt/vcruntime140_1.dll" "$runtime/"
+    # rfirma.com, el binario de consola (ADR-0041): cargo no genera la extensión `.com` y
+    # `tauri build` no lleva la bandera `console`, así que se compila aparte y se renombra aquí.
+    (cd "{{ tauri }}" && cargo build --release --features custom-protocol,console --bin rfirma-console)
+    cp "$CARGO_TARGET_DIR/release/rfirma-console.exe" "$runtime/rfirma.com"
     (cd "{{ app }}" && pnpm exec tauri build --bundles nsis --config "{{ root }}/packaging/windows/tauri.windows.json")
     salida="$CARGO_TARGET_DIR/release/bundle/nsis"
     instalador="$(find "$salida" -maxdepth 1 -type f -name '*-setup.exe' | sort | tail -1)"
