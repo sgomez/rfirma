@@ -372,6 +372,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       changedAfterLastSignature: bool
       format: SignatureStandardView
       findings: Vec<DocumentFindingView>
+      closed: bool
 
   pub struct SiteErrandView
       origin: Option<String>
