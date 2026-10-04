@@ -1480,7 +1480,7 @@ msgid "sede.refusals.contactSite"
 msgstr "Contact the site to finish the procedure."
 
 msgid "sede.refusals.closeOther"
-msgstr "Close AutoFirma or the other procedure you have open, and try again from the site."
+msgstr "Close the other procedure or signing app and try again."
 
 msgid "sede.refusals.otherCertificate"
 msgstr "That certificate can't be used to sign. Go back to the site and choose another one."

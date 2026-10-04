@@ -56,7 +56,10 @@ export function SedeOutcome({
 }: SedeOutcomeProps) {
   const { t } = useTranslation();
   const carriesHelp = outcome.kind === "refused" && outcome.situation === "unknown";
-  const asksToAct = outcome.kind === "refused" && outcome.situation === "portsTaken";
+  const asksToAct =
+    outcome.kind === "refused" &&
+    isSedeRefusal(outcome.situation) &&
+    REFUSAL_ACTION_OF[outcome.situation] === "closeOther";
   const staysOpen = carriesHelp || asksToAct;
   useOutcomeClock(onClose, !staysOpen);
   const closeButton = useDefaultButton();

@@ -13,8 +13,7 @@ import { elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
 
 const RETRY = "Vuelve a la sede e inténtalo de nuevo.";
 const CONTACT_SITE = "Contacta con la sede para terminar el trámite.";
-const CLOSE_OTHER =
-  "Cierra AutoFirma o el otro trámite que tengas abierto y vuelve a intentarlo desde la sede.";
+const CLOSE_OTHER = "Cierra el otro trámite o la otra aplicación de firma y vuelve a intentarlo.";
 const OTHER_CERTIFICATE = "No se puede firmar con ese certificado. Vuelve a la sede y elige otro.";
 
 const SITE_ACTION: Record<keyof typeof REFUSAL_ACTION_OF, string> = {
@@ -323,17 +322,20 @@ describe("4 · outcome", () => {
     expect(screen.queryByRole("button", { name: /Comentarios y ayuda/ })).not.toBeInTheDocument();
   });
 
-  it("does not close by itself on taken ports: the person has to close the other application", async () => {
-    const { port, calls } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "refused", situation: "portsTaken", detail: "63131: en uso" },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
+  it.each(["portsTaken", "errandInFlight"] as const)(
+    "does not close by itself on %s: the person has to close the other one",
+    async (situation) => {
+      const { port, calls } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "refused", situation, detail: "63131: en uso" },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
 
-    await elapse(OUTCOME_CLOSE_MS * 2);
-    expect(calls.close).not.toHaveBeenCalled();
-    expect(screen.queryByText(/se cerrará sola/i)).not.toBeInTheDocument();
-  });
+      await elapse(OUTCOME_CLOSE_MS * 2);
+      expect(calls.close).not.toHaveBeenCalled();
+      expect(screen.queryByText(/se cerrará sola/i)).not.toBeInTheDocument();
+    },
+  );
 
   it("does not close by itself on unknown refusal", async () => {
     const { port, calls } = scriptedErrand({

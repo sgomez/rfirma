@@ -1488,7 +1488,7 @@ msgid "sede.refusals.contactSite"
 msgstr "Jarri harremanetan egoitzarekin izapidea amaitzeko."
 
 msgid "sede.refusals.closeOther"
-msgstr "Itxi AutoFirma edo irekita duzun beste izapidea, eta saiatu berriro egoitzatik."
+msgstr "Itxi beste izapidea edo beste sinadura-aplikazioa, eta saiatu berriro."
 
 msgid "sede.refusals.otherCertificate"
 msgstr "Ezin da ziurtagiri horrekin sinatu. Itzuli egoitzara eta aukeratu beste bat."

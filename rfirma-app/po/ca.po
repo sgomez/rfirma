@@ -1480,7 +1480,7 @@ msgid "sede.refusals.contactSite"
 msgstr "Contacta amb la seu per acabar el tràmit."
 
 msgid "sede.refusals.closeOther"
-msgstr "Tanca AutoFirma o l'altre tràmit que tinguis obert i torna-ho a intentar des de la seu."
+msgstr "Tanca l'altre tràmit o l'altra aplicació de signatura i torna-ho a intentar."
 
 msgid "sede.refusals.otherCertificate"
 msgstr "No es pot signar amb aquest certificat. Torna a la seu i tria'n un altre."
