@@ -49,6 +49,18 @@ export const SeveralCertificates: Story = {
   },
 };
 
+export const SignChallenge: Story = {
+  args: { errand: sedeErrand(consentStage({ document: null, signing: "challenge" })) },
+};
+
+export const SignXml: Story = {
+  args: { errand: sedeErrand(consentStage({ document: null, signing: "xml" })) },
+};
+
+export const SignInvoice: Story = {
+  args: { errand: sedeErrand(consentStage({ document: null, signing: "invoice" })) },
+};
+
 export const NarrowedBySite: Story = {
   args: { errand: sedeErrand(consentStage({ narrowed: true })) },
 };
@@ -117,6 +129,23 @@ export const PreviousSignaturesWithProblem: Story = {
   },
 };
 
+export const PreviousSignatureBySameCertificate: Story = {
+  args: {
+    errand: sedeErrand(
+      consentStage({
+        document: documentWith({
+          previousSignatures: previousSignaturesReport([
+            previousSignature({
+              issuer: certificate().issuer,
+              certificateSerialNumber: certificate().certificateSerialNumber,
+            }),
+          ]),
+        }),
+      }),
+    ),
+  },
+};
+
 export const Batch: Story = {
   args: { errand: sedeErrand(consentStage({ document: null, signs: 3, signing: null })) },
 };
@@ -144,6 +173,15 @@ export const IdentityData: Story = {
   args: {
     errand: sedeErrand(consentStage({ document: null, signing: null }), {
       operation: "selectcert",
+    }),
+  },
+};
+
+export const IdentityDataWithoutOrigin: Story = {
+  args: {
+    errand: sedeErrand(consentStage({ document: null, signing: null }), {
+      operation: "selectcert",
+      origin: null,
     }),
   },
 };

@@ -1,3 +1,4 @@
+import { composeStories } from "@storybook/react-vite";
 import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inMemoryExternalDestinationOpener } from "../desktop/externalDestination";
@@ -9,8 +10,9 @@ import {
   type REFUSAL_ACTION_OF,
   type RefusalSituation,
 } from "./errand";
+import * as outcomeModule from "./SedeOutcome.stories";
 import { SedeWindow } from "./SedeWindow";
-import { scriptedErrand, signedDocument } from "./sedeWindowFixtures";
+import { scriptedErrand, scriptedFrom } from "./sedeWindowFixtures";
 
 const RETRY = "Vuelve a la sede e inténtalo de nuevo.";
 const CONTACT_SITE = "Contacta con la sede para terminar el trámite.";
@@ -84,80 +86,14 @@ const DESK_TITLE: Record<(typeof NAMED_BY_THE_DESK)[number], string> = {
   keyringPinMissing: "El llavero ha perdido el PIN del Almacén",
 };
 
-/** Grada A: el momento 4, el desenlace, y su cierre a los quince segundos (TD-63). */
+/** Grada A: el momento 4, el desenlace: qué se dice de cada rechazo y su cierre a los quince segundos. Lo que enseña cada historia está en `SedeWindow.presentation.test.tsx`. */
+
+const { Signed, RefusedContactSite, RefusedCloseOther, RefusedUnknown } =
+  composeStories(outcomeModule);
 
 describe("4 · outcome", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
-
-  it("still shows what was signed: the outcome is where you check it was that document", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "signed", document: signedDocument },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText("Solicitud de subvención 2026")).toBeInTheDocument();
-    expect(screen.getByText("27 páginas · 2,4 MB")).toBeInTheDocument();
-  });
-
-  it("shows no document in a refusal, because there never was one", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "refused", situation: "missingFormat", detail: "format=" },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.queryByText("Solicitud de subvención 2026")).not.toBeInTheDocument();
-  });
-
-  it("says rFirma keeps no copy, which is the one thing you cannot deduce", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "signed", document: signedDocument },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText("Firmado y enviado")).toBeInTheDocument();
-    expect(screen.getByText("rFirma no guarda copia.")).toBeInTheDocument();
-  });
-
-  it("confirms a plain save with no document row: the person just chose where", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "saved" },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText("Guardado")).toBeInTheDocument();
-    expect(screen.queryByText("Solicitud de subvención 2026")).not.toBeInTheDocument();
-  });
-
-  it("says how many files were delivered when the load ends there", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "loaded", fileCount: 2 },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText("Cargado")).toBeInTheDocument();
-    expect(
-      screen.getByText("Se han enviado 2 ficheros a sede.ejemplo.gob.es."),
-    ).toBeInTheDocument();
-  });
-
-  it("confirms the batch is at the site, with how many signatures it carried", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "batchSigned", signs: 3 },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText("Firmado y enviado")).toBeInTheDocument();
-    expect(
-      screen.getByText("Las 3 firmas del lote ya están en sede.ejemplo.gob.es."),
-    ).toBeInTheDocument();
-  });
 
   it.each([
     ...Object.entries(SITE_ACTION).map(([situation, action]) => ({
@@ -176,17 +112,6 @@ describe("4 · outcome", () => {
     renderWithCatalog(<SedeWindow errands={port} />);
 
     expect(screen.getByText(text)).toBeInTheDocument();
-  });
-
-  it("tells a refusal without naming the site, even when the request brings no origin", () => {
-    const { port } = scriptedErrand(
-      { kind: "outcome", outcome: { kind: "refused", situation: "sha1", detail: "CRUDO" } },
-      { origin: null },
-    );
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText(CONTACT_SITE)).toBeInTheDocument();
-    expect(screen.queryByText(/La petición/)).not.toBeInTheDocument();
   });
 
   it.each([
@@ -234,135 +159,46 @@ describe("4 · outcome", () => {
     },
   );
 
-  it("adds neither a cause nor a note for the site to a refusal that has none", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "refused", situation: "unsupportedFilter", detail: "CRUDO" },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.queryByText(/La sede ha pedido/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/pedid/)).not.toBeInTheDocument();
-  });
-
-  it("asks to close the other application on taken ports, under the common refusal title", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: {
-        kind: "refused",
-        situation: "portsTaken",
-        detail: "63131: Address already in use (os error 98)",
-      },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText("No se ha completado la petición")).toBeInTheDocument();
-    expect(screen.getByText(CLOSE_OTHER)).toBeInTheDocument();
-    expect(screen.getByText("63131: Address already in use (os error 98)")).toBeInTheDocument();
-    expect(screen.queryByText("La petición no ha llegado")).not.toBeInTheDocument();
-  });
-
-  it("adds nothing to a cancellation: the title already says it", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "cancelled", document: signedDocument },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText("Has cancelado la firma")).toBeInTheDocument();
-    expect(screen.queryByText(/no se ha firmado nada/i)).not.toBeInTheDocument();
-  });
-
-  it("states a refusal without blaming anyone, and leaves the raw detail copiable", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: {
-        kind: "refused",
-        situation: "appendedSignaturePage",
-        detail: "signaturePages=append",
-      },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText("No se ha completado la petición")).toBeInTheDocument();
-    expect(screen.getByText(CONTACT_SITE)).toBeInTheDocument();
-    expect(screen.getByText("signaturePages=append")).toBeInTheDocument();
-    expect(screen.queryByText(/el fallo es de/i)).not.toBeInTheDocument();
-  });
-
-  it("shows the help link on unknown refusal and opens discussions outside", async () => {
+  it("opens discussions outside from the help link of an unknown refusal", () => {
     const destinations = inMemoryExternalDestinationOpener();
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: {
-        kind: "refused",
-        situation: "unknown",
-        detail: "error inesperado del transporte",
-      },
-    });
+    const { port } = scriptedFrom(RefusedUnknown);
     renderWithCatalog(<SedeWindow errands={port} externalDestinations={destinations} />);
 
-    const helpButton = screen.getByRole("button", { name: /Comentarios y ayuda/ });
-    expect(helpButton).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Comentarios y ayuda/ }));
 
-    fireEvent.click(helpButton);
     expect(destinations.opened).toEqual(["discussions"]);
   });
 
-  it("does not show the help link on known refusals", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: {
-        kind: "refused",
-        situation: "appendedSignaturePage",
-        detail: "signaturePages=append",
-      },
-    });
+  it.each([
+    ["taken ports", RefusedCloseOther],
+    ["an unknown refusal", RefusedUnknown],
+  ])("does not close by itself on %s: the person has to act", async (_, story) => {
+    const { port, calls } = scriptedFrom(story);
     renderWithCatalog(<SedeWindow errands={port} />);
 
-    expect(screen.queryByRole("button", { name: /Comentarios y ayuda/ })).not.toBeInTheDocument();
+    await elapse(OUTCOME_CLOSE_MS * 2);
+
+    expect(calls.close).not.toHaveBeenCalled();
+    expect(screen.queryByText(/se cerrará/i)).not.toBeInTheDocument();
   });
 
-  it.each(["portsTaken", "errandInFlight"] as const)(
-    "does not close by itself on %s: the person has to close the other one",
-    async (situation) => {
-      const { port, calls } = scriptedErrand({
-        kind: "outcome",
-        outcome: { kind: "refused", situation, detail: "63131: en uso" },
-      });
-      renderWithCatalog(<SedeWindow errands={port} />);
-
-      await elapse(OUTCOME_CLOSE_MS * 2);
-      expect(calls.close).not.toHaveBeenCalled();
-      expect(screen.queryByText(/se cerrará sola/i)).not.toBeInTheDocument();
-    },
-  );
-
-  it("does not close by itself on unknown refusal", async () => {
+  it("does not close by itself while another errand is in flight", async () => {
     const { port, calls } = scriptedErrand({
       kind: "outcome",
-      outcome: {
-        kind: "refused",
-        situation: "unknown",
-        detail: "error desconocido",
-      },
+      outcome: { kind: "refused", situation: "errandInFlight", detail: "63131: en uso" },
     });
     renderWithCatalog(<SedeWindow errands={port} />);
 
     await elapse(OUTCOME_CLOSE_MS * 2);
+
     expect(calls.close).not.toHaveBeenCalled();
-    expect(screen.queryByText(/se cerrará en/i)).not.toBeInTheDocument();
   });
 
-  it("closes by itself after fifteen seconds on known refusals, and not before", async () => {
-    const { port, calls } = scriptedErrand({
-      kind: "outcome",
-      outcome: {
-        kind: "refused",
-        situation: "appendedSignaturePage",
-        detail: "signaturePages=append",
-      },
-    });
+  it.each([
+    ["a known refusal", RefusedContactSite],
+    ["a signature", Signed],
+  ])("closes by itself after fifteen seconds on %s, and not before", async (_, story) => {
+    const { port, calls } = scriptedFrom(story);
     renderWithCatalog(<SedeWindow errands={port} />);
 
     await elapse(OUTCOME_CLOSE_MS - 1_000);
@@ -372,37 +208,13 @@ describe("4 · outcome", () => {
     expect(calls.close).toHaveBeenCalledOnce();
   });
 
-  it("focuses Cerrar on a signature, so Enter closes without waiting", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "signed", document: signedDocument },
-    });
+  it.each([
+    ["a signature", Signed],
+    ["a refusal that stays open", RefusedCloseOther],
+  ])("focuses Cerrar on %s, so Enter closes it", (_, story) => {
+    const { port } = scriptedFrom(story);
     renderWithCatalog(<SedeWindow errands={port} />);
 
     expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
-  });
-
-  it("focuses Cerrar on a refusal that stays open, so Enter closes it", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "refused", situation: "portsTaken", detail: "" },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
-  });
-
-  it("closes by itself after fifteen seconds, and not before", async () => {
-    const { port, calls } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "signed", document: signedDocument },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    await elapse(OUTCOME_CLOSE_MS - 1_000);
-    expect(calls.close).not.toHaveBeenCalled();
-
-    await elapse(1_000);
-    expect(calls.close).toHaveBeenCalledOnce();
   });
 });

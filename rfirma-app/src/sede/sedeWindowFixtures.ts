@@ -72,6 +72,18 @@ export function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {})
   return { port, calls };
 }
 
+/** El trámite de una historia, para montar su estado en un test de comportamiento. */
+export function errandOf(story: { args: { errand?: Errand } }): Errand {
+  if (story.args.errand === undefined) throw new Error("the story carries no errand");
+  return story.args.errand;
+}
+
+/** Un puerto guionizado que arranca en el trámite de una historia. */
+export function scriptedFrom(story: { args: { errand?: Errand } }) {
+  const errand = errandOf(story);
+  return scriptedErrand(errand.stage, errand);
+}
+
 /** El documento del artboard, el mismo que se enseña al consentir. */
 export const signedDocument: SiteDocument = {
   title: "Solicitud de subvención 2026",

@@ -87,12 +87,4 @@ describe("1c · marking the area of the visible signature", () => {
     expect(calls.markArea).toHaveBeenCalledWith(null);
     expect(calls.cancel).not.toHaveBeenCalled();
   });
-
-  it("leaves only cancelling when the document cannot be opened", () => {
-    const { port } = scriptedErrand({ kind: "marking", pdf: null });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText(/No se ha podido abrir el documento/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
-  });
 });
