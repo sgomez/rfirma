@@ -53,6 +53,10 @@ import org.spongycastle.asn1.ASN1InputStream;
 
 import com.aowagie.text.Document;
 import com.aowagie.text.Paragraph;
+import com.aowagie.text.Rectangle;
+import com.aowagie.text.pdf.PdfAnnotation;
+import com.aowagie.text.pdf.PdfFormField;
+import com.aowagie.text.pdf.PdfName;
 import com.aowagie.text.pdf.PdfWriter;
 
 import es.gob.afirma.core.signers.AOSignConstants;
@@ -95,7 +99,7 @@ public final class ReferenceSigner {
                   ReferenceSigner xades <detached|enveloping|enveloped> <entrada.xml> <p12> <pin> <salida>
                   ReferenceSigner xades-extra-certificate <entrada.xml> <p12> <pin> <cert.pem> <salida>
                   ReferenceSigner facturae <invoice.xml> <p12> <pin> <salida>
-                  ReferenceSigner pdf <salida>
+                  ReferenceSigner pdf <salida> [campo de firma vacio]
                   ReferenceSigner pades <entrada.pdf> <p12> <pin> <salida> [clave=valor ...]
                   ReferenceSigner pades-timestamped <entrada.pdf> <p12> <pin> <tsaURL> <salida>
                   ReferenceSigner pades-stamped-at <entrada.pdf> <p12> <pin> <instante ISO-8601> <salida>
@@ -163,9 +167,17 @@ public final class ReferenceSigner {
     private static void pdf(String[] args) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Document document = new Document();
-        PdfWriter.getInstance(document, out);
+        PdfWriter writer = PdfWriter.getInstance(document, out);
         document.open();
         document.add(new Paragraph("Documento de prueba de rfirma."));
+        if (args.length > 2) {
+            PdfFormField field = PdfFormField.createSignature(writer);
+            field.setWidget(new Rectangle(100, 600, 300, 700), new PdfName("I"));
+            field.setFieldName(args[2]);
+            field.setFlags(PdfAnnotation.FLAGS_PRINT);
+            field.setPage(1);
+            writer.addAnnotation(field);
+        }
         document.close();
         Files.write(Path.of(args[1]), out.toByteArray());
     }

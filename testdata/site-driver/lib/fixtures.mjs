@@ -86,6 +86,13 @@ export function aPdfWithAnUnregisteredSignature() {
   ]);
 }
 
+/** Un PDF con dos firmas y nada detrás de la última, cuya lista de firmas empieza por la más antigua. */
+export function aPdfWithTwoSignaturesListedOldestFirst() {
+  return readFileSync(
+    join(here, "../previous-signatures/pades-two-signatures-oldest-listed-first.pdf"),
+  );
+}
+
 const THE_PASSWORD_PADDING = Buffer.from(
   "28bf4e5e4e758a4164004e56fffa01082e2e00b6d0683e802f0ca9fe6453697a",
   "hex",

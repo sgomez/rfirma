@@ -1,10 +1,13 @@
 package es.gob.afirma.nativebridge;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
@@ -16,6 +19,9 @@ import java.util.Properties;
 import org.spongycastle.cms.CMSSignedData;
 import org.spongycastle.cms.SignerInformation;
 import org.junit.jupiter.api.Test;
+
+import com.aowagie.text.pdf.AcroFields;
+import com.aowagie.text.pdf.PdfReader;
 
 /** Las salidas del veredicto, sobre firmas hechas aqui mismo. */
 class ValidationBridgeTest {
@@ -64,6 +70,90 @@ class ValidationBridgeTest {
                 "la clave de extraParams con la que se repite sin volver a preguntar");
         assertEquals("pdfShadowAttackSuspect", verdict.messageCode(),
                 "y el codigo del mensaje con el que pregunta el original");
+    }
+
+    @Test
+    void two_signatures_with_nothing_after_the_last_are_valid_with_the_oldest_listed_first()
+            throws Exception {
+        final byte[] pdf = TestFixtures.pdfWithVisibleCosignsApartFromTheFirstSignature(1);
+        assertTheOldestSignatureIsListedFirst(pdf);
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(),
+                "motivo: " + verdict.reason() + ", pregunta: " + verdict.messageCode());
+    }
+
+    @Test
+    void the_sample_signed_twice_by_the_original_lists_the_oldest_first_and_is_valid()
+            throws Exception {
+        final byte[] pdf = Files.readAllBytes(Path.of("..", "testdata", "previous-signatures",
+                "pades-two-signatures-oldest-listed-first.pdf"));
+        assertTheOldestSignatureIsListedFirst(pdf);
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(),
+                "motivo: " + verdict.reason() + ", pregunta: " + verdict.messageCode());
+    }
+
+    @Test
+    void three_signatures_with_nothing_after_the_last_are_valid_whatever_order_they_are_listed_in()
+            throws Exception {
+        final byte[] pdf = TestFixtures.pdfWithVisibleCosignsApartFromTheFirstSignature(2);
+        assertTheLatestSignatureIsNotListedFirst(pdf);
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(),
+                "motivo: " + verdict.reason() + ", pregunta: " + verdict.messageCode());
+    }
+
+    @Test
+    void a_visible_cosign_over_the_first_signature_with_nothing_after_it_is_valid()
+            throws Exception {
+        final byte[] pdf = TestFixtures.pdfWithAVisibleCosignOverTheFirstSignature();
+        assertTheOldestSignatureIsListedFirst(pdf);
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(),
+                "motivo: " + verdict.reason() + ", pregunta: " + verdict.messageCode());
+    }
+
+    @Test
+    void a_page_repainted_after_the_last_of_several_signatures_asks_for_confirmation()
+            throws Exception {
+        final byte[] pdf = TestFixtures.withThePageRepaintedAfterSigning(
+                TestFixtures.pdfWithVisibleCosignsApartFromTheFirstSignature(1));
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.CONFIRMATION_NEEDED, verdict.outcome());
+        assertEquals("allowShadowAttack", verdict.param());
+        assertEquals("pdfShadowAttackSuspect", verdict.messageCode());
+    }
+
+    @Test
+    void a_form_signed_twice_is_valid_while_nothing_is_filled_in_after_signing() throws Exception {
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(
+                TestFixtures.pdfWithATextFieldSignedTwice(), "PAdES", false);
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(),
+                "motivo: " + verdict.reason() + ", pregunta: " + verdict.messageCode());
+    }
+
+    @Test
+    void a_form_filled_in_after_the_last_of_several_signatures_asks_for_confirmation()
+            throws Exception {
+        final byte[] pdf = TestFixtures.withTheTextFieldFilledInAfterSigning(
+                TestFixtures.pdfWithATextFieldSignedTwice());
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.CONFIRMATION_NEEDED, verdict.outcome());
+        assertEquals("allowModifiedForm", verdict.param());
+        assertEquals("signingModifiedPdfForm", verdict.messageCode());
     }
 
     @Test
@@ -284,6 +374,21 @@ class ValidationBridgeTest {
                 "el motivo con el que el original da por caducado el certificado");
         assertEquals(ValidationBridge.VALID, unchecked.outcome(),
                 "sin comprobar certificados la caducidad no cuenta: motivo " + unchecked.reason());
+    }
+
+    private static void assertTheOldestSignatureIsListedFirst(final byte[] pdf) throws Exception {
+        assertEquals(TestFixtures.FIRST_SIGNATURE_FIELD,
+                new PdfReader(pdf).getAcroFields().getSignatureNames().get(0),
+                "iText lista primero la firma antigua");
+    }
+
+    private static void assertTheLatestSignatureIsNotListedFirst(final byte[] pdf)
+            throws Exception {
+        final AcroFields fields = new PdfReader(pdf).getAcroFields();
+        assertNotEquals(fields.getTotalRevisions(),
+                fields.getRevision(fields.getSignatureNames().get(0)),
+                "iText no lista primero la firma de la ultima revision: "
+                        + fields.getSignatureNames());
     }
 
     private static byte[] signed(final byte[] pdf) throws Exception {

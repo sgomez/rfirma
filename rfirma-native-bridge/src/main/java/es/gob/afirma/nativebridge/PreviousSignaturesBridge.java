@@ -584,7 +584,7 @@ final class PreviousSignaturesBridge {
     }
 
     /** La firma de la revision mas alta, que es la ultima: {@code getSignatureNames} no tiene orden. */
-    private static String latestRevisionName(final AcroFields fields) {
+    static String latestRevisionName(final AcroFields fields) {
         String latest = null;
         for (final String name : fields.getSignatureNames()) {
             if (latest == null || fields.getRevision(name) > fields.getRevision(latest)) {

@@ -55,7 +55,7 @@ final class ValidationBridge {
         final SignValider valider = validerFor(format);
         valider.setRelaxed(true);
         try {
-            return verdictOf(validities(valider, document, checkCertificates));
+            return verdictOf(relaxedValidities(valider, document, checkCertificates));
         }
         catch (final RuntimeConfigNeededException e) {
             if (RequestType.CONFIRM != e.getRequestType()) {
@@ -152,6 +152,17 @@ final class ValidationBridge {
                     withContent));
         }
         return integrity;
+    }
+
+    private static List<SignValidity> relaxedValidities(final SignValider valider,
+            final byte[] document, final boolean checkCertificates)
+            throws IOException, RuntimeConfigNeededException {
+        if (!(valider instanceof final ValidatePdfSignature pdf)) {
+            return validities(valider, document, checkCertificates);
+        }
+        final Properties options = headless(checkCertificates);
+        LastSignedRevision.confirmNothingChangedAfterSigning(document, options);
+        return pdf.validate(document, LastSignedRevision.withoutRepeatingThem(options));
     }
 
     private static Properties headless(final boolean checkCertificates) {

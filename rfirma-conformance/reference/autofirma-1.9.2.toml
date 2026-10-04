@@ -17,6 +17,12 @@ cause = "BUG-23"
 note = "La firma vuelve sin el sello pedido y la operación no reporta que no se pudo sellar."
 
 [[known]]
+id = "check_signatures_cosigns_a_pdf_with_several_signatures_and_nothing_after_them"
+outcome = "no-conforme"
+cause = "BUG-37"
+note = "Compara la revisión de la firma más antigua con el documento entero, ve la segunda firma visible como un cambio y, con headless=true, responde SAF_50."
+
+[[known]]
 id = "a_pades_signature_that_cannot_be_timestamped_reports_the_failure"
 outcome = "no-conforme"
 cause = "BUG-36"
