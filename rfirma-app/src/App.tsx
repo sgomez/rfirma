@@ -177,24 +177,12 @@ export function App({
   );
 
   const standardRectOn = useMemo(() => (pdf === null ? null : standardRectOnPageOf(pdf)), [pdf]);
-  const {
-    placing,
-    pageMode,
-    placement,
-    viewedPage,
-    viewPage,
-    moveBox,
-    sealPage,
-    sealViewedPage,
-    unsealViewedPage,
-    choosePages,
-    changePageMode,
-    placeOnViewedPage,
-  } = usePlacement({
+  const placementState = usePlacement({
     document: placedDocument,
     standardRectOn,
     onChange: documents.place,
   });
+  const { placing, placement, viewPage, moveBox, sealPage, placeOnViewedPage } = placementState;
 
   const signatureOn = signature.enabled && pdf !== null;
   useEffect(() => {
@@ -465,7 +453,6 @@ export function App({
               document={{
                 id: documents.active.id,
                 name: documents.active.name,
-                pages: pdf.pageCount,
                 sizeBytes,
               }}
               previousSignatures={previousSignatures}
@@ -475,14 +462,7 @@ export function App({
               onChooseModule={() => void lookForCertificates()}
               signature={signature}
               onChangeSignature={setSignature}
-              placement={placement}
-              pageSets={placing.sets}
-              onChoosePages={choosePages}
-              pageMode={pageMode}
-              onChangePageMode={changePageMode}
-              viewedPage={viewedPage}
-              onSeal={sealViewedPage}
-              onUnseal={unsealViewedPage}
+              placementState={placementState}
               rubric={rubric}
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}

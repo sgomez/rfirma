@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { placementStateOf } from "../placement/placementFixtures";
 import {
   certificate,
   previousSignatureOf,
@@ -86,5 +87,26 @@ describe("la firma visible, al cambiar el certificado", () => {
     show({ signature: visible });
 
     expect(screen.getByText("En la página 3")).toBeInTheDocument();
+  });
+
+  it("shows no placement block with the visible signature off", () => {
+    renderPanel({ signature: { ...visible, enabled: false } });
+
+    expect(screen.queryByRole("radiogroup", { name: "En qué páginas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /aquí/ })).not.toBeInTheDocument();
+  });
+
+  it("turns the sign button off while the typed pages make no sense", () => {
+    renderPanel({
+      signature: visible,
+      placementState: placementStateOf({
+        rect: { x0: 100, y0: 100, x1: 300, y1: 180 },
+        sets: { single: 3, these: { only: [10, 40] } },
+        mode: "these",
+        pageCount: 6,
+      }),
+    });
+
+    expect(screen.getByRole("button", { name: "Firmar" })).toBeDisabled();
   });
 });
