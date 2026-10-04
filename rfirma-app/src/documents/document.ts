@@ -1,6 +1,6 @@
 //! El vocabulario del documento que se tiene delante (`DocumentInHand`) y su insignia; no es la fila de los recientes. Sin React.
 
-import type { Placement } from "../viewer/signatureBox";
+import type { Placement } from "../placement/pageSets";
 
 /** Si el documento ya lleva firmas; es el `Badge` de `memory::recents` en el backend. */
 export type Badge = "Signed" | "Unsigned";

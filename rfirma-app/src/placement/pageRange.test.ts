@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { unsealing } from "../viewer/signatureBox";
 import { formatPageRange, parsePageRange } from "./pageRange";
+import { unsealing } from "./pageSets";
 
 /** El recuadro no importa aquí: lo que se prueba es el conjunto. */
 const rect = { x0: 0, y0: 0, x1: 10, y1: 10 };

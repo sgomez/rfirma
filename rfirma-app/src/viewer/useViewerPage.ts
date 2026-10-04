@@ -8,9 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { firstSealedPage, type Placement } from "../placement/pageSets";
 import type { PdfDocument, Viewport } from "./pdf";
 import { createRenderQueue, type ObservedSize, observeSize, type RenderQueue } from "./renderQueue";
-import { firstSealedPage, type PageSize, type Placement } from "./signatureBox";
+import type { PageSize } from "./signatureBox";
 import {
   anchoredScroll,
   bitmapScale,

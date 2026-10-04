@@ -7,7 +7,7 @@ import type { DocumentDrops, Drop } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
 import type { RecentDocument, RecentsStore } from "./documents/recents";
 import type { ErrorSituation } from "./errors/errorMessage";
-import type { PageSet } from "./viewer/signatureBox";
+import type { PageSet } from "./placement/pageSets";
 import { type PdfSource, pdfjsSource } from "./viewer/source";
 
 /**

@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { AlertIcon } from "../design-system/icons";
 import { Stack } from "../design-system/Stack";
-import type { PageChoice, PageSets } from "../viewer/signatureBox";
-import { type FieldTrouble, messageFor, type PageButton } from "./placementField";
+import type { PageChoice, PageSets } from "../placement/pageSets";
+import { type FieldTrouble, messageFor, type PageButton } from "../placement/placementField";
 
 interface PlacementFieldsetProps {
   pageSets: PageSets;

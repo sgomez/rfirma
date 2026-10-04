@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Switch } from "../design-system/Switch";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
-import type { PageChoice, PageSet, PageSets, Placement } from "../viewer/signatureBox";
+import type { PageChoice, PageSet, PageSets, Placement } from "../placement/pageSets";
 import { CertificateNotice } from "./CertificateNotice";
 import { CertificateSelect } from "./CertificateSelect";
 import type { Certificate } from "./certificate";

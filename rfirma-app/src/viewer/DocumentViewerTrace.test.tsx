@@ -1,10 +1,11 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
+import type { PageChoice, Placement } from "../placement/pageSets";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
 import type { PdfDocument } from "./pdf";
-import { movedBy, type PageChoice, type Placement, toPixels, toUserSpace } from "./signatureBox";
+import { movedBy, toPixels, toUserSpace } from "./signatureBox";
 import {
   box,
   goToPage,

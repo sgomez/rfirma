@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { PageGeometry } from "./App.signingOrder";
 import { signingOrderFor } from "./App.signingOrder";
 import type { DocumentInHand } from "./documents/document";
+import { firstSealedPage, type Placement, sealedPages } from "./placement/pageSets";
 import type { Certificate } from "./signing/certificate";
 import { isUsable } from "./signing/certificate";
 import type { SigningBackend, SigningOrder } from "./signing/flow";
@@ -18,7 +19,6 @@ import { pagesWithoutSeal } from "./signing/unsealedPages";
 import { useStampPreview } from "./signing/useStampPreview";
 import { rubricGapFor, type VisibleSignature } from "./signing/visibleSignature";
 import type { PdfDocument } from "./viewer/pdf";
-import { firstSealedPage, type Placement, sealedPages } from "./viewer/signatureBox";
 
 interface SignFlowInput {
   pdf: PdfDocument | null;

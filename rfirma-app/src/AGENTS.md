@@ -53,7 +53,8 @@ sus comentarios a las formas que admite la regla 6 de `CLAUDE.md`.
 | `shell/` | La ventana y su cabecera (ADR-0007). |
 | `documents/` | Los documentos abiertos y los recientes. |
 | `signing/` | La firma, en el lado de la interfaz. |
-| `viewer/` | El visor de PDF. |
+| `placement/` | El vocabulario de la colocación de la firma visible: el recuadro en espacio de usuario, el conjunto de páginas, sus modos y el conjunto tecleado. No sabe de píxeles ni de gestos. |
+| `viewer/` | El visor de PDF: los píxeles y los gestos sobre el recuadro. |
 | `status/` | El estado de la instalación. |
 | `preferences/` | Los ajustes. |
 | `i18n/` | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). Los bloques de comentario que explican el mecanismo están indexados en `i18n/AGENTS.md`. `i18n/locales/*.ts` son generados y no versionados: no se leen ni se editan. |

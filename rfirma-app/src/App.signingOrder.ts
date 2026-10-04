@@ -1,52 +1,12 @@
-//! La colocación guardada, la geometría de la página y la orden de firma armada en un solo sitio, con el formato de la fecha del recuadro y el certificado que se elige de los encontrados. Sin React.
+//! La geometría de la página y la orden de firma armada en un solo sitio, con el formato de la fecha del recuadro y el certificado que se elige de los encontrados. Sin React.
 
+import type { Placement } from "./placement/pageSets";
 import type { Certificate } from "./signing/certificate";
 import { isUsable } from "./signing/certificate";
 import type { SigningOrder } from "./signing/flow";
 import { base64Of, type Rubric } from "./signing/rubric";
 import type { CertificateState } from "./signing/SigningPanel";
 import type { VisibleSignature } from "./signing/visibleSignature";
-import {
-  NO_PAGE_SETS,
-  type PageChoice,
-  type PageSets,
-  type Placement,
-  sealedPages,
-  type UserSpaceRect,
-} from "./viewer/signatureBox";
-
-/**
- * La colocación **entera**, tal y como la guarda la ventana.
- *
- * Un rectángulo, tres conjuntos —uno por opción— y cuál de ellas manda. Lo que
- * cruza a firmar es el `Placement` que sale de las tres, no esto: aquí vive el
- * estado de la interfaz, y ahí fuera solo se puede firmar en un sitio.
- */
-export interface Placing {
-  rect: UserSpaceRect | null;
-  sets: PageSets;
-  choice: PageChoice;
-}
-
-/**
- * La colocación guardada en la fila, repartida en las tres opciones.
- *
- * La opción activa es **la que explica el conjunto sin inventar nada**: una
- * página sola es `Solo 1 página`, la palabra `"all"` es `Todas las páginas` y
- * cualquier otra cosa es `Estas páginas`. Las demás arrancan vacías a propósito
- * —no se rellenan «por si acaso»— para que la primera vez que se elijan se
- * siembren de esta, que es lo que pide la ficha.
- */
-export function placingFrom(placement: Placement | null, pageCount: number): Placing {
-  if (placement === null) return { rect: null, sets: NO_PAGE_SETS, choice: "single" };
-  const { rect, pages } = placement;
-  if (pages === "all") return { rect, sets: NO_PAGE_SETS, choice: "all" };
-  const only = sealedPages(pages, pageCount);
-  if (only.length === 1 && only[0] !== undefined) {
-    return { rect, sets: { single: only[0], these: null }, choice: "single" };
-  }
-  return { rect, sets: { single: null, these: pages }, choice: "these" };
-}
 
 /**
  * La página que mide la orden: la primera del conjunto, con su caja y su giro.

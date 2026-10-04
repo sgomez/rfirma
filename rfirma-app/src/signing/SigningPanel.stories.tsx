@@ -21,7 +21,7 @@ import {
   STORY_RUBRIC,
   VALID_CLOSING,
 } from "../../.storybook/fixtures/signing";
-import { placementOf } from "../viewer/signatureBox";
+import { placementOf } from "../placement/pageSets";
 import { SigningPanel } from "./SigningPanel";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 

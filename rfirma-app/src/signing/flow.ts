@@ -6,7 +6,7 @@
  * pide cada etapa por su turno y enseña en cuál va.
  */
 
-import type { PageSet } from "../viewer/signatureBox";
+import type { PageSet } from "../placement/pageSets";
 import type { PreviousSignaturesReport } from "./previousSignatures";
 import type { StoreSecret } from "./secret";
 import type { TokenFailure } from "./token";

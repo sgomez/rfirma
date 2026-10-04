@@ -1,8 +1,7 @@
 //! La colocación de la firma visible: el recuadro y los tres modos de página.
 
 import { useCallback, useMemo, useState } from "react";
-import type { Placing } from "./App.signingOrder";
-import type { PdfDocument } from "./viewer/pdf";
+import type { Placing } from "./placement/pageSets";
 import {
   activating,
   NO_PAGE_SETS,
@@ -12,9 +11,10 @@ import {
   pagesOf,
   placementOf,
   sealedPages,
-  standardRectOf,
   storing,
-} from "./viewer/signatureBox";
+} from "./placement/pageSets";
+import type { PdfDocument } from "./viewer/pdf";
+import { standardRectOf } from "./viewer/signatureBox";
 
 /**
  * La colocación de la firma visible: el recuadro y los tres modos de página que lo
