@@ -1,7 +1,7 @@
 export const es = {
-  "meta.title": "rFirma — Firma electrónica nativa para el escritorio",
+  "meta.title": "rFirma: firma electrónica sin Java, alternativa a AutoFirma",
   "meta.description":
-    "Aplicación de escritorio en Rust y React que sustituye la interfaz Swing y los servidores locales de AutoFirma, con la criptografía oficial de la Administración.",
+    "Firma PDF con tu certificado digital o DNIe en Linux, Windows y macOS. Funciona en las sedes que piden AutoFirma, sin Java. Versión alfa.",
   "meta.image.alt": "Logotipo de rFirma sobre fondo verde con el dominio rfirma.sgomez.me",
 
   "notice.aria": "Aviso sobre titularidad oficial",
@@ -28,10 +28,10 @@ export const es = {
   "lang.en": "English",
 
   "hero.kicker": "Alternativa a AutoFirma",
-  "hero.title.line1": "Firma electrónica nativa.",
-  "hero.title.line2": "Sin Java, sin esperas.",
+  "hero.title.line1": "rFirma: firma electrónica nativa,",
+  "hero.title.line2": "sin Java.",
   "hero.body":
-    "Aplicación de escritorio en Rust y React que sustituye la interfaz Swing y los servidores locales de AutoFirma, con la criptografía oficial de la Administración.",
+    "Sin esperas. Aplicación de escritorio en Rust y React que sustituye la interfaz Swing y los servidores locales de AutoFirma, con la criptografía oficial de la Administración.",
   "hero.cta.primary": "Instalar rFirma",
   "hero.cta.secondary": "Ver cómo se firma",
   "hero.trust.oss": "Código abierto, EUPL 1.2",

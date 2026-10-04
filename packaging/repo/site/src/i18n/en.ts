@@ -1,9 +1,9 @@
 import type { Dictionary } from "./es";
 
 export const en: Dictionary = {
-  "meta.title": "rFirma — Native electronic signature for the desktop",
+  "meta.title": "rFirma: e-signature without Java, an AutoFirma alternative",
   "meta.description":
-    "Desktop application in Rust and React that replaces AutoFirma's Swing interface and local servers, with the Administration's official cryptography.",
+    "Sign PDFs with your digital certificate or DNIe on Linux, Windows and macOS. Works on the government sites that require AutoFirma, no Java. Alpha version.",
   "meta.image.alt": "The rFirma logo on a green background with the domain rfirma.sgomez.me",
 
   "notice.aria": "Notice about official ownership",
@@ -30,10 +30,10 @@ export const en: Dictionary = {
   "lang.en": "English",
 
   "hero.kicker": "Alternative to AutoFirma",
-  "hero.title.line1": "Native electronic signature.",
-  "hero.title.line2": "No Java, no waiting.",
+  "hero.title.line1": "rFirma: native electronic signature,",
+  "hero.title.line2": "no Java.",
   "hero.body":
-    "Desktop application in Rust and React that replaces AutoFirma's Swing interface and local servers, with the Administration's official cryptography.",
+    "No waiting. Desktop application in Rust and React that replaces AutoFirma's Swing interface and local servers, with the Administration's official cryptography.",
   "hero.cta.primary": "Install rFirma",
   "hero.cta.secondary": "See how signing works",
   "hero.trust.oss": "Open source, EUPL 1.2",
