@@ -60,15 +60,15 @@ describe("App, firmando, firmado y error", () => {
     const user = userEvent.setup();
     const signGate = deferred<{ ok: true; value: undefined }>();
     const signer = aSigner({ sign: () => signGate.promise });
-    renderApp(
-      inMemoryRecents(),
-      [documentPlaced("factura.pdf"), documentPlaced("otro.pdf")],
-      pdfsOf({ "factura.pdf": 2, "otro.pdf": 3 }),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [documentPlaced("factura.pdf"), documentPlaced("otro.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2, "otro.pdf": 3 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+      rubrics: emptyRubricPicker(),
       signer,
-    );
+    });
 
     await openPdf(user);
     await openPdf(user);
@@ -131,15 +131,15 @@ describe("App, firmando, firmado y error", () => {
         findings: [],
       }),
     });
-    renderApp(
-      inMemoryRecents(),
-      [documentPlaced("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [documentPlaced("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+      rubrics: emptyRubricPicker(),
       signer,
-    );
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -171,15 +171,15 @@ describe("App, firmando, firmado y error", () => {
         },
       }),
     });
-    renderApp(
-      inMemoryRecents(),
-      [documentPlaced("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [documentPlaced("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+      rubrics: emptyRubricPicker(),
       signer,
-    );
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -220,15 +220,15 @@ describe("App, firmando, firmado y error", () => {
       }),
     });
     const emptyStore = vi.fn(async () => {});
-    renderApp(
-      inMemoryRecents(),
-      [documentPlaced("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      { list: async () => [remembered], emptyStore },
-      emptyRubricPicker(),
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [documentPlaced("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: { list: async () => [remembered], emptyStore },
+      rubrics: emptyRubricPicker(),
       signer,
-    );
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -256,15 +256,15 @@ describe("App, firmando, firmado y error", () => {
       }),
       discard,
     });
-    renderApp(
-      inMemoryRecents(),
-      [documentPlaced("factura.pdf"), documentPlaced("otro.pdf")],
-      pdfsOf({ "factura.pdf": 2, "otro.pdf": 3 }),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [documentPlaced("factura.pdf"), documentPlaced("otro.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2, "otro.pdf": 3 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+      rubrics: emptyRubricPicker(),
       signer,
-    );
+    });
 
     await openPdf(user);
     await openPdf(user);
