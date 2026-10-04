@@ -4,8 +4,8 @@ description: Qué pasa al pulsar «Firmar» en una sede electrónica que pide Au
 ---
 
 Muchas sedes electrónicas de la Administración piden AutoFirma para firmar un
-trámite. rFirma atiende esas mismas peticiones: cuando la sede pulsa «Firmar»,
-se abre la **ventana de sede** de rFirma, que dice quién pide la firma y qué se va
+trámite. rFirma atiende esas mismas peticiones: cuando pulsas «Firmar» en la
+sede, se abre la **ventana de sede** de rFirma, que dice quién pide la firma y qué se va
 a firmar, y no firma nada hasta que lo consientes.
 
 ## Antes del primer trámite
@@ -30,7 +30,7 @@ el sistema, la nombra rFirma o `xdg-open`. Acepta, y si el navegador ofrece
 recordar la elección para esa sede, no volverá a preguntar.
 
 Después, el navegador puede pedir un segundo permiso: que la página acceda a la
-**red local**, que es por donde habla con rFirma, que está en tu propio equipo.
+**red local**: por ahí habla con rFirma, que está en tu propio equipo.
 En Chrome sale como una franja bajo la barra de direcciones y en Firefox como un
 panel junto a ella. Pulsa **Permitir**.
 
@@ -59,8 +59,8 @@ va dentro del recuadro.
 
 ### El consentimiento
 
-El momento central del trámite, y **siempre aparece**, también cuando solo tienes
-un certificado. La ventana dice:
+El momento central del trámite. Aparece aunque solo tengas un certificado; la
+única excepción la activas tú en Preferencias (más abajo). La ventana dice:
 
 - **Quién pide la firma**: la dirección de la página, por ejemplo «sede.ejemplo.es
   pide tu firma de un documento PDF». Si la página no se puede identificar, lo

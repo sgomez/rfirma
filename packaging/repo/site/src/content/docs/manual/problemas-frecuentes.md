@@ -47,8 +47,9 @@ Tras arreglarlo, vuelve a la sede y pulsa su botón de reintentar.
 - **La sede puede limitar los certificados válidos**: la ventana lo avisa, y si
   no queda ninguno dice que la sede no acepta tus certificados. Instala otro que
   la sede admita.
-- **Si es una tarjeta o el DNIe**, comprueba que está en el lector y vuelve a
-  buscar desde la ventana.
+- **Si es una tarjeta o el DNIe**, comprueba que está en el lector antes de
+  pulsar «Firmar» en la sede. Si la ventana ya estaba abierta, pulsa **Volver a
+  buscar** si te lo ofrece; si no, cancela y vuelve a empezar desde la sede.
 - **Si no tienes ninguno**, la ventana dice «No tienes ningún certificado» y
   ofrece **Instalar un certificado…** con un fichero `.p12` o `.pfx`.
 
