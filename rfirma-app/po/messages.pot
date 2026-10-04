@@ -1246,10 +1246,6 @@ msgstr ""
 msgid "sede.repair.retry"
 msgstr ""
 
-#. El sujeto de las frases cuando la petición no trae un origen válido.
-msgid "sede.origin.unknown"
-msgstr ""
-
 msgid "sede.consent.asksSignature"
 msgstr ""
 
@@ -1452,9 +1448,6 @@ msgstr ""
 msgid "sede.outcome.refusedTitle"
 msgstr ""
 
-msgid "sede.outcome.portsTakenTitle"
-msgstr ""
-
 msgid "sede.outcome.refusedNote"
 msgstr ""
 
@@ -1470,112 +1463,29 @@ msgstr ""
 msgid "sede.oldWebClient.body"
 msgstr ""
 
-msgid "sede.refusals.appendedSignaturePage"
+msgid "sede.refusals.retry"
 msgstr ""
 
-msgid "sede.refusals.unsupportedFilter"
+msgid "sede.refusals.contactSite"
 msgstr ""
 
-msgid "sede.refusals.unsupportedProtocolVersion"
+msgid "sede.refusals.closeOther"
 msgstr ""
 
-msgid "sede.refusals.missingFormat"
+msgid "sede.refusals.otherCertificate"
 msgstr ""
 
-msgid "sede.refusals.unsupportedKeyStore"
+#. La causa de seguridad, antes de la acción: la persona no lee el detalle técnico.
+msgid "sede.refusalCauses.sha1"
 msgstr ""
 
-msgid "sede.refusals.errandInFlight"
+msgid "sede.refusalCauses.explicitXades"
 msgstr ""
 
-msgid "sede.refusals.portsTaken"
+msgid "sede.refusalCauses.invoiceMultisignature"
 msgstr ""
 
-msgid "sede.refusals.unknown"
-msgstr ""
-
-msgid "sede.refusals.saveCancelled"
-msgstr ""
-
-msgid "sede.refusals.loadCancelled"
-msgstr ""
-
-msgid "sede.refusals.cannotSaveData"
-msgstr ""
-
-msgid "sede.refusals.cannotLoadData"
-msgstr ""
-
-msgid "sede.refusals.batchPresignerUnreachable"
-msgstr ""
-
-msgid "sede.refusals.batchPostsignerUnreachable"
-msgstr ""
-
-msgid "sede.refusals.batchInvalidPresignResponse"
-msgstr ""
-
-msgid "sede.refusals.batchInvalidPostsignResponse"
-msgstr ""
-
-msgid "sede.refusals.batchSigningFailed"
-msgstr ""
-
-msgid "sede.refusals.triphaseServerUrlMissing"
-msgstr ""
-
-msgid "sede.refusals.triphaseServerException"
-msgstr ""
-
-msgid "sede.refusals.triphaseServerUnreachable"
-msgstr ""
-
-msgid "sede.refusals.triphaseServerUnexpectedAnswer"
-msgstr ""
-
-msgid "sede.refusals.certificateNotFound"
-msgstr ""
-
-msgid "sede.refusals.folderMissing"
-msgstr ""
-
-msgid "sede.refusals.unwritable"
-msgstr ""
-
-msgid "sede.refusals.invalidSignature"
-msgstr ""
-
-msgid "sede.refusals.confirmationNeeded"
-msgstr ""
-
-msgid "sede.refusals.localBatchSign"
-msgstr ""
-
-msgid "sede.refusals.siteErrandNotLive"
-msgstr ""
-
-msgid "sede.refusals.pdfHasUnregisteredSignatures"
-msgstr ""
-
-msgid "sede.refusals.secretOnTheReaderKeypad"
-msgstr ""
-
-msgid "sede.refusals.userCancelled"
-msgstr ""
-
-msgid "sede.refusals.promptFailed"
-msgstr ""
-
-msgid "sede.refusals.sha1"
-msgstr ""
-
-msgid "sede.refusals.explicitXades"
-msgstr ""
-
-msgid "sede.refusals.invoiceMultisignature"
-msgstr ""
-
-msgid "sede.refusals.unsupportedCountersignature"
+msgid "sede.refusalCauses.unsupportedCountersignature"
 msgstr ""
 
 msgid "sede.siteNotes.sha1"
@@ -1609,6 +1519,12 @@ msgstr ""
 #. —estado de su almacén— y nunca cuáles descartó la sede ni por qué.
 msgid "sede.noCertificate.excludedTitle"
 msgid_plural "sede.noCertificate.excludedTitle"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "sede.noCertificate.excludedTitleUnknownOrigin"
+msgid_plural "sede.noCertificate.excludedTitleUnknownOrigin"
 msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""

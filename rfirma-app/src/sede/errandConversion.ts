@@ -1,11 +1,12 @@
-//! La conversión pura del momento del backend al `Errand` de la ventana, y del fallo de una etapa al desenlace de rechazo que sabe redactar el catálogo. Sin React.
+//! La conversión pura del momento del backend al `Errand` de la ventana, y del fallo de una etapa al desenlace de rechazo que nombra la tabla de rechazos (`REFUSAL_ACTION_OF`). Sin React.
 
-import type { Catalog } from "../i18n/catalog";
 import type { PreviousSignaturesReport } from "../signing/previousSignatures";
 import {
   type Errand,
   type ErrandStage,
+  isSedeRefusal,
   NAMED_BY_THE_DESK,
+  type NamedByTheDesk,
   type RefusalSituation,
   type SignatureRound,
   type SiteDocument,
@@ -13,53 +14,7 @@ import {
 } from "./errand";
 import type { DescribedDocument, SiteErrandView, SiteStageView } from "./siteErrandView";
 
-/**
- * Las situaciones de rechazo que el catálogo sabe redactar.
- *
- * Un `Record` y no una lista: si `sede.refusals` gana una clave, `tsc` exige
- * que entre también aquí, y ninguna situación nueva acaba cayendo en `unknown`
- * sin que nadie se entere.
- */
-const REFUSALS: Record<keyof Catalog["sede"]["refusals"], true> = {
-  appendedSignaturePage: true,
-  unsupportedFilter: true,
-  unsupportedProtocolVersion: true,
-  missingFormat: true,
-  unsupportedKeyStore: true,
-  errandInFlight: true,
-  portsTaken: true,
-  sha1: true,
-  explicitXades: true,
-  invoiceMultisignature: true,
-  unsupportedCountersignature: true,
-  saveCancelled: true,
-  loadCancelled: true,
-  cannotSaveData: true,
-  cannotLoadData: true,
-  batchPresignerUnreachable: true,
-  batchPostsignerUnreachable: true,
-  batchInvalidPresignResponse: true,
-  batchInvalidPostsignResponse: true,
-  batchSigningFailed: true,
-  triphaseServerUrlMissing: true,
-  triphaseServerException: true,
-  triphaseServerUnreachable: true,
-  triphaseServerUnexpectedAnswer: true,
-  certificateNotFound: true,
-  folderMissing: true,
-  unwritable: true,
-  invalidSignature: true,
-  confirmationNeeded: true,
-  localBatchSign: true,
-  siteErrandNotLive: true,
-  pdfHasUnregisteredSignatures: true,
-  secretOnTheReaderKeypad: true,
-  userCancelled: true,
-  promptFailed: true,
-  unknown: true,
-};
-
-/** Las etiquetas del backend que el catálogo ya redacta con otro nombre: las del lote, sin su prefijo. */
+/** Las etiquetas del backend que la tabla de rechazos ya nombra de otro modo: las del lote, sin su prefijo. */
 const RENAMED: Record<string, RefusalSituation> = {
   unreadable: "cannotLoadData",
   saveDestinationUnwritable: "cannotSaveData",
@@ -69,15 +24,15 @@ const RENAMED: Record<string, RefusalSituation> = {
   invalidPostsignResponse: "batchInvalidPostsignResponse",
 };
 
-/** La situación tal como la sabe nombrar el catálogo, o `unknown`. */
+/** La situación tal como la nombra la tabla de rechazos, o `unknown`. */
 function refusalOf(situation: string): RefusalSituation {
   const renamed = RENAMED[situation];
   if (renamed !== undefined) return renamed;
-  if (situation in REFUSALS || isNamedByTheDesk(situation)) return situation as RefusalSituation;
+  if (isSedeRefusal(situation) || isNamedByTheDesk(situation)) return situation;
   return "unknown";
 }
 
-function isNamedByTheDesk(situation: string): boolean {
+function isNamedByTheDesk(situation: string): situation is NamedByTheDesk {
   return (NAMED_BY_THE_DESK as readonly string[]).includes(situation);
 }
 

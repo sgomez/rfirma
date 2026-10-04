@@ -1,7 +1,6 @@
 //! El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand` y las constantes de sus relojes. Sin React.
 
 import type { ErrorSituation } from "../errors/errorMessage";
-import type { Catalog } from "../i18n/catalog";
 import type { Certificate } from "../signing/certificate";
 import type { SigningOrder } from "../signing/flow";
 import type { PreviousSignaturesReport } from "../signing/previousSignatures";
@@ -50,14 +49,61 @@ export interface SiteDocument {
   previousSignatures: PreviousSignaturesReport;
 }
 
+/** Lo que puede hacer la persona tras un rechazo de la sede. */
+type RefusalAction = "retry" | "contactSite" | "closeOther" | "otherCertificate";
+
+/** Cada rechazo propio de la sede, con la acción que lo cuenta. */
+export const REFUSAL_ACTION_OF = {
+  appendedSignaturePage: "contactSite",
+  unsupportedFilter: "contactSite",
+  unsupportedProtocolVersion: "contactSite",
+  missingFormat: "contactSite",
+  unsupportedKeyStore: "contactSite",
+  errandInFlight: "closeOther",
+  portsTaken: "closeOther",
+  sha1: "contactSite",
+  explicitXades: "contactSite",
+  invoiceMultisignature: "contactSite",
+  unsupportedCountersignature: "contactSite",
+  saveCancelled: "retry",
+  loadCancelled: "retry",
+  cannotSaveData: "retry",
+  cannotLoadData: "retry",
+  batchPresignerUnreachable: "retry",
+  batchPostsignerUnreachable: "retry",
+  batchInvalidPresignResponse: "retry",
+  batchInvalidPostsignResponse: "retry",
+  batchSigningFailed: "retry",
+  triphaseServerUrlMissing: "contactSite",
+  triphaseServerException: "retry",
+  triphaseServerUnreachable: "retry",
+  triphaseServerUnexpectedAnswer: "retry",
+  certificateNotFound: "otherCertificate",
+  folderMissing: "retry",
+  unwritable: "retry",
+  invalidSignature: "contactSite",
+  confirmationNeeded: "contactSite",
+  localBatchSign: "contactSite",
+  siteErrandNotLive: "retry",
+  pdfHasUnregisteredSignatures: "contactSite",
+  secretOnTheReaderKeypad: "otherCertificate",
+  userCancelled: "retry",
+  promptFailed: "retry",
+  unknown: "retry",
+} as const satisfies Record<string, RefusalAction>;
+
 /**
  * Por qué rFirma rechazó la petición, **clasificado** y no redactado en el
- * backend (ADR-0009).
- *
- * Las propias de la sede salen de `sede.refusals`; las del token, el puente y
- * el documento se cuentan con el título del mensaje que les da el escritorio.
+ * backend (ADR-0009): las del escritorio se cuentan con el título de su mensaje.
  */
-export type RefusalSituation = keyof Catalog["sede"]["refusals"] | NamedByTheDesk;
+export type RefusalSituation = SedeRefusal | NamedByTheDesk;
+
+type SedeRefusal = keyof typeof REFUSAL_ACTION_OF;
+
+/** Si la situación es un rechazo propio de la sede y no una del escritorio. */
+export function isSedeRefusal(situation: string): situation is SedeRefusal {
+  return Object.hasOwn(REFUSAL_ACTION_OF, situation);
+}
 
 /** Las situaciones del escritorio que la ventana de sede cuenta con el título de su mensaje. */
 export const NAMED_BY_THE_DESK = [
@@ -88,7 +134,7 @@ export const NAMED_BY_THE_DESK = [
   "keyringPinMissing",
 ] as const satisfies readonly ErrorSituation[];
 
-type NamedByTheDesk = (typeof NAMED_BY_THE_DESK)[number];
+export type NamedByTheDesk = (typeof NAMED_BY_THE_DESK)[number];
 
 /**
  * Cómo acabó el trámite. En los tres casos **la sede ya ha recibido su

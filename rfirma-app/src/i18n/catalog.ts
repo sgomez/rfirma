@@ -12,6 +12,8 @@ import type es from "./locales/es";
  * `locales/es.ts` **no está en el repositorio**: lo genera
  * `tools/po-import.mjs` desde `po/es.po` antes de cada `tsc`. Si tu
  * editor dice que no existe, ejecuta `just po`.
+ *
+ * @public Solo lo usan los catálogos generados, que knip no ve.
  */
 export type Catalog = typeof es;
 

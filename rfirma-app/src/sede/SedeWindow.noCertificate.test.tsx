@@ -59,6 +59,23 @@ describe("5 · no usable certificate", () => {
     expect(screen.getByRole("button", { name: "Volver a buscar" })).toBeInTheDocument();
   });
 
+  it.each([
+    [1, "No se acepta tu certificado"],
+    [3, "No se acepta ninguno de tus 3 certificados"],
+  ])(
+    "titles the exclusion of %i without naming a site when the request brings no origin",
+    (owned, title) => {
+      const { port } = scriptedErrand(
+        { kind: "noCertificate", reason: "excluded", owned },
+        { origin: null },
+      );
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText(title)).toBeInTheDocument();
+      expect(screen.queryByText(/La petición/)).not.toBeInTheDocument();
+    },
+  );
+
   it("focuses the main action, in both reasons: installing another can still fix it", () => {
     const none = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
     const { unmount } = renderWithCatalog(<SedeWindow errands={none.port} />);

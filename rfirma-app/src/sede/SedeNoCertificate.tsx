@@ -94,10 +94,9 @@ export function SedeNoCertificate({
           {excluded
             ? terminal
               ? t("sede.noCertificate.terminalExcludedTitle", { count: owned })
-              : t("sede.noCertificate.excludedTitle", {
-                  count: owned,
-                  origin: origin ?? t("sede.origin.unknown"),
-                })
+              : origin === null
+                ? t("sede.noCertificate.excludedTitleUnknownOrigin", { count: owned })
+                : t("sede.noCertificate.excludedTitle", { count: owned, origin })
             : t("sede.noCertificate.noneTitle")}
         </p>
         {!terminal && (

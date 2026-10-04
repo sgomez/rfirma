@@ -51,7 +51,7 @@ describe("el lote remoto", () => {
     expect(seen.map((errand) => errand?.stage.kind)).toEqual(["consent", "signing", "outcome"]);
   });
 
-  it("names the batch's own refusals as the catalogue knows them", async () => {
+  it("names the batch's own refusals as the refusal table knows them", async () => {
     const { push, port, last } = watched({
       signWithPin: async () => ({
         ok: false,
@@ -149,7 +149,7 @@ describe("el lote local", () => {
     });
   });
 
-  it("names the local batch's own refusals as the catalogue knows them", async () => {
+  it("names the local batch's own refusals as the refusal table knows them", async () => {
     const { push, port, last } = watched({
       signWithPin: async () => ({
         ok: false,

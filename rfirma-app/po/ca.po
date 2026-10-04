@@ -1246,10 +1246,6 @@ msgstr ""
 msgid "sede.repair.retry"
 msgstr "Després de permetre-ho, torna a la seu i prem Reintenta."
 
-#. El sujeto de las frases cuando la petición no trae un origen válido.
-msgid "sede.origin.unknown"
-msgstr "La petició"
-
 msgid "sede.consent.asksSignature"
 msgstr "{{origin}} demana la teva signatura."
 
@@ -1460,10 +1456,7 @@ msgid "sede.outcome.cancelledTitle"
 msgstr "Has cancel·lat la signatura"
 
 msgid "sede.outcome.refusedTitle"
-msgstr "rFirma ha rebutjat la petició"
-
-msgid "sede.outcome.portsTakenTitle"
-msgstr "rFirma no ha pogut obrir el canal amb la pàgina"
+msgstr "No s'ha completat la petició"
 
 msgid "sede.outcome.refusedNote"
 msgstr "Per a qui manté la seu:"
@@ -1480,161 +1473,30 @@ msgstr "Aquesta pàgina està desactualitzada"
 msgid "sede.oldWebClient.body"
 msgstr "La pàgina fa servir una versió antiga de la peça que parla amb rFirma, i pot tenir errors o no ser segura. Prem Continuar per seguir; si alguna cosa falla, avisa qui manté la pàgina."
 
-msgid "sede.refusals.appendedSignaturePage"
-msgstr ""
-"{{origin}} demana col·locar la signatura en una pàgina afegida al final, i "
-"rFirma no fa això."
+msgid "sede.refusals.retry"
+msgstr "Torna a la seu i prova-ho de nou."
 
-msgid "sede.refusals.unsupportedFilter"
-msgstr ""
-"{{origin}} demana filtrar els certificats amb un criteri que rFirma no "
-"reconeix."
+msgid "sede.refusals.contactSite"
+msgstr "Contacta amb la seu per acabar el tràmit."
 
-msgid "sede.refusals.unsupportedProtocolVersion"
-msgstr "{{origin}} parla una versió del protocol que rFirma no entén."
+msgid "sede.refusals.closeOther"
+msgstr "Tanca l'altre tràmit o l'altra aplicació de signatura i torna-ho a intentar."
 
-msgid "sede.refusals.missingFormat"
-msgstr "{{origin}} no diu en quin format cal signar."
+msgid "sede.refusals.otherCertificate"
+msgstr "No es pot signar amb aquest certificat. Torna a la seu i tria'n un altre."
 
-msgid "sede.refusals.unsupportedKeyStore"
-msgstr ""
-"{{origin}} demana signar amb un magatzem de certificats que rFirma no pot "
-"obrir."
+#. La causa de seguridad, antes de la acción: la persona no lee el detalle técnico.
+msgid "sede.refusalCauses.sha1"
+msgstr "La seu ha demanat una signatura amb SHA-1, que ja no és segura."
 
-msgid "sede.refusals.errandInFlight"
-msgstr ""
-"{{origin}} demana una signatura amb un altre tràmit obert, i rFirma n'atén "
-"un cada vegada."
+msgid "sede.refusalCauses.explicitXades"
+msgstr "La seu ha demanat un tipus de signatura antic que es podria fer passar per la d'un altre document."
 
-msgid "sede.refusals.portsTaken"
-msgstr ""
-"{{origin}} ofereix uns ports que una altra aplicació ja fa servir, així que "
-"rFirma no ha pogut obrir el canal per respondre-la. Tanca aquesta aplicació —"
-"pot ser AutoFirma o una altra còpia de rFirma— i torna-ho a provar des de la "
-"pàgina."
+msgid "sede.refusalCauses.invoiceMultisignature"
+msgstr "La seu ha demanat afegir una segona signatura a una factura electrònica, que només n'admet una."
 
-msgid "sede.refusals.unknown"
-msgstr "{{origin}} ha enviat alguna cosa que rFirma no pot atendre."
-
-msgid "sede.refusals.saveCancelled"
-msgstr ""
-"Has tancat el diàleg de desament sense triar on desar el fitxer que demanava "
-"{{origin}}."
-
-msgid "sede.refusals.loadCancelled"
-msgstr ""
-"Has tancat el diàleg de càrrega sense triar cap fitxer per a {{origin}}."
-
-msgid "sede.refusals.cannotSaveData"
-msgstr "El fitxer que demanava {{origin}} no s'ha pogut escriure on has triat."
-
-msgid "sede.refusals.cannotLoadData"
-msgstr "Un dels fitxers triats per a {{origin}} no s'ha pogut llegir."
-
-msgid "sede.refusals.batchPresignerUnreachable"
-msgstr "El servei de {{origin}} que prepara el lot no ha contestat."
-
-msgid "sede.refusals.batchPostsignerUnreachable"
-msgstr "El servei de {{origin}} que tanca el lot no ha contestat."
-
-msgid "sede.refusals.batchInvalidPresignResponse"
-msgstr ""
-"El servei de {{origin}} que prepara el lot ha contestat alguna cosa que "
-"rFirma no sap llegir."
-
-msgid "sede.refusals.batchInvalidPostsignResponse"
-msgstr ""
-"El servei de {{origin}} que tanca el lot ha contestat alguna cosa que rFirma "
-"no sap llegir."
-
-msgid "sede.refusals.batchSigningFailed"
-msgstr ""
-"La signatura del lot que demanava {{origin}} no s'ha arribat a completar."
-
-msgid "sede.refusals.triphaseServerUrlMissing"
-msgstr ""
-"{{origin}} ha demanat signar amb el seu servei de signatura, però no ha dit "
-"on és."
-
-msgid "sede.refusals.triphaseServerException"
-msgstr "El servei de signatura de {{origin}} ha donat un error."
-
-msgid "sede.refusals.triphaseServerUnreachable"
-msgstr "El servei de signatura de {{origin}} no ha contestat."
-
-msgid "sede.refusals.triphaseServerUnexpectedAnswer"
-msgstr ""
-"El servei de signatura de {{origin}} ha contestat alguna cosa que rFirma no "
-"sap llegir."
-
-msgid "sede.refusals.certificateNotFound"
-msgstr "El certificat triat ja no està disponible o {{origin}} no l'accepta."
-
-msgid "sede.refusals.folderMissing"
-msgstr "La carpeta on rFirma havia d'escriure per a {{origin}} ja no existeix."
-
-msgid "sede.refusals.unwritable"
-msgstr "rFirma no ha pogut escriure el fitxer que necessitava {{origin}}."
-
-msgid "sede.refusals.invalidSignature"
-msgstr ""
-"El document que ha enviat {{origin}} porta una signatura que no és vàlida."
-
-msgid "sede.refusals.confirmationNeeded"
-msgstr ""
-"{{origin}} ha demanat signar sense preguntar-te, però el document necessita "
-"que confirmis alguna cosa abans."
-
-msgid "sede.refusals.localBatchSign"
-msgstr "El lot que ha enviat {{origin}} no es pot signar tal com arriba."
-
-msgid "sede.refusals.siteErrandNotLive"
-msgstr ""
-"El tràmit amb {{origin}} ja havia acabat quan ha arribat la teva resposta."
-
-msgid "sede.refusals.pdfHasUnregisteredSignatures"
-msgstr ""
-"El PDF que ha enviat {{origin}} porta signatures que no consten al seu "
-"formulari, i rFirma no hi signa a sobre sense que ho confirmis."
-
-msgid "sede.refusals.secretOnTheReaderKeypad"
-msgstr ""
-"El PIN d'aquest certificat es tecleja al lector, i rFirma encara no el sap "
-"demanar així."
-
-msgid "sede.refusals.userCancelled"
-msgstr ""
-"Has cancel·lat la petició del PIN, així que la signatura que demanava "
-"{{origin}} no s'ha fet."
-
-msgid "sede.refusals.promptFailed"
-msgstr ""
-"rFirma no t'ha pogut demanar el PIN per a la signatura que demanava "
-"{{origin}}."
-
-msgid "sede.refusals.sha1"
-msgstr ""
-"{{origin}} ha demanat un tipus de signatura antic que ja no és segur, amb SHA-1. Per això rFirma no la fa. No és culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
-
-msgid "sede.refusals.explicitXades"
-msgstr ""
-"{{origin}} ha demanat un tipus de signatura antic que ja no és segur: "
-"aquesta signatura es podria fer passar per la d'un altre document diferent "
-"del teu. Per això rFirma no la fa. No és culpa teva; si necessites acabar el "
-"tràmit, contacta amb {{origin}}."
-
-msgid "sede.refusals.invoiceMultisignature"
-msgstr ""
-"{{origin}} ha demanat afegir una signatura a una factura electrònica que ja "
-"està signada. Una factura electrònica només admet una signatura, així que "
-"rFirma no ho pot fer. No és culpa teva; si necessites acabar el tràmit, "
-"contacta amb {{origin}}."
-
-msgid "sede.refusals.unsupportedCountersignature"
-msgstr ""
-"{{origin}} ha demanat signar sobre la signatura d'una altra persona en un "
-"tipus de document que no ho permet, així que rFirma no ho pot fer. No és "
-"culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
+msgid "sede.refusalCauses.unsupportedCountersignature"
+msgstr "La seu ha demanat signar sobre la signatura d'una altra persona en un tipus de document que no ho permet."
 
 msgid "sede.siteNotes.sha1"
 msgstr ""
@@ -1677,6 +1539,12 @@ msgid_plural "sede.noCertificate.excludedTitle"
 msgstr[0] "{{origin}} no accepta el teu certificat"
 msgstr[1] "{{origin}} no accepta cap dels teus {{count}} certificats"
 msgstr[2] "{{origin}} no accepta cap dels teus {{count}} certificats"
+
+msgid "sede.noCertificate.excludedTitleUnknownOrigin"
+msgid_plural "sede.noCertificate.excludedTitleUnknownOrigin"
+msgstr[0] "No s'accepta el teu certificat"
+msgstr[1] "No s'accepta cap dels teus {{count}} certificats"
+msgstr[2] "No s'accepta cap dels teus {{count}} certificats"
 
 msgid "sede.noCertificate.terminalExcludedTitle"
 msgid_plural "sede.noCertificate.terminalExcludedTitle"
