@@ -62,3 +62,13 @@ fn the_signature_view_carries_its_date_and_whether_it_closes_the_document() {
         serde_json::json!({"kind": "stamped", "at": "2023-01-10T10:32:00Z", "tsa": "TSA FNMT"})
     );
 }
+
+#[test]
+fn the_report_view_says_whether_the_document_is_closed_to_signing() {
+    let closed = DocumentSignatures::new(Vec::new(), false).closed_to_signing(true);
+
+    let json = serde_json::to_value(PreviousSignaturesReportView::from(closed))
+        .expect("la vista serializa");
+
+    assert_eq!(json["closed"], true);
+}

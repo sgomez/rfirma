@@ -603,6 +603,10 @@ msgstr[2] ""
 msgid "panel.previousSignatures.view"
 msgstr ""
 
+#. Franja al pie del aviso de firmas previas y título de «Firmar» desactivado: la firma local rechaza el PDF por certificado.
+msgid "panel.previousSignatures.closed"
+msgstr ""
+
 #. Franja al pie del aviso de firmas previas: ya firmaste con el certificado elegido.
 msgid "panel.previousSignatures.sameCertificate"
 msgstr ""

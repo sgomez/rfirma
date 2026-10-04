@@ -403,6 +403,8 @@ crossing! {
         pub format: SignatureStandardView,
         /// Los hallazgos del documento, que no son de ninguna firma.
         pub findings: Vec<DocumentFindingView>,
+        /// Si la firma local lo rechaza por certificado.
+        pub closed: bool,
     }
 }
 
@@ -412,6 +414,7 @@ impl From<DocumentSignatures> for PreviousSignaturesReportView {
         let warning_count = report.warning_count();
         let tone = ToneView::from(report.tone());
         let changed_after_last_signature = report.changed_after_last_signature();
+        let closed = report.closed();
         let findings = report
             .findings()
             .iter()
@@ -429,6 +432,7 @@ impl From<DocumentSignatures> for PreviousSignaturesReportView {
             changed_after_last_signature,
             format,
             findings,
+            closed,
         }
     }
 }

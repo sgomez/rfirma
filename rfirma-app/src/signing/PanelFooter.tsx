@@ -1,5 +1,6 @@
 //! El pie fijo del panel, también tras firmar: el destino y, según el estado, «Firmar», «Reintentar» y «Volver», las salidas de sin certificados o las de abrir el firmado.
 
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, FileIcon, FolderIcon } from "../design-system/icons";
 import type { Certificate } from "./certificate";
@@ -20,6 +21,8 @@ interface PanelFooterSigningProps extends PanelFooterDestinationProps {
   onChangeDestination: () => void;
   signing: boolean;
   blocked: boolean;
+  /** Si la firma local lo rechaza por certificado. */
+  closed: boolean;
   certificate: CertificateState;
   onRetryCertificates: () => void;
   onChooseModule: () => void;
@@ -195,6 +198,7 @@ export function PanelFooter(props: PanelFooterProps) {
                 chosen={props.certificate.kind === "chosen" ? props.certificate.certificate : null}
                 signing={props.signing}
                 blocked={props.blocked}
+                closed={props.closed}
                 onSign={props.onSign}
               />
             )}
@@ -209,10 +213,11 @@ interface SignButtonProps {
   signing: boolean;
   /** Con el interruptor encendido y sin colocar, o con el rango en error. */
   blocked: boolean;
+  closed: boolean;
   onSign: () => void;
 }
 
-function SignButton({ chosen, signing, blocked, onSign }: SignButtonProps) {
+function SignButton({ chosen, signing, blocked, closed, onSign }: SignButtonProps) {
   const { t } = useTranslation();
   const usable = chosen !== null && isUsable(chosen.status);
   return (
@@ -220,14 +225,17 @@ function SignButton({ chosen, signing, blocked, onSign }: SignButtonProps) {
       <button
         type="button"
         className="rf-btn rf-btn--primary panel__sign"
-        title={
-          chosen === null ? undefined : t("panel.footer.signWith", { holder: chosen.holderName })
-        }
-        disabled={signing || blocked || !usable}
+        title={signButtonTitle(t, chosen, closed)}
+        disabled={signing || blocked || closed || !usable}
         onClick={onSign}
       >
         {t(signing ? "panel.footer.signing" : "panel.footer.sign")}
       </button>
     </div>
   );
+}
+
+function signButtonTitle(t: TFunction, chosen: Certificate | null, closed: boolean) {
+  if (closed) return t("panel.previousSignatures.closed");
+  return chosen === null ? undefined : t("panel.footer.signWith", { holder: chosen.holderName });
 }

@@ -292,6 +292,7 @@ export function SigningPanel({
         onChangeDestination={onChangeDestination}
         signing={signing}
         blocked={blocked}
+        closed={previousSignatures.closed === true}
         certificate={certificate}
         onRetryCertificates={onRetryCertificates}
         onChooseModule={onChooseModule}

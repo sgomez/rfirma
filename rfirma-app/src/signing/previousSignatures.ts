@@ -71,6 +71,8 @@ export interface PreviousSignaturesReport {
   format?: SignatureFormat;
   /** Los hallazgos del documento, primero en cualquier lista de problemas. */
   findings: readonly DocumentFinding[];
+  /** Si la firma local lo rechaza por certificado; sin él, no. */
+  closed?: boolean;
 }
 
 /** Un problema que «¿Firmar de todos modos?» enseña: un hallazgo, o una firma que no es válida. */

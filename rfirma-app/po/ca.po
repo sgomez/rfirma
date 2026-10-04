@@ -674,6 +674,10 @@ msgstr[2] "{{count}} problemes"
 msgid "panel.previousSignatures.view"
 msgstr "Veure signatures →"
 
+#. Franja al pie del aviso de firmas previas y título de «Firmar» desactivado: la firma local rechaza el PDF por certificado.
+msgid "panel.previousSignatures.closed"
+msgstr "El document està tancat i no admet més signatures."
+
 #. Franja al pie del aviso de firmas previas: ya firmaste con el certificado elegido.
 msgid "panel.previousSignatures.sameCertificate"
 msgstr "Ja ho vas signar tu amb aquest certificat"
