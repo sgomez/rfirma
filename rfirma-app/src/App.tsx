@@ -25,8 +25,8 @@ import { RecentsSection } from "./documents/RecentRows";
 import type { RecentDocument } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
 import { classify } from "./errors/classify";
-import { firstSealedPage, NO_PAGE_SETS, placingFrom } from "./placement/pageSets";
-import { usePlacement } from "./placement/usePlacement";
+import { firstSealedPage } from "./placement/pageSets";
+import { type PlacedDocument, usePlacement } from "./placement/usePlacement";
 import { PreferencesView } from "./preferences/PreferencesView";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
@@ -132,9 +132,9 @@ export function App({
   // Un gesto sobre el recuadro está en curso. Sólo lo mira la vista previa: es
   // lo que congela la vista anterior en vez de pagar un ciclo por fotograma.
   const [gesturing, setGesturing] = useState(false);
-  // La página que se está mirando: la sigue eligiendo el visor, y el panel la
-  // necesita para elegir la cara del botón de sellar.
-  const [viewedPage, setViewedPage] = useState(1);
+  // Un valor nuevo por cada apertura, también del mismo documento: es lo que
+  // repone la colocación.
+  const [placedDocument, setPlacedDocument] = useState<PlacedDocument | null>(null);
   // El botón de sellar vive en el panel y actúa en el visor, que es quien
   // tiene el `viewport` para medir la posición estándar del recuadro.
   const [placementRequest, setPlacementRequest] = useState<{
@@ -184,17 +184,17 @@ export function App({
   const standardRectOn = useMemo(() => (pdf === null ? null : standardRectOnPageOf(pdf)), [pdf]);
   const {
     placing,
-    setPlacing,
     pageMode,
     placement,
+    viewedPage,
+    viewPage,
     rememberPlacement,
     choosePages,
     changePageMode,
     placeOnViewedPage,
   } = usePlacement({
-    pageCount: pdf?.pageCount ?? 0,
+    document: placedDocument,
     standardRectOn,
-    viewedPage,
     onChange: documents.place,
   });
 
@@ -208,21 +208,13 @@ export function App({
   const boxPage = placement === null ? null : (firstSealedPage(placement) ?? 1);
   const geometry = usePageGeometry(pdf, boxPage);
 
-  // Cambiar de pestaña repone el recuadro que guarda: uno ya abierto vuelve a su
-  // página y posición, y uno nuevo arranca donde toque, no donde lo dejó otro.
   useEffect(() => {
     const active = documents.active;
-    if (!active) {
+    if (!active || !isAPdf(active)) {
       setPdf(null);
       setPdfFailure(null);
       setSizeBytes(null);
-      setPlacing({ rect: null, sets: NO_PAGE_SETS, mode: "single" });
-      return;
-    }
-    if (!isAPdf(active)) {
-      setPdf(null);
-      setPdfFailure(null);
-      setSizeBytes(null);
+      setPlacedDocument(null);
       return;
     }
     let current = true;
@@ -231,9 +223,10 @@ export function App({
       setPdf(opened.ok ? opened.pdf : null);
       setPdfFailure(opened.ok ? null : opened.failure);
       setSizeBytes(opened.ok ? opened.sizeBytes : null);
-      // Se guarda una sola colocación, la firmada; los otros dos modos se siembran de ella.
-      setPlacing(placingFrom(active.placement, opened.ok ? opened.pdf.pageCount : 0));
-      setViewedPage(firstSealedPage(active.placement) ?? 1);
+      setPlacedDocument({
+        placement: active.placement,
+        pageCount: opened.ok ? opened.pdf.pageCount : 0,
+      });
       // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
       // abrió, y el recuadro de este llevaría estampada una hora vieja.
       setSigningInstant(new Date());
@@ -241,7 +234,7 @@ export function App({
     return () => {
       current = false;
     };
-  }, [documents.active, pdfs, setPlacing]);
+  }, [documents.active, pdfs]);
 
   const viewedSignatures = useViewedSignatures(signer, activeId);
   const { dropNotice } = useDropNotices(
@@ -392,7 +385,7 @@ export function App({
             canPlace={signature.enabled}
             onPlace={rememberPlacement}
             pageMode={pageMode}
-            onPageChange={setViewedPage}
+            onPageChange={viewPage}
             placementRequest={placementRequest}
             onOpen={openDocument}
             emptyExtra={

@@ -382,6 +382,36 @@ describe("la petición de sellar o quitar el sello", () => {
     });
   });
 
+  it("moves the box to the page it is looking at under «one page» instead of adding it", async () => {
+    const onPlace = vi.fn();
+    const seated: Placement = { rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } };
+    const { document, renders } = recordingDocument(3);
+    const { rerender } = renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        pageMode="single"
+        onPlace={onPlace}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    await goToPage(2, renders);
+
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        pageMode="single"
+        onPlace={onPlace}
+        onOpen={noop}
+        placementRequest={{ action: "seal" }}
+      />,
+    );
+
+    expect(onPlace).toHaveBeenCalledWith({ rect: seated.rect, pages: { only: [2] } });
+  });
+
   /** ID-92: quitar la última página devuelve al estado del PDF recién abierto. */
   it("takes the whole placement away with the last page of the set", async () => {
     const onPlace = vi.fn();

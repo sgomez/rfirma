@@ -1,15 +1,16 @@
-//! El estado de la colocación de la firma visible: el recuadro, lo que recuerda cada modo de páginas y el modo activo; mide con la posición estándar que se le pasa y no conoce el PDF.
+//! El estado de la colocación de la firma visible: el recuadro, lo que recuerda cada modo de páginas, el modo activo y la página a la vista, repuestos solos al cambiar de documento; mide con la posición estándar que se le pasa y no conoce el PDF.
 
 import { useCallback, useMemo, useState } from "react";
 import {
   activating,
-  NO_PAGE_SETS,
+  firstSealedPage,
   type PageMode,
   type PageSet,
   type Placement,
   type Placing,
   pagesOf,
   placementOf,
+  placingFrom,
   sealedPages,
   storing,
   type UserSpaceRect,
@@ -18,32 +19,55 @@ import {
 /** La posición estándar del recuadro en una página del documento. */
 export type StandardRectOn = (page: number) => Promise<UserSpaceRect>;
 
-interface PlacementOptions {
+/** El documento que se tiene delante; cada valor nuevo es otro documento, o el mismo vuelto a abrir. */
+export interface PlacedDocument {
+  placement: Placement | null;
   pageCount: number;
+}
+
+interface PlacementOptions {
+  /** `null` cuando no hay documento delante. */
+  document: PlacedDocument | null;
   /** `null` cuando no hay documento que medir. */
   standardRectOn: StandardRectOn | null;
-  viewedPage: number;
   onChange?: (placement: Placement | null) => unknown;
 }
 
+interface Front {
+  document: PlacedDocument | null;
+  placing: Placing;
+  viewedPage: number;
+}
+
+function frontOf(document: PlacedDocument | null): Front {
+  const saved = document?.placement ?? null;
+  return {
+    document,
+    placing: placingFrom(saved, document?.pageCount ?? 0),
+    viewedPage: firstSealedPage(saved) ?? 1,
+  };
+}
+
 /** La colocación de la firma visible y las órdenes que la cambian. */
-export function usePlacement({
-  pageCount,
-  standardRectOn,
-  viewedPage,
-  onChange,
-}: PlacementOptions) {
-  const [placing, setPlacing] = useState<Placing>({
-    rect: null,
-    sets: NO_PAGE_SETS,
-    mode: "single",
-  });
+export function usePlacement({ document, standardRectOn, onChange }: PlacementOptions) {
+  const [front, setFront] = useState(() => frontOf(document));
+  let current = front;
+  if (front.document !== document) {
+    current = frontOf(document);
+    setFront(current);
+  }
+  const { placing, viewedPage } = current;
+  const pageCount = document?.pageCount ?? 0;
   const pageMode = placing.mode;
   const placement = useMemo(() => placementOf(placing.rect, placing.sets, placing.mode), [placing]);
 
+  const viewPage = useCallback((page: number) => {
+    setFront((was) => ({ ...was, viewedPage: page }));
+  }, []);
+
   const apply = useCallback(
     (next: Placing) => {
-      setPlacing(next);
+      setFront((was) => ({ ...was, placing: next }));
       onChange?.(placementOf(next.rect, next.sets, next.mode));
     },
     [onChange],
@@ -104,9 +128,10 @@ export function usePlacement({
 
   return {
     placing,
-    setPlacing,
     pageMode,
     placement,
+    viewedPage,
+    viewPage,
     rememberPlacement,
     choosePages,
     changePageMode,

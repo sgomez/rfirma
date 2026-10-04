@@ -27,13 +27,24 @@ interface SedeMarkingProps {
  */
 export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   const { t } = useTranslation();
-  const [viewedPage, setViewedPage] = useState(1);
   const [placementRequest, setPlacementRequest] = useState<{
     action: "seal" | "unseal";
   } | null>(null);
   const standardRectOn = useMemo(() => (pdf === null ? null : standardRectOnPageOf(pdf)), [pdf]);
-  const { placing, pageMode, placement, rememberPlacement, choosePages, changePageMode } =
-    usePlacement({ pageCount: pdf?.pageCount ?? 0, standardRectOn, viewedPage });
+  const document = useMemo(
+    () => (pdf === null ? null : { placement: null, pageCount: pdf.pageCount }),
+    [pdf],
+  );
+  const {
+    placing,
+    pageMode,
+    placement,
+    viewedPage,
+    viewPage,
+    rememberPlacement,
+    choosePages,
+    changePageMode,
+  } = usePlacement({ document, standardRectOn });
   const { pagesText, rangeError, pageButton, typePages } = usePlacementField({
     documentPages: pdf?.pageCount ?? 0,
     pageSets: placing.sets,
@@ -84,7 +95,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
               placement={placement}
               onPlace={rememberPlacement}
               pageMode={pageMode}
-              onPageChange={setViewedPage}
+              onPageChange={viewPage}
               placementRequest={placementRequest}
               onOpen={noop}
             />
