@@ -7,9 +7,10 @@ import type { DocumentInHand } from "./documents/document";
 import type { Drop } from "./documents/drops";
 import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentPicker } from "./documents/picker";
-import type { RecentDocument } from "./documents/recents";
+import { inMemoryRecents, type RecentDocument } from "./documents/recents";
 import type { Preferences } from "./preferences/preferences";
 import { inMemoryPreferences } from "./preferences/preferences";
+import { defaults } from "./preferences/preferencesFixtures";
 import type { NativeTitlebar } from "./shell/nativeTitlebar";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import { emptyCertificateStore } from "./signing/certificate";
@@ -19,7 +20,6 @@ import {
   inMemoryDestination,
   type SingleDestination,
 } from "./signing/destination";
-import { unavailableStampComposer } from "./signing/stampPreview";
 import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
 import { aMainWindowDoubles, type MainWindowDoubleOverrides } from "./testing/mainWindowDoubles";
 import { renderWithCatalog } from "./testing/render";
@@ -190,7 +190,7 @@ export function failingCertificateStore(failures: number, then: readonly Certifi
   return store;
 }
 
-interface RenderAppOptions extends MainWindowDoubleOverrides {
+interface RenderAppOptions extends Omit<MainWindowDoubleOverrides, "titlebar"> {
   documents?: DocumentInHand[];
   settings?: Partial<Preferences>;
   invoked?: Drop | null;
@@ -206,51 +206,26 @@ export function renderApp({
   titlebar = null,
   ...overrides
 }: RenderAppOptions = {}) {
-  const doubles = aMainWindowDoubles({
+  const recents = overrides.recents ?? inMemoryRecents();
+  const preferences = inMemoryPreferences({ ...defaults, ...settings }, () => void recents.clear());
+  const ports = aMainWindowDoubles({
+    picker: inMemoryDocumentPicker(documents),
     drops: inMemoryDocumentDrops(invoked),
     destinations: aDestination(),
     ...overrides,
+    recents,
+    preferences,
+    ...(titlebar === null ? {} : { titlebar }),
   });
-  const { recents, drops } = doubles;
-  const preferences = inMemoryPreferences(
-    {
-      theme: "system",
-      destination: "Documentos",
-      destinationMode: "next_to_the_original",
-      offersOriginalFolder: false,
-      rememberVisibleSignature: true,
-      rememberActivity: true,
-      notifyNewVersion: true,
-      setupWizardSeen: false,
-      consentCountdown: true,
-      honourAutomaticSelection: false,
-      ...settings,
-    },
-    () => void recents.clear(),
-  );
   renderWithCatalog(
     <App
-      recents={recents}
-      picker={inMemoryDocumentPicker(documents)}
-      drops={drops}
-      pdfs={doubles.pdfs}
-      preferences={preferences}
-      destinations={doubles.destinations}
-      certificates={doubles.certificates}
-      rubrics={doubles.rubrics}
-      stamps={unavailableStampComposer()}
-      signer={doubles.signer}
-      opener={doubles.opener}
+      ports={ports}
       initialSignature={initialSignature}
-      versions={doubles.versions}
       version="0.1.0"
       menuAnchor={titlebar === null ? "header" : "titlebar"}
-      externalDestinations={doubles.externalDestinations}
-      status={doubles.status}
-      titlebar={titlebar ?? undefined}
     />,
   );
-  return { recents, preferences, drops };
+  return { recents, preferences, drops: ports.drops };
 }
 
 /** Abre un PDF por el segmento principal del botón partido. */

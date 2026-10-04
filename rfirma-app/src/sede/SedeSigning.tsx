@@ -2,6 +2,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
+import { ProgressBar } from "../design-system/ProgressBar";
 import { Stack } from "../design-system/Stack";
 import type { Certificate } from "../signing/certificate";
 import type { SigningPhase } from "./errand";
@@ -71,16 +72,11 @@ export function SedeSigning({ origin, certificate, phase, onCancel }: SedeSignin
                 idNumber: certificate.idNumber,
               })}
         </p>
-        <div
-          className="sede-signing__track"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={PROGRESS[phase]}
+        <ProgressBar
+          variant="framed"
+          value={PROGRESS[phase]}
           aria-label={t("panel.footer.signing")}
-        >
-          <div className="sede-signing__bar" style={{ width: `${PROGRESS[phase]}%` }} />
-        </div>
+        />
       </Stack>
     </SedeBody>
   );
