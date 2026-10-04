@@ -127,7 +127,7 @@ async fn the_published_client_is_refused_a_document_whose_previous_signature_doe
     );
 }
 
-/// Lo que el cliente publicado recibe al cofirmar con `checkSignatures=true` la CAdES que
+/// Lo que el cliente publicado recibe al cofirmar con `checkSignatures=true` la firma que
 /// prepara `script`.
 async fn cosigning_checking_the_signatures(script: &str) -> Event {
     let material = ChannelMaterial::fresh();
@@ -190,5 +190,28 @@ async fn the_published_client_cosigns_a_cades_whose_certificate_has_expired() {
         "la CAdES integra con el certificado caducado tenia que cofirmarse, y acabo en {}: {}",
         held.name(),
         held.field("message")
+    );
+}
+
+/// Un PDF cuyo hueco del `/ByteRange` es mayor que `/Contents` no se cofirma: el `errorCallback` recibe `SAF_39`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_is_refused_a_cosign_over_a_pdf_whose_byte_range_leaves_bytes_out() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let broken = cosigning_checking_the_signatures("cosignpadescheckingbyterange").await;
+
+    assert_eq!(
+        broken.name(),
+        "error",
+        "el PDF con bytes fuera del /ByteRange tenia que acabar en el errorCallback, y acabo en {}",
+        broken.name()
+    );
+    assert_eq!(
+        broken.field("message"),
+        WireAnswer::refused(SafCode::InvalidSignature).on_the_wire(),
+        "un PDF con bytes fuera del /ByteRange tenia que contestar ERROR_INVALID_SIGNATURE"
     );
 }

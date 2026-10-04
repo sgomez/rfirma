@@ -23,6 +23,10 @@ import org.junit.jupiter.api.Test;
 import com.aowagie.text.pdf.AcroFields;
 import com.aowagie.text.pdf.PdfReader;
 
+import es.gob.afirma.signvalidation.SignValidity;
+import es.gob.afirma.signvalidation.SignValidity.SIGN_DETAIL_TYPE;
+import es.gob.afirma.signvalidation.SignValidity.VALIDITY_ERROR;
+
 /** Las salidas del veredicto, sobre firmas hechas aqui mismo. */
 class ValidationBridgeTest {
 
@@ -355,6 +359,111 @@ class ValidationBridgeTest {
 
         assertTrue(results.stream().anyMatch(result -> result.startsWith("Firma no valida")),
                 "resultados: " + results);
+    }
+
+    @Test
+    void a_pdf_whose_byte_range_does_not_start_at_zero_is_invalid() throws Exception {
+        final byte[] pdf = ByteRangeSamples.resignedOver(signed(TestFixtures.samplePdf()),
+                range -> new long[] {1, range[1] - 1, range[2], range[3]});
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.INVALID, verdict.outcome());
+        assertEquals("CORRUPTED_SIGN", verdict.reason());
+    }
+
+    @Test
+    void a_pdf_whose_byte_range_gap_holds_unsigned_bytes_besides_the_contents_is_invalid()
+            throws Exception {
+        final byte[] pdf = ByteRangeSamples.withUnsignedBytesInsideTheContentsGap(
+                signed(TestFixtures.samplePdf()));
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.INVALID, verdict.outcome());
+        assertEquals("CORRUPTED_SIGN", verdict.reason());
+    }
+
+    @Test
+    void a_pdf_whose_byte_range_has_more_than_four_numbers_is_invalid() throws Exception {
+        final byte[] signed = signed(TestFixtures.samplePdf());
+        final long[] range = ByteRangeSamples.lastRange(signed);
+        final byte[] pdf = ByteRangeSamples.withTheByteRangeWritten(signed,
+                "[0 " + range[1] + " " + range[2] + " " + range[3] + " 0]");
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.INVALID, verdict.outcome());
+        assertEquals("CORRUPTED_SIGN", verdict.reason());
+    }
+
+    @Test
+    void the_site_accepts_a_pdf_whose_byte_range_ends_inside_its_revision() throws Exception {
+        final byte[] pdf = ByteRangeSamples.resignedOver(signed(TestFixtures.samplePdf()),
+                range -> new long[] {0, range[1], range[2], range[3] - "%%EOF\n".length()});
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(), "motivo: " + verdict.reason());
+    }
+
+    @Test
+    void the_site_accepts_a_pdf_with_spare_bytes_after_its_last_eof() throws Exception {
+        final byte[] pdf =
+                ByteRangeSamples.withSpareBytesAfterTheLastEof(signed(TestFixtures.samplePdf()));
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(), "motivo: " + verdict.reason());
+    }
+
+    @Test
+    void the_site_accepts_a_pdf_with_two_signatures_in_incremental_revisions() throws Exception {
+        final ValidationBridge.Verdict verdict =
+                ValidationBridge.validate(TestFixtures.pdfWithTwoOrdinarySignatures(), "PAdES", false);
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(), "motivo: " + verdict.reason());
+    }
+
+    @Test
+    void the_site_accepts_a_pdf_with_a_document_timestamp_after_its_signature() throws Exception {
+        final byte[] pdf = ByteRangeSamples.withADocTimeStampAfter(signed(TestFixtures.samplePdf()));
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(), "motivo: " + verdict.reason());
+    }
+
+    @Test
+    void a_pdf_whose_document_timestamp_gap_holds_unsigned_bytes_is_invalid() throws Exception {
+        final byte[] pdf = ByteRangeSamples.withUnsignedBytesInsideTheContentsGap(
+                ByteRangeSamples.withADocTimeStampAfter(signed(TestFixtures.samplePdf())));
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(pdf, "PAdES", false);
+
+        assertEquals(ValidationBridge.INVALID, verdict.outcome());
+        assertEquals("CORRUPTED_SIGN", verdict.reason());
+    }
+
+    @Test
+    void verify_reports_a_signature_whose_byte_range_ends_inside_its_revision() throws Exception {
+        final byte[] pdf = ByteRangeSamples.resignedOver(signed(TestFixtures.samplePdf()),
+                range -> new long[] {0, range[1], range[2], range[3] - "%%EOF\n".length()});
+
+        final List<String> results = ValidationBridge.results(pdf, "PAdES");
+
+        assertTrue(results.contains(ValidationBridge.plainText(new SignValidity(
+                SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.CORRUPTED_SIGN).toString())),
+                "resultados: " + results);
+    }
+
+    @Test
+    void verify_says_of_a_pdf_with_spare_bytes_after_its_last_eof_that_it_is_valid()
+            throws Exception {
+        final byte[] pdf =
+                ByteRangeSamples.withSpareBytesAfterTheLastEof(signed(TestFixtures.samplePdf()));
+
+        assertEquals(List.of("Firma valida"), ValidationBridge.results(pdf, "PAdES"));
     }
 
     @Test

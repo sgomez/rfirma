@@ -549,7 +549,12 @@ final class PreviousSignaturesBridge {
 
         final List<Dated> dated = new ArrayList<>();
         for (final String name : fields.getSignatureNames()) {
+            final boolean covered = ByteRanges.coversItsRevision(pdf,
+                    fields.getSignatureDictionary(name), ByteRanges.Strictness.LOCAL);
             if (isTimestamp(fields, name)) {
+                if (!covered) {
+                    dated.add(new Dated(null, damaged(List.of())));
+                }
                 continue;
             }
             final PdfPKCS7 pkcs7 = readableSignature(fields, name);
@@ -562,6 +567,9 @@ final class PreviousSignaturesBridge {
                     pkcs7.getSignDate() == null ? null : pkcs7.getSignDate().toInstant();
             final Stamp stamp = stampOf(pkcs7);
             final List<SignValidity> validities = new ArrayList<>(validate(name, fields, profile));
+            if (!covered) {
+                validities.add(new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.CORRUPTED_SIGN));
+            }
             if (certification.forbids(fields.getRevision(name))) {
                 validities.add(new SignValidity(SIGN_DETAIL_TYPE.KO,
                         VALIDITY_ERROR.CERTIFIED_SIGN_REVISION));

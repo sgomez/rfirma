@@ -16,6 +16,7 @@ import {
   aCadesSignedWithTheExpiredCertificate,
   aCertifiedPdf,
   aPasswordProtectedPdf,
+  aPdfWhoseByteRangeLeavesBytesOut,
   aPdfWithAnUnregisteredSignature,
   aPdfWithTwoSignaturesListedOldestFirst,
   aTamperedCadesSignature,
@@ -981,6 +982,9 @@ export const SIGNATURE_SCRIPTS = {
   cosignautowithoutasignature: aPublishedScript(cosigning("auto", "", theXmlDocument)),
   cosignpadeschecking: aPublishedScript(
     cosigning("PAdES", "checkSignatures=true", thePdfOfTheTest),
+  ),
+  cosignpadescheckingbyterange: aPublishedScript(
+    cosigning("PAdES", "checkSignatures=true", aPdfWhoseByteRangeLeavesBytesOut),
   ),
   cosigncadescheckingtampered: aPublishedScript(
     cosigning("CAdES", "checkSignatures=true", aTamperedCadesSignature),

@@ -369,6 +369,96 @@ class PreviousSignaturesBridgeTest {
     }
 
     @Test
+    void a_signature_whose_byte_range_does_not_start_at_zero_is_damaged() throws Exception {
+        final byte[] pdf = ByteRangeSamples.resignedOver(
+                ByteRangeSamples.signed(TestFixtures.samplePdf()),
+                range -> new long[] {1, range[1] - 1, range[2], range[3]});
+
+        assertOnlySignatureIsDamaged(pdf);
+    }
+
+    @Test
+    void a_signature_whose_byte_range_gap_holds_unsigned_bytes_is_damaged() throws Exception {
+        final byte[] pdf = ByteRangeSamples.withUnsignedBytesInsideTheContentsGap(
+                ByteRangeSamples.signed(TestFixtures.samplePdf()));
+
+        assertOnlySignatureIsDamaged(pdf);
+    }
+
+    @Test
+    void a_signature_whose_byte_range_ends_inside_its_revision_is_damaged() throws Exception {
+        final byte[] pdf = ByteRangeSamples.resignedOver(
+                ByteRangeSamples.signed(TestFixtures.samplePdf()),
+                range -> new long[] {0, range[1], range[2], range[3] - "%%EOF\n".length()});
+
+        assertOnlySignatureIsDamaged(pdf);
+    }
+
+    @Test
+    void a_signature_followed_by_spare_bytes_after_the_last_eof_is_valid() throws Exception {
+        final byte[] pdf = ByteRangeSamples.withSpareBytesAfterTheLastEof(
+                ByteRangeSamples.signed(TestFixtures.samplePdf()));
+
+        final PreviousSignaturesBridge.Signature signature =
+                PreviousSignaturesBridge.read(pdf).signatures().get(0);
+
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signature.validity(),
+                "motivo: " + signature.validityReason());
+    }
+
+    @Test
+    void a_signature_followed_by_a_later_revision_still_covers_its_own() throws Exception {
+        final byte[] pdf = TestFixtures.withThePageRepaintedAfterSigning(
+                ByteRangeSamples.signed(TestFixtures.samplePdf()));
+
+        final PreviousSignaturesBridge.Signature signature =
+                PreviousSignaturesBridge.read(pdf).signatures().get(0);
+
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signature.validity(),
+                "motivo: " + signature.validityReason());
+    }
+
+    @Test
+    void a_document_timestamp_after_the_signature_leaves_it_valid_and_unlisted() throws Exception {
+        final byte[] pdf = ByteRangeSamples.withADocTimeStampAfter(
+                ByteRangeSamples.signed(TestFixtures.samplePdf()));
+
+        final List<PreviousSignaturesBridge.Signature> signatures =
+                PreviousSignaturesBridge.read(pdf).signatures();
+
+        assertEquals(1, signatures.size());
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signatures.get(0).validity(),
+                "motivo: " + signatures.get(0).validityReason());
+    }
+
+    @Test
+    void a_document_timestamp_whose_byte_range_gap_holds_unsigned_bytes_is_listed_as_damaged()
+            throws Exception {
+        final byte[] pdf = ByteRangeSamples.withUnsignedBytesInsideTheContentsGap(
+                ByteRangeSamples.withADocTimeStampAfter(
+                        ByteRangeSamples.signed(TestFixtures.samplePdf())));
+
+        final List<PreviousSignaturesBridge.Signature> signatures =
+                PreviousSignaturesBridge.read(pdf).signatures();
+
+        assertEquals(2, signatures.size());
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signatures.get(0).validity(),
+                "motivo: " + signatures.get(0).validityReason());
+        assertEquals(PreviousSignaturesBridge.Problem.DAMAGED,
+                signatures.get(1).validityReason().problem());
+    }
+
+    private static void assertOnlySignatureIsDamaged(final byte[] pdf) {
+        final List<PreviousSignaturesBridge.Signature> signatures =
+                PreviousSignaturesBridge.read(pdf).signatures();
+
+        assertEquals(1, signatures.size());
+        assertEquals(PreviousSignaturesBridge.Validity.INVALID, signatures.get(0).validity());
+        assertEquals(PreviousSignaturesBridge.Problem.DAMAGED,
+                signatures.get(0).validityReason().problem());
+    }
+
+    @Test
     void validating_the_previous_signatures_makes_no_network_request() throws Exception {
         final byte[] pdf = signed(TestFixtures.samplePdf(), TestFixtures.certificateChain(),
                 TestFixtures.privateKey());
