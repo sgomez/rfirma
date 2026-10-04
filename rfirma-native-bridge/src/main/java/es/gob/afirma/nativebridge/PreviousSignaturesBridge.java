@@ -284,7 +284,7 @@ final class PreviousSignaturesBridge {
                 countersignatures);
     }
 
-    private static X509Certificate certificateOf(final SignerInformation signer,
+    static X509Certificate certificateOf(final SignerInformation signer,
             final Store<X509CertificateHolder> certificates) {
         try {
             for (final X509CertificateHolder holder
@@ -299,7 +299,7 @@ final class PreviousSignaturesBridge {
         }
     }
 
-    private static boolean isOutOfDate(final SignValidity validity) {
+    static boolean isOutOfDate(final SignValidity validity) {
         return validity.getError() == VALIDITY_ERROR.CERTIFICATE_EXPIRED
             || validity.getError() == VALIDITY_ERROR.CERTIFICATE_NOT_VALID_YET;
     }
@@ -309,7 +309,7 @@ final class PreviousSignaturesBridge {
      * vigencia (ADR-0043). Verifica con la clave publica y no con el certificado, porque
      * SpongyCastle rechaza un certificado que no estaba en vigor en el {@code signingTime}.
      */
-    private static SignValidity integrityOf(final SignerInformation signer,
+    static SignValidity integrityOf(final SignerInformation signer,
             final X509Certificate certificate, final boolean withContent) {
         try {
             final boolean verified = signer.verify(new SignerInformationVerifier(

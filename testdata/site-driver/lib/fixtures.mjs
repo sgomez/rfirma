@@ -140,3 +140,17 @@ export function theCmsSignatureOfTheSite() {
 export function theReferenceSignature(name) {
   return readFileSync(join(here, "../reference", name));
 }
+
+/** La CAdES implícita de referencia con un byte del contenido cambiado: el resumen firmado ya no cuadra. */
+export function aTamperedCadesSignature() {
+  const signature = Buffer.from(theReferenceSignature("cades-implicit.p7s"));
+  const content = theChallenge();
+  const at = signature.indexOf(content);
+  signature[at + content.length / 2] ^= 1;
+  return signature;
+}
+
+/** Una CAdES implícita íntegra, firmada con el certificado caducado del kit. */
+export function aCadesSignedWithTheExpiredCertificate() {
+  return readFileSync(join(here, "../previous-signatures/cades-expired.csig"));
+}

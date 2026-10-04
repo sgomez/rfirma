@@ -230,7 +230,10 @@ covered = ["a_facturae_signature_over_data_that_is_no_invoice_is_rejected_with_s
 [[row]]
 code = "SAF_39"
 point = "before_certificate"
-covered = ["check_signatures_stops_a_multisignature_it_cannot_validate"]
+covered = [
+  "check_signatures_stops_a_multisignature_it_cannot_validate",
+  "check_signatures_stops_a_cosign_over_a_tampered_cades",
+]
 
 [[row]]
 code = "SAF_40"
