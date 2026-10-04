@@ -471,6 +471,7 @@ certificado.
 mode = "v4"
 script = "cosigncadescheckingexpired"
 store = "expired"
+act.consent = "rFirma da la firma previa por buena y pide certificado: elígelo para que la cofirma acabe. AutoFirma la rechaza sin pedir nada."
 expects.code = "SAF_39"
 
 [[check]]
