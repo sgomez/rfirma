@@ -159,6 +159,8 @@ export const gl: Dictionary = {
     "Para Debian, Ubuntu e distribucións derivadas. Configura o repositorio mediante o formato moderno <code>deb822</code> coa clave GPG verificada en <code>/usr/share/keyrings/</code>.",
   "install.dnf.body":
     "Para Fedora e derivadas baseadas en paquetes RPM. Configura o repositorio con comprobación criptográfica estrita de metadatos e paquetes (<code>gpgcheck=1</code> e <code>repo_gpgcheck=1</code>).",
+  "install.manual":
+    "Instrucións detalladas, pegada da clave e verificación, no manual (en castelán)",
   "install.soon": "En desenvolvemento",
   "install.windows.title": "rFirma para Windows",
   "install.windows.body":

@@ -108,6 +108,10 @@ describe.each(locales)("landing %s", (locale) => {
     }
   });
 
+  it("links its install section to the installation page of the manual", () => {
+    expect(document.querySelector("#instalacion a[href='/manual/instalacion/']")).not.toBeNull();
+  });
+
   it("describes itself as a free SoftwareApplication in JSON-LD", () => {
     const script = document.querySelector("script[type='application/ld+json']");
     const data = JSON.parse(script?.textContent ?? "");
@@ -145,6 +149,13 @@ describe("manual", () => {
       join("manual", "linea-de-ordenes", "index.html"),
     );
   });
+
+  it.each(["instalacion", "firmar-un-pdf", "ver-las-firmas", "preferencias"])(
+    "publishes the %s page",
+    (slug) => {
+      expect(manual.map(({ file }) => file)).toContain(join("manual", slug, "index.html"));
+    },
+  );
 
   describe.each(manual)("$name", ({ file }) => {
     const document = page(file);

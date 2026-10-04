@@ -1,5 +1,5 @@
 ---
-import { translator, type Locale } from "../i18n";
+import { defaultLocale, installationManualPath, translator, type Locale } from "../i18n";
 
 interface Props {
   locale: Locale;
@@ -163,5 +163,14 @@ Select-String rFirma_ .\SHA256SUMS</pre>
         />
       </div>
     </div>
+
+    <p style="margin:32px 0 0;text-align:center;font-size:.9375rem">
+      <a
+        href={installationManualPath}
+        hreflang={locale === defaultLocale ? undefined : defaultLocale}
+        style="color:var(--rf-brand-text);font-weight:600"
+        >{t("install.manual")} →</a
+      >
+    </p>
   </div>
 </section>
