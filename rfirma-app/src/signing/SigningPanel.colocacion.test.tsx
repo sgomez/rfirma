@@ -129,7 +129,7 @@ describe("SigningPanel · Firma visible, en qué páginas", () => {
     expect(field()).toHaveValue("3,10-11,13-20");
   });
 
-  it("asks for the option and does not decide the set that goes with it", async () => {
+  it("asks for the mode and does not decide the set that goes with it", async () => {
     const user = userEvent.setup();
     const onChoosePages = vi.fn();
     const onChangePageMode = vi.fn();

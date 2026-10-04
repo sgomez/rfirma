@@ -63,7 +63,7 @@ describe("App · Firma visible, en qué páginas", () => {
     expect(within(panel).queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
   });
 
-  it("gives each option its own set, so going back brings what was left there", async () => {
+  it("gives each mode its own set, so going back brings what was left there", async () => {
     const { user, panel } = await openVisible();
 
     await user.click(within(panel).getByRole("radio", { name: "Varias" }));

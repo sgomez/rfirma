@@ -313,7 +313,7 @@ describe("the signing panel, by state", () => {
       expect(screen.queryByText(/Coloca la firma/)).not.toBeInTheDocument();
     });
 
-    it("signs invisibly with the switch off, and shows none of the page choices", () => {
+    it("signs invisibly with the switch off, and shows none of the page modes", () => {
       renderWithCatalog(<Ready />);
 
       expect(button("Firmar")).toBeEnabled();

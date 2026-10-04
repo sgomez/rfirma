@@ -87,9 +87,9 @@ interface SigningPanelProps {
    * recuadro y no tiene por qué saberlo.
    */
   onChoosePages: (pages: PageSet | null) => void;
-  /** Cuál de las tres opciones manda sobre el conjunto. */
+  /** Cuál de las tres modos manda sobre el conjunto. */
   pageMode: PageMode;
-  onChangePageMode: (choice: PageMode) => void;
+  onChangePageMode: (mode: PageMode) => void;
   /**
    * La página que se está mirando en el visor. Decide la cara del botón de
    * sellar: si la lleva, ofrece quitarla.
