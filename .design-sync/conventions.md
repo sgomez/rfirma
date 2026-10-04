@@ -16,18 +16,29 @@ const { DesignRoot } = window.RFirma;
 
 `language`: `es` | `ca` | `en` | `eu` | `gl`. `theme`: `light` | `dark`.
 
-### Estilo: clases `rf-*` y tokens `--rf-*`
+### Estilo: primitivos, clases `rf-*` y tokens `--rf-*`
 
-No hay componentes React para las piezas básicas. Botones, tarjetas y campos son clases CSS. No inventes clases ni escribas colores, radios o sombras literales: usa estas clases y, para tu maquetación propia, `var(--rf-*)`.
+Las pantallas se componen con primitivos: `Button`, `Card`, `Field`, `Badge`, `Dialog`, `Popover`, `Stack` y `Row` (todos en `window.RFirma`). Una clase `rf-*` se escribe a mano solo si aún no tiene primitivo: el texto, `rf-input`, `rf-divider`, `rf-label` y poco más. No inventes clases ni escribas colores, radios o sombras literales: para tu maquetación propia, `var(--rf-*)`.
+
+| Primitivo | Props |
+| --- | --- |
+| `Button` | `variant`: `primary` / `secondary` / `ghost`; `type="button"` por defecto |
+| `Card` | `elevated` |
+| `Field` | etiqueta, control y ayuda apilados |
+| `Badge` | `variant`: `primary` |
+| `Dialog` | `label`, `onClose`, `role`: `dialog` / `alertdialog` |
+| `Popover` | `open`, `onClose`, `anchorRef` |
+| `Stack` / `Row` | `gap`: `xs` / `md` en `Stack`, `xs` / `sm` en `Row` |
+
+Clases a mano, solo las que no tienen primitivo:
 
 | Familia | Clases |
 | --- | --- |
-| Botones | `rf-btn` + `rf-btn--primary` / `--secondary` / `--ghost` / `--pill` / `--disabled` |
-| Superficies | `rf-surface`, `rf-card` (`--elevated`, `--interactive`), `rf-dialog`, `rf-scrim`, `rf-section`, `rf-divider` |
+| Superficies | `rf-surface`, `rf-section`, `rf-divider` |
 | Texto | `rf-display`, `rf-heading`, `rf-title`, `rf-body`, `rf-prose`, `rf-label`, `rf-hint`, `rf-text-muted`, `rf-text-primary` |
-| Formularios | `rf-field` (`--error`), `rf-input` |
-| Maquetación | `rf-stack` (columna), `rf-row` (fila), `rf-gap-xs` / `-sm` / `-md` / `-lg` |
-| Otros | `rf-badge` (`--primary`) |
+| Formularios | `rf-input` |
+
+Las clases de los primitivos (`rf-btn`, `rf-card`, `rf-field`, `rf-badge`, `rf-dialog`, `rf-scrim`, `rf-stack`, `rf-row`, `rf-gap-*`) las pone el primitivo: no las escribas.
 
 Tokens: color `--rf-bg`, `--rf-surface`, `--rf-text`, `--rf-text-muted`, `--rf-primary`, `--rf-primary-hover`, `--rf-on-primary`, `--rf-accent`, `--rf-border-subtle`, `--rf-border-strong`; espacio `--rf-space-xs` … `--rf-space-2xl`; radio `--rf-radius-sm` / `-md` / `-lg` / `-xl` / `-pill`; sombra `--rf-shadow-card`, `--rf-shadow-elevated`; movimiento `--rf-duration-fast` / `-base` / `-slow`, `--rf-easing`.
 
@@ -37,7 +48,7 @@ Componentes `*Icon` con prop `size` en px: `CheckCircleIcon`, `CrossCircleIcon`,
 
 ### Pantallas
 
-`SedeView` es la ventana que abre una sede electrónica (520 × 420), con el momento del trámite en la prop `errand` y sus órdenes como props: no recibe ningún puerto. Úsala entera cuando el diseño sea esa ventana, con el `errand` del momento que toque; sus textos salen del catálogo. Las pantallas nuevas se construyen con las clases de arriba y los iconos.
+`SedeView` es la ventana que abre una sede electrónica (520 × 420), con el momento del trámite en la prop `errand` y sus órdenes como props: no recibe ningún puerto. Úsala entera cuando el diseño sea esa ventana, con el `errand` del momento que toque; sus textos salen del catálogo. Las pantallas nuevas se componen con los primitivos de arriba, el texto con sus clases y los iconos.
 
 ### Dónde mirar
 
@@ -47,18 +58,20 @@ Componentes `*Icon` con prop `size` en px: `CheckCircleIcon`, `CrossCircleIcon`,
 ### Ejemplo
 
 ```jsx
-const { DesignRoot, CheckCircleIcon } = window.RFirma;
+const { DesignRoot, Card, Stack, Row, Button, CheckCircleIcon } = window.RFirma;
 <DesignRoot language="es" theme="light">
-  <div className="rf-card rf-stack rf-gap-md" style={{ padding: "var(--rf-space-lg)" }}>
-    <div className="rf-row rf-gap-xs">
-      <CheckCircleIcon size={24} />
-      <p className="rf-title">Documento firmado</p>
-    </div>
-    <p className="rf-prose">La firma se ha guardado junto al documento.</p>
-    <div className="rf-row rf-gap-sm">
-      <button type="button" className="rf-btn rf-btn--ghost">Ver firmas</button>
-      <button type="button" className="rf-btn rf-btn--primary">Cerrar</button>
-    </div>
-  </div>
+  <Card>
+    <Stack gap="md" style={{ padding: "var(--rf-space-lg)" }}>
+      <Row gap="xs">
+        <CheckCircleIcon size={24} />
+        <p className="rf-title">Documento firmado</p>
+      </Row>
+      <p className="rf-prose">La firma se ha guardado junto al documento.</p>
+      <Row gap="sm">
+        <Button variant="ghost">Ver firmas</Button>
+        <Button variant="primary">Cerrar</Button>
+      </Row>
+    </Stack>
+  </Card>
 </DesignRoot>
 ```

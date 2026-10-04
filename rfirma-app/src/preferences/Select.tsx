@@ -1,6 +1,7 @@
 //! Un desplegable de la aplicación, no el `<select>` del sistema, con su teclado y su accesibilidad repuestos a mano.
 
 import { useCallback, useId, useRef, useState } from "react";
+import { Field } from "../design-system/Field";
 import { ChevronDownIcon } from "../design-system/icons";
 import { Popover } from "../design-system/Popover";
 import "./Select.css";
@@ -104,7 +105,7 @@ export function Select<T extends string>({
   };
 
   return (
-    <div className="rf-field select" ref={container}>
+    <Field className="select" ref={container}>
       <span className={hideLabel ? "rf-label rf-visually-hidden" : "rf-label"} id={labelId}>
         {label}
       </span>
@@ -171,6 +172,6 @@ export function Select<T extends string>({
           </div>
         ))}
       </Popover>
-    </div>
+    </Field>
   );
 }

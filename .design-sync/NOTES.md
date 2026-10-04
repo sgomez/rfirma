@@ -18,5 +18,6 @@ Proyecto: «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`), forma 
 
 - Hay que recompilar la referencia (`npx storybook build -c .storybook -o ../.design-sync/sb-reference` desde rfirma-app) cuando cambien historias, componentes o CSS.
 - Si una pantalla nueva también usa `position: fixed`, necesita un marco como `inSedeWindow`.
+- Las piezas componibles son los primitivos de `design-sync.entry.ts` (`Button`, `Card`, `Field`, `Badge`, `Dialog`, `Popover`, `Stack`, `Row`), y las convenciones enseñan a componer con ellos. Un primitivo nuevo se exporta en la entrada, lleva historia y entra en la tabla de las convenciones.
 - El `_ds_bundle.css` pesa unos 310 KB porque incluye `app.css` entero.
 - Herramientas probadas: Storybook 10.6.1, Vite 8, React 19.3 y Node 24.
