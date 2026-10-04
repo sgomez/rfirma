@@ -2,11 +2,13 @@
 
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
+import { Dialog } from "../design-system/Dialog";
+import { Row } from "../design-system/Row";
 import { classify, type NamedFailure } from "../errors/classify";
 import { useLanguage } from "../i18n/LanguageProvider";
 import type { Certificate } from "../signing/certificate";
 import "./PreferencesView.css";
-import { trapTabWithinCurrentTarget } from "./focusTrap";
 import {
   AppearanceSection,
   CertificatesSection,
@@ -133,7 +135,6 @@ export function PreferencesView({
   const [certificateFailure, setCertificateFailure] = useState<NamedFailure | null>(null);
   const [current, setCurrent] = useState<Section>("general");
   const titleId = useId();
-  const confirm = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const tabs = useRef(new Map<Section, HTMLElement | null>());
 
@@ -144,25 +145,13 @@ export function PreferencesView({
   // Preferencias.
   useEffect(() => {
     const onWindowKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (event.key !== "Escape" || event.defaultPrevented || confirmingPurge) return;
       event.preventDefault();
-      if (confirmingPurge) {
-        setConfirmingPurge(false);
-        return;
-      }
       onClose();
     };
     window.addEventListener("keydown", onWindowKeyDown);
     return () => window.removeEventListener("keydown", onWindowKeyDown);
   }, [confirmingPurge, onClose]);
-
-  // La confirmación es a su vez un diálogo modal, así que cuando se pone
-  // delante el foco entra en ella y el tabulador deja de pasear por los
-  // ajustes que quedan detrás: `aria-modal` lo promete a quien escucha, y
-  // esto es lo que lo cumple para quien teclea.
-  useEffect(() => {
-    if (confirmingPurge) confirm.current?.focus();
-  }, [confirmingPurge]);
 
   /**
    * Guarda un ajuste y, si el disco lo rechaza, deja el aviso **en la sección
@@ -388,39 +377,27 @@ export function PreferencesView({
       </div>
 
       <div className="preferences__footer">
-        <button type="button" className="rf-btn rf-btn--primary" onClick={onClose}>
+        <Button variant="primary" onClick={onClose}>
           {t("actions.close")}
-        </button>
+        </Button>
       </div>
 
       {confirmingPurge && (
-        <div className="rf-scrim">
-          <div
-            className="rf-dialog preferences__confirm"
-            role="dialog"
-            aria-modal="true"
-            tabIndex={-1}
-            ref={confirm}
-            aria-labelledby={`${titleId}-confirm`}
-            onKeyDown={trapTabWithinCurrentTarget}
-          >
-            <p className="rf-prose" id={`${titleId}-confirm`}>
-              {t("preferences.rememberActivity.confirm.body")}
-            </p>
-            <div className="rf-row preferences__confirm-actions">
-              <button
-                type="button"
-                className="rf-btn rf-btn--ghost"
-                onClick={() => setConfirmingPurge(false)}
-              >
-                {t("actions.cancel")}
-              </button>
-              <button type="button" className="rf-btn rf-btn--primary" onClick={() => void purge()}>
-                {t("preferences.rememberActivity.confirm.accept")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <Dialog
+          label={t("preferences.rememberActivity.confirm.body")}
+          onClose={() => setConfirmingPurge(false)}
+          className="preferences__confirm"
+        >
+          <p className="rf-prose">{t("preferences.rememberActivity.confirm.body")}</p>
+          <Row className="preferences__confirm-actions">
+            <Button variant="ghost" onClick={() => setConfirmingPurge(false)}>
+              {t("actions.cancel")}
+            </Button>
+            <Button variant="primary" onClick={() => void purge()}>
+              {t("preferences.rememberActivity.confirm.accept")}
+            </Button>
+          </Row>
+        </Dialog>
       )}
     </section>
   );

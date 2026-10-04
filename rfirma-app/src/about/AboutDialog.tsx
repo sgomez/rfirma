@@ -1,10 +1,11 @@
 //! El diálogo Acerca de: identidad de la aplicación, estado de la versión, licencias y aviso de independencia.
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./AboutDialog.css";
 import { Badge } from "../design-system/Badge";
 import { Button } from "../design-system/Button";
+import { Dialog } from "../design-system/Dialog";
 import { ExternalLinkIcon, InfoIcon, NewVersionIcon, UpToDateIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
@@ -33,7 +34,6 @@ export function AboutDialog({
   onClose,
 }: AboutDialogProps) {
   const { t } = useTranslation();
-  const titleId = useId();
   const [currentVersion, setCurrentVersion] = useState(newVersion);
   const [updating, setUpdating] = useState(false);
 
@@ -54,13 +54,11 @@ export function AboutDialog({
   }, [versions]);
 
   return (
-    <div className="rf-scrim">
-      <div className="rf-dialog about" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+    <>
+      <Dialog label={t("app.name")} onClose={onClose} className="about">
         <div className="about__header">
           <div className="about__identity">
-            <p className="rf-heading about__name" id={titleId}>
-              {t("app.name")}
-            </p>
+            <p className="rf-heading about__name">{t("app.name")}</p>
             <Badge className="about__version">{t("about.version", { version })}</Badge>
           </div>
           <UpdateStatus
@@ -109,7 +107,7 @@ export function AboutDialog({
             {t("actions.close")}
           </Button>
         </Row>
-      </div>
+      </Dialog>
       {updating && currentVersion !== null && (
         <InstallUpdateDialog
           newVersion={currentVersion}
@@ -117,7 +115,7 @@ export function AboutDialog({
           onClose={() => setUpdating(false)}
         />
       )}
-    </div>
+    </>
   );
 }
 

@@ -1,9 +1,10 @@
 //! La confirmación con la versión, la instalación y el mensaje de cada resultado fallido.
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./InstallUpdateDialog.css";
 import { Button } from "../design-system/Button";
+import { Dialog } from "../design-system/Dialog";
 import { Row } from "../design-system/Row";
 import type { Installation, NewVersion, VersionCheck } from "./newVersion";
 
@@ -23,7 +24,6 @@ type Phase =
 /** Pide confirmación con la versión anunciada, instala y, si falla, lo explica sin cerrar la aplicación. */
 export function InstallUpdateDialog({ newVersion, versions, onClose }: InstallUpdateDialogProps) {
   const { t } = useTranslation();
-  const titleId = useId();
   const [phase, setPhase] = useState<Phase>({ kind: "confirming" });
   const { version } = newVersion;
 
@@ -38,51 +38,50 @@ export function InstallUpdateDialog({ newVersion, versions, onClose }: InstallUp
     if (result !== "installed") setPhase({ kind: "failed", reason: result });
   }
 
+  const label = {
+    confirming: t("updates.install.confirmTitle", { version }),
+    installing: t("updates.install.installing"),
+    failed: t("updates.install.failedTitle"),
+  }[phase.kind];
+
   return (
-    <div className="rf-scrim">
-      <div
-        className="rf-dialog install-update-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
-        {phase.kind === "confirming" && (
-          <>
-            <p className="rf-title" id={titleId}>
-              {t("updates.install.confirmTitle", { version })}
-            </p>
-            <p className="rf-prose">{t("updates.install.confirmBody", { version })}</p>
-            <Row className="install-update-dialog__actions">
-              <Button variant="ghost" onClick={onClose}>
-                {t("actions.notNow")}
-              </Button>
-              <Button variant="primary" onClick={() => void install()}>
-                {t("updates.install.confirm")}
-              </Button>
-            </Row>
-          </>
-        )}
-        {phase.kind === "installing" && (
-          <p className="rf-title" id={titleId} role="status">
-            {t("updates.install.installing")}
+    <Dialog
+      label={label}
+      onClose={phase.kind === "installing" ? undefined : onClose}
+      className="install-update-dialog"
+    >
+      {phase.kind === "confirming" && (
+        <>
+          <p className="rf-title">{t("updates.install.confirmTitle", { version })}</p>
+          <p className="rf-prose">{t("updates.install.confirmBody", { version })}</p>
+          <Row className="install-update-dialog__actions">
+            <Button variant="ghost" onClick={onClose}>
+              {t("actions.notNow")}
+            </Button>
+            <Button variant="primary" onClick={() => void install()}>
+              {t("updates.install.confirm")}
+            </Button>
+          </Row>
+        </>
+      )}
+      {phase.kind === "installing" && (
+        <p className="rf-title" role="status">
+          {t("updates.install.installing")}
+        </p>
+      )}
+      {phase.kind === "failed" && (
+        <>
+          <p className="rf-title">{t("updates.install.failedTitle")}</p>
+          <p className="rf-prose" role="alert">
+            {t(`updates.install.failed.${phase.reason}`)}
           </p>
-        )}
-        {phase.kind === "failed" && (
-          <>
-            <p className="rf-title" id={titleId}>
-              {t("updates.install.failedTitle")}
-            </p>
-            <p className="rf-prose" role="alert">
-              {t(`updates.install.failed.${phase.reason}`)}
-            </p>
-            <Row className="install-update-dialog__actions">
-              <Button variant="primary" onClick={onClose}>
-                {t("actions.close")}
-              </Button>
-            </Row>
-          </>
-        )}
-      </div>
-    </div>
+          <Row className="install-update-dialog__actions">
+            <Button variant="primary" onClick={onClose}>
+              {t("actions.close")}
+            </Button>
+          </Row>
+        </>
+      )}
+    </Dialog>
   );
 }
