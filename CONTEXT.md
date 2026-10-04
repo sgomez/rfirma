@@ -74,9 +74,21 @@ colocación «vacía»: encender la firma visible la coloca en la página a la
 vista, y apagarla deja firmar sin ella; no existe «encendida y sin colocar». El conjunto
 puede ser una página, algunas o todas, y el recuadro se dibuja idéntico en
 todas ellas y en ninguna más, porque el PDF lleva un solo campo de firma con su
-widget replicado. Se recuerda por documento: «las páginas 3, 7 y 9» no
-significa nada en otro PDF.
+widget replicado. En la ventana principal se recuerda por documento: «las
+páginas 3, 7 y 9» no significa nada en otro PDF. En un trámite de sede que pide
+firma visible sin traer recuadro, la persona la coloca igual y dura lo que el
+trámite: no se guarda.
 _Avoid_: ancla, posición de la firma, página de firma
+
+**Modo de páginas**:
+Cuál de las tres maneras de nombrar las páginas de una colocación está activa:
+una página, varias o todas. Cada modo recuerda su propio conjunto, y cambiar de
+modo no reescribe el que se deja: volver a él trae lo que tenía. Un modo que se
+estrena arranca con lo que nombraba el anterior. El recuadro es uno solo y no
+cambia con el modo; a la firma solo llega el conjunto del modo activo. La
+memoria de los otros modos dura mientras el documento sigue delante: al cambiar
+de documento o volver a abrirlo solo queda la colocación que se firmaría.
+_Avoid_: opción de páginas, tipo de colocación, selección de páginas
 
 **Recuadro que pide la sede**:
 La firma visible que un trámite de sede trae ya puesta en sus `extraParams`:
