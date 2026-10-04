@@ -108,6 +108,20 @@ describe.each(locales)("landing %s", (locale) => {
   });
 });
 
+describe.each(landings)("screenshots of $name", ({ file }) => {
+  const document = page(file);
+  const screenshots = Array.from(document.querySelectorAll("img[src*='/_astro/']"));
+
+  it("are served as AVIF or WebP with a srcset and sizes", () => {
+    expect(screenshots.length).toBeGreaterThan(0);
+    for (const image of screenshots) {
+      expect(image.getAttribute("src")).toMatch(/\.(avif|webp)$/);
+      expect(image.getAttribute("srcset")).toMatch(/\.(avif|webp) \d+w/);
+      expect(image.getAttribute("sizes")).toBeTruthy();
+    }
+  });
+});
+
 describe("404", () => {
   const document = page("404.html");
 
