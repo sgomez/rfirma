@@ -24,11 +24,8 @@ interface SigningProgressDialogProps {
  * un cuelgue. Y cuando algo falla, saber en qué fase fue es lo primero que hace
  * falta.
  *
- * El artboard marca la etapa con un glifo y nada más. Aquí cada fila conserva
- * además su palabra —«Hecha», «En curso», «Pendiente»—: la sección 8 del
- * sistema de diseño prohíbe que la forma o el color sean el único indicador, y
- * un punto lleno frente a uno hueco es exactamente eso. La palabra es la
- * diferencia entre una fila que se lee y una que hay que interpretar.
+ * La etapa en curso se anuncia con `aria-current`, para que el glifo no sea
+ * el único indicador.
  */
 export function SigningProgressDialog({ stage }: SigningProgressDialogProps) {
   const { t } = useTranslation();
@@ -50,9 +47,12 @@ export function SigningProgressDialog({ stage }: SigningProgressDialogProps) {
         <ol className="progress-dialog__stages">
           {SIGNING_STAGES.map((each, index) => {
             const state = index < current ? "done" : index === current ? "running" : "pending";
-            const term = TERM_KEY[each];
             return (
-              <li className={`progress-dialog__stage progress-dialog__stage--${state}`} key={each}>
+              <li
+                className={`progress-dialog__stage progress-dialog__stage--${state}`}
+                key={each}
+                aria-current={state === "running" ? "step" : undefined}
+              >
                 <span className="progress-dialog__mark" aria-hidden="true">
                   {state === "done" ? (
                     <CheckIcon size={20} strokeWidth={2} />
@@ -60,17 +60,7 @@ export function SigningProgressDialog({ stage }: SigningProgressDialogProps) {
                     <span className="progress-dialog__dot" />
                   )}
                 </span>
-                <span className="rf-prose">
-                  {t(`progress.stages.${each}`)}
-                  {term && (
-                    <span className="rf-text-muted progress-dialog__term">
-                      {` (${t(`progress.stages.${term}`)})`}
-                    </span>
-                  )}
-                </span>
-                <span className="rf-hint progress-dialog__state">
-                  {t(`progress.states.${state}`)}
-                </span>
+                <span className="rf-prose">{t(`progress.stages.${each}`)}</span>
               </li>
             );
           })}
@@ -95,14 +85,3 @@ export function SigningProgressDialog({ stage }: SigningProgressDialogProps) {
     </div>
   );
 }
-
-/**
- * El término del dominio de cada etapa, entre paréntesis. La firma no tiene:
- * «firmando en la tarjeta» ya dice exactamente lo que pasa, y es la única de
- * las tres que toca la clave privada.
- */
-const TERM_KEY = {
-  presign: "presignTerm",
-  sign: null,
-  postsign: "postsignTerm",
-} as const satisfies Record<SigningStage, string | null>;

@@ -228,13 +228,6 @@ export function StatusView({
       </div>
 
       <div className="status-view__body">
-        <div className="status-view__table-header">
-          <p className="rf-label status-view__col-signal">{t("status.columns.signal")}</p>
-          <p className="rf-label status-view__col-value">{t("status.columns.value")}</p>
-          <p className="rf-label status-view__col-verdict">{t("status.columns.verdict")}</p>
-          <p className="rf-label status-view__col-action">{t("status.columns.action")}</p>
-        </div>
-
         {rows.map((row) => (
           <div key={row.signal} className="status-view__row" role="status">
             <div className="status-view__row-main">

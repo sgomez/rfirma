@@ -66,7 +66,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
     });
   });
 
-  it("reads whether the environment allows Junto al documento original", async () => {
+  it("reads whether the environment allows Junto al original", async () => {
     invoke.mockResolvedValue({ ...aConfiguration, offersTheOriginalFolder: true });
 
     expect((await tauriPreferences().read()).offersOriginalFolder).toBe(true);

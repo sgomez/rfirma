@@ -208,7 +208,7 @@ export function SetupWizard({
         )}
         {step === 2 && (
           <button type="button" className="rf-btn rf-btn--secondary" onClick={() => setStep(1)}>
-            {t("setup.actions.back")}
+            {t("actions.back")}
           </button>
         )}
         {step === 1 ? (
@@ -218,7 +218,7 @@ export function SetupWizard({
             className="rf-btn rf-btn--primary"
             onClick={() => setStep(2)}
           >
-            {t("setup.actions.continue")}
+            {t("actions.continue")}
           </button>
         ) : (
           <button type="button" className="rf-btn rf-btn--primary" onClick={onFinish}>
@@ -231,11 +231,6 @@ export function SetupWizard({
 }
 
 function WelcomeScreen({ t }: { t: TFunction }) {
-  const independence = t("about.independence");
-  const separator = independence.indexOf(". ");
-  const independenceTitle = separator === -1 ? independence : independence.slice(0, separator);
-  const independenceBody = separator === -1 ? "" : independence.slice(separator + 2);
-
   return (
     <div className="rf-stack rf-gap-md">
       <div className="rf-stack setup-wizard__intro">
@@ -243,8 +238,8 @@ function WelcomeScreen({ t }: { t: TFunction }) {
         <p className="rf-prose">{t("setup.welcome.body", { version: AUTOFIRMA_VERSION })}</p>
       </div>
       <div className="rf-card">
-        <p className="rf-title setup-wizard__notice-title">{independenceTitle}</p>
-        {independenceBody && <p className="rf-prose">{independenceBody}</p>}
+        <p className="rf-title setup-wizard__notice-title">{t("about.independenceLead")}</p>
+        <p className="rf-prose">{t("about.independence")}</p>
       </div>
       <LanguageCard t={t} />
     </div>
@@ -267,7 +262,6 @@ function LanguageCard({ t }: { t: TFunction }) {
   return (
     <div className="rf-card setup-wizard__card">
       <p className="rf-title setup-wizard__card-title">{t("preferences.language.label")}</p>
-      <p className="rf-prose">{t("setup.language.body")}</p>
       <Select
         label={t("preferences.language.label")}
         hideLabel
@@ -289,7 +283,7 @@ interface StepProps {
   number: 1 | 2;
   markerState: StepMarkerState;
   title: string;
-  hint: string;
+  hint?: string;
   last?: boolean;
   children: ReactNode;
 }
@@ -303,7 +297,7 @@ function Step({ number, markerState, title, hint, last = false, children }: Step
       </div>
       <div className="rf-stack setup-wizard__step-content">
         <p className="rf-prose setup-wizard__step-title">{title}</p>
-        <p className="rf-hint">{hint}</p>
+        {hint && <p className="rf-hint">{hint}</p>}
         <div className="setup-wizard__step-action">{children}</div>
       </div>
     </div>
@@ -352,7 +346,7 @@ function CertificateStep({ t, status, onInstall, onDecline }: CertificateStepPro
     <Step
       number={1}
       markerState={markerState}
-      title={t("setup.certificate.title")}
+      title={t("status.signals.localCaCertificate")}
       hint={t("setup.certificate.body")}
     >
       {status.kind === "idle" && (
@@ -361,7 +355,7 @@ function CertificateStep({ t, status, onInstall, onDecline }: CertificateStepPro
             {t("status.actions.install")}
           </button>
           <button type="button" className="rf-btn rf-btn--secondary" onClick={onDecline}>
-            {t("setup.actions.notNow")}
+            {t("actions.notNow")}
           </button>
         </div>
       )}
@@ -378,7 +372,7 @@ function CertificateStep({ t, status, onInstall, onDecline }: CertificateStepPro
                 {t("setup.certificate.installedTitle")}
               </p>
               {status.restartNotice && (
-                <p className="rf-hint">{t("setup.certificate.installedRestartNotice")}</p>
+                <p className="rf-hint">{t("status.notices.restartFirefox")}</p>
               )}
             </>
           )}
@@ -397,7 +391,7 @@ function CertificateStep({ t, status, onInstall, onDecline }: CertificateStepPro
               </ul>
               <div className="rf-row">
                 <button type="button" className="rf-btn rf-btn--secondary" onClick={onInstall}>
-                  {t("status.withdrawal.retry")}
+                  {t("actions.retry")}
                 </button>
               </div>
             </>
@@ -425,7 +419,7 @@ function HandlerStep({ t, status, autoFirmaAppears, onUse, onDecline }: HandlerS
       number={2}
       markerState={markerState}
       title={t("setup.handler.title")}
-      hint={t(autoFirmaAppears ? "setup.handler.body" : "setup.handler.bodyNoAutofirma")}
+      hint={autoFirmaAppears ? t("setup.handler.body") : undefined}
       last
     >
       {status.kind === "idle" && (
@@ -435,10 +429,10 @@ function HandlerStep({ t, status, autoFirmaAppears, onUse, onDecline }: HandlerS
             className="rf-btn rf-btn--primary"
             onClick={() => onUse(status.target)}
           >
-            {t("setup.actions.useRfirma")}
+            {t("status.actions.useRfirma")}
           </button>
           <button type="button" className="rf-btn rf-btn--secondary" onClick={onDecline}>
-            {t("setup.actions.notNow")}
+            {t("actions.notNow")}
           </button>
         </div>
       )}
@@ -460,7 +454,6 @@ function initialHandlerStatus(row: SignalRow): HandlerStatus {
 function ProtectionSetting({ t, preferences }: { t: TFunction; preferences: PreferencesStore }) {
   const [enabled, setEnabled] = useState(true);
   const titleId = useId();
-  const hintId = useId();
 
   useEffect(() => {
     let cancelled = false;
@@ -490,16 +483,12 @@ function ProtectionSetting({ t, preferences }: { t: TFunction; preferences: Pref
           <p className="rf-prose setup-wizard__step-title" id={titleId}>
             {t("preferences.consentCountdown.label")}
           </p>
-          <p className="rf-hint" id={hintId}>
-            {t("preferences.consentCountdown.hint")}
-          </p>
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={enabled}
           aria-labelledby={titleId}
-          aria-describedby={hintId}
           className="switch__control setup-wizard__protection-switch"
           onClick={() => void change(!enabled)}
         >

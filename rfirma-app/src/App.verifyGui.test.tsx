@@ -103,7 +103,6 @@ describe("App, con verify --gui", () => {
     render(aSigner());
 
     expect(await screen.findByText("Sin firmas")).toBeInTheDocument();
-    expect(screen.getByText("El documento no tiene firmas.")).toBeInTheDocument();
     expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
   });
 

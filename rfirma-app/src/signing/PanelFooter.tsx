@@ -149,7 +149,7 @@ export function PanelFooter(props: PanelFooterProps) {
             disabled={props.signable === false}
             onClick={props.onSign}
           >
-            {t("panel.footer.sign")}
+            {t("actions.sign")}
           </button>
         </div>
       ) : (
@@ -161,7 +161,7 @@ export function PanelFooter(props: PanelFooterProps) {
                 className="rf-btn rf-btn--primary panel__failure-retry"
                 onClick={props.onSign}
               >
-                {t("panel.footer.retrySigning")}
+                {t("actions.retry")}
               </button>
               <button
                 type="button"
@@ -187,7 +187,7 @@ export function PanelFooter(props: PanelFooterProps) {
                   className="rf-btn rf-btn--secondary panel__retry"
                   onClick={props.onRetryCertificates}
                 >
-                  {t("panel.certificate.retry")}
+                  {t("actions.lookAgain")}
                 </button>
               </div>
             )}
@@ -225,17 +225,16 @@ function SignButton({ chosen, signing, blocked, closed, onSign }: SignButtonProp
       <button
         type="button"
         className="rf-btn rf-btn--primary panel__sign"
-        title={signButtonTitle(t, chosen, closed)}
+        title={signButtonTitle(t, closed)}
         disabled={signing || blocked || closed || !usable}
         onClick={onSign}
       >
-        {t(signing ? "panel.footer.signing" : "panel.footer.sign")}
+        {t(signing ? "panel.footer.signing" : "actions.sign")}
       </button>
     </div>
   );
 }
 
-function signButtonTitle(t: TFunction, chosen: Certificate | null, closed: boolean) {
-  if (closed) return t("panel.previousSignatures.closed");
-  return chosen === null ? undefined : t("panel.footer.signWith", { holder: chosen.holderName });
+function signButtonTitle(t: TFunction, closed: boolean) {
+  return closed ? t("panel.previousSignatures.closed") : undefined;
 }

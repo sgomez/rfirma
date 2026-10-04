@@ -8,47 +8,40 @@ const noop = () => {};
 
 function renderDialog(props: Partial<Parameters<typeof UnsealedPagesDialog>[0]> = {}) {
   return renderWithCatalog(
-    <UnsealedPagesDialog fallen={3} chosen={13} onConfirm={noop} onCancel={noop} {...props} />,
+    <UnsealedPagesDialog fallen={3} onConfirm={noop} onCancel={noop} {...props} />,
   );
 }
 
 // Grada A: el diálogo del ID-105/ID-106, contra docs/design/dialogo-paginas-sin-firma-visible.md.
 describe("UnsealedPagesDialog", () => {
-  it("counts the pages that fall against the chosen set, not the document", () => {
-    renderDialog({ fallen: 3, chosen: 13 });
+  it("says how many pages fall and that the signature stays valid", () => {
+    renderDialog({ fallen: 3 });
 
     expect(
       screen.getByRole("dialog", { name: "3 páginas se quedarán sin firma visible" }),
     ).toBeVisible();
     expect(
       screen.getByText(
-        "El recuadro no cabe en 3 de las 13 páginas que has elegido, más pequeñas que aquella " +
-          "sobre la que lo colocaste. El documento se firmará igual y la firma será válida en " +
-          "todo él, pero en esas páginas no aparecerá la firma visible.",
+        "El recuadro no cabe en páginas más pequeñas que aquella donde lo colocaste. " +
+          "La firma será válida en todo el documento.",
       ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("La firma visible aparecerá en 10 de las 13 páginas elegidas."),
     ).toBeInTheDocument();
   });
 
   // ID-106: nunca una lista de números, ni con doce cayéndose.
   it("never names a fallen page, however many fall", () => {
-    renderDialog({ fallen: 12, chosen: 13 });
+    renderDialog({ fallen: 12 });
 
     expect(screen.getByRole("dialog")).toHaveTextContent("12");
     expect(screen.queryByText(/\b1\b.*\b2\b.*\b3\b/)).not.toBeInTheDocument();
   });
 
-  it("uses the singular for a single page, in the title and the recount", () => {
-    renderDialog({ fallen: 1, chosen: 5 });
+  it("uses the singular in the title for a single page", () => {
+    renderDialog({ fallen: 1 });
 
     expect(
       screen.getByRole("dialog", { name: "Una página se quedará sin firma visible" }),
     ).toBeVisible();
-    expect(
-      screen.getByText("La firma visible aparecerá en 4 de las 5 páginas elegidas."),
-    ).toBeInTheDocument();
   });
 
   it("says 'sin firma visible', never 'recortadas'", () => {

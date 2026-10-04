@@ -26,26 +26,20 @@ describe("SigningProgressDialog", () => {
     expect(screen.getByText("No retires la tarjeta hasta que termine.")).toBeInTheDocument();
   });
 
-  it("names the three stages in plain language, with the domain term alongside", () => {
+  it("names the three stages in plain language, without the domain term", () => {
     renderProgress("presign");
 
     const stages = screen.getAllByRole("listitem").map((item) => item.textContent);
-    expect(stages[0]).toContain("Preparando la firma");
-    expect(stages[0]).toContain("(prefirma)");
-    expect(stages[1]).toContain("Firmando en la tarjeta");
-    // La firma no lleva paréntesis: ya dice exactamente lo que pasa.
-    expect(stages[1]).not.toContain("(");
-    expect(stages[2]).toContain("Ensamblando el PDF");
-    expect(stages[2]).toContain("(postfirma)");
+    expect(stages).toEqual(["Preparando la firma", "Firmando en la tarjeta", "Ensamblando el PDF"]);
   });
 
-  it("marks what is done, what is under way and what is still pending", () => {
+  it("marks only the stage under way as the current step", () => {
     renderProgress("sign");
 
     const stages = screen.getAllByRole("listitem");
-    expect(stages[0]).toHaveTextContent("Hecha");
-    expect(stages[1]).toHaveTextContent("En curso");
-    expect(stages[2]).toHaveTextContent("Pendiente");
+    expect(stages[0]).not.toHaveAttribute("aria-current");
+    expect(stages[1]).toHaveAttribute("aria-current", "step");
+    expect(stages[2]).not.toHaveAttribute("aria-current");
   });
 
   it("advances the bar with the stage", () => {

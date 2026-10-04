@@ -237,7 +237,7 @@ describe("el estado del sello, flotando sobre la botonera", () => {
     expect(stampPill()).not.toBeInTheDocument();
   });
 
-  it("says the frozen view is the previous one while the box is being moved", async () => {
+  it("mounts no pill while the box is being moved", async () => {
     const { document, renders } = recordingDocument();
     renderWithCatalog(
       <DocumentViewer
@@ -250,9 +250,7 @@ describe("el estado del sello, flotando sobre la botonera", () => {
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
-    expect(
-      screen.getByText("Firma visible congelada mientras mueves el recuadro"),
-    ).toBeInTheDocument();
+    expect(stampPill()).not.toBeInTheDocument();
   });
 
   it("asks for the recomposition by hand on a large document", async () => {
@@ -299,15 +297,15 @@ describe("el estado del sello, flotando sobre la botonera", () => {
 
     expect(screen.getByText("No se ha podido dibujar la firma visible")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Volver a intentarlo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
 
     expect(onComposeStamp).toHaveBeenCalled();
   });
 
   /**
-   * El hueco del botón queda reservado incluso vacío: dos estados sin botón
-   * —congelado y componiendo— pintan igual de elementos, y el que sí tiene
-   * botón no añade una fila nueva, solo lo rellena.
+   * El hueco del botón queda reservado incluso vacío: el estado sin botón
+   * —componiendo— lo pinta igual, y el que sí tiene botón no añade una fila
+   * nueva, solo lo rellena.
    */
   it("keeps the same button slot whether there is a button or not", async () => {
     const { document, renders } = recordingDocument();
@@ -317,7 +315,7 @@ describe("el estado del sello, flotando sobre la botonera", () => {
         placement={seated}
         onPlace={noop}
         onOpen={noop}
-        stamp={{ kind: "frozen" }}
+        stamp={{ kind: "composing" }}
       />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
@@ -353,7 +351,7 @@ describe("el estado del sello, flotando sobre la botonera", () => {
         placement={seated}
         onPlace={noop}
         onOpen={noop}
-        stamp={{ kind: "frozen" }}
+        stamp={{ kind: "composing" }}
       />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));

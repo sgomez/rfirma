@@ -21,7 +21,7 @@ export function SedeOldWebClient({ onDismiss }: { onDismiss: () => void }) {
             className="rf-btn rf-btn--primary"
             onClick={onDismiss}
           >
-            {t("sede.oldWebClient.dismiss")}
+            {t("actions.continue")}
           </button>
         </>
       }

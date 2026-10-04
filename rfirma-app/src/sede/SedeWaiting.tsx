@@ -45,7 +45,7 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
           ficha da instalar la CA como la **acción principal** de este estado.
           Sin ella el navegador ni llega a preguntar por el permiso. */}
       <button type="button" className="rf-btn rf-btn--primary" onClick={onInstallLocalCa}>
-        {t("sede.repair.installCa")}
+        {t("status.actions.install")}
       </button>
     </div>
   );
@@ -113,7 +113,7 @@ function BrowserTab({
       className={`rf-btn sede-waiting__tab${id === chosen ? " sede-waiting__tab--chosen" : ""}`}
       onClick={() => onChoose(id)}
     >
-      {id === "chrome" ? t("sede.repair.chrome") : t("sede.repair.firefox")}
+      {id === "chrome" ? t("panel.certificate.stores.chrome") : t("status.storeBrands.firefox")}
     </button>
   );
 }

@@ -74,7 +74,6 @@ export function useSignFlow({
   // `pdf.js`, manda exactamente lo que se enseñó.
   const [sealLossPrompt, setSealLossPrompt] = useState<{
     fallen: number;
-    chosen: number;
     certificate: Certificate;
     order: SigningOrder;
   } | null>(null);
@@ -188,7 +187,7 @@ export function useSignFlow({
     });
 
     // El permiso de cofirmar sobre firmas de tipo desconocido solo sale de un
-    // «Firmar igualmente» que enseñó esa fila.
+    // «Firmar de todos modos» que enseñó esa fila.
     const permitted = consented ? { ...order, allowUnregisteredSignatures: true } : order;
 
     await signUnlessTheSealFalls(chosen, permitted, pdf, stamped);
@@ -229,7 +228,6 @@ export function useSignFlow({
     if (fallen.length > 0) {
       setSealLossPrompt({
         fallen: fallen.length,
-        chosen: chosenPages.length,
         certificate: chosen,
         order,
       });
@@ -239,7 +237,7 @@ export function useSignFlow({
     await startSigning(chosen, order, singleDestinationId);
   };
 
-  // `Firmar igualmente` de «¿Firmar de todos modos?»: el resto del recorrido
+  // `Firmar de todos modos` de «¿Firmar de todos modos?»: el resto del recorrido
   // sigue igual, con el aviso de las páginas sin sello que aún puede interponerse.
   const signDespiteProblems = async () => {
     if (signAnywayPrompt === null || pdf === null || activeDocument === null || chosen === null) {

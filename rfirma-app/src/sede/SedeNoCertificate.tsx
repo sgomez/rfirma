@@ -118,7 +118,7 @@ export function SedeNoCertificate({
         {!closeOnly && (
           <div className="rf-row sede-no-certificate__look-again">
             <button type="button" className="rf-btn rf-btn--ghost" onClick={onLookAgain}>
-              {t("sede.noCertificate.lookAgain")}
+              {t("actions.lookAgain")}
             </button>
           </div>
         )}

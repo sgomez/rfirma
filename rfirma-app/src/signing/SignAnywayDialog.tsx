@@ -52,7 +52,7 @@ export function SignAnywayDialog({ problems, locale, onConfirm, onCancel }: Sign
             {t("actions.cancel")}
           </button>
           <button type="button" className="rf-btn rf-btn--primary" onClick={onConfirm}>
-            {t("signAnyway.confirm")}
+            {t("actions.signAnyway")}
           </button>
         </div>
       </div>

@@ -129,7 +129,7 @@ export function Header({
                   className="rf-btn header__entry"
                   onClick={choose(onOpenStatus)}
                 >
-                  <span className="header__entryLabel">{t("header.status")}</span>
+                  <span className="header__entryLabel">{t("status.title")}</span>
                   <span className="header__entryIcon" aria-hidden="true" />
                 </button>
                 <hr className="rf-divider header__divider" />

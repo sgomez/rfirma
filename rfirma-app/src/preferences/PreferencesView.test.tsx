@@ -11,9 +11,7 @@ describe("PreferencesView", () => {
     renderView({ onChange });
     await openTab(user, "Firma");
 
-    await user.click(
-      screen.getByRole("switch", { name: /Recordar la última configuración de firma visible/ }),
-    );
+    await user.click(screen.getByRole("switch", { name: /Recordar la firma visible/ }));
 
     expect(onChange).toHaveBeenCalledWith({ ...defaults, rememberVisibleSignature: false });
     expect(screen.queryByRole("button", { name: "Guardar" })).not.toBeInTheDocument();
@@ -38,9 +36,7 @@ describe("PreferencesView", () => {
 
     await openTab(user, "Firma");
     expect(
-      screen
-        .getByRole("switch", { name: /Recordar la última configuración de firma visible/ })
-        .closest(".switch"),
+      screen.getByRole("switch", { name: /Recordar la firma visible/ }).closest(".switch"),
     ).toHaveClass("switch--wide");
   });
 
@@ -49,7 +45,7 @@ describe("PreferencesView", () => {
     renderView({ preferences: { ...defaults, destination: "Documentos" } });
     await openTab(user, "Firma");
 
-    expect(screen.getByText("Dónde se guarda el documento firmado")).toBeInTheDocument();
+    expect(screen.getByText("Dónde guardar")).toBeInTheDocument();
     expect(screen.getByText("Documentos")).toBeInTheDocument();
     expect(screen.queryByText(/\/home\//)).not.toBeInTheDocument();
   });
@@ -62,9 +58,7 @@ describe("PreferencesView", () => {
     renderView({ onChooseDestination });
     await openTab(user, "Firma");
 
-    expect(
-      screen.queryByRole("combobox", { name: "Dónde se guarda el documento firmado" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Dónde guardar" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cambiar carpeta…" }));
 
     expect(onChooseDestination).toHaveBeenCalledOnce();
@@ -82,15 +76,15 @@ describe("PreferencesView", () => {
     expect(await screen.findByText(/no se pudo guardar/)).toBeInTheDocument();
   });
 
-  // «Junto al documento original» solo cuando el entorno sabe devolver la ruta
+  // «Junto al original» solo cuando el entorno sabe devolver la ruta
   // real del documento (ID-184): donde no la sabe, la opción no aparece y el
   // ajuste se queda en la carpeta con su «Cambiar carpeta…», como antes.
-  it("offers Junto al documento original only when the environment allows it", async () => {
+  it("offers Junto al original only when the environment allows it", async () => {
     const user = userEvent.setup();
     renderView({ preferences: { ...defaults, offersOriginalFolder: false } });
     await openTab(user, "Firma");
 
-    expect(screen.queryByText("Junto al documento original")).not.toBeInTheDocument();
+    expect(screen.queryByText("Junto al original")).not.toBeInTheDocument();
     expect(screen.queryByText("En esta carpeta")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
   });
@@ -108,11 +102,9 @@ describe("PreferencesView", () => {
     });
     await openTab(user, "Firma");
 
-    const group = screen.getByRole("radiogroup", { name: "Dónde se guarda el documento firmado" });
+    const group = screen.getByRole("radiogroup", { name: "Dónde guardar" });
     expect(group).toBeInTheDocument();
-    expect(
-      within(group).getByRole("radio", { name: "Junto al documento original" }),
-    ).not.toBeChecked();
+    expect(within(group).getByRole("radio", { name: "Junto al original" })).not.toBeChecked();
     expect(within(group).getByRole("radio", { name: "En esta carpeta" })).toBeChecked();
     expect(screen.getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
   });
@@ -128,7 +120,7 @@ describe("PreferencesView", () => {
     });
     await openTab(user, "Firma");
 
-    expect(screen.getByRole("radio", { name: "Junto al documento original" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Junto al original" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "En esta carpeta" })).not.toBeChecked();
   });
 
@@ -169,7 +161,7 @@ describe("PreferencesView", () => {
     await user.click(screen.getByRole("radio", { name: "En esta carpeta" }));
 
     expect(await screen.findByText(/no se pudo guardar/)).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Junto al documento original" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Junto al original" })).toBeChecked();
   });
 
   it("offers every language whose catalog is complete", async () => {
@@ -243,7 +235,9 @@ describe("PreferencesView", () => {
 
     expect(onChange).not.toHaveBeenCalled();
     expect(onForgetActivity).not.toHaveBeenCalled();
-    expect(screen.getByText(/Al apagarlo se borra lo ya recordado/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Se borrarán los documentos recientes y el último certificado usado/),
+    ).toBeInTheDocument();
   });
 
   it("erases what was remembered once the purge is confirmed", async () => {
@@ -287,14 +281,12 @@ describe("PreferencesView", () => {
    * actividad», que borra algo al apagarse. Este interruptor solo cambia si
    * la franja se enseña.
    */
-  it("turns Avisarme cuando haya una versión nueva off without asking", async () => {
+  it("turns Avisar de versiones nuevas off without asking", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     renderView({ onChange });
 
-    await user.click(
-      screen.getByRole("switch", { name: "Avisarme cuando haya una versión nueva" }),
-    );
+    await user.click(screen.getByRole("switch", { name: "Avisar de versiones nuevas" }));
 
     expect(onChange).toHaveBeenCalledWith({ ...defaults, notifyNewVersion: false });
   });
@@ -305,19 +297,17 @@ describe("PreferencesView", () => {
     renderView({ onChange });
     await openTab(user, "Firma");
 
-    await user.click(screen.getByRole("switch", { name: /Protección contra firmas accidentales/ }));
+    await user.click(screen.getByRole("switch", { name: /Esperar 3 segundos antes de firmar/ }));
 
     expect(onChange).toHaveBeenCalledWith({ ...defaults, consentCountdown: false });
   });
 
-  it("shows the countdown's hint, shared with the setup wizard", async () => {
+  it("shows no hint under the countdown, whose label already says it", async () => {
     const user = userEvent.setup();
     renderView();
     await openTab(user, "Firma");
 
-    expect(
-      screen.getByText("Se añade una pausa de 3 segundos antes de permitir firmar."),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/pausa de 3 segundos/)).not.toBeInTheDocument();
   });
 
   it("lets the site choose its only accepted certificate once turned on", async () => {
@@ -327,7 +317,7 @@ describe("PreferencesView", () => {
     await openTab(user, "Firma");
 
     const toggle = screen.getByRole("switch", {
-      name: /Usar el certificado que elija la sede/,
+      name: /Si solo sirve un certificado y la sede lo permite/,
     });
     expect(toggle).not.toBeChecked();
     await user.click(toggle);
@@ -335,17 +325,15 @@ describe("PreferencesView", () => {
     expect(onChange).toHaveBeenCalledWith({ ...defaults, honourAutomaticSelection: true });
   });
 
-  it("shows the new hints of the two switches and hides the retired ones", async () => {
+  it("shows no hint under the two switches and hides the retired ones", async () => {
     const user = userEvent.setup();
     renderView();
     await openTab(user, "Firma");
 
-    expect(
-      screen.getByText("Si solo sirve uno de tus certificados, se usa sin preguntarte."),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/se usa sin preguntarte/)).not.toBeInTheDocument();
     expect(screen.queryByText(/se reutilizan en el siguiente documento/)).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("switch", { name: /Protección contra firmas por descuido en las sedes/ }),
+      screen.queryByRole("switch", { name: /Protección contra firmas/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -406,14 +394,14 @@ describe("PreferencesView", () => {
     ).toBeInTheDocument();
     expect(within(privacy).getByRole("button", { name: "Vaciar la lista" })).toBeInTheDocument();
     expect(
-      within(privacy).getByRole("switch", { name: /Avisarme cuando haya una versión nueva/ }),
+      within(privacy).getByRole("switch", { name: /Avisar de versiones nuevas/ }),
     ).toBeInTheDocument();
 
     await openTab(user, "Firma");
     const signing = screen.getByRole("tabpanel", { name: "Firma" });
     expect(
       within(signing).getByRole("switch", {
-        name: /Recordar la última configuración de firma visible/,
+        name: /Recordar la firma visible/,
       }),
     ).toBeInTheDocument();
     expect(within(signing).getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
@@ -430,7 +418,9 @@ describe("PreferencesView", () => {
     renderView();
 
     expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
-    expect(screen.queryByRole("switch", { name: /Recordar la última/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("switch", { name: /Recordar la firma visible/ }),
+    ).not.toBeInTheDocument();
 
     await openTab(user, "Firma");
 
@@ -547,9 +537,7 @@ describe("PreferencesView", () => {
     renderView({ onChange });
     await openTab(user, "Firma");
 
-    await user.click(
-      screen.getByRole("switch", { name: /Recordar la última configuración de firma visible/ }),
-    );
+    await user.click(screen.getByRole("switch", { name: /Recordar la firma visible/ }));
 
     expect(await screen.findByText("EACCES: permission denied")).toBeInTheDocument();
   });
@@ -575,7 +563,7 @@ describe("PreferencesView", () => {
     renderView();
     await openTab(user, "Firma");
 
-    await user.click(screen.getByRole("switch", { name: /Recordar la última configuración/ }));
+    await user.click(screen.getByRole("switch", { name: /Recordar la firma visible/ }));
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -601,7 +589,7 @@ describe("PreferencesView", () => {
     await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
 
     const confirmation = screen
-      .getByText(/Al apagarlo se borra lo ya recordado/)
+      .getByText(/Se borrarán los documentos recientes y el último certificado usado/)
       .closest(".rf-dialog") as HTMLElement;
     expect(confirmation.contains(document.activeElement)).toBe(true);
 
@@ -623,7 +611,9 @@ describe("PreferencesView", () => {
     await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
     await user.keyboard("{Escape}");
 
-    expect(screen.queryByText(/Al apagarlo se borra lo ya recordado/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Se borrarán los documentos recientes y el último certificado usado/),
+    ).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
     expect(onChange).not.toHaveBeenCalled();
   });

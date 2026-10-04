@@ -51,7 +51,7 @@ export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmPro
             disabled={handing}
             onClick={() => void confirm()}
           >
-            {t("sede.confirm.continue")}
+            {t("actions.continue")}
           </button>
         </>
       }
@@ -61,7 +61,7 @@ export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmPro
           <span className="sede-confirm__icon">
             <AlertIcon size={18} />
           </span>
-          <p className="rf-title">{t("sede.confirm.title")}</p>
+          <p className="rf-title">{t("signAnyway.title")}</p>
         </div>
         <p className="rf-prose">{confirmationMessage(t, messageCode)}</p>
       </div>

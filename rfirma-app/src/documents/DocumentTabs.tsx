@@ -274,8 +274,8 @@ function SplitOpenButton({
                 ? "document-tabs__split-arrow document-tabs__split-arrow--open"
                 : "document-tabs__split-arrow"
             }
-            title={t("tabs.recentlyOpened")}
-            aria-label={t("tabs.recentlyOpened")}
+            title={t("recents.heading")}
+            aria-label={t("recents.heading")}
             aria-haspopup="menu"
             aria-expanded={open}
             aria-controls={open ? menuId : undefined}

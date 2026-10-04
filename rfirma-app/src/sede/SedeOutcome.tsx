@@ -147,7 +147,7 @@ export function SedeOutcome({
             <SiteNote situation={outcome.situation} />
             <div className="rf-stack rf-gap-xs sede-outcome__detail">
               <div className="rf-row rf-gap-xs sede-outcome__detail-head">
-                <span className="rf-label">{t("sede.outcome.detail")}</span>
+                <span className="rf-label">{t("errors.technicalDetail")}</span>
                 <button
                   type="button"
                   className="rf-btn rf-btn--ghost sede-outcome__copy"
@@ -168,7 +168,7 @@ export function SedeOutcome({
                   onClick={openHelp}
                 >
                   <ExternalLinkIcon size={14} />
-                  {t("errors.help")}
+                  {t("header.help")}
                 </button>
               </div>
             )}
@@ -390,9 +390,8 @@ function SiteNote({ situation }: { situation: RefusalSituation }) {
 function title(outcome: SiteOutcome, t: TFunction): string {
   switch (outcome.kind) {
     case "signed":
-      return t("sede.outcome.signedTitle");
     case "batchSigned":
-      return t("sede.outcome.batchTitle");
+      return t("sede.outcome.signedTitle");
     case "saved":
       return t("sede.outcome.savedTitle");
     case "loaded":

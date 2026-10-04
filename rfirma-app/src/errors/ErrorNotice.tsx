@@ -148,7 +148,7 @@ export function ErrorNotice({
           onEmptyStore?.();
         }}
       >
-        {t("errors.emptyStore.confirmButton")}
+        {t("errors.emptyStore.button")}
       </button>
     </>
   ) : (
@@ -208,7 +208,7 @@ export function ErrorNotice({
                     onClick={openHelp}
                   >
                     <ExternalLinkIcon size={14} />
-                    {t("errors.help")}
+                    {t("header.help")}
                   </button>
                 )}
                 {onReload && (

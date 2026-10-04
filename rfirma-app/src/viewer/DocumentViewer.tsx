@@ -143,7 +143,7 @@ interface DocumentViewerProps {
    * decirlo—, así que la pastilla no se monta para esos tres.
    */
   stamp?: StampPreview;
-  /** «Ver cómo queda», y también «Volver a intentarlo». */
+  /** «Ver cómo queda», y también «Reintentar». */
   onComposeStamp?: () => void;
   /** Dónde va el hueco punteado de la rúbrica que falta por cargar. */
   rubricGap?: RubricGap | null;

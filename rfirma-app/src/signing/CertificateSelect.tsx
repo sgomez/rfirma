@@ -376,9 +376,9 @@ export function CertificateSelect({
 function storeLabel(store: Store, t: TFunction): string {
   switch (store) {
     case "card":
-      return t("panel.certificate.stores.card");
+      return t("status.storeBrands.card");
     case "firefox":
-      return t("panel.certificate.stores.firefox");
+      return t("status.storeBrands.firefox");
     case "chrome":
       return t("panel.certificate.stores.chrome");
     case "nssdb":
@@ -386,7 +386,7 @@ function storeLabel(store: Store, t: TFunction): string {
     case "installed":
       return t("panel.certificate.stores.installed");
     case "windows":
-      return t("panel.certificate.stores.windows");
+      return t("status.storeBrands.windows");
   }
 }
 

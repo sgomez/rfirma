@@ -51,9 +51,9 @@ export function PhraseEditor({ phrase, samples, onChange }: PhraseEditorProps) {
   const menuId = useId();
 
   const names: Record<Datum, string> = {
-    signer: t("panel.visibleSignature.datum.signer"),
-    issuer: t("panel.visibleSignature.datum.issuer"),
-    signedAt: t("panel.visibleSignature.datum.signedAt"),
+    signer: t("panel.signed.field.signer"),
+    issuer: t("panel.signed.field.issuer"),
+    signedAt: t("panel.signed.field.date"),
   };
   const { signer, issuer, signedAt } = samples;
   const pill = useCallback(

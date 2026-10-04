@@ -26,25 +26,19 @@ export function CertificateNotice({
           <AlertIcon size={18} />
           <span className="rf-title">{t("panel.certificate.empty.title")}</span>
         </div>
-        <p className="rf-body rf-text-muted panel__notice-body">
-          {t("panel.certificate.empty.body")}
-        </p>
       </div>
     );
   }
 
   if (state.kind === "failed") {
-    // El mismo lenguaje que `empty` —título y explicación— con el fallo ya
-    // clasificado y su detalle crudo debajo.
+    // El mismo título que `empty`, con el fallo ya clasificado y su detalle
+    // crudo debajo.
     return (
       <div className="panel__no-certificates">
         <div className="panel__notice-title">
           <AlertIcon size={18} />
           <span className="rf-title">{t("panel.certificate.failed.title")}</span>
         </div>
-        <p className="rf-body rf-text-muted panel__notice-body">
-          {t("panel.certificate.failed.body")}
-        </p>
         <ErrorNotice
           situation={state.failure.situation}
           technicalDetail={state.failure.detail}

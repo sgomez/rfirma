@@ -179,21 +179,6 @@ export function RevokedIcon({ size = 14 }: IconProps) {
 }
 
 /**
- * El icono del bloque «La firma visible aparecerá en…» del diálogo de páginas
- * sin firma visible (docs/design/dialogo-paginas-sin-firma-visible.md): el
- * recuadro con la marca dentro, para que se lea junto al resto de recuadros
- * del sistema de diseño y no como un icono suelto.
- */
-export function SealIcon({ size = 20 }: IconProps) {
-  return (
-    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
-      <rect x="4" y="4" width="16" height="16" rx="3" />
-      <path d="M8 12.5 10.5 15 16 9" />
-    </svg>
-  );
-}
-
-/**
  * La marca de verificación.
  *
  * El artboard la dibuja con dos grosores: 3 en las casillas de 12 px del

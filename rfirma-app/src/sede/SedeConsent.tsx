@@ -63,7 +63,7 @@ export function SedeConsent({
   const remaining = useConsentCountdown(countdown);
   const ready = chosen !== null && remaining === 0;
   const consentButton = useDefaultButton(ready);
-  const action = identity ? t("sede.consent.identify") : t("sede.consent.sign");
+  const action = identity ? t("sede.consent.identify") : t("actions.sign");
 
   return (
     <SedeBody

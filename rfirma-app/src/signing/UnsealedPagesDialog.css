@@ -20,21 +20,6 @@
   flex-shrink: 0;
 }
 
-/* La vuelta positiva: el dato que de verdad decide, en un bloque aparte. */
-.unsealed-pages-dialog__remaining {
-  display: flex;
-  align-items: center;
-  gap: var(--rf-space-xs);
-  padding: var(--rf-space-sm);
-  border: 1px solid var(--rf-border-subtle);
-  border-radius: var(--rf-radius-md);
-  background: var(--rf-bg);
-}
-
-.unsealed-pages-dialog__seal {
-  flex-shrink: 0;
-}
-
 .unsealed-pages-dialog__actions {
   justify-content: flex-end;
   gap: var(--rf-space-sm);

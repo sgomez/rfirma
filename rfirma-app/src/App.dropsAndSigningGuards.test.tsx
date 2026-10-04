@@ -202,19 +202,14 @@ describe("App, con páginas donde el recuadro no cabe", () => {
 
     await user.click(sign);
 
-    // ID-106: el denominador es el conjunto elegido (3), no el documento.
     expect(
       await screen.findByRole("dialog", { name: "Una página se quedará sin firma visible" }),
     ).toBeVisible();
     expect(
       screen.getByText(
-        "El recuadro no cabe en 1 de las 3 páginas que has elegido, más pequeñas que aquella " +
-          "sobre la que lo colocaste. El documento se firmará igual y la firma será válida en " +
-          "todo él, pero en esas páginas no aparecerá la firma visible.",
+        "El recuadro no cabe en páginas más pequeñas que aquella donde lo colocaste. " +
+          "La firma será válida en todo el documento.",
       ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("La firma visible aparecerá en 2 de las 3 páginas elegidas."),
     ).toBeInTheDocument();
     expect(presign).not.toHaveBeenCalled();
 
@@ -593,7 +588,7 @@ describe("App · ¿Firmar de todos modos?", () => {
 
     await user.click(sign);
     const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
-    await user.click(within(dialog).getByRole("button", { name: "Firmar igualmente" }));
+    await user.click(within(dialog).getByRole("button", { name: "Firmar de todos modos" }));
 
     await waitFor(() => expect(presigned).toHaveLength(1));
     expect(presigned[0]?.allowUnregisteredSignatures).toBe(true);
@@ -622,7 +617,7 @@ describe("App · ¿Firmar de todos modos?", () => {
 
     await user.click(sign);
     const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
-    await user.click(within(dialog).getByRole("button", { name: "Firmar igualmente" }));
+    await user.click(within(dialog).getByRole("button", { name: "Firmar de todos modos" }));
 
     await waitFor(() => expect(presigned).toHaveLength(1));
     expect(presigned[0]?.allowUnregisteredSignatures).toBeFalsy();
@@ -668,12 +663,12 @@ describe("App · ¿Firmar de todos modos?", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByText("El documento está cerrado y no admite más firmas.");
+    await within(panel).findByText("El documento no admite más firmas.");
     await within(within(panel).getByRole("combobox")).findByText(remembered.holderName);
 
     const sign = within(panel).getByRole("button", { name: "Firmar" });
     expect(sign).toBeDisabled();
-    expect(sign).toHaveAttribute("title", "El documento está cerrado y no admite más firmas.");
+    expect(sign).toHaveAttribute("title", "El documento no admite más firmas.");
     expect(within(panel).queryByText("Ya lo firmaste tú con este certificado")).toBeNull();
   });
 });

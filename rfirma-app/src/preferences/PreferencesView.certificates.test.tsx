@@ -215,7 +215,7 @@ describe("certificates in a file", () => {
 
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
     await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
-    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
 
     expect(onEmptyStore).toHaveBeenCalledOnce();
   });

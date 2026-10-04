@@ -59,8 +59,8 @@ export function ModelFieldset({
   );
   const samples = useMemo(
     () => ({
-      signer: certificate?.stampedSigner ?? t("panel.visibleSignature.datum.signer"),
-      issuer: certificate?.issuer ?? t("panel.visibleSignature.datum.issuer"),
+      signer: certificate?.stampedSigner ?? t("panel.signed.field.signer"),
+      issuer: certificate?.issuer ?? t("panel.signed.field.issuer"),
       signedAt: signedAtSample,
     }),
     [certificate, signedAtSample, t],

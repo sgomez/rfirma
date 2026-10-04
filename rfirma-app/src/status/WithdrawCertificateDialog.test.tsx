@@ -37,11 +37,9 @@ describe("WithdrawCertificateDialog", () => {
     const dialog = screen.getByRole("alertdialog", { name: "Retirar el certificado de rFirma" });
     expect(dialog).toBeVisible();
     expect(dialog).toHaveFocus();
-    expect(
-      screen.getByText("El certificado de rFirma, de los navegadores donde esté"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("El certificado de rFirma, de tus navegadores")).toBeInTheDocument();
     expect(screen.getByText("Que las sedes abran rFirma")).toBeInTheDocument();
-    expect(screen.getByText("Se puede volver a instalar desde este panel.")).toBeInTheDocument();
+    expect(screen.getByText("Podrás volver a instalarlo aquí.")).toBeInTheDocument();
   });
 
   it("cancels without withdrawing", async () => {
@@ -74,11 +72,7 @@ describe("WithdrawCertificateDialog", () => {
     await waitFor(() => {
       expect(screen.getByRole("alertdialog", { name: "Certificado retirado" })).toBeVisible();
     });
-    expect(
-      screen.getByText(
-        "Reinicia el navegador para que deje de confiar en el certificado retirado.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Reinicia el navegador para que surta efecto.")).toBeInTheDocument();
   });
 
   it("closes on Cerrar after a successful withdrawal", async () => {

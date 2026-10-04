@@ -111,7 +111,7 @@ describe("3 · signing", () => {
     });
     renderWithCatalog(<SedeWindow errands={port} />);
 
-    expect(screen.getByText("Firmando")).toBeInTheDocument();
+    expect(screen.getByText("Firmando…")).toBeInTheDocument();
     expect(screen.getByText("Con ADA LOVELACE BYRON · 99999999R.")).toBeInTheDocument();
     expect(screen.queryByText(/prefirma|posfirma/i)).not.toBeInTheDocument();
   });

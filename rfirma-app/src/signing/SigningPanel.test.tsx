@@ -303,7 +303,6 @@ describe("SigningPanel", () => {
     renderPanel({ certificate: { kind: "empty" }, onRetryCertificates });
 
     expect(screen.getByText("Sin certificados")).toBeInTheDocument();
-    expect(screen.getByText("No hay ningún certificado con el que firmar.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Añadir un certificado…" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Volver a buscar" }));
 
@@ -439,13 +438,10 @@ describe("SigningPanel", () => {
     expect(screen.getByRole("button", { name: "Firmar" })).toBeDisabled();
   });
 
-  it("names the chosen certificate's holder in the title of «Firmar»", () => {
+  it("gives «Firmar» no title while the document admits signatures", () => {
     renderPanel();
 
-    expect(screen.getByRole("button", { name: "Firmar" })).toHaveAttribute(
-      "title",
-      "Firmar con el certificado de Ada Lovelace Byron",
-    );
+    expect(screen.getByRole("button", { name: "Firmar" })).not.toHaveAttribute("title");
   });
 
   it("puts the certificate selector first, above the co-signature notice", () => {
@@ -509,9 +505,7 @@ describe("la firma visible, sin certificado elegido", () => {
     const toggle = screen.getByRole("switch", { name: "Firma visible" });
     expect(toggle).toHaveAttribute("aria-checked", "false");
     expect(toggle).toBeDisabled();
-    expect(
-      screen.getByText("Elige un certificado para añadir una firma visible."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Elige antes un certificado.")).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: "Completa" })).not.toBeInTheDocument();
   });
 
@@ -519,9 +513,7 @@ describe("la firma visible, sin certificado elegido", () => {
     renderPanel({ signature: { ...visible, enabled: false } });
 
     expect(screen.getByRole("switch", { name: "Firma visible" })).toBeEnabled();
-    expect(
-      screen.queryByText("Elige un certificado para añadir una firma visible."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Elige antes un certificado.")).not.toBeInTheDocument();
   });
 
   it("brings the placement back when a certificate that went away comes back", () => {
