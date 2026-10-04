@@ -1,19 +1,24 @@
-//! El doble de `SiteErrandPort` de las historias de sede: emite el momento pedido y sus órdenes son espías de Storybook.
+//! Los argumentos que comparten las historias de `SedeView`: un trámite de ejemplo y órdenes que son espías de Storybook.
 
 import { fn } from "storybook/test";
-import { type ErrandStage, noErrand, type SiteErrandPort } from "./errand";
+import type { Errand, ErrandStage } from "./errand";
+import type { SedeViewProps } from "./SedeView";
 
-/** Un puerto que emite `stage` de sede y no hace nada más. */
-export function storyErrand(stage: ErrandStage): SiteErrandPort {
-  return {
-    ...noErrand(),
-    watch: (onChange) => {
-      onChange({ origin: "sede.ejemplo.gob.es", operation: "sign", stage });
-      return () => {};
-    },
-    consent: fn(async () => {}),
-    cancel: fn(async () => {}),
-    close: fn(async () => {}),
-    installLocalCa: fn(async () => {}),
-  };
+/** Las órdenes de la vista, todas espías: una historia no habla con ningún puerto. */
+export const sedeViewActions = {
+  onConsent: fn(),
+  onConfirmSignatures: fn(),
+  onMarkArea: fn(),
+  onCancel: fn(),
+  onClose: fn(),
+  onLookAgain: fn(),
+  onInstallCertificate: fn(),
+  onInstallLocalCa: fn(),
+  onDismissWarning: fn(),
+  onOpenHelp: fn(),
+} satisfies Partial<SedeViewProps>;
+
+/** Un trámite de una sede de ejemplo en el momento `stage`; `errand` sobrescribe el resto. */
+export function sedeErrand(stage: ErrandStage, errand: Partial<Errand> = {}): Errand {
+  return { origin: "sede.ejemplo.gob.es", operation: "sign", stage, ...errand };
 }

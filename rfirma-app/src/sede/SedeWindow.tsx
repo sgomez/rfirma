@@ -1,20 +1,10 @@
-//! La ventana de sede: sigue el trámite por `SiteErrandPort` y monta el componente de cada momento entre cuerpo y pie.
+//! La ventana de sede: sigue el trámite por `SiteErrandPort` y se lo pasa a `SedeView`.
 
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import { classify, type NamedFailure } from "../errors/classify";
 import type { Errand, SiteErrandPort } from "./errand";
-import { SedeConfirm } from "./SedeConfirm";
-import { SedeConsent } from "./SedeConsent";
-import { SedeMarking } from "./SedeMarking";
-import { SedeNoCertificate } from "./SedeNoCertificate";
-import { SedeOldWebClient } from "./SedeOldWebClient";
-import { SedeOutcome } from "./SedeOutcome";
-import { SedeSigning } from "./SedeSigning";
-import { SedeTransfer } from "./SedeTransfer";
-import { SedeWaiting } from "./SedeWaiting";
-import "./SedeWindow.css";
+import { SedeView } from "./SedeView";
 
 interface SedeWindowProps {
   errands: SiteErrandPort;
@@ -83,11 +73,10 @@ function SedeDialog({
   consentCountdown: boolean;
   onOpenHelp?: () => void;
 }) {
-  const { t } = useTranslation();
-  const stage = errand.stage;
-
-  const close = () => void errands.close();
-  const cancel = () => void errands.cancel();
+  const openHelp = () => {
+    onOpenHelp?.();
+    void externalDestinations?.open("discussions");
+  };
 
   const [installFailure, setInstallFailure] = useState<NamedFailure | null>(null);
   // Un fallo al instalar se enseña en línea, con la misma clasificación que
@@ -102,90 +91,20 @@ function SedeDialog({
   };
 
   return (
-    <div className="sede-window__frame">
-      <section
-        className="sede-window"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("app.name")}
-        data-stage={stage.kind}
-      >
-        {stage.kind === "waiting" && (
-          <SedeWaiting
-            moment="connecting"
-            onInstallLocalCa={() => void errands.installLocalCa()}
-            onCancel={cancel}
-          />
-        )}
-        {(stage.kind === "unreachable" || stage.kind === "noChannel") && (
-          <SedeWaiting
-            moment="unreachable"
-            onInstallLocalCa={() => void errands.installLocalCa()}
-            onCancel={cancel}
-          />
-        )}
-        {stage.kind === "oldWebClient" && (
-          <SedeOldWebClient onDismiss={() => void errands.dismissWarning()} />
-        )}
-        {stage.kind === "consent" && (
-          <SedeConsent
-            origin={errand.origin}
-            terminalOrder={errand.terminalOrder ?? null}
-            operation={errand.operation}
-            stage={stage}
-            countdown={consentCountdown}
-            onConsent={(certificateId) => void errands.consent(certificateId)}
-            onCancel={cancel}
-          />
-        )}
-        {stage.kind === "marking" && (
-          <SedeMarking
-            pdf={stage.pdf}
-            onMark={(area) => errands.markArea(area)}
-            onCancel={() => void errands.markArea(null)}
-          />
-        )}
-        {stage.kind === "confirming" && (
-          <SedeConfirm
-            messageCode={stage.messageCode}
-            onConfirm={() => errands.confirmSignatures()}
-            onCancel={cancel}
-          />
-        )}
-        {stage.kind === "signing" && (
-          <SedeSigning
-            origin={errand.origin}
-            certificate={stage.certificate}
-            phase={stage.phase}
-            onCancel={cancel}
-          />
-        )}
-        {/* Guardar y cargar **no preguntan en esta ventana**: la orden abre el
-            diálogo del portal en cuanto el momento llega, y aquí sólo se
-            nombra el fichero (ADR-0011). */}
-        {(stage.kind === "saving" || stage.kind === "loading") && <SedeTransfer transfer={stage} />}
-        {stage.kind === "outcome" && (
-          <SedeOutcome
-            origin={errand.origin}
-            outcome={stage.outcome}
-            onClose={close}
-            onOpenHelp={onOpenHelp}
-            externalDestinations={externalDestinations}
-          />
-        )}
-        {stage.kind === "noCertificate" && (
-          <SedeNoCertificate
-            origin={errand.origin}
-            terminal={errand.terminalOrder !== undefined}
-            reason={stage.reason}
-            owned={stage.owned}
-            failure={installFailure}
-            onInstall={() => void installCertificate()}
-            onLookAgain={() => void errands.lookAgain()}
-            onLeave={cancel}
-          />
-        )}
-      </section>
-    </div>
+    <SedeView
+      errand={errand}
+      consentCountdown={consentCountdown}
+      installFailure={installFailure}
+      onConsent={(certificateId) => void errands.consent(certificateId)}
+      onConfirmSignatures={() => errands.confirmSignatures()}
+      onMarkArea={(area) => errands.markArea(area)}
+      onCancel={() => void errands.cancel()}
+      onClose={() => void errands.close()}
+      onLookAgain={() => void errands.lookAgain()}
+      onInstallCertificate={() => void installCertificate()}
+      onInstallLocalCa={() => void errands.installLocalCa()}
+      onDismissWarning={() => void errands.dismissWarning()}
+      onOpenHelp={openHelp}
+    />
   );
 }

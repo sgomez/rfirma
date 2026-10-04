@@ -13,7 +13,6 @@ import {
 } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
-import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import { errorText } from "../errors/errorMessage";
 import { formatSize } from "../signing/SigningPanel";
 import {
@@ -31,7 +30,6 @@ interface SedeOutcomeProps {
   outcome: SiteOutcome;
   onClose: () => void;
   onOpenHelp?: () => void;
-  externalDestinations?: ExternalDestinationOpener;
 }
 
 /**
@@ -50,13 +48,7 @@ interface SedeOutcomeProps {
  * tiempo a leer, y el caso que lo decide es el rechazo, donde irse sola
  * reproduciría el síntoma que el aviso venía a evitar.
  */
-export function SedeOutcome({
-  origin,
-  outcome,
-  onClose,
-  onOpenHelp,
-  externalDestinations,
-}: SedeOutcomeProps) {
+export function SedeOutcome({ origin, outcome, onClose, onOpenHelp }: SedeOutcomeProps) {
   const { t } = useTranslation();
   const carriesHelp = outcome.kind === "refused" && outcome.situation === "unknown";
   const asksToAct =
@@ -69,7 +61,6 @@ export function SedeOutcome({
 
   const openHelp = () => {
     onOpenHelp?.();
-    void externalDestinations?.open("discussions");
   };
 
   return (

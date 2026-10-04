@@ -7,9 +7,13 @@
   "storybookStatic": ".design-sync/sb-reference",
   "entry": "rfirma-app/design-sync.entry.ts",
   "titleMap": {
-    "1·Espera": "SedeWindow",
-    "2·Consentimiento": "SedeWindow",
-    "4·Rechazo": "SedeWindow"
+    "1·Espera": "SedeView",
+    "1c·Marcarlafirma": "SedeView",
+    "2·Consentimiento": "SedeView",
+    "2b·Confirmar": "SedeView",
+    "3·Firmando": "SedeView",
+    "4·Desenlace": "SedeView",
+    "5·Sincertificado": "SedeView"
   },
   "extraEntries": [
     "./design-sync.entry.ts"
@@ -25,7 +29,7 @@
     "src/design-system/bundle/fonts/fonts.css"
   ],
   "overrides": {
-    "SedeWindow": {
+    "SedeView": {
       "cardMode": "single",
       "primaryStory": "Consent"
     }
