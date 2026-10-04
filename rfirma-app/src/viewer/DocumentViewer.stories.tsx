@@ -11,10 +11,10 @@ import { storyPdf } from "./storyPdf";
 const meta = {
   title: "Ventana principal/5 · Visor",
   component: DocumentViewer,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "centered" },
   decorators: [
     (Story) => (
-      <div style={{ height: 560, display: "flex" }}>
+      <div style={{ width: 800, height: 560, display: "grid" }}>
         <Story />
       </div>
     ),
