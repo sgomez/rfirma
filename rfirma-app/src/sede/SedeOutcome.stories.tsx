@@ -2,11 +2,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { SedeWindow } from "./SedeWindow";
+import { inSedeWindow } from "./sedeStoryFrame";
 import { storyErrand } from "./sedeStoryPort";
 
 const meta = {
   title: "Sede/4 · Rechazo",
   component: SedeWindow,
+  decorators: [inSedeWindow],
   args: {
     errands: storyErrand({
       kind: "outcome",

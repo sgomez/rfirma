@@ -1,0 +1,34 @@
+{
+  "projectId": "312bca0c-2f94-494a-820a-e947e03f9ade",
+  "pkg": "rfirma-app",
+  "globalName": "RFirma",
+  "shape": "storybook",
+  "storybookConfigDir": "rfirma-app/.storybook",
+  "storybookStatic": ".design-sync/sb-reference",
+  "entry": "rfirma-app/design-sync.entry.ts",
+  "titleMap": {
+    "1·Espera": "SedeWindow",
+    "2·Consentimiento": "SedeWindow",
+    "4·Rechazo": "SedeWindow"
+  },
+  "extraEntries": [
+    "./design-sync.entry.ts"
+  ],
+  "provider": {
+    "component": "DesignRoot",
+    "props": {
+      "language": "es",
+      "theme": "light"
+    }
+  },
+  "extraFonts": [
+    "src/design-system/bundle/fonts/fonts.css"
+  ],
+  "overrides": {
+    "SedeWindow": {
+      "cardMode": "single",
+      "primaryStory": "Consent"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
