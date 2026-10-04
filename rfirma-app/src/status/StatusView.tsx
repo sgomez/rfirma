@@ -4,6 +4,7 @@ import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import "./StatusView.css";
 import {
   AlertIcon,
@@ -217,14 +218,14 @@ export function StatusView({
     <section className="status-view" aria-label={t("status.title")}>
       <div className="status-view__header">
         <h1 className="rf-title status-view__title">{t("status.title")}</h1>
-        <button
-          type="button"
-          className="rf-btn rf-btn--secondary status-view__recheck"
+        <Button
+          variant="secondary"
+          className="status-view__recheck"
           onClick={handleRecheck}
           disabled={isRechecking}
         >
           {t("status.recheck")}
-        </button>
+        </Button>
       </div>
 
       <div className="status-view__body">
@@ -269,22 +270,22 @@ export function StatusView({
 
               <div className="status-view__cell-action">
                 {row.signal === "localCaCertificate" && row.verdict === "correct" ? (
-                  <button
-                    type="button"
-                    className="rf-btn rf-btn--secondary status-view__action-btn"
+                  <Button
+                    variant="secondary"
+                    className="status-view__action-btn"
                     onClick={() => setIsWithdrawing(true)}
                   >
                     {t("status.actions.withdraw")}
-                  </button>
+                  </Button>
                 ) : (
                   row.action && (
-                    <button
-                      type="button"
-                      className="rf-btn rf-btn--secondary status-view__action-btn"
+                    <Button
+                      variant="secondary"
+                      className="status-view__action-btn"
                       onClick={() => handleAction(row)}
                     >
                       {actionLabel(t, row)}
-                    </button>
+                    </Button>
                   )
                 )}
               </div>
@@ -292,9 +293,9 @@ export function StatusView({
 
             {row.detail && (
               <div className="status-view__detail">
-                <button
-                  type="button"
-                  className="rf-btn rf-btn--ghost status-view__detail-toggle"
+                <Button
+                  variant="ghost"
+                  className="status-view__detail-toggle"
                   aria-expanded={expandedDetail.has(row.signal)}
                   aria-controls={`status-view__detail-${row.signal}`}
                   onClick={() => toggleDetail(row.signal)}
@@ -305,7 +306,7 @@ export function StatusView({
                     <ChevronRightIcon size={14} />
                   )}
                   {detailToggleLabel(t, row.detail)}
-                </button>
+                </Button>
 
                 {expandedDetail.has(row.signal) && (
                   <ul id={`status-view__detail-${row.signal}`} className="status-view__detail-list">
@@ -351,13 +352,9 @@ export function StatusView({
       </div>
 
       <div className="status-view__footer">
-        <button
-          type="button"
-          className="rf-btn rf-btn--secondary status-view__close"
-          onClick={onClose}
-        >
+        <Button variant="secondary" className="status-view__close" onClick={onClose}>
           {t("actions.close")}
-        </button>
+        </Button>
       </div>
 
       {isWithdrawing && (

@@ -3,7 +3,11 @@
 import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
+import { Card } from "../design-system/Card";
 import { AlertIcon, CheckIcon, SpinnerIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
+import { Stack } from "../design-system/Stack";
 import { classify } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
@@ -163,8 +167,8 @@ export function SetupWizard({
       />
 
       <div className="setup-wizard__body">
-        <div className="setup-wizard__column rf-stack rf-gap-md">
-          <div className="rf-row rf-gap-xs">
+        <Stack gap="md" className="setup-wizard__column">
+          <Row gap="xs">
             <span
               aria-hidden="true"
               className="setup-wizard__progress-bar setup-wizard__progress-bar--active"
@@ -176,7 +180,7 @@ export function SetupWizard({
             <span className="rf-body rf-text-muted setup-wizard__step">
               {t("setup.step", { current: step, total: 2 })}
             </span>
-          </div>
+          </Row>
 
           {step === 1 && <WelcomeScreen t={t} />}
           {step === 2 && (
@@ -197,52 +201,47 @@ export function SetupWizard({
               <ProtectionSetting t={t} preferences={preferences} />
             </div>
           )}
-        </div>
+        </Stack>
       </div>
 
-      <div className="setup-wizard__footer rf-row rf-gap-sm">
+      <Row gap="sm" className="setup-wizard__footer">
         {step === 1 && (
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onFinish}>
+          <Button variant="ghost" onClick={onFinish}>
             {t("setup.actions.skip")}
-          </button>
+          </Button>
         )}
         {step === 2 && (
-          <button type="button" className="rf-btn rf-btn--secondary" onClick={() => setStep(1)}>
+          <Button variant="secondary" onClick={() => setStep(1)}>
             {t("actions.back")}
-          </button>
+          </Button>
         )}
         {step === 1 ? (
-          <button
-            ref={continueButton}
-            type="button"
-            className="rf-btn rf-btn--primary"
-            onClick={() => setStep(2)}
-          >
+          <Button ref={continueButton} variant="primary" onClick={() => setStep(2)}>
             {t("actions.continue")}
-          </button>
+          </Button>
         ) : (
-          <button type="button" className="rf-btn rf-btn--primary" onClick={onFinish}>
+          <Button variant="primary" onClick={onFinish}>
             {t("setup.actions.finish")}
-          </button>
+          </Button>
         )}
-      </div>
+      </Row>
     </div>
   );
 }
 
 function WelcomeScreen({ t }: { t: TFunction }) {
   return (
-    <div className="rf-stack rf-gap-md">
-      <div className="rf-stack setup-wizard__intro">
+    <Stack gap="md">
+      <Stack className="setup-wizard__intro">
         <p className="rf-title setup-wizard__title">{t("setup.welcome.title")}</p>
         <p className="rf-prose">{t("setup.welcome.body", { version: AUTOFIRMA_VERSION })}</p>
-      </div>
-      <div className="rf-card">
+      </Stack>
+      <Card>
         <p className="rf-title setup-wizard__notice-title">{t("about.independenceLead")}</p>
         <p className="rf-prose">{t("about.independence")}</p>
-      </div>
+      </Card>
       <LanguageCard t={t} />
-    </div>
+    </Stack>
   );
 }
 
@@ -260,7 +259,7 @@ function LanguageCard({ t }: { t: TFunction }) {
   };
 
   return (
-    <div className="rf-card setup-wizard__card">
+    <Card className="setup-wizard__card">
       <p className="rf-title setup-wizard__card-title">{t("preferences.language.label")}</p>
       <Select
         label={t("preferences.language.label")}
@@ -273,7 +272,7 @@ function LanguageCard({ t }: { t: TFunction }) {
       {saveFailure !== null && (
         <ErrorNotice situation="settingNotSaved" technicalDetail={saveFailure} />
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -290,17 +289,17 @@ interface StepProps {
 
 function Step({ number, markerState, title, hint, last = false, children }: StepProps) {
   return (
-    <div className="rf-row rf-gap-sm setup-wizard__step-row">
+    <Row gap="sm" className="setup-wizard__step-row">
       <div className="setup-wizard__step-marker-column">
         <StepMarker number={number} state={markerState} />
         {!last && <span aria-hidden="true" className="setup-wizard__step-line" />}
       </div>
-      <div className="rf-stack setup-wizard__step-content">
+      <Stack className="setup-wizard__step-content">
         <p className="rf-prose setup-wizard__step-title">{title}</p>
         {hint && <p className="rf-hint">{hint}</p>}
         <div className="setup-wizard__step-action">{children}</div>
-      </div>
-    </div>
+      </Stack>
+    </Row>
   );
 }
 
@@ -350,17 +349,17 @@ function CertificateStep({ t, status, onInstall, onDecline }: CertificateStepPro
       hint={t("setup.certificate.body")}
     >
       {status.kind === "idle" && (
-        <div className="rf-row rf-gap-xs">
-          <button type="button" className="rf-btn rf-btn--primary" onClick={onInstall}>
+        <Row gap="xs">
+          <Button variant="primary" onClick={onInstall}>
             {t("status.actions.install")}
-          </button>
-          <button type="button" className="rf-btn rf-btn--secondary" onClick={onDecline}>
+          </Button>
+          <Button variant="secondary" onClick={onDecline}>
             {t("actions.notNow")}
-          </button>
-        </div>
+          </Button>
+        </Row>
       )}
       {(status.kind === "working" || status.kind === "done" || status.kind === "failed") && (
-        <div className="rf-stack rf-gap-xs" role="status">
+        <Stack gap="xs" role="status">
           {status.kind === "working" && (
             <p className="rf-prose setup-wizard__step-outcome">
               {t("setup.certificate.installing")}
@@ -389,14 +388,14 @@ function CertificateStep({ t, status, onInstall, onDecline }: CertificateStepPro
                   </li>
                 ))}
               </ul>
-              <div className="rf-row">
-                <button type="button" className="rf-btn rf-btn--secondary" onClick={onInstall}>
+              <Row>
+                <Button variant="secondary" onClick={onInstall}>
                   {t("actions.retry")}
-                </button>
-              </div>
+                </Button>
+              </Row>
             </>
           )}
-        </div>
+        </Stack>
       )}
     </Step>
   );
@@ -423,18 +422,14 @@ function HandlerStep({ t, status, autoFirmaAppears, onUse, onDecline }: HandlerS
       last
     >
       {status.kind === "idle" && (
-        <div className="rf-row rf-gap-xs">
-          <button
-            type="button"
-            className="rf-btn rf-btn--primary"
-            onClick={() => onUse(status.target)}
-          >
+        <Row gap="xs">
+          <Button variant="primary" onClick={() => onUse(status.target)}>
             {t("status.actions.useRfirma")}
-          </button>
-          <button type="button" className="rf-btn rf-btn--secondary" onClick={onDecline}>
+          </Button>
+          <Button variant="secondary" onClick={onDecline}>
             {t("actions.notNow")}
-          </button>
-        </div>
+          </Button>
+        </Row>
       )}
       {status.kind === "done" && (
         <p className="rf-prose setup-wizard__step-outcome" role="status">
@@ -478,12 +473,12 @@ function ProtectionSetting({ t, preferences }: { t: TFunction; preferences: Pref
   return (
     <>
       <hr className="rf-divider setup-wizard__divider" />
-      <div className="rf-row rf-gap-sm setup-wizard__protection">
-        <div className="rf-stack setup-wizard__protection-text">
+      <Row gap="sm" className="setup-wizard__protection">
+        <Stack className="setup-wizard__protection-text">
           <p className="rf-prose setup-wizard__step-title" id={titleId}>
             {t("preferences.consentCountdown.label")}
           </p>
-        </div>
+        </Stack>
         <button
           type="button"
           role="switch"
@@ -496,7 +491,7 @@ function ProtectionSetting({ t, preferences }: { t: TFunction; preferences: Pref
             <span className="switch__knob" />
           </span>
         </button>
-      </div>
+      </Row>
     </>
   );
 }
