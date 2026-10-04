@@ -2,7 +2,9 @@
 
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { AlertIcon } from "../design-system/icons";
+import { Stack } from "../design-system/Stack";
 import type { PageChoice, PageSets } from "../viewer/signatureBox";
 import { type FieldTrouble, messageFor, type PageButton } from "./placementField";
 
@@ -36,13 +38,9 @@ export function PlacementFieldset({
   const group = useId();
 
   const button = pageButton && (
-    <button
-      type="button"
-      className="rf-btn rf-btn--secondary panel__page-button"
-      onClick={pageButton.act}
-    >
+    <Button variant="secondary" className="panel__page-button" onClick={pageButton.act}>
       {pageButton.label}
-    </button>
+    </Button>
   );
 
   return (
@@ -77,7 +75,7 @@ export function PlacementFieldset({
       )}
 
       {pageChoice === "these" && (
-        <div className="rf-stack panel__range">
+        <Stack className="panel__range">
           <div className="panel__range-row">
             <input
               className={
@@ -100,7 +98,7 @@ export function PlacementFieldset({
               <span className="rf-body">{messageFor(rangeError, t)}</span>
             </p>
           )}
-        </div>
+        </Stack>
       )}
     </>
   );

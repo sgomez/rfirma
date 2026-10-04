@@ -3,7 +3,9 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { formatSignedTime } from "../App.signingOrder";
+import { Badge } from "../design-system/Badge";
 import { AlertIcon, CheckCircleIcon, FileIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { Destination } from "./destination";
@@ -71,12 +73,12 @@ export function SignedPanel({
     <div className="panel">
       <div className="panel__scroll">
         {signedAt !== undefined && (
-          <div className="rf-row rf-gap-xs signed-panel__signed-at">
+          <Row gap="xs" className="signed-panel__signed-at">
             <CheckCircleIcon size={18} />
             <span className="rf-body">
               {t("panel.signed.signedAt", { time: formatSignedTime(signedAt, locale) })}
             </span>
-          </div>
+          </Row>
         )}
 
         {readFailure ? (
@@ -110,12 +112,10 @@ export function SignedPanel({
               <span>{t("panel.signed.title")}</span>
             </p>
             {!reading && (
-              <div className="rf-row rf-gap-xs">
-                {format !== "unrecognized" && (
-                  <span className="rf-badge">{FORMAT_BADGES[format]}</span>
-                )}
-                <span className="rf-badge">{countBadge(signatures, t)}</span>
-              </div>
+              <Row gap="xs">
+                {format !== "unrecognized" && <Badge>{FORMAT_BADGES[format]}</Badge>}
+                <Badge>{countBadge(signatures, t)}</Badge>
+              </Row>
             )}
             <SignatureCards
               signatures={signatures}
