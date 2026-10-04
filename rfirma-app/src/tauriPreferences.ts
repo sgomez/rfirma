@@ -1,21 +1,12 @@
-//! Los puertos de Tauri de la configuración: ajustes, idioma, destino, tema de la ventana, apertura del firmado y de los destinos externos, y la versión publicada.
+//! Los puertos de Tauri de la configuración: ajustes, idioma y tema de la ventana.
 
-import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { FALLBACK_LANGUAGE, isLanguageTag } from "./i18n/languages";
 import type { LanguagePreference } from "./i18n/preference";
 import type { DestinationMode } from "./preferences/destinationMode";
 import type { PreferencesStore } from "./preferences/preferences";
 import { DEFAULT_THEME, isTheme, type Theme, type WindowTheme } from "./preferences/theme";
-import type {
-  Destination,
-  DestinationSource,
-  SignedDocumentOpener,
-  SingleDestination,
-} from "./signing/destination";
-import type { Installation, NewVersion, VersionCheck } from "./updates/newVersion";
 
 /**
  * La configuración tal como cruza: es `commands::ConfigurationView`, con el
@@ -106,55 +97,6 @@ export function tauriPreferences(): PreferencesStore {
 }
 
 /**
- * Dónde caerá el documento que hay delante: `preview_destination`, y
- * `choose_single_destination` para fijarlo solo para esta firma.
- *
- * Lo compone el backend con la misma carpeta comprobada y el mismo
- * `landing_for` con los que va a escribir después, así que el pie enseña lo que
- * va a ocurrir y no una promesa parecida.
- */
-export function tauriDestinations(): DestinationSource {
-  return {
-    previewFor: (documentId, singleDestinationId = null) =>
-      invoke<Destination>("preview_destination", {
-        id: documentId,
-        destination: singleDestinationId,
-      }),
-    chooseSingle: (documentId) =>
-      invoke<SingleDestination | null>("choose_single_destination", { id: documentId }),
-  };
-}
-
-export function tauriExternalDestinationOpener(): ExternalDestinationOpener {
-  return {
-    open: (destination) => invoke<void>("open_external_destination", { target: destination }),
-  };
-}
-
-/**
- * Abrir el PDF firmado y su carpeta: `open_signed_document` y
- * `open_signed_folder`.
- *
- * **No se les manda ninguna ruta**, porque la ventana no tiene ninguna
- * (ADR-0011): lo que abren es el fichero que dejó la última postfirma, que es
- * justo el que el resumen tiene delante. El complemento `opener` se llama desde
- * Rust por lo mismo que el del diálogo, y debajo es el portal
- * `OpenURI`.
- */
-export function tauriSignedDocumentOpener(): SignedDocumentOpener {
-  return {
-    openDocument: (documentId) =>
-      documentId === undefined
-        ? invoke<void>("open_signed_document")
-        : invoke<void>("open_opened_document", { document: documentId }),
-    openFolder: (documentId) =>
-      documentId === undefined
-        ? invoke<void>("open_signed_folder")
-        : invoke<void>("open_opened_folder", { document: documentId }),
-  };
-}
-
-/**
  * El idioma, en la misma configuración que los demás ajustes.
  *
  * Es un puerto aparte porque el idioma se lee **antes** de que haya ventana
@@ -172,26 +114,6 @@ export function tauriLanguagePreference(): LanguagePreference {
       await writeConfiguration({ ...stored, language });
     },
   };
-}
-
-/**
- * Si hay una versión nueva publicada.
- *
- * Aquí no hay ni URL ni caché ni comparación de versiones: todo eso es de
- * `app::version`, que es quien pregunta —siempre— y quien decide que sin red
- * no se dice nada. La orden contesta `null` en los tres
- * casos en que no hay nada que contar, y `null` es lo que llega a la ventana.
- */
-export function tauriVersionCheck(): VersionCheck {
-  return {
-    latest: async () => await invoke<NewVersion | null>("check_for_new_version"),
-    install: async () => await invoke<Installation>("install_new_version"),
-  };
-}
-
-/** La versión del binario en ejecución, la de `Cargo.toml`. */
-export async function tauriAppVersion(): Promise<string> {
-  return await getVersion();
 }
 
 /** El tema de la ventana nativa, que es lo que pinta la barra de título GTK. */

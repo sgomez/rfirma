@@ -1,8 +1,14 @@
-//! Los puertos de Tauri de la firma: certificados, las tres etapas, la rúbrica, la última firma visible y el sello.
+//! Los puertos de Tauri de la firma: certificados, las tres etapas, la rúbrica, la última firma visible, el sello, el destino y la apertura del firmado.
 
 import { invoke } from "@tauri-apps/api/core";
 import { classify } from "./errors/classify";
 import type { Certificate, CertificateStore } from "./signing/certificate";
+import type {
+  Destination,
+  DestinationSource,
+  SignedDocumentOpener,
+  SingleDestination,
+} from "./signing/destination";
 import type { SignedDocument, SigningBackend } from "./signing/flow";
 import type { PreviousSignaturesReport } from "./signing/previousSignatures";
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
@@ -161,5 +167,48 @@ export function tauriStampComposer(): StampComposer {
         };
       }
     },
+  };
+}
+
+/**
+ * Dónde caerá el documento que hay delante: `preview_destination`, y
+ * `choose_single_destination` para fijarlo solo para esta firma.
+ *
+ * Lo compone el backend con la misma carpeta comprobada y el mismo
+ * `landing_for` con los que va a escribir después, así que el pie enseña lo que
+ * va a ocurrir y no una promesa parecida.
+ */
+export function tauriDestinations(): DestinationSource {
+  return {
+    previewFor: (documentId, singleDestinationId = null) =>
+      invoke<Destination>("preview_destination", {
+        id: documentId,
+        destination: singleDestinationId,
+      }),
+    chooseSingle: (documentId) =>
+      invoke<SingleDestination | null>("choose_single_destination", { id: documentId }),
+  };
+}
+
+/**
+ * Abrir el PDF firmado y su carpeta: `open_signed_document` y
+ * `open_signed_folder`.
+ *
+ * **No se les manda ninguna ruta**, porque la ventana no tiene ninguna
+ * (ADR-0011): lo que abren es el fichero que dejó la última postfirma, que es
+ * justo el que el resumen tiene delante. El complemento `opener` se llama desde
+ * Rust por lo mismo que el del diálogo, y debajo es el portal
+ * `OpenURI`.
+ */
+export function tauriSignedDocumentOpener(): SignedDocumentOpener {
+  return {
+    openDocument: (documentId) =>
+      documentId === undefined
+        ? invoke<void>("open_signed_document")
+        : invoke<void>("open_opened_document", { document: documentId }),
+    openFolder: (documentId) =>
+      documentId === undefined
+        ? invoke<void>("open_signed_folder")
+        : invoke<void>("open_opened_folder", { document: documentId }),
   };
 }
