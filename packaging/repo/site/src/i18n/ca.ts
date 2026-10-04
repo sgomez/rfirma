@@ -18,6 +18,7 @@ export const ca: Dictionary = {
   "nav.features": "Característiques",
   "nav.comparison": "Comparativa",
   "nav.install": "Instal·lació",
+  "nav.manual": "Manual",
   "nav.transparency": "Transparència",
   "nav.github": "GitHub",
 

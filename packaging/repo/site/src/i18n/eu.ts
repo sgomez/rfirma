@@ -18,6 +18,7 @@ export const eu: Dictionary = {
   "nav.features": "Ezaugarriak",
   "nav.comparison": "Konparaketa",
   "nav.install": "Instalazioa",
+  "nav.manual": "Eskuliburua",
   "nav.transparency": "Gardentasuna",
   "nav.github": "GitHub",
 
