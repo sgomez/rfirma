@@ -50,5 +50,6 @@ export const handlerOurs: SignalRow = {
 
 export const handlerWithoutAutoFirma: SignalRow = {
   ...handlerNotOurs,
+  value: "",
   candidates: [{ id: "rfirma.desktop", name: "rFirma", selected: false }],
 };

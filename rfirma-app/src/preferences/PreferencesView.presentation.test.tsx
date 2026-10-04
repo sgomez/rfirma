@@ -96,6 +96,9 @@ describe("Firma", () => {
     expect(screen.queryByText(/pausa de 3 segundos/)).not.toBeInTheDocument();
     expect(screen.queryByText(/se usa sin preguntarte/)).not.toBeInTheDocument();
     expect(screen.queryByText(/se reutilizan en el siguiente documento/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("switch", { name: /Protección contra firmas/ }),
+    ).not.toBeInTheDocument();
   });
 
   const modes = [

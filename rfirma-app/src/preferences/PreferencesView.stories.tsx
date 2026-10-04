@@ -13,8 +13,8 @@ const meta = {
     (Story) => (
       <div
         style={{
-          width: 900,
-          height: 560,
+          width: 1100,
+          height: 640,
           position: "relative",
           transform: "translateZ(0)",
           overflow: "hidden",

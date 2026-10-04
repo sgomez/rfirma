@@ -14,8 +14,20 @@ describe("PreferencesView", () => {
     await user.click(screen.getByRole("switch", { name: /Recordar la firma visible/ }));
 
     expect(onChange).toHaveBeenCalledWith({ ...defaults, rememberVisibleSignature: false });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Guardar" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cerrar" })).toBeInTheDocument();
+  });
+
+  it("keeps a single panel when the section changes", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    await openTab(user, "Firma");
+    await openTab(user, "Apariencia");
+
+    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+    expect(screen.getByRole("tabpanel", { name: "Apariencia" })).toBeInTheDocument();
   });
 
   it("picks the destination folder with a directory picker and not with a dropdown", async () => {

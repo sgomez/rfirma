@@ -47,6 +47,7 @@ describe("the version status", () => {
       for (const text of shows) expect(await screen.findByText(text)).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: update }) !== null).toBe(offersUpdate);
       expect(screen.queryByText(/flatpak install/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/sudo apt install rfirma/)).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Copiar" })).not.toBeInTheDocument();
     });
   }
