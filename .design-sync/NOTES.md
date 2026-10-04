@@ -14,7 +14,21 @@ Proyecto: «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`), forma 
 - [GENERAL] Ni los tokens ni las clases `rf-*` llegaban a `_ds_bundle.css`. El convertidor solo toma el CSS que importan los componentes de la entrada, y `index.css` lo importa el preview de Storybook, no un componente. Ahora la entrada importa `index.css` y `app.css`. `cfg.tokensGlob` no sirve sin `cfg.tokensPkg`.
 - [GENERAL] La ventana de sede usa `position: fixed; inset: 0` y en Storybook medía 0 px (`sb-error`: «no storybook root content»). Las historias de sede llevan el decorador `inSedeWindow` (520 × 420, el `DIALOG_SIZE` de Tauri), y `SedeView` va con `cardMode: "single"`.
 
+- [GENERAL] Las piezas de dominio que exporta la entrada solo llegan con su `titleMap`: sin él salen como `[TITLE_UNMAPPED]` y se descartan. `Ventana principal/4 · Recientes` va a `RecentsSection`, el `component` de su historia, no a `RecentRows`.
+- [GENERAL] `Dialog` y los cuatro diálogos de firma son `position: fixed` y daban `sb-error` (raíz de 0 px). Sus historias llevan el decorador `inDialogWindow` (`src/design-system/dialogStoryFrame.tsx`, 1280 × 720, el tamaño inicial de la ventana principal).
+- [GENERAL] La captura es de 900 × 700. Los marcos más anchos se cortaban por la derecha en la vista previa, mientras que la referencia captura el desbordamiento. Por eso los diálogos llevan `viewport: "1340x780"`; `StatusView` y `WithdrawCertificateView`, `"1240x760"`; y `MainWindow`, `"1160x620"`.
+- `cardMode`: `single` en `Dialog`, `Popover`, los diálogos de firma y `WithdrawCertificateView`; `column` en `StatusView`, `DocumentViewer`, `ErrorNotice`, `MainWindow` y `RecentsSection` (`[GRID_OVERFLOW]`).
+- `SedeView` tiene 63 historias: el driver se corre con `--max-stories 63`, o la principal (`Consent`) se queda sin capturar.
+
+## Artefactos de la referencia, ya graduados
+
+- `Card` › `Elevated` y `Popover` › `In Portal`: la referencia recorta a la raíz de la historia, así que pierde la sombra exterior y el panel en portal. El componente es el mismo.
+- `SignaturesDialog`, en las historias altas: el diálogo desborda el marco en los dos lados porque `rf-dialog` no tiene `max-height`. Es fiel al componente.
+- `DocumentViewer`: su historia es estrecha y la barra sale cortada por la izquierda en los dos lados.
+
 ## Riesgos al volver a sincronizar
+
+- `conventions.md` solo presenta `SedeView` como pantalla; no nombra los diálogos de firma, `StatusView`, `MainWindow` ni el resto de piezas de dominio que ya se sincronizan.
 
 - Hay que recompilar la referencia (`npx storybook build -c .storybook -o ../.design-sync/sb-reference` desde rfirma-app) cuando cambien historias, componentes o CSS.
 - Si una pantalla nueva también usa `position: fixed`, necesita un marco como `inSedeWindow`.

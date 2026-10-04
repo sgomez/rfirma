@@ -2,6 +2,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
+import { inDialogWindow } from "../design-system/dialogStoryFrame";
 import { signingProblems } from "./previousSignatures";
 import { SignAnywayDialog } from "./SignAnywayDialog";
 import {
@@ -14,7 +15,8 @@ import {
 const meta = {
   title: "Diálogos de firma/2 · Firmar de todos modos",
   component: SignAnywayDialog,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "centered" },
+  decorators: [inDialogWindow],
   args: {
     problems: signingProblems(MIXED_REPORT),
     locale: "es",

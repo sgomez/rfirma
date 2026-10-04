@@ -1,12 +1,14 @@
 //! Las historias del diálogo de progreso de la firma, una por etapa en curso.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { inDialogWindow } from "../design-system/dialogStoryFrame";
 import { SigningProgressDialog } from "./SigningProgressDialog";
 
 const meta = {
   title: "Diálogos de firma/4 · Progreso de firma",
   component: SigningProgressDialog,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "centered" },
+  decorators: [inDialogWindow],
   args: { stage: "presign" },
 } satisfies Meta<typeof SigningProgressDialog>;
 

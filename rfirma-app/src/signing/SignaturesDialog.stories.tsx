@@ -2,6 +2,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
+import { inDialogWindow } from "../design-system/dialogStoryFrame";
 import { SignaturesDialog } from "./SignaturesDialog";
 import {
   ALL_VALID_REPORT,
@@ -13,7 +14,8 @@ import {
 const meta = {
   title: "Diálogos de firma/3 · Ver firmas",
   component: SignaturesDialog,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "centered" },
+  decorators: [inDialogWindow],
   args: { report: MIXED_REPORT, onClose: fn() },
 } satisfies Meta<typeof SignaturesDialog>;
 

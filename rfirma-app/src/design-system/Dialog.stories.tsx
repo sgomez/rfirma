@@ -3,12 +3,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "./Button";
 import { Dialog } from "./Dialog";
+import { inDialogWindow } from "./dialogStoryFrame";
 import { Row } from "./Row";
 
 const meta = {
   title: "Sistema de diseño/Dialog",
   component: Dialog,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "centered" },
+  decorators: [inDialogWindow],
   argTypes: { role: { control: "select", options: ["dialog", "alertdialog"] } },
   args: { label: "¿Firmar de todos modos?" },
 } satisfies Meta<typeof Dialog>;
