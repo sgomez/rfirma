@@ -243,6 +243,7 @@ fn verbose_prints_the_validity_the_format_and_a_sheet_per_signature_of_a_pdf() {
         with_the_signing_day_checked(printed_lines(&outcome), since),
         [
             "PAdES · 2 firmas",
+            "",
             "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
             "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
         ]
@@ -277,6 +278,7 @@ fn verbose_names_the_entity_on_whose_behalf_a_representative_signs() {
         with_the_signing_day_checked(printed_lines(&outcome), since),
         [
             "PAdES · 1 firma",
+            "",
             "✓ NOMBRE APELLIDOUNO · por ENTIDAD DE PRUEBAS · <día de la firma>",
         ]
     );
@@ -316,6 +318,7 @@ fn verbose_prints_the_format_and_a_sheet_per_cosignature_of_a_cades() {
         with_the_signing_day_checked(printed_lines(&outcome), since),
         [
             "CAdES · 2 firmas",
+            "",
             "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
             "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
         ]
@@ -356,6 +359,7 @@ fn verbose_prints_the_countersignature_of_a_cades_inside_the_signature_it_counte
         with_the_signing_day_checked(printed_lines(&outcome), since),
         [
             "CAdES · 1 firma · 1 contrafirma",
+            "",
             "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
             "    ✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
         ]
@@ -396,6 +400,7 @@ fn verbose_prints_the_countersignature_of_a_xades_inside_the_signature_it_counte
         with_the_signing_day_checked(printed_lines(&outcome), since),
         [
             "XAdES · 1 firma · 1 contrafirma",
+            "",
             "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
             "    ✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
         ]
@@ -424,6 +429,7 @@ fn verbose_prints_the_format_and_the_sheet_of_a_signed_invoice() {
         with_the_signing_day_checked(printed_lines(&outcome), since),
         [
             "FacturaE · 1 firma",
+            "",
             "✓ EIDAS CERTIFICADO PRUEBAS · <día de la firma>",
         ]
     );
