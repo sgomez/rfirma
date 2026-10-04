@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { CopyIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
+import { Stack } from "../design-system/Stack";
 import { CHROME_LOCAL_NETWORK_SETTINGS } from "./errand";
 import { SedeBody } from "./SedeFrame";
 
@@ -39,15 +42,15 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
   const unreachable = moment === "unreachable";
 
   const localCa = (
-    <div className="rf-row rf-gap-xs sede-waiting__ca">
+    <Row gap="xs" className="sede-waiting__ca">
       <p className="rf-body sede-waiting__ca-text">{t("sede.repair.caMissing")}</p>
       {/* `--primary`, y es el único de la pantalla: la tabla «Estados» de la
           ficha da instalar la CA como la **acción principal** de este estado.
           Sin ella el navegador ni llega a preguntar por el permiso. */}
-      <button type="button" className="rf-btn rf-btn--primary" onClick={onInstallLocalCa}>
+      <Button variant="primary" onClick={onInstallLocalCa}>
         {t("status.actions.install")}
-      </button>
-    </div>
+      </Button>
+    </Row>
   );
 
   return (
@@ -57,13 +60,13 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
         <>
           {unreachable && <p className="rf-hint sede-waiting__retry">{t("sede.repair.retry")}</p>}
           <div className="sede-window__spacer" />
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
+          <Button variant="ghost" onClick={onCancel}>
             {unreachable ? t("actions.close") : t("actions.cancel")}
-          </button>
+          </Button>
         </>
       }
     >
-      <div className={`rf-stack sede-waiting${unreachable ? " sede-waiting--repair" : ""}`}>
+      <Stack className={`sede-waiting${unreachable ? " sede-waiting--repair" : ""}`}>
         <p className="rf-title sede-waiting__title">
           {unreachable ? t("sede.unreachable.title") : t("sede.waiting.title")}
         </p>
@@ -81,17 +84,17 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
             {/* Dos botones normales y no `tablist`: no gobiernan ningún
                 `tabpanel`, y unas pestañas que no controlan nada le mienten al
                 lector de pantalla. `aria-pressed` dice la verdad con menos. */}
-            <div className="rf-row rf-gap-xs sede-waiting__tabs">
+            <Row gap="xs" className="sede-waiting__tabs">
               <BrowserTab id="chrome" chosen={browser} onChoose={setBrowser} />
               <BrowserTab id="firefox" chosen={browser} onChoose={setBrowser} />
-            </div>
+            </Row>
 
             {browser === "chrome" ? <ChromeRecipe /> : <FirefoxRecipe />}
 
             {browser === "firefox" && localCa}
           </>
         )}
-      </div>
+      </Stack>
     </SedeBody>
   );
 }
@@ -107,14 +110,14 @@ function BrowserTab({
 }) {
   const { t } = useTranslation();
   return (
-    <button
+    <Button
       type="button"
       aria-pressed={id === chosen}
-      className={`rf-btn sede-waiting__tab${id === chosen ? " sede-waiting__tab--chosen" : ""}`}
+      className={`sede-waiting__tab${id === chosen ? " sede-waiting__tab--chosen" : ""}`}
       onClick={() => onChoose(id)}
     >
       {id === "chrome" ? t("panel.certificate.stores.chrome") : t("status.storeBrands.firefox")}
-    </button>
+    </Button>
   );
 }
 
@@ -128,14 +131,13 @@ function ChromeRecipe() {
         <span className="rf-row rf-gap-xs sede-waiting__address">
           {/* Un `chrome://` no es navegable desde fuera: se copia, no se pulsa. */}
           <code className="rf-body">{CHROME_LOCAL_NETWORK_SETTINGS}</code>
-          <button
-            type="button"
-            className="rf-btn rf-btn--ghost"
+          <Button
+            variant="ghost"
             onClick={() => void navigator.clipboard.writeText(CHROME_LOCAL_NETWORK_SETTINGS)}
           >
             <CopyIcon size={14} />
             {t("actions.copy")}
-          </button>
+          </Button>
         </span>
         <span className="rf-hint">{t("sede.repair.chromePadlock")}</span>
       </li>
