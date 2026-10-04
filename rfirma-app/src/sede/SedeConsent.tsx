@@ -334,7 +334,7 @@ function signatureRoundNote(t: TFunction, round: SignatureRound): string | null 
     case "sign":
       return null;
     case "cosign":
-      return t("panel.coSignature", { count: 1 });
+      return t("sede.consent.coSignature");
     case "counter":
       return round.target === "tree"
         ? t("sede.consent.counterSignatureTree")

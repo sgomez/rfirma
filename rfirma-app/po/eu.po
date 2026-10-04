@@ -409,12 +409,6 @@ msgstr[0] "1 orrialde"
 msgstr[1] "{{count}} orrialde"
 msgstr[2] "{{count}} orrialde"
 
-msgid "panel.coSignature"
-msgid_plural "panel.coSignature"
-msgstr[0] "Aurreko sinadura 1ekin batera sinatuko duzu"
-msgstr[1] "Aurreko {{count}} sinadurekin batera sinatuko duzu"
-msgstr[2] "Aurreko {{count}} sinadurekin batera sinatuko duzu"
-
 #. Línea del aviso de firmas previas: con cuántas firmas se firma.
 msgid "panel.previousSignatures.alongside"
 msgid_plural "panel.previousSignatures.alongside"
@@ -1318,6 +1312,13 @@ msgstr ""
 msgid "sede.consent.counterSignatureLeafs"
 msgstr ""
 "Sinatuta dator jada: zurea dituen azken sinaduren gaineko kontrasinadura "
+"izango da."
+
+#. Cofirma: se firma junto a las firmas que el documento ya trae, sin
+#. contarlas, porque las cuenta el aviso de firmas previas de debajo.
+msgid "sede.consent.coSignature"
+msgstr ""
+"Sinatuta dator jada: zurea dituen sinadurekin batera egindako kosinadura "
 "izango da."
 
 msgid "sede.consent.batchTitle"
