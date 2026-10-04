@@ -175,8 +175,8 @@ cual, porque `rfirma.exe` responde por las tuberías de mintty.
 ## 🌐 Traducciones
 
 Quien traduce revisa sus textos en la pantalla real, sin montar el entorno, en el
-[Storybook publicado](https://sgomez.github.io/rfirma/): se reconstruye con cada
-push a `main`, y su barra de herramientas cambia el idioma y el tema. Los textos
+[Storybook publicado](https://sgomez.github.io/rfirma/): se reconstruye a mano,
+con el workflow «Pages», y su barra de herramientas cambia el idioma y el tema. Los textos
 viven en `rfirma-app/po/`; en local, `just storybook`.
 
 ## 📦 Instalación

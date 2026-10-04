@@ -3,15 +3,6 @@
 name: Pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - rfirma-app/src/**
-      - rfirma-app/.storybook/**
-      - rfirma-app/po/**
-      - rfirma-app/package.json
-      - pnpm-lock.yaml
-      - .github/workflows/pages.yml
   workflow_dispatch:
 
 permissions:
