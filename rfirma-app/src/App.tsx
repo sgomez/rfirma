@@ -11,7 +11,6 @@ import { useDropNotices } from "./App.useDropNotices";
 import { useNativeTitlebar } from "./App.useNativeTitlebar";
 import { useOpenShortcut } from "./App.useOpenShortcut";
 import { usePageGeometry } from "./App.usePageGeometry";
-import { usePlacementControls } from "./App.usePlacementControls";
 import { useDestination, usePreferencesState } from "./App.usePreferencesState";
 import { usePreviousSignatures } from "./App.usePreviousSignatures";
 import { useSignedSummary } from "./App.useSignedSummary";
@@ -28,6 +27,7 @@ import type { RecentDocument } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
 import { classify } from "./errors/classify";
 import { firstSealedPage, NO_PAGE_SETS, placingFrom } from "./placement/pageSets";
+import { usePlacement } from "./placement/usePlacement";
 import { PreferencesView } from "./preferences/PreferencesView";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
@@ -41,6 +41,7 @@ import { InstallUpdateDialog } from "./updates/InstallUpdateDialog";
 import { NewVersionStrip } from "./updates/NewVersionStrip";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
+import { standardRectOnPageOf } from "./viewer/signatureBox";
 import type { DocumentFailure } from "./viewer/source";
 
 type OpenDialog = "about" | "installUpdate" | null;
@@ -180,6 +181,7 @@ export function App({
     [signingInstant, i18n.language],
   );
 
+  const standardRectOn = useMemo(() => (pdf === null ? null : standardRectOnPageOf(pdf)), [pdf]);
   const {
     placing,
     setPlacing,
@@ -189,7 +191,12 @@ export function App({
     choosePages,
     changePageMode,
     placeOnViewedPage,
-  } = usePlacementControls(pdf, documents.place, viewedPage);
+  } = usePlacement({
+    pageCount: pdf?.pageCount ?? 0,
+    standardRectOn,
+    viewedPage,
+    onChange: documents.place,
+  });
 
   const signatureOn = signature.enabled && pdf !== null;
   useEffect(() => {
