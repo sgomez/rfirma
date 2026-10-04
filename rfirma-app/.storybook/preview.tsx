@@ -1,23 +1,18 @@
 import type { Decorator, Preview } from "@storybook/react-vite";
 import "../src/design-system/index.css";
 import "../src/app.css";
+import { DesignRoot } from "../src/design-system/DesignRoot";
 import { LANGUAGES } from "../src/i18n/languages";
-import { applyTheme } from "../src/preferences/theme";
-import { CatalogProvider } from "../src/testing/render";
 
-const withCatalogAndTheme: Decorator = (Story, { globals }) => {
-  applyTheme(globals.theme === "dark" ? "dark" : "light", () => {});
-  return (
-    <CatalogProvider language={globals.language}>
-      <div className="rf-root">
-        <Story />
-      </div>
-    </CatalogProvider>
-  );
-};
+const withCatalogAndTheme: Decorator = (Story, { globals }) => (
+  <DesignRoot language={globals.language} theme={globals.theme === "dark" ? "dark" : "light"}>
+    <Story />
+  </DesignRoot>
+);
 
 const preview: Preview = {
   decorators: [withCatalogAndTheme],
+  parameters: { options: { storySort: { method: "alphabetical" } } },
   initialGlobals: { language: "es", theme: "light" },
   globalTypes: {
     language: {

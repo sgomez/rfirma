@@ -3,11 +3,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import { SedeWindow } from "./SedeWindow";
+import { inSedeWindow } from "./sedeStoryFrame";
 import { storyErrand } from "./sedeStoryPort";
 
 const meta = {
   title: "Sede/2 · Consentimiento",
   component: SedeWindow,
+  decorators: [inSedeWindow],
+  parameters: { layout: "centered" },
   args: {
     consentCountdown: false,
     errands: storyErrand({
