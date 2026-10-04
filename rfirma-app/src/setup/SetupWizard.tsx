@@ -19,7 +19,6 @@ import { Header } from "../shell/Header";
 import { type MenuAnchor, menuAnchorFor } from "../shell/menuAnchor";
 import "./SetupWizard.css";
 import {
-  memoryStatus,
   type SignalRow,
   type StatusPort,
   type StoreDetail,
@@ -34,7 +33,7 @@ interface SetupWizardProps {
   /** Si el asistente ya se ha visto en un arranque anterior: entonces no se monta. */
   seen: boolean;
   preferences: PreferencesStore;
-  statusPort?: StatusPort;
+  statusPort: StatusPort;
   /** Se llama una vez, al pulsar «Terminar», pase lo que pase con las dos acciones. */
   onFinish: () => void;
   /** Dónde va el menú de la cabecera. Ver [`MenuAnchor`]. */
@@ -76,7 +75,7 @@ type HandlerStatus =
 export function SetupWizard({
   seen,
   preferences,
-  statusPort = memoryStatus(),
+  statusPort,
   onFinish,
   menuAnchor,
   onOpenStatus = () => {},

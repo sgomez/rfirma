@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const invoke = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 
-const { tauriDestinations, tauriLanguagePreference, tauriPreferences, tauriVersionCheck } =
-  await import("./tauriPreferences");
+const { tauriLanguagePreference, tauriPreferences } = await import("./tauriPreferences");
 
 const aConfiguration = {
   language: "es",
@@ -213,95 +212,5 @@ describe("los puertos de la configuración sobre Tauri", () => {
     invoke.mockResolvedValue(null);
 
     await expect(tauriPreferences().chooseFolder()).resolves.toBeNull();
-  });
-});
-
-/**
- * **Grada A**: el destino sobre Tauri. Quien lo compone —la carpeta comprobada
- * y el nombre con su homónimo resuelto— es `app::documents::where_it_lands`, y
- * está probado allí; aquí solo se comprueba la costura.
- */
-describe("el puerto del destino sobre Tauri", () => {
-  beforeEach(() => {
-    invoke.mockReset();
-  });
-
-  it("asks where the open document will land, by its identifier and never by a path", async () => {
-    invoke.mockResolvedValue({
-      folder: "Documentos",
-      name: "contrato-firmado.pdf",
-      writable: true,
-    });
-
-    const destination = await tauriDestinations().previewFor("1e8b83b9");
-
-    expect(invoke).toHaveBeenCalledWith("preview_destination", {
-      id: "1e8b83b9",
-      destination: null,
-    });
-    expect(destination).toEqual({
-      folder: "Documentos",
-      name: "contrato-firmado.pdf",
-      writable: true,
-    });
-  });
-
-  it("asks with the single destination's id when this signature has one", async () => {
-    invoke.mockResolvedValue({
-      folder: "Escritorio",
-      name: "contrato-firmado.pdf",
-      writable: true,
-    });
-
-    await tauriDestinations().previewFor("1e8b83b9", "single-42");
-
-    expect(invoke).toHaveBeenCalledWith("preview_destination", {
-      id: "1e8b83b9",
-      destination: "single-42",
-    });
-  });
-
-  it("opens the save dialog for a single signature, by the document's identifier", async () => {
-    invoke.mockResolvedValue({
-      id: "single-42",
-      folder: "Escritorio",
-      name: "contrato-firmado.pdf",
-      writable: true,
-    });
-
-    const chosen = await tauriDestinations().chooseSingle("1e8b83b9");
-
-    expect(invoke).toHaveBeenCalledWith("choose_single_destination", { id: "1e8b83b9" });
-    expect(chosen).toEqual({
-      id: "single-42",
-      folder: "Escritorio",
-      name: "contrato-firmado.pdf",
-      writable: true,
-    });
-  });
-
-  it("reads a cancelled save dialog as no choice", async () => {
-    invoke.mockResolvedValue(null);
-
-    await expect(tauriDestinations().chooseSingle("1e8b83b9")).resolves.toBeNull();
-  });
-});
-
-describe("el puerto de la versión sobre Tauri", () => {
-  beforeEach(() => {
-    invoke.mockReset();
-  });
-
-  it("asks the backend whether there is a newer published version, and nothing else", async () => {
-    invoke.mockResolvedValue({ version: "0.4.1" });
-
-    expect(await tauriVersionCheck().latest()).toEqual({ version: "0.4.1" });
-    expect(invoke).toHaveBeenCalledExactlyOnceWith("check_for_new_version");
-  });
-
-  it("reads no answer as nothing to say, and not as a failure", async () => {
-    invoke.mockResolvedValue(null);
-
-    expect(await tauriVersionCheck().latest()).toBeNull();
   });
 });

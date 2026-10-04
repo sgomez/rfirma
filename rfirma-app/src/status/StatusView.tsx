@@ -22,7 +22,6 @@ import type {
 import { unavailableExternalDestinationOpener } from "../desktop/externalDestination";
 import { Select } from "../preferences/Select";
 import {
-  memoryStatus,
   type Signal,
   type SignalDetail,
   type SignalRow,
@@ -36,7 +35,7 @@ import { WithdrawCertificateDialog } from "./WithdrawCertificateDialog";
 
 export interface StatusViewProps {
   onClose: () => void;
-  statusPort?: StatusPort;
+  statusPort: StatusPort;
   externalDestinations?: ExternalDestinationOpener;
   /**
    * Se llama con las filas de cada remedición propia —al abrirse, tras una
@@ -50,7 +49,7 @@ export interface StatusViewProps {
 
 export function StatusView({
   onClose,
-  statusPort = memoryStatus(),
+  statusPort,
   externalDestinations = unavailableExternalDestinationOpener(),
   onRowsChange,
   initiallyExpanded = [],
