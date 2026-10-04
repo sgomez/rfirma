@@ -179,19 +179,6 @@
   justify-content: center;
 }
 
-.sede-signing__track {
-  height: 6px;
-  border-radius: var(--rf-radius-pill);
-  background: var(--rf-surface);
-  border: 1px solid var(--rf-border-subtle);
-  overflow: hidden;
-}
-
-.sede-signing__bar {
-  height: 100%;
-  background: var(--rf-primary);
-}
-
 /* El fichero que va o que viene, con el diálogo del portal encima */
 
 .sede-transfer {

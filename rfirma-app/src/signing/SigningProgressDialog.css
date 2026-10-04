@@ -61,18 +61,3 @@
 .progress-dialog__stage--pending {
   color: var(--rf-text-muted);
 }
-
-.progress-dialog__bar {
-  height: 4px;
-  border-radius: var(--rf-radius-pill);
-  background: var(--rf-border-subtle);
-  overflow: hidden;
-}
-
-.progress-dialog__bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--rf-radius-pill);
-  background: var(--rf-primary);
-  transition: width var(--rf-duration-base) var(--rf-easing);
-}
