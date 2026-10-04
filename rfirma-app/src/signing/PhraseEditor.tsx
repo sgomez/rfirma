@@ -5,7 +5,6 @@ import {
   type DragEvent,
   type KeyboardEvent,
   useCallback,
-  useEffect,
   useId,
   useLayoutEffect,
   useRef,
@@ -14,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { PlusIcon } from "../design-system/icons";
+import { Menu, MenuItem } from "../design-system/Menu";
 import {
   datumOf,
   isCanonical,
@@ -48,7 +48,6 @@ export function PhraseEditor({ phrase, samples, onChange }: PhraseEditorProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const container = useRef<HTMLDivElement>(null);
   const addButton = useRef<HTMLButtonElement>(null);
-  const menu = useRef<HTMLDivElement>(null);
   const menuId = useId();
 
   const names: Record<Datum, string> = {
@@ -167,33 +166,7 @@ export function PhraseEditor({ phrase, samples, onChange }: PhraseEditorProps) {
     insertAt(range, pill(datum));
   };
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
-    const closeOutside = (event: MouseEvent) => {
-      if (!container.current?.contains(event.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", closeOutside);
-    return () => document.removeEventListener("mousedown", closeOutside);
-  }, [menuOpen]);
-
-  const onMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const items = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'),
-    );
-    const at = items.indexOf(document.activeElement as HTMLElement);
-    const focus = (index: number) => items[(index + items.length) % items.length]?.focus();
-    if (event.key === "ArrowDown") focus(at + 1);
-    else if (event.key === "ArrowUp") focus(at - 1);
-    else if (event.key === "Home") focus(0);
-    else if (event.key === "End") focus(items.length - 1);
-    else if (event.key === "Escape") {
-      setMenuOpen(false);
-      addButton.current?.focus();
-    } else if (event.key === "Tab") setMenuOpen(false);
-    else return;
-    if (event.key !== "Tab") event.preventDefault();
-  };
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   return (
     <div className="panel__phrase" ref={container}>
@@ -233,30 +206,22 @@ export function PhraseEditor({ phrase, samples, onChange }: PhraseEditorProps) {
           {t("panel.visibleSignature.phrase.addDatum")}
         </Button>
       </div>
-      {menuOpen && (
-        <div
-          ref={menu}
-          id={menuId}
-          role="menu"
-          aria-label={t("panel.visibleSignature.phrase.addDatum")}
-          className="panel__phrase-menu"
-          onKeyDown={onMenuKeyDown}
-        >
-          {DATA.map((datum) => (
-            <button
-              key={datum}
-              type="button"
-              role="menuitem"
-              tabIndex={-1}
-              className="panel__phrase-option"
-              onClick={() => pick(datum)}
-            >
-              <span className="panel__phrase-option-name">{names[datum]}</span>
-              <span className="panel__phrase-option-sample">{samples[datum]}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <Menu
+        open={menuOpen}
+        onClose={closeMenu}
+        anchorRef={container}
+        returnFocusRef={addButton}
+        id={menuId}
+        aria-label={t("panel.visibleSignature.phrase.addDatum")}
+        className="panel__phrase-menu"
+      >
+        {DATA.map((datum) => (
+          <MenuItem key={datum} className="panel__phrase-option" onClick={() => pick(datum)}>
+            <span className="panel__phrase-option-name">{names[datum]}</span>
+            <span className="panel__phrase-option-sample">{samples[datum]}</span>
+          </MenuItem>
+        ))}
+      </Menu>
     </div>
   );
 }

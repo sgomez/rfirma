@@ -64,6 +64,16 @@ function caretAtEnd(phrase: HTMLElement) {
   window.getSelection()?.addRange(range);
 }
 
+/** Deja el cursor al principio de la frase, antes de su primer carácter. */
+function caretAtStart(phrase: HTMLElement) {
+  phrase.focus();
+  const range = window.document.createRange();
+  range.setStart(phrase, 0);
+  range.collapse(true);
+  window.getSelection()?.removeAllRanges();
+  window.getSelection()?.addRange(range);
+}
+
 function pillsIn(phrase: HTMLElement) {
   return Array.from(phrase.querySelectorAll<HTMLElement>("[data-datum]")).map(
     (pill) => pill.dataset.datum,
@@ -116,6 +126,19 @@ describe("App, con el modelo Personalizada", () => {
     );
     expect(pillsIn(phrase)).toEqual(["signer", "signedAt", "issuer"]);
     expect(within(panel).queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("keeps the caret where it was when «+ Dato» closes without a choice", async () => {
+    const { user, panel, phrase } = await withCustomModel();
+    caretAtStart(phrase);
+    const add = within(panel).getByRole("button", { name: "Dato" });
+
+    await user.click(add);
+    await user.keyboard("{Escape}");
+    await user.click(add);
+    await user.click(within(panel).getByRole("menuitem", { name: /^Emisor/ }));
+
+    expect(pillsIn(phrase)).toEqual(["issuer", "signer", "signedAt"]);
   });
 
   it("deletes a pill whole, like a word, with one Backspace", async () => {
