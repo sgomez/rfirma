@@ -2,6 +2,7 @@
 
 pub mod admissibility;
 pub mod bridge;
+pub mod catalog;
 pub mod config;
 pub mod document_signatures;
 pub mod isolate_gone;

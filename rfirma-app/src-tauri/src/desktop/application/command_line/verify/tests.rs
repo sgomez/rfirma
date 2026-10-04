@@ -222,7 +222,30 @@ fn verified_reading(words: &[&str], reader: &Reading) -> Outcome {
     attended(words, &OneFile(A_PDF), &verifier, reader, &SummerInMadrid)
 }
 
+fn verified_reading_in(language: Language, words: &[&str], reader: &Reading) -> Outcome {
+    let verifier = Answering::with(&["Firma valida"]);
+    attended_in(
+        language,
+        words,
+        &OneFile(A_PDF),
+        &verifier,
+        reader,
+        &SummerInMadrid,
+    )
+}
+
 fn attended(
+    words: &[&str],
+    files: &dyn CommandLineFiles,
+    verifier: &Answering,
+    engine: &dyn PreviousSignaturesEngine,
+    time_zone: &dyn LocalTimeZone,
+) -> Outcome {
+    attended_in(Language::Spanish, words, files, verifier, engine, time_zone)
+}
+
+fn attended_in(
+    language: Language,
     words: &[&str],
     files: &dyn CommandLineFiles,
     verifier: &Answering,
@@ -242,6 +265,7 @@ fn attended(
             verifier,
             reader: &EngineReading::over(engine),
             time_zone,
+            language,
             signer: &Untouched,
             window: &Untouched,
         },

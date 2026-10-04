@@ -22,6 +22,7 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::store::StoreClass;
 use crate::signing::domain::bridge::{Format as SignatureFormat, SignatureOperation, XadesVariant};
+use crate::signing::domain::Language;
 use crate::site::domain::protocol::detection::{shape_of, DetectedShape};
 use crate::site::domain::protocol::{site_filter, SiteFilter};
 
@@ -62,6 +63,8 @@ pub struct CommandLinePorts<'a> {
     pub reader: &'a dyn SignatureReading,
     /// La zona horaria en la que se enseña la fecha declarada.
     pub time_zone: &'a dyn LocalTimeZone,
+    /// El idioma del sistema, en el que se escriben los textos del catálogo.
+    pub language: Language,
     /// Quien firma por el camino de la sede.
     pub signer: &'a dyn DocumentSigner,
     /// La ventana de sede en la que se elige con `-certgui`.

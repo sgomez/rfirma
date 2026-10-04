@@ -250,6 +250,7 @@ pub fn attended_with_the_window(
         verifier: &NativeVerifier,
         reader: &EngineReading::over(&NativeEngine),
         time_zone: &SystemTimeZone,
+        language: rfirma_lib::signing::domain::Language::Spanish,
         signer: &RootsSigner::of(roots),
         window,
     };

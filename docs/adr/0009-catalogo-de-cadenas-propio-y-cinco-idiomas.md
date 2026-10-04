@@ -136,3 +136,26 @@ permite que alguien de fuera traduzca sin tocar código.
   visor antes de firmar, así que no hay sorpresa. No lleva ajuste propio.
 - **El empaquetado queda fuera del circuito de traducción.** El `.desktop` y el
   `metainfo.xml` no se traducen: lo que muestran es el nombre propio del programa.
+
+## Enmienda: la línea de órdenes lee el mismo catálogo
+
+El catálogo deja de ser solo de la interfaz: los textos que imprime
+`rfirma verify -vv` —por ahora, los motivos de validez de la ficha— salen de las
+mismas claves (`signatureReason.*`) y en el idioma del sistema, que elige
+`Language::first_of` como para los diálogos de Rust. La línea de órdenes no
+tiene una preferencia guardada que leer antes de la ventana, así que manda el
+locale. Las fechas no se traducen: la terminal conserva el formato ISO, que se
+puede grepear.
+
+**Cómo llega a Rust.** El `build.rs` de `src-tauri` lee los `.po` versionados al
+compilar y escribe en `OUT_DIR` una tabla clave → texto por idioma, que
+`signing::domain::catalog` incluye en el binario. No hay `.mo`, ni ficheros que
+instalar junto al ejecutable, ni `gettext` en tiempo de compilación: el lector
+del `.po` es el mismo módulo para el `build.rs` y para las pruebas. Las
+`{{variables}}` se resuelven como en i18next, y una clave que falte en un idioma
+cae al castellano, la misma red que `returnEmptyString: false`.
+
+**La regla del 100 % es la misma.** Un idioma con alguna cadena vacía o
+`#, fuzzy` no entra en la tabla, igual que `po-import` no le genera `.ts`; un
+sistema en ese idioma, o en uno que rFirma no tiene, lee el castellano. La
+puerta sigue siendo de construcción: el idioma incompleto no está en el binario.

@@ -133,6 +133,7 @@ fn attended_in(
         verifier: &Untouched,
         reader: &Untouched,
         time_zone: &Untouched,
+        language: crate::signing::domain::Language::Spanish,
         signer,
         window: &Untouched,
     };

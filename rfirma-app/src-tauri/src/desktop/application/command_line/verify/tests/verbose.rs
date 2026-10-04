@@ -322,60 +322,143 @@ fn a_stamped_signature_says_sealed_with_the_tsa() {
     assert!(output.contains("✓ UNA · 2026-09-20\n"), "{output}");
 }
 
-#[test]
-fn the_reasons_are_written_in_the_sheet() {
-    for (reason, text) in [
+type KeyedReason = (
+    ValidityReason,
+    &'static str,
+    Vec<(&'static str, &'static str)>,
+);
+
+fn one_of_each_reason() -> Vec<KeyedReason> {
+    let reasons = vec![
         (
             ValidityReason::CertificateExpired {
                 date: "2026-01-02T00:00:00Z".to_owned(),
                 holder: Some("ACME SL".to_owned()),
             },
-            "El certificado de ACME SL caducó el 2026-01-02",
+            "signatureReason.certificateExpiredHolder",
+            vec![("holder", "ACME SL"), ("date", "2026-01-02")],
         ),
         (
             ValidityReason::CertificateExpired {
                 date: "2026-01-02T00:00:00Z".to_owned(),
                 holder: None,
             },
-            "El certificado caducó el 2026-01-02",
+            "signatureReason.certificateExpired",
+            vec![("date", "2026-01-02")],
         ),
         (
             ValidityReason::ModifiedAfterSigning,
-            "Se ha modificado después de firmarse",
+            "signatureReason.modifiedAfterSigning",
+            vec![],
         ),
-        (ValidityReason::Damaged, "La firma está dañada"),
+        (ValidityReason::Damaged, "signatureReason.damaged", vec![]),
         (
             ValidityReason::CertificateNotYetValid {
                 date: "2027-01-02T00:00:00Z".to_owned(),
             },
-            "El certificado no se podía usar antes del 2027-01-02",
+            "signatureReason.certificateNotYetValid",
+            vec![("date", "2027-01-02")],
         ),
         (
             ValidityReason::UnknownSignatureType,
-            "rFirma no conoce este tipo de firma",
+            "signatureReason.unknownSignatureType",
+            vec![],
         ),
         (
             ValidityReason::CosignNotAdmitted {
                 closed_by: Some("UNA".to_owned()),
             },
-            "UNA no admitía más firmas",
+            "signatureReason.cosignNotAdmitted",
+            vec![("name", "UNA")],
         ),
         (
             ValidityReason::CosignNotAdmitted { closed_by: None },
-            "El documento no admitía más firmas",
+            "signatureReason.cosignNotAdmittedUnnamed",
+            vec![],
         ),
-    ] {
-        let mut signature = a_signature("X", "", None);
-        signature.validity = Validity::Invalid;
-        signature.validity_reason = Some(reason);
+    ];
+    for (reason, _, _) in &reasons {
+        match reason {
+            ValidityReason::CertificateExpired { .. }
+            | ValidityReason::ModifiedAfterSigning
+            | ValidityReason::Damaged
+            | ValidityReason::CertificateNotYetValid { .. }
+            | ValidityReason::UnknownSignatureType
+            | ValidityReason::CosignNotAdmitted { .. } => {}
+        }
+    }
+    reasons
+}
 
-        let output = verbose(&["verify", "-i", "firmado.pdf", "-vv"], vec![signature]);
+fn reason_in_the_sheet(language: Language, reason: ValidityReason) -> String {
+    let mut signature = a_signature("X", "", None);
+    signature.validity = Validity::Invalid;
+    signature.validity_reason = Some(reason);
+    let outcome = verified_reading_in(
+        language,
+        &["verify", "-i", "firmado.pdf", "-vv"],
+        &Reading(Ok(vec![signature])),
+    );
+    assert_eq!(outcome.exit_code, SUCCEEDED);
+    printed(&outcome)
+}
+
+#[test]
+fn the_reasons_are_written_in_the_sheet() {
+    for (reason, key, values) in one_of_each_reason() {
+        let text = translated(Language::Spanish, key, &values);
+
+        let output = reason_in_the_sheet(Language::Spanish, reason);
 
         assert!(
             output.contains(&format!("  Motivo:            {text}\n")),
             "{output}"
         );
     }
+}
+
+#[test]
+fn every_validity_reason_has_its_key_in_every_language_of_the_catalog() {
+    for (reason, key, _) in one_of_each_reason() {
+        assert_eq!(reason_key(&reason, &SummerInMadrid).0, key);
+        for language in Language::ALL {
+            assert_ne!(translated(language, key, &[]), key, "{key}");
+        }
+    }
+}
+
+#[test]
+fn with_the_system_in_english_the_reasons_are_those_of_english() {
+    let reason = ValidityReason::CertificateExpired {
+        date: "2026-01-02T00:00:00Z".to_owned(),
+        holder: Some("ACME SL".to_owned()),
+    };
+
+    let output = reason_in_the_sheet(Language::English, reason);
+
+    assert!(
+        output.contains(&translated(
+            Language::English,
+            "signatureReason.certificateExpiredHolder",
+            &[("holder", "ACME SL"), ("date", "2026-01-02")]
+        )),
+        "{output}"
+    );
+}
+
+#[test]
+fn with_a_system_language_rfirma_does_not_publish_the_reasons_are_in_spanish() {
+    let language = Language::first_of(["de_DE.UTF-8"]);
+
+    let output = reason_in_the_sheet(language, ValidityReason::Damaged);
+
+    assert!(
+        output.contains(&format!(
+            "  Motivo:            {}\n",
+            translated(Language::Spanish, "signatureReason.damaged", &[])
+        )),
+        "{output}"
+    );
 }
 
 #[test]
