@@ -4,6 +4,9 @@ import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
+import { Row } from "../design-system/Row";
+import { Stack } from "../design-system/Stack";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { LANGUAGES, type LanguageTag } from "../i18n/languages";
@@ -28,12 +31,12 @@ function Heading({
   const { t } = useTranslation();
   return (
     <>
-      <div className="rf-row preferences__heading-row">
+      <Row className="preferences__heading-row">
         <p className="rf-label preferences__heading" id={headingId}>
           {t(`preferences.sections.${label}`)}
         </p>
         {action}
-      </div>
+      </Row>
       <hr className="rf-divider" />
     </>
   );
@@ -97,13 +100,9 @@ export function GeneralSection({
               wide
               onChange={onRememberActivityChange}
             />
-            <button
-              type="button"
-              className="rf-btn rf-btn--secondary preferences__clear"
-              onClick={onForgetClick}
-            >
+            <Button variant="secondary" className="preferences__clear" onClick={onForgetClick}>
               {t("recents.clear")}
-            </button>
+            </Button>
             {forgetFailure !== null && (
               <ErrorNotice situation="activityNotForgotten" technicalDetail={forgetFailure} />
             )}
@@ -132,12 +131,12 @@ function DestinationFolderRow({
   t: TFunction;
 }) {
   return (
-    <div className="rf-row rf-gap-sm preferences__destination-row">
+    <Row gap="sm" className="preferences__destination-row">
       <p className="rf-prose preferences__destination-folder">{destination}</p>
-      <button type="button" className="rf-btn rf-btn--secondary" onClick={onChooseDestinationClick}>
+      <Button variant="secondary" onClick={onChooseDestinationClick}>
         {t("preferences.destination.change")}
-      </button>
-    </div>
+      </Button>
+    </Row>
   );
 }
 
@@ -173,7 +172,7 @@ function DestinationField({
         {t("preferences.destination.label")}
       </p>
       {preferences.offersOriginalFolder ? (
-        <div className="rf-stack rf-gap-xs" role="radiogroup" aria-labelledby={labelId}>
+        <Stack gap="xs" role="radiogroup" aria-labelledby={labelId}>
           <label className="rf-row rf-gap-xs preferences__destination-radio">
             <input
               type="radio"
@@ -195,7 +194,7 @@ function DestinationField({
             </label>
             <div className="preferences__destination-suboption">{folderRow}</div>
           </div>
-        </div>
+        </Stack>
       ) : (
         folderRow
       )}
@@ -307,13 +306,9 @@ export function CertificatesSection({
         label="certificates"
         headingId={`${titleId}-heading-certificates`}
         action={
-          <button
-            type="button"
-            className="rf-btn rf-btn--secondary preferences__add-certificate"
-            onClick={onAddClick}
-          >
+          <Button variant="secondary" className="preferences__add-certificate" onClick={onAddClick}>
             {t("preferences.certificates.add")}
-          </button>
+          </Button>
         }
       />
       {certificateFailure !== null && (
@@ -347,16 +342,16 @@ export function CertificatesSection({
                   {certificateLine(certificate, t, i18n.language)}
                 </span>
               </span>
-              <button
-                type="button"
-                className="rf-btn rf-btn--ghost preferences__remove-certificate"
+              <Button
+                variant="ghost"
+                className="preferences__remove-certificate"
                 aria-label={t("preferences.certificates.remove", {
                   holder: certificate.holderName,
                 })}
                 onClick={() => onRemoveClick(certificate)}
               >
                 {t("actions.remove")}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

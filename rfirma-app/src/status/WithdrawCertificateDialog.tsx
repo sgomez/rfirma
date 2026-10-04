@@ -7,6 +7,7 @@ import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
 import { CheckCircleIcon, CheckingIcon, CrossCircleIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
+import { Stack } from "../design-system/Stack";
 import "./WithdrawCertificateDialog.css";
 import {
   type StoreBrand,
@@ -84,11 +85,11 @@ export function WithdrawCertificateDialog({
       <p className="rf-title">{title}</p>
 
       {moment === "question" && (
-        <div className="rf-stack rf-gap-xs">
+        <Stack gap="xs">
           <p className="rf-prose">{t("status.withdrawal.body.certificate")}</p>
           <p className="rf-prose">{t("status.withdrawal.body.handler")}</p>
           <p className="rf-hint">{t("status.withdrawal.hint")}</p>
-        </div>
+        </Stack>
       )}
 
       {moment === "working" && (

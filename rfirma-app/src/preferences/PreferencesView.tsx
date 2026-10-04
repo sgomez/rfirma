@@ -340,16 +340,15 @@ export function PreferencesView({
           onKeyDown={onTabsKeyDown}
         >
           {SECTIONS.map((section) => (
-            <button
+            <Button
               key={section}
-              type="button"
               id={tabId(section)}
               role="tab"
               ref={registerTab(section)}
               className={
                 section === current
-                  ? "rf-btn preferences__section preferences__section--current"
-                  : "rf-btn preferences__section rf-text-muted"
+                  ? "preferences__section preferences__section--current"
+                  : "preferences__section rf-text-muted"
               }
               aria-selected={section === current}
               aria-controls={`${titleId}-panel`}
@@ -357,7 +356,7 @@ export function PreferencesView({
               onClick={() => show(section)}
             >
               {t(`preferences.sections.${section}`)}
-            </button>
+            </Button>
           ))}
         </div>
       </nav>
