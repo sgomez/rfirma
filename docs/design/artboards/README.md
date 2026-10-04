@@ -58,8 +58,6 @@ y su ficha, [`ventana-de-sede.md`](../ventana-de-sede.md):
 | 5b | `EstadoPaginasSinFirmaVisible` | Antes de firmar: las páginas donde la firma visible no cabe |
 | 5c | `EstadoFirmarDeTodosModos` | Antes de firmar: el documento trae alguna firma caducada o no válida, o un hallazgo, y se pide confirmación |
 | 5d | `EstadoVerFirmas` | El diálogo «Ver firmas»: las firmas que ya trae el documento, con su validez, sobre `Main` lista |
-| 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén —, sobre `Main` buscando certificados o lista, según el almacén |
-| 7 | `EstadoPinIncorrecto` | Secreto incorrecto, con el mismo fondo que el 6 |
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
 | — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4, sobre `Main` lista |
 | — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde y el idioma, y las dos acciones como pasos numerados —instalar el certificado propio y poner a rFirma por defecto— con la protección contra firmas accidentales aparte |

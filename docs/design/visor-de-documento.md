@@ -4,55 +4,65 @@ La región izquierda, bajo las pestañas. Enseña el PDF y es donde se coloca la
 firma visible. Responde a «cómo va a quedar». Sin documento, es la zona de
 soltar.
 
+**La verdad del dibujo es el código y sus historias:**
+`viewer/DocumentViewer.stories.tsx` («Ventana principal/5 · Visor»). Esta ficha
+cuenta el flujo y el porqué; los textos salen del catálogo (`viewer.*` en
+`po/messages.pot`) y no se copian aquí. Las historias pintan una hoja de
+mentira (`viewer/storyPdf.ts`): no hay `pdf.js` en Storybook, y lo que se ve
+dentro del recuadro en la aplicación es el PDF que compone el backend.
+
 ## Casos de uso que la usan
 
 - Firmar un PDF en local — desde que se abre el documento hasta que se guarda.
 - Ver las firmas de un documento con `rfirma verify -i <doc> -gui`: la hoja sin
   recuadro; si el fichero no es PDF (CAdES, XAdES, un formato desconocido), en
-  lugar de la hoja, centrados, el icono de documento de 40 px en
-  `--rf-text-muted`, el nombre del fichero en negrita y «Sin vista previa», y
-  sin la píldora.
+  lugar de la hoja, centrados, el icono de documento, el nombre del fichero en
+  negrita y `viewer.noPreview`, y sin la píldora.
+
+## Flujo entre estados
+
+| Estado | Historia | Qué se ve |
+| --- | --- | --- |
+| Vacío | `Empty` | La zona de soltar (`viewer.dropZone`, `viewer.dropZoneHint`); sin píldora ni panel |
+| Vacío con recientes | `EmptyWithRecents` | La zona de soltar y, debajo, los [recientes](pestanas-de-documentos.md) |
+| Con documento | `WithDocument` | La hoja y la píldora; sin firma visible, la hoja limpia |
+| Firma visible en una página | `WithSignatureBox` | El recuadro editable en la página a la vista |
+| Firma visible en todas | `SignatureBoxOnAllPages` | El mismo recuadro, replicado en cada página del conjunto |
+| Sin vista previa | `WithoutPreview` | El nombre del fichero y la indicación, sin hoja ni píldora |
+| El fichero no se deja abrir | `FailureNotAPdf` | El aviso de error en el visor, que sin documento no tiene panel donde ir |
+| Fallo con documento delante | `FailureOverDocument` | El aviso y el primer documento intacto, para que el rechazo no sea mudo |
+
+Los estados con certificado, sello compuesto, recalculado o error del sello
+dependen del panel y del backend y no tienen historia aquí: los cubre la prueba
+de `DocumentViewer` con su doble de `pdf.js`. Quien los quiera ver en Storybook
+los añade con la tanda del panel de firma.
 
 ## Estructura
 
-Superficie flexible sobre `--rf-bg`, con `overflow: hidden`:
+Superficie flexible sobre `--rf-bg`, sin desbordar:
 
-- **La hoja**, centrada, proporción A4 (1 : 1,414), fondo `--rf-bg` forzando
-  `data-theme="light"`: el papel no cambia con el tema.
+- **La hoja**, centrada, de proporción A4, con `data-theme="light"` forzado: el
+  papel no cambia con el tema.
 - **La firma visible**, sobre la hoja, solo si está encendida en el
   [panel](panel-de-firma.md) y la página está en su conjunto.
 - **El aviso de la vista previa**, flotando sobre la píldora, solo cuando hay
   algo que decir.
-- **La píldora** de paginación y zoom, anclada al pie a `--rf-space-md` del
-  borde.
+- **La píldora** de paginación y zoom, anclada al pie del borde.
 
-Ningún control de la firma visible vive fuera del propio recuadro: el resto
-está en el panel.
+Ningún control de la firma visible vive fuera del propio recuadro: el resto está
+en el panel.
 
-### Geometría
+**La zona de soltar** es un recuadro de borde discontinuo con el icono de subir,
+la invitación a soltar o abrir y una línea que dice que el documento no sale del
+ordenador. Debajo, al mismo ancho, los recientes. El conjunto, centrado en el
+visor.
 
-- Hoja con borde de 1 px en `--rf-border-subtle`, `--rf-radius-sm` y
-  `--rf-shadow-card`. En el artboard, 326 px al 100 %, a 40 px del borde
-  superior.
-- **Píldora**: `--rf-radius-pill`, fondo `--rf-surface`, borde
-  `--rf-border-subtle`, `--rf-shadow-elevated`, 4 px de relleno, 2 px entre
-  botones. Cada botón es un círculo de 32 px con icono de 16 px en `--rf-text`,
-  no en el `--rf-text-muted` de `.rf-btn--ghost`; desactivado, a opacidad 0.45;
-  al pasar por encima de uno activado, el círculo toma fondo
-  `--rf-border-subtle`. El divisor entre
-  los dos grupos es una línea de 1 × 24 px en `--rf-border-subtle`.
-- **Número de página**: pastilla de 56 × 30 px con `--rf-radius-sm`, borde
-  `--rf-border-strong` y el número a 13 px en peso 700. En la aplicación es un
-  `<input type="number">` sin flechas (`appearance: textfield`); el artboard
-  dibuja un `<span>` de 34 px. El «de 6» en `.rf-body rf-text-muted`; el
-  porcentaje, 44 px mínimo y peso 700. `white-space: nowrap`.
-- **Zona de soltar del estado vacío**: 520 × 170 px, borde de 2 px discontinuo
-  en `--rf-border-strong`, `--rf-radius-lg`, fondo `--rf-surface`. Dentro, el
-  icono de subir de 32 px en `--rf-text-muted`, «Arrastra un PDF o pulsa para
-  abrirlo» en `.rf-title` a 16 px y «No sale de tu ordenador» en
-  `.rf-body rf-text-muted`. Debajo, a 24 px y al mismo ancho, los recientes
-  ([pestañas de documentos](pestanas-de-documentos.md)). El conjunto, centrado
-  en el visor.
+**La hoja** lleva borde, esquinas pequeñas y la sombra de tarjeta. **La píldora**
+es del radio de píldora, de superficie elevada, y cada botón es un círculo con el
+icono en `--rf-text` —no en el atenuado de `.rf-btn--ghost`—; desactivado, a
+opacidad baja. El número de página es un `<input type="number">` sin flechas, y
+el porcentaje no se parte de línea. La geometría exacta la dan
+`DocumentViewer.css` y las historias.
 
 ## Lo que se ve dentro del recuadro es la firma de verdad
 
@@ -60,10 +70,7 @@ El recuadro enseña **la firma visible que se va a estampar**, pintada por quien
 la estampará. No se maqueta en HTML: un ciclo trifásico en seco con un `PK1`
 inventado produce bytes visibles idénticos a los del firmado de verdad, y
 `pdf.js` los pinta ([prefirma en seco con pdf.js](../research/prefirma-en-seco-pdfjs.md),
-[ADR-0006](../adr/0006-firma-visible-se-configura-sobre-el-documento.md)). El
-mini-render del artboard es el dibujo de ese resultado para cada modelo: Completa
-con firmante, fecha y emisor; Solo rúbrica; Personalizada con la frase ya
-sustituida; la rúbrica a la izquierda si está encendida.
+[ADR-0006](../adr/0006-firma-visible-se-configura-sobre-el-documento.md)).
 
 **O es la firma de verdad, o el recuadro va vacío.** Nunca una aproximación:
 
@@ -92,15 +99,16 @@ Lo que exige a la implementación: `standard_fonts` de `pdfjs-dist` copiadas a
 
 ## El aviso de la vista previa
 
-Flota sobre la píldora, centrado: `--rf-radius-pill`, fondo `--rf-surface`,
-borde `--rf-border-strong`, `--rf-shadow-elevated`, 40 px de alto mínimo. Habla
-de la vista previa de la firma visible y de nada más:
+Flota sobre la píldora, centrado, en superficie elevada y de altura mínima fija.
+Habla de la vista previa de la firma visible y de nada más. Sus textos son
+`viewer.stamp.*`:
 
-| Cuándo | Texto | Botón | El recuadro |
+| Cuándo | Clave del texto | Botón | El recuadro |
 | --- | --- | --- | --- |
 | Al día | — (no hay aviso) | — | la firma |
-| Documento grande, sin recalcular | «Documento grande: la firma visible no se recalcula sola» | `Ver cómo queda` | la firma anterior al 35 % |
-| No se ha podido dibujar | «No se ha podido dibujar la firma visible» | `Volver a intentarlo` | marco y tiradores, con un icono de información dentro |
+| Documento grande, sin recalcular | `viewer.stamp.onDemand` | `viewer.stamp.show` | la firma anterior, atenuada |
+| Recalculando | `viewer.stamp.composing` | — | la firma anterior, atenuada |
+| No se ha podido dibujar | `viewer.stamp.failed` | reintentar | marco y tiradores, con un icono de información dentro |
 
 Moviendo o redimensionando no lleva aviso: el atenuado ya lo dice mientras dura
 el gesto.
@@ -111,23 +119,24 @@ eso lo dice el panel.
 
 ## La píldora
 
-```
-⏮ ‹ [6] de 6 › ⏭  │  − 100 % + ⤢
-```
+De izquierda a derecha, en dos grupos separados por un divisor: **páginas**
+—primera, anterior, número editable, total, siguiente, última, con
+`viewer.firstPage`, `viewer.previousPage`, `viewer.pageNumber`, `viewer.pageOf`,
+`viewer.nextPage` y `viewer.lastPage`— y **zoom** —alejar, porcentaje editable,
+acercar y ajustar a la ventana (`viewer.zoomOut`, `viewer.zoomLevel`,
+`viewer.zoomIn`, `viewer.fitWidth`, `viewer.fitPage`)—. La barra de páginas
+ocupa lo mismo con 4 páginas que con 400.
 
 Iconos `<svg>` en línea sobre lienzo `0 0 24 24`, trazo 1.5 (ID-53), salvo los
-cuatro chevrons de paginación, a trazo 2. El − y el + del zoom siguen a 1.5.
-
-- **Páginas**: primera, anterior, número editable, total, siguiente, última.
-  Ocupa lo mismo con 4 páginas que con 400.
-- **Zoom**: alejar, porcentaje editable, acercar, ajustar a la ventana.
+cuatro chevrons de paginación, a trazo 2.
 
 El zoom forma parte de colocar la firma, por eso va aquí y no en un menú.
 
 - **Continuo, del 25 % al 400 %** (ID-116). `Ctrl`+rueda amplía anclado al
   puntero —el pellizco del trackpad llega por ahí—; el porcentaje tecleado se
   recorta al rango; `Ctrl+0` vuelve al 100 % con el foco en la hoja o en el
-  recuadro. Los botones ± saltan entre siete escalones redondos.
+  recuadro. Los botones de acercar y alejar saltan entre siete escalones
+  redondos.
 - **Un documento nuevo abre en «ajustar a la página»**, también en apaisado.
 - **«Ajustar» es un modo** (ID-117): sobrevive al cambio de página, de tamaño de
   ventana y de documento. **Un zoom fijado a mano también sobrevive** al
@@ -138,10 +147,10 @@ El zoom forma parte de colocar la firma, por eso va aquí y no en un menú.
 
 ## El recuadro
 
-**Mientras se puede editar**: borde de 1,5 px en `--rf-primary`, fondo `--rf-bg`
-y cuatro tiradores en las esquinas (9 px en el artboard, `--rf-bg` con borde
-`--rf-primary`). **Firmando o firmado**: sin borde ni tiradores; ya no se mueve.
-Sin pastilla encima.
+**Mientras se puede editar**: borde en `--rf-primary`, fondo `--rf-bg` y cuatro
+tiradores en las esquinas (`viewer.dragHandle`). **Firmando o firmado**: sin
+borde ni tiradores; ya no se mueve. Sin pastilla encima. Su nombre accesible es
+`viewer.signatureBox`.
 
 - **Posición libre**, sin rejilla de nueve posiciones: la firma va donde lo dice
   el documento, normalmente bajo el nombre de la persona
@@ -166,17 +175,17 @@ contenido.
 - La página donde se trazó **no se dibuja distinta**: el PDF no tiene esa
   diferencia.
 - **Fuera del conjunto la hoja se ve limpia**, sin fantasma a trazos. Lo dice el
-  panel, con «Ponerla aquí».
+  panel, con su acción de ponerla en la página a la vista.
 
 ## Los tres gestos del recuadro
 
 - **Trazar**: pulsar sobre la hoja y arrastrar hace nacer el recuadro, de esquina
   a esquina. Es el único camino que elige sitio en el mismo gesto; encender la
-  firma visible y «Ponerla aquí» usan la posición estándar.
+  firma visible y ponerla en la página a la vista usan la posición estándar.
 - **Arrastrar**: mover el que ya existe.
 - **Redimensionar**: tirar de una esquina.
 
-Trazar es «Ponerla aquí» con sitio elegido: con **Una página** sustituye la
+Trazar es «ponerla aquí» con sitio elegido: con **Una página** sustituye la
 página, con **Varias** la añade y con **Todas** el conjunto ya estaba completo.
 Como el PDF lleva un solo campo con el widget replicado, el rectángulo trazado
 se mueve en todas las páginas del conjunto.
@@ -204,67 +213,47 @@ ocupar casi todo el visor y da igual.
 
 - **Flechas**: mueven el recuadro un punto de espacio de usuario (ID-115); diez
   con `Mayús`.
-- **Dos elementos enfocables** (ID-113): la hoja atiende `AvPág`, `RePág`,
-  `Inicio` y `Fin`; el recuadro, las flechas, y las teclas de página burbujean
-  desde él. `Esc` devuelve el foco a la hoja. Al cambiar de página, un recuadro
-  fuera de la parte visible se trae a ella una vez (ID-118).
+- **Dos elementos enfocables** (ID-113): la hoja (`viewer.sheet`) atiende
+  `AvPág`, `RePág`, `Inicio` y `Fin`; el recuadro, las flechas, y las teclas de
+  página burbujean desde él. `Esc` devuelve el foco a la hoja. Al cambiar de
+  página, un recuadro fuera de la parte visible se trae a ella una vez (ID-118).
 - **Ni el zoom ni el redimensionado de la ventana escriben la colocación**
   (ID-114): solo el trazo, el arrastre, el redimensionado y las flechas.
-- **Soltar fuera de la página no se acepta**: «El recuadro se ha quedado fuera de
-  la página, así que sigue donde estaba», y vuelve. El backend lo comprueba
-  otra vez antes de firmar, porque iText recortaría en silencio (ID-22).
+- **Soltar fuera de la página no se acepta** (`viewer.outOfPage`): el recuadro
+  vuelve a donde estaba. El backend lo comprueba otra vez antes de firmar,
+  porque iText recortaría en silencio (ID-22).
 - **La firma no sigue a la página que miras**: se queda donde se puso.
 - **Las páginas donde el recuadro no cabe** se avisan una vez, antes de firmar,
   en el [diálogo de páginas sin firma visible](dialogo-paginas-sin-firma-visible.md).
 
-## Estados
-
-En el artboard `Main`, palancas «Estado», «Firma visible», «Vista previa de la
-firma visible», «Contenido de la firma» y «Visor»:
-
-- **Vacío**: la zona de soltar y los recientes; sin píldora ni panel.
-- **Firma visible apagada**: la hoja limpia.
-- **Encendida, en la página a la vista**: el recuadro editable.
-- **Encendida, en otra página**: la hoja limpia.
-- **Arrastrándola**: el recuadro fuera de su sitio, con `--rf-shadow-elevated`, y
-  su sitio anterior a trazos al 60 %.
-- **Tamaño pequeño**: el mismo contenido con la letra reducida.
-- **Recalculando** y **no se ha podido dibujar**: ver el aviso.
-- **Sin certificado**: la hoja limpia, sin recuadro.
-- **Zoom** 50 %, 100 % y 300 %: la hoja y el recuadro escalan; los tiradores no.
-  Al 300 % el artboard enseña la esquina de la firma.
-- **Firmando**: la hoja al 45 %, bajo el velo.
-- **Firmado** y **error al firmar**: el recuadro sin borde ni tiradores.
-
 ## Componentes y tokens
 
-Maquetación propia con `var(--rf-*)`: `--rf-bg`, `--rf-surface`,
-`--rf-border-subtle`, `--rf-border-strong`, `--rf-primary`,
-`--rf-shadow-card`, `--rf-shadow-elevated`, `--rf-radius-sm|lg|pill`,
-`--rf-space-md`.
+`Button`, `Row`, los iconos del sistema de diseño y `ErrorNotice` para los
+fallos; maquetación propia con `var(--rf-*)`: `--rf-bg`, `--rf-surface`,
+`--rf-border-subtle`, `--rf-border-strong`, `--rf-primary`, `--rf-shadow-card`,
+`--rf-shadow-elevated`, `--rf-radius-sm|lg|pill`, `--rf-space-md`.
 
 ## Decisiones
 
-- **El mini-render es la firma real**, no un dibujo nuestro (25/09/2026). Main
-  v4 D la dibuja con el modelo elegido, y se lee como el resultado del ciclo en
-  seco que la aplicación ya pinta: la regla «o es la de verdad, o no hay nada»
-  del ADR-0006 sigue en pie.
-- **Se conservan «recalculando» y «no se ha podido dibujar»**, que Main v4 D no
-  dibujaba: el caso existe igual. «Moviendo» pierde su aviso: era una frase para
-  lo que el atenuado ya enseña. El aviso flota sobre la píldora porque en
-  flujo, bajo la hoja, se iba con ella al ampliar.
+- **El mini-render es la firma real**, no un dibujo nuestro (25/09/2026). La
+  regla «o es la de verdad, o no hay nada» del ADR-0006 sigue en pie, y es la
+  razón de que Storybook no pinte ningún recuadro con contenido.
+- **Se conservan «recalculando» y «no se ha podido dibujar»**, que el dibujo de
+  la ventana no tenía: el caso existe igual. «Moviendo» pierde su aviso: era una
+  frase para lo que el atenuado ya enseña. El aviso flota sobre la píldora porque
+  en flujo, bajo la hoja, se iba con ella al ampliar.
 - **Sin pastilla sobre el recuadro ni etiqueta de página**: el recuadro solo
   lleva marco y tiradores; la página la dice el panel.
-- **Sin tira de miniaturas.** La propusieron V3 A (columna de 128 px) y V3 B
-  (tira bajo la hoja) como navegación y selección de páginas. A las 200 páginas
-  es un desplazador que hay que recorrer, y el número editable de la píldora
-  llega en un gesto.
+- **Sin tira de miniaturas.** La propusieron dos de las composiciones que se
+  descartaron (ver [ventana principal](ventana-principal.md#decisiones)) como
+  navegación y selección de páginas. A las 200 páginas es un desplazador que hay
+  que recorrer, y el número editable de la píldora llega en un gesto.
 - **La paginación es una píldora del visor**, no una pastilla por página: con 27
   páginas ya no cabían.
+- **El fallo de apertura vive en el visor y no en el panel**, porque sin
+  documento abierto no hay panel, y se pinta también con un documento delante:
+  el segundo PDF que no se deja abrir deja el primero en pantalla, y sin el aviso
+  el rechazo sería mudo.
 - Mecánica que hace que la pantalla se sienta como se ve: las pintadas de
   `pdf.js` pasan por una cola que cancela la anterior, y el arrastre no toca el
   estado hasta soltar.
-
-Validado en el lienzo
-[Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
-página **Recorrido de firma**, artboard `Main`, el 25/09/2026.

@@ -25,24 +25,6 @@
       "is_interactive": true
     },
     {
-      "file": "EstadoPin.dc.html",
-      "title": "6 · Pidiendo PIN",
-      "x": 1260,
-      "y": 0,
-      "w": 1180,
-      "h": 700,
-      "page": "recorrido"
-    },
-    {
-      "file": "EstadoPinIncorrecto.dc.html",
-      "title": "7 · PIN incorrecto",
-      "x": 2520,
-      "y": 0,
-      "w": 1180,
-      "h": 700,
-      "page": "recorrido"
-    },
-    {
       "file": "EstadoAcercaDe.dc.html",
       "title": "Acerca de · desde el menú",
       "x": 0,

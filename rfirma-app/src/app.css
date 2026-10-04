@@ -45,9 +45,8 @@ body {
 /*
  * El velo de los diálogos.
  *
- * El bundle define `.rf-scrim` solo como color (`_ds_bundle.css:204`); el
- * `helmet` del artboard es el que lo coloca (`EstadoPin.dc.html:101`). Sin la
- * colocación, los cuatro diálogos —PIN, progreso, preferencias y acerca de— se
+ * El bundle define `.rf-scrim` solo como color (`_ds_bundle.css:204`); `app.css` es
+ * quien lo coloca. Sin la colocación, los cuatro diálogos —PIN, progreso, preferencias y acerca de— se
  * montan **en flujo**, detrás de la ventana y por debajo del pliegue: una
  * banda oscura del alto de su contenido, sin superponerse a nada.
  *
