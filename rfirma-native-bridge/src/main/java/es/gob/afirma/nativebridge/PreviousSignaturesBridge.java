@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -151,6 +152,7 @@ final class PreviousSignaturesBridge {
         DAMAGED("damaged", Validity.INVALID),
         MODIFIED_AFTER_SIGNING("modifiedAfterSigning", Validity.INVALID),
         COSIGN_NOT_ADMITTED("cosignNotAdmitted", Validity.INVALID),
+        UNSUPPORTED_ALGORITHM("unsupportedAlgorithm", Validity.INVALID),
         UNKNOWN_SIGNATURE_TYPE("unknownSignatureType", Validity.INVALID),
         CERTIFICATE_NOT_YET_VALID("certificateNotYetValid", Validity.INVALID),
         CERTIFICATE_EXPIRED("certificateExpired", Validity.EXPIRED);
@@ -277,6 +279,9 @@ final class PreviousSignaturesBridge {
                 signer, certificates, x509(), true, profile, withContent));
         if (validities.stream().anyMatch(PreviousSignaturesBridge::isOutOfDate)) {
             validities.add(integrityOf(signer, certificate, withContent));
+        }
+        if (usesBrokenCmsAlgorithm(signer)) {
+            validities.add(unsupportedAlgorithm());
         }
         return identityOf(certificate,
                 algorithmName(signer.getDigestAlgOID(), signer.getEncryptionAlgOID()), profile,
@@ -465,6 +470,9 @@ final class PreviousSignaturesBridge {
         if (!XmlSignerKeyBinding.holds(signature, signer.getPublicKey())) {
             reasons.add(Reason.of(Problem.DAMAGED));
         }
+        if (usesBrokenXmlDigest(signature)) {
+            reasons.add(Reason.of(Problem.UNSUPPORTED_ALGORITHM));
+        }
         return worstOf(reasons);
     }
 
@@ -558,6 +566,9 @@ final class PreviousSignaturesBridge {
                 validities.add(new SignValidity(SIGN_DETAIL_TYPE.KO,
                         VALIDITY_ERROR.CERTIFIED_SIGN_REVISION));
             }
+            if (isBroken(pkcs7.getHashAlgorithm())) {
+                validities.add(unsupportedAlgorithm());
+            }
             final boolean unrecognizedSubFilter = hasUnrecognizedSubFilter(fields, name);
             final Reason worst = worstReason(
                     stamp == null ? validities : atStampTime(validities, signer, stamp.at()),
@@ -650,10 +661,59 @@ final class PreviousSignaturesBridge {
             case SIGN_PROFILE_NOT_CHECKED -> unrecognizedSubFilter
                     ? Reason.of(Problem.UNKNOWN_SIGNATURE_TYPE)
                     : null;
-            case ALGORITHM_NOT_SUPPORTED, UNKOWN_SIGNATURE_FORMAT ->
-                    Reason.of(Problem.UNKNOWN_SIGNATURE_TYPE);
+            case ALGORITHM_NOT_SUPPORTED -> Reason.of(Problem.UNSUPPORTED_ALGORITHM);
+            case UNKOWN_SIGNATURE_FORMAT -> Reason.of(Problem.UNKNOWN_SIGNATURE_TYPE);
             default -> Reason.of(Problem.DAMAGED);
         };
+    }
+
+    private static final Set<String> BROKEN_DIGEST_NAMES = Set.of("MD2", "MD5");
+
+    private static final Set<String> BROKEN_DIGEST_OIDS =
+            Set.of("1.2.840.113549.2.2", "1.2.840.113549.2.5",
+                    "1.2.840.113549.1.1.2", "1.2.840.113549.1.1.4");
+
+    private static final Pattern BROKEN_XML_DIGEST = Pattern.compile("(?i)[#/-](md2|md5)$");
+
+    /** Si el resumen es MD5 o MD2, por su OID (tambien el compuesto md5WithRSA o md2WithRSA) o por su nombre. */
+    static boolean isBroken(final String digest) {
+        return digest != null && (BROKEN_DIGEST_OIDS.contains(digest)
+                || BROKEN_DIGEST_NAMES.contains(digest.toUpperCase(Locale.ROOT).replace("-", "")));
+    }
+
+    /** Si el resumen o el algoritmo de firma del firmante es MD5 o MD2. */
+    static boolean usesBrokenCmsAlgorithm(final SignerInformation signer) {
+        return isBroken(signer.getDigestAlgOID()) || isBroken(signer.getEncryptionAlgOID());
+    }
+
+    private static SignValidity unsupportedAlgorithm() {
+        return new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.ALGORITHM_NOT_SUPPORTED);
+    }
+
+    /** Si el {@code ds:SignedInfo} propio de la firma declara MD5 o MD2, en su firma o en sus referencias. */
+    static boolean usesBrokenXmlDigest(final Element signature) {
+        final Element signedInfo = firstChild(signature, "SignedInfo");
+        if (signedInfo == null) {
+            return false;
+        }
+        final List<Element> methods = new ArrayList<>(children(signedInfo, "SignatureMethod"));
+        for (final Element reference : children(signedInfo, "Reference")) {
+            methods.addAll(children(reference, "DigestMethod"));
+        }
+        return methods.stream().anyMatch(method ->
+                BROKEN_XML_DIGEST.matcher(method.getAttribute("Algorithm")).find());
+    }
+
+    /** Si alguna firma del documento, contrafirmas incluidas, resume con MD5 o MD2. */
+    static boolean usesBrokenDigest(final byte[] document) {
+        return read(document).signatures().stream().anyMatch(PreviousSignaturesBridge::isBrokenTree);
+    }
+
+    private static boolean isBrokenTree(final Signature signature) {
+        return signature.validityReason() != null
+                && signature.validityReason().problem() == Problem.UNSUPPORTED_ALGORITHM
+                || signature.countersignatures().stream()
+                        .anyMatch(PreviousSignaturesBridge::isBrokenTree);
     }
 
     private static final Map<String, String> DIGESTS = Map.of(

@@ -233,6 +233,7 @@ fn validity_reason_of(entry: &serde_json::Value) -> Result<Option<ValidityReason
             date: field(reason, "date")?.to_owned(),
         },
         "unknownSignatureType" => ValidityReason::UnknownSignatureType,
+        "unsupportedAlgorithm" => ValidityReason::UnsupportedAlgorithm,
         "cosignNotAdmitted" => ValidityReason::CosignNotAdmitted {
             closed_by: optional_name("closedBy"),
         },

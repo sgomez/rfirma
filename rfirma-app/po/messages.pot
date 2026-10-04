@@ -1084,6 +1084,10 @@ msgstr ""
 msgid "signatureReason.unknownSignatureType"
 msgstr ""
 
+#. Motivo de una firma no válida: resume con MD5 o MD2.
+msgid "signatureReason.unsupportedAlgorithm"
+msgstr ""
+
 #. Motivo de una firma no válida. {{name}}: quien cerró el documento a más firmas.
 msgid "signatureReason.cosignNotAdmitted"
 msgstr ""

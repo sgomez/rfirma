@@ -24,6 +24,8 @@ pub enum ValidityReason {
         date: String,
     },
     UnknownSignatureType,
+    /// La firma resume con MD5 o MD2.
+    UnsupportedAlgorithm,
     /// Cofirma de un documento que no admitía más firmas, cerrado por `closed_by`, su nombre común.
     CosignNotAdmitted {
         closed_by: Option<String>,

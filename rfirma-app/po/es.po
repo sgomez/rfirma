@@ -1158,6 +1158,10 @@ msgstr "El certificado no se podía usar antes del {{date}}"
 msgid "signatureReason.unknownSignatureType"
 msgstr "rFirma no conoce este tipo de firma"
 
+#. Motivo de una firma no válida: resume con MD5 o MD2.
+msgid "signatureReason.unsupportedAlgorithm"
+msgstr "La firma usa un algoritmo de resumen no admitido (MD5 o MD2)"
+
 #. Motivo de una firma no válida. {{name}}: quien cerró el documento a más firmas.
 msgid "signatureReason.cosignNotAdmitted"
 msgstr "{{name}} no admitía más firmas"

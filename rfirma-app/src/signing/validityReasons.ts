@@ -28,6 +28,8 @@ export function validityReasonText(t: TFunction, reason: ValidityReason, locale:
       });
     case "unknownSignatureType":
       return t("signatureReason.unknownSignatureType");
+    case "unsupportedAlgorithm":
+      return t("signatureReason.unsupportedAlgorithm");
     case "cosignNotAdmitted":
       return reason.closedBy === null
         ? t("signatureReason.cosignNotAdmittedUnnamed")
