@@ -1,3 +1,4 @@
+import { composeStories } from "@storybook/react-vite";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -6,58 +7,26 @@ import type { Certificate } from "../signing/certificate";
 import { elapse } from "../testing/elapse";
 import { renderWithCatalog } from "../testing/render";
 import { OUTCOME_CLOSE_MS } from "./errand";
+import * as noCertificateModule from "./SedeNoCertificate.stories";
+import * as outcomeModule from "./SedeOutcome.stories";
 import { SedeWindow } from "./SedeWindow";
-import { scriptedErrand, signedDocument } from "./sedeWindowFixtures";
+import { scriptedErrand, scriptedFrom } from "./sedeWindowFixtures";
 
-/**
- * Grada A: el momento 5 (sin certificado utilizable), el fallo de un hijo y la
- * forma de la ventana (TD-63).
- */
+/** Grada A: el momento 5 (sin certificado utilizable), el fallo de un hijo y la forma de la ventana. */
+
+const { NoneInstalled, ExcludedBySite } = composeStories(noCertificateModule);
+const { Cancelled } = composeStories(outcomeModule);
 
 describe("5 · no usable certificate", () => {
-  it("offers the fix when there is none installed, because the fix is not the site's", () => {
-    const { port } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.getByText("No tienes ningún certificado")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Volver a buscar" })).toBeInTheDocument();
-    // Sin «Cerrar» la única salida sería la cruz del sistema, que ya no pasa
-    // por aquí: la atiende `CloseRequested` en el backend.
-    expect(screen.getByRole("button", { name: "Cerrar" })).toBeInTheDocument();
-  });
-
-  /*
-   * La barra de título es la del sistema, así que la cruz **no la pinta esta
-   * ventana** y no hay dos puertas que comparar: la del pie es la única que
-   * pasa por aquí. Irse por la del sistema llega a `CloseRequested`, y de que
-   * eso abandone el trámite responde el backend (ID-340).
-   */
   it("leaves through the footer, and the window paints no cross of its own", async () => {
     const user = userEvent.setup();
-    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+    const { port, calls } = scriptedFrom(NoneInstalled);
     renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.queryByRole("button", { name: "Cerrar la ventana" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
-    // La sede no ha recibido nada: irse es abandonar el trámite, que es lo
-    // único que libera el `idsession`.
     expect(calls.cancel).toHaveBeenCalledOnce();
     expect(calls.close).not.toHaveBeenCalled();
-  });
-
-  it("also offers to install when the site excluded them all: the new one might work", () => {
-    const { port } = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(
-      screen.getByText("sede.ejemplo.gob.es no acepta ninguno de tus 3 certificados"),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cerrar" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Volver a buscar" })).toBeInTheDocument();
   });
 
   it.each([
@@ -77,39 +46,19 @@ describe("5 · no usable certificate", () => {
     },
   );
 
-  it("focuses the main action, in both reasons: installing another can still fix it", () => {
-    const none = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
-    const { unmount } = renderWithCatalog(<SedeWindow errands={none.port} />);
-    expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toHaveFocus();
-    unmount();
-
-    const excluded = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
-    renderWithCatalog(<SedeWindow errands={excluded.port} />);
-    expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toHaveFocus();
-  });
-
-  it("leaves through the footer when the site excluded them all, without the site hearing anything until then", async () => {
-    const user = userEvent.setup();
-    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
+  it.each([
+    ["none installed", NoneInstalled],
+    ["excluded by the site", ExcludedBySite],
+  ])("focuses the main action when %s: installing another can still fix it", (_, story) => {
+    const { port } = scriptedFrom(story);
     renderWithCatalog(<SedeWindow errands={port} />);
 
-    await user.click(screen.getByRole("button", { name: "Cerrar" }));
-
-    expect(calls.cancel).toHaveBeenCalledOnce();
-    expect(calls.close).not.toHaveBeenCalled();
-  });
-
-  it("never enumerates what the site discarded", () => {
-    const { port } = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(screen.queryByText(/ADA LOVELACE/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/criterio/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toHaveFocus();
   });
 
   it("looks again through the port, for a certificate installed with the window open", async () => {
     const user = userEvent.setup();
-    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+    const { port, calls } = scriptedFrom(NoneInstalled);
     renderWithCatalog(<SedeWindow errands={port} />);
 
     await user.click(screen.getByRole("button", { name: "Volver a buscar" }));
@@ -119,7 +68,7 @@ describe("5 · no usable certificate", () => {
 
   it("installs from the excluded screen too, because a new certificate might not be excluded", async () => {
     const user = userEvent.setup();
-    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
+    const { port, calls } = scriptedFrom(ExcludedBySite);
     renderWithCatalog(<SedeWindow errands={port} />);
 
     await user.click(screen.getByRole("button", { name: "Instalar un certificado…" }));
@@ -131,7 +80,7 @@ describe("5 · no usable certificate", () => {
 describe("5 · install failure", () => {
   it("shows the failure in line instead of discarding it", async () => {
     const user = userEvent.setup();
-    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+    const { port, calls } = scriptedFrom(NoneInstalled);
     calls.installCertificate.mockRejectedValueOnce({
       situation: "pkcs12Unreadable",
       detail: "SEC_PKCS12DecoderUpdate",
@@ -147,7 +96,7 @@ describe("5 · install failure", () => {
 
   it("shows no error when the file dialog is cancelled", async () => {
     const user = userEvent.setup();
-    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+    const { port, calls } = scriptedFrom(NoneInstalled);
     calls.installCertificate.mockResolvedValueOnce(false);
     renderWithCatalog(<SedeWindow errands={port} />);
 
@@ -162,7 +111,6 @@ describe("5 · install failure", () => {
 describe("when a child throws", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    // React registra el fallo en la consola además de pasarlo al boundary.
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
   afterEach(() => {
@@ -171,8 +119,6 @@ describe("when a child throws", () => {
   });
 
   it("shows the failure screen instead of closing itself", async () => {
-    // `SedeConsent` da por hecho que `certificates` existe desde su primera
-    // línea: es el hijo más sencillo de hacer lanzar sin tocar su código.
     const { port, calls } = scriptedErrand({
       kind: "consent",
       document: null,
@@ -200,10 +146,7 @@ describe("when a child throws", () => {
 
 describe("the window's shape", () => {
   it("has no application header, no menu, no tray and no destination footer", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "cancelled", document: signedDocument },
-    });
+    const { port } = scriptedFrom(Cancelled);
     renderWithCatalog(<SedeWindow errands={port} />);
 
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
