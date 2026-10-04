@@ -2,6 +2,7 @@
 
 import { type ReactNode, useCallback, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { AlertIcon, ExternalLinkIcon, MenuIcon } from "../design-system/icons";
 import { Popover } from "../design-system/Popover";
 import "./Header.css";
@@ -77,24 +78,20 @@ export function Header({
       <span className="header__gap" />
       <div className="header__end">
         {hasAttention && (
-          <button
-            type="button"
-            className="rf-btn header__button header__attention"
+          <Button
+            className="header__button header__attention"
             aria-label={t("header.attention")}
             title={t("header.attention")}
             onClick={onOpenStatus}
           >
             <AlertIcon size={16} />
-          </button>
+          </Button>
         )}
         {menuAnchor === "header" && (
           <div className="header__menu" ref={container}>
-            <button
-              type="button"
+            <Button
               ref={trigger}
-              className={
-                open ? "rf-btn header__button header__button--open" : "rf-btn header__button"
-              }
+              className={open ? "header__button header__button--open" : "header__button"}
               aria-label={t("header.menu")}
               aria-haspopup="menu"
               aria-expanded={open}
@@ -102,7 +99,7 @@ export function Header({
               onClick={() => setOpen((wasOpen) => !wasOpen)}
             >
               <MenuIcon size={18} />
-            </button>
+            </Button>
             <Popover
               open={open}
               onClose={close}
@@ -112,45 +109,25 @@ export function Header({
               id={menuId}
               role="menu"
             >
-              <button
-                type="button"
-                role="menuitem"
-                className="rf-btn header__entry"
-                onClick={choose(onOpenStatus)}
-              >
+              <Button role="menuitem" className="header__entry" onClick={choose(onOpenStatus)}>
                 <span className="header__entryLabel">{t("status.title")}</span>
                 <span className="header__entryIcon" aria-hidden="true" />
-              </button>
+              </Button>
               <hr className="rf-divider header__divider" />
-              <button
-                type="button"
-                role="menuitem"
-                className="rf-btn header__entry"
-                onClick={choose(onOpenPreferences)}
-              >
+              <Button role="menuitem" className="header__entry" onClick={choose(onOpenPreferences)}>
                 <span className="header__entryLabel">{t("header.preferences")}</span>
                 <span className="header__entryIcon" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="rf-btn header__entry"
-                onClick={choose(onOpenHelp)}
-              >
+              </Button>
+              <Button role="menuitem" className="header__entry" onClick={choose(onOpenHelp)}>
                 <span className="header__entryLabel">{t("header.help")}</span>
                 <span className="header__entryIcon" aria-hidden="true">
                   <ExternalLinkIcon />
                 </span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="rf-btn header__entry"
-                onClick={choose(onOpenAbout)}
-              >
+              </Button>
+              <Button role="menuitem" className="header__entry" onClick={choose(onOpenAbout)}>
                 <span className="header__entryLabel">{t("header.about")}</span>
                 <span className="header__entryIcon" aria-hidden="true" />
-              </button>
+              </Button>
             </Popover>
           </div>
         )}
