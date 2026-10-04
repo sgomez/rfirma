@@ -50,6 +50,17 @@ fn verify_json_of_a_valid_signature_gives_it_valid_with_its_certificate() {
 }
 
 #[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn verify_json_of_a_cades_made_with_the_ec_certificate_gives_the_ecdsa_name_and_oid() {
+    let verified = in_json(&a_cades_signed_with_the_ec_certificate());
+
+    assert_eq!(
+        verified["signatures"][0]["signatureAlgorithm"],
+        serde_json::json!({"name": "ecdsa-with-SHA256", "oid": "1.2.840.10045.4.3.2"})
+    );
+}
+
+#[test]
 #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
 fn verify_json_of_a_tampered_cades_gives_it_invalid_and_modified_after_signing() {
     let verified = in_json(&a_tampered_cades());
@@ -106,7 +117,13 @@ fn verify_json_of_a_pdf_signed_twice_gives_both_signatures_with_the_token_certif
                 .is_some_and(|subject| subject.contains(&format!("CN={common_name}"))),
             "{certificate}"
         );
-        assert_eq!(signature["signatureAlgorithm"]["name"], "SHA256withRSA");
+        assert_eq!(
+            signature["signatureAlgorithm"],
+            serde_json::json!({
+                "name": "sha256WithRSAEncryption",
+                "oid": "1.2.840.113549.1.1.11"
+            })
+        );
         let signed_at = signature["signingTime"]["at"]
             .as_str()
             .and_then(|at| DateTime::parse_from_rfc3339(at).ok())

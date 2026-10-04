@@ -90,7 +90,10 @@ fn verify_json_gives_the_standard_and_each_signature_from_the_previous_signature
                     "notBefore": "2025-01-01T00:00:00Z",
                     "notAfter": "2029-01-01T00:00:00Z",
                 },
-                "signatureAlgorithm": {"name": "SHA256withRSA"},
+                "signatureAlgorithm": {
+                    "name": "sha256WithRSAEncryption",
+                    "oid": "1.2.840.113549.1.1.11",
+                },
                 "signingTime": {"at": "2026-09-14T08:32:05Z", "source": "declared"},
                 "closesDocument": false,
                 "countersignatures": [],
@@ -130,6 +133,21 @@ fn a_signature_with_only_the_bridge_signing_time_gives_it_as_declared() {
     assert_eq!(
         signature["signingTime"],
         json!({"at": "2026-09-14T08:32:05Z", "source": "declared"})
+    );
+}
+
+#[test]
+fn an_algorithm_out_of_the_table_goes_with_its_jca_name_and_no_oid() {
+    let signature = DocumentSignature {
+        signature_algorithm: Some("MD5withRSA".to_owned()),
+        ..a_complete_signature()
+    };
+
+    let verified = in_json(vec![signature]);
+
+    assert_eq!(
+        verified["signatures"][0]["signatureAlgorithm"],
+        json!({"name": "MD5withRSA"})
     );
 }
 

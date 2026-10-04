@@ -26,7 +26,10 @@ use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate
 use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, XadesVariant};
 
-use support::{a_cycle_of, a_cycle_signed_by, a_one_page_pdf, certificate_labelled, PIN};
+use support::{
+    a_cycle_of, a_cycle_signed_by, a_one_page_pdf, certificate_labelled,
+    ecdsa_composed_for_the_ec_certificate, ACTIVE_EC, CHALLENGE, PIN,
+};
 
 fn sample(relative: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -213,6 +216,23 @@ fn a_pdf_signed_twice_with_the_token() -> PathBuf {
     );
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("verify-signed-twice.pdf");
     std::fs::write(&path, twice).expect("el PDF firmado dos veces se escribe");
+    path
+}
+
+/// Una firma CAdES implícita hecha con el certificado de curva elíptica del token.
+fn a_cades_signed_with_the_ec_certificate() -> PathBuf {
+    let certificate = certificate_labelled(ACTIVE_EC);
+    let signed = a_cycle_signed_by(
+        &certificate,
+        PIN,
+        Format::Cades,
+        ecdsa_composed_for_the_ec_certificate(&certificate),
+        CHALLENGE,
+        SignatureOperation::Sign,
+        &[("mode", "implicit")],
+    );
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("verify-ecdsa.p7s");
+    std::fs::write(&path, signed).expect("la firma ECDSA se escribe");
     path
 }
 
