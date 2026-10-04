@@ -86,13 +86,17 @@ msgstr "Zerbait okerra gertatu da"
 
 #. «Comentarios y ayuda» es header.help, el botón que sale debajo.
 msgid "errors.messages.retry.body"
-msgstr "Saiatu berriro. Berriz gertatzen bada, partekatu xehetasun teknikoa «Iruzkinak eta laguntza» atalean."
+msgstr ""
+"Saiatu berriro. Berriz gertatzen bada, partekatu xehetasun teknikoa "
+"«Iruzkinak eta laguntza» atalean."
 
 msgid "errors.messages.handlerNotAvailable.title"
 msgstr "Ezin da aldatu estekak nork artatzen dituen"
 
 msgid "errors.messages.handlerNotAvailable.body"
-msgstr "rFirmaren bertsio honek ezin du aukera hori idatzi: mahaigainaren ezarpenetan aldatzen da."
+msgstr ""
+"rFirmaren bertsio honek ezin du aukera hori idatzi: mahaigainaren "
+"ezarpenetan aldatzen da."
 
 #. Mensaje genérico: elegir otra imagen de rúbrica. Lo usan notAnAcceptedImage, damagedImage, imageTooLarge, sourceUnreadable, storeUnwritable y storeUnreadable.
 msgid "errors.messages.otherImage.title"
@@ -210,13 +214,16 @@ msgid "errors.messages.noKeyring.title"
 msgstr "Mahaigaineko gako-sortak ez du erantzuten"
 
 msgid "errors.messages.noKeyring.body"
-msgstr "Desblokea ezazu edo egiaztatu zure mahaigainak bat duela, eta saiatu berriro."
+msgstr ""
+"Desblokea ezazu edo egiaztatu zure mahaigainak bat duela, eta saiatu berriro."
 
 msgid "errors.messages.keyringPinMissing.title"
 msgstr "Gako-sortak Biltegiaren PINa galdu du"
 
 msgid "errors.messages.keyringPinMissing.body"
-msgstr "Hustu Biltegia Hobespenak → Ziurtagiriak atalean eta instalatu berriro zure ziurtagiriak."
+msgstr ""
+"Hustu Biltegia Hobespenak → Ziurtagiriak atalean eta instalatu berriro zure "
+"ziurtagiriak."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
@@ -793,7 +800,9 @@ msgstr[2] "{{count}} orrialde sinadura ikusgairik gabe geratuko dira"
 
 #. Cuerpo del diálogo de páginas sin firma visible; el título, en plural, dice cuántas páginas son.
 msgid "sealLoss.body"
-msgstr "Laukia ez da sartzen jarri zenuen orrialdea baino txikiagoak diren orrialdeetan. Sinadura baliozkoa izango da dokumentu osoan."
+msgstr ""
+"Laukia ez da sartzen jarri zenuen orrialdea baino txikiagoak diren "
+"orrialdeetan. Sinadura baliozkoa izango da dokumentu osoan."
 
 msgid "actions.signAnyway"
 msgstr "Sinatu hala ere"
@@ -1063,7 +1072,8 @@ msgid "preferences.consentCountdown.label"
 msgstr "Itxaron 3 segundo sinatu aurretik"
 
 msgid "preferences.honourAutomaticSelection.label"
-msgstr "Ziurtagiri bakarrak balio badu eta egoitzak uzten badu, erabili galdetu gabe"
+msgstr ""
+"Ziurtagiri bakarrak balio badu eta egoitzak uzten badu, erabili galdetu gabe"
 
 msgid "preferences.rememberActivity.label"
 msgstr "Gogoratu nire jarduera"
@@ -1073,7 +1083,8 @@ msgstr "Azken dokumentuak eta azkenekoz erabilitako ziurtagiria."
 
 #. Único texto del diálogo de confirmación, y su nombre accesible; el botón es «Borrar y apagar».
 msgid "preferences.rememberActivity.confirm.body"
-msgstr "Azken dokumentuak eta azkenekoz erabilitako ziurtagiria ezabatuko dira."
+msgstr ""
+"Azken dokumentuak eta azkenekoz erabilitako ziurtagiria ezabatuko dira."
 
 msgid "preferences.rememberActivity.confirm.accept"
 msgstr "Ezabatu eta itzali"
@@ -1140,7 +1151,10 @@ msgstr "Azken bertsioan zaude"
 
 #. Cuerpo del aviso de independencia, bajo about.independenceLead.
 msgid "about.independence"
-msgstr "rFirmak ez du zerikusirik AutoFirmarekin, ez eta Estatuko Administrazio Orokorrarekin ere, eta ez du haien babesik. Jakinarazi haren akatsak gure biltegian, ez AutoFirmaren taldeari."
+msgstr ""
+"rFirmak ez du zerikusirik AutoFirmarekin, ez eta Estatuko Administrazio "
+"Orokorrarekin ere, eta ez du haien babesik. Jakinarazi haren akatsak gure "
+"biltegian, ez AutoFirmaren taldeari."
 
 #. Título del aviso de independencia, en Acerca de y en la bienvenida del asistente; le sigue about.independence.
 msgid "about.independenceLead"
@@ -1174,7 +1188,9 @@ msgid "setup.welcome.title"
 msgstr "Konfiguratu rFirma"
 
 msgid "setup.welcome.body"
-msgstr "rFirma AutoFirma {{version}} bertsioarekin bateragarria da. Egoitzetan erabiltzeko, zure ekipoa prestatu behar da."
+msgstr ""
+"rFirma AutoFirma {{version}} bertsioarekin bateragarria da. Egoitzetan "
+"erabiltzeko, zure ekipoa prestatu behar da."
 
 msgid "setup.step"
 msgstr "Urratsa {{current}}/{{total}}"
@@ -1350,13 +1366,19 @@ msgid "sede.confirm.messages.pdfShadowAttackSuspect"
 msgstr "Badirudi PDFa azken sinaduraren ondoren aldatu dela."
 
 msgid "sede.confirm.messages.signingCertifiedPdf"
-msgstr "Sinatu nahi duzun PDFa ziurtatuta dago, eta ez du sinadura berririk onartzen. Zurea gehitzeak aurreko sinadura baliogabetuko du."
+msgstr ""
+"Sinatu nahi duzun PDFa ziurtatuta dago, eta ez du sinadura berririk "
+"onartzen. Zurea gehitzeak aurreko sinadura baliogabetuko du."
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
-msgstr "PDF dokumentuak inprimaki bat du, eta haren eremuak sinatu ondoren aldatu dira."
+msgstr ""
+"PDF dokumentuak inprimaki bat du, eta haren eremuak sinatu ondoren aldatu "
+"dira."
 
 msgid "sede.confirm.messages.unknown"
-msgstr "Sinadura-balidatzaileak jarraitu aurretik berretsi beharreko zerbait adierazi du ({{code}})."
+msgstr ""
+"Sinadura-balidatzaileak jarraitu aurretik berretsi beharreko zerbait "
+"adierazi du ({{code}})."
 
 msgid "sede.marking.title"
 msgstr "Markatu non doan zure sinadura"
@@ -1479,7 +1501,10 @@ msgid "sede.oldWebClient.title"
 msgstr "Orri hau zaharkituta dago"
 
 msgid "sede.oldWebClient.body"
-msgstr "Orriak rFirmarekin hitz egiten duen piezaren bertsio zahar bat erabiltzen du, eta akatsak izan ditzake edo baliteke segurua ez izatea. Sakatu Jarraitu aurrera egiteko; zerbait gaizki badoa, jakinarazi orria kudeatzen duenari."
+msgstr ""
+"Orriak rFirmarekin hitz egiten duen piezaren bertsio zahar bat erabiltzen "
+"du, eta akatsak izan ditzake edo baliteke segurua ez izatea. Sakatu Jarraitu "
+"aurrera egiteko; zerbait gaizki badoa, jakinarazi orria kudeatzen duenari."
 
 msgid "sede.refusals.retry"
 msgstr "Itzuli egoitzara eta saiatu berriro."
@@ -1491,24 +1516,32 @@ msgid "sede.refusals.closeOther"
 msgstr "Itxi beste izapidea edo beste sinadura-aplikazioa, eta saiatu berriro."
 
 msgid "sede.refusals.otherCertificate"
-msgstr "Ezin da ziurtagiri horrekin sinatu. Itzuli egoitzara eta aukeratu beste bat."
+msgstr ""
+"Ezin da ziurtagiri horrekin sinatu. Itzuli egoitzara eta aukeratu beste bat."
 
 #. La causa de seguridad, antes de la acción: la persona no lee el detalle técnico.
 msgid "sede.refusalCauses.sha1"
-msgstr "Egoitzak SHA-1 erabiltzen duen sinadura bat eskatu du, eta hori ez da segurua jada."
+msgstr ""
+"Egoitzak SHA-1 erabiltzen duen sinadura bat eskatu du, eta hori ez da "
+"segurua jada."
 
 msgid "sede.refusalCauses.explicitXades"
-msgstr "Egoitzak sinadura mota zahar bat eskatu du, beste dokumentu baten sinadura balitz bezala aurkez daitekeena."
+msgstr ""
+"Egoitzak sinadura mota zahar bat eskatu du, beste dokumentu baten sinadura "
+"balitz bezala aurkez daitekeena."
 
 msgid "sede.refusalCauses.invoiceMultisignature"
-msgstr "Egoitzak bigarren sinadura bat gehitzeko eskatu du faktura elektroniko batean, eta faktura elektronikoek sinadura bakarra onartzen dute."
+msgstr ""
+"Egoitzak bigarren sinadura bat gehitzeko eskatu du faktura elektroniko "
+"batean, eta faktura elektronikoek sinadura bakarra onartzen dute."
 
 msgid "sede.refusalCauses.unsupportedCountersignature"
-msgstr "Egoitzak beste pertsona baten sinaduraren gainean sinatzeko eskatu du, hori onartzen ez duen dokumentu mota batean."
+msgstr ""
+"Egoitzak beste pertsona baten sinaduraren gainean sinatzeko eskatu du, hori "
+"onartzen ez duen dokumentu mota batean."
 
 msgid "sede.siteNotes.sha1"
-msgstr ""
-"Eskatu SHA256withRSA edo handiagoa."
+msgstr "Eskatu SHA256withRSA edo handiagoa."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""
@@ -1564,81 +1597,3 @@ msgstr[2] "Zure --filter-ak ez du zure {{count}} ziurtagirietako bat ere uzten"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Instalatu beste ziurtagiri bat, edo itxi eta jarraitu egoitzatik."
-
-#~ msgid "tabs.open"
-#~ msgstr "Ireki PDF bat"
-
-#~ msgid "panel.visibleSignature.rubric.title"
-#~ msgstr "Errubrikaren irudia"
-
-#~ msgid "panel.visibleSignature.content"
-#~ msgstr "Edukia"
-
-#~ msgid "panel.visibleSignature.fields.rubric"
-#~ msgstr "Errubrika"
-
-#~ msgid "panel.visibleSignature.fields.rubricDisabled"
-#~ msgstr "Aukeratu lehenik irudi bat"
-
-#~ msgid "panel.visibleSignature.fields.signerName"
-#~ msgstr "Sinatzailea"
-
-#~ msgid "panel.visibleSignature.fields.issuer"
-#~ msgstr "Jaulkitzailea"
-
-#~ msgid "panel.visibleSignature.fields.signedAt"
-#~ msgstr "Data"
-
-#~ msgid "panel.visibleSignature.fields.reason"
-#~ msgstr "Arrazoia"
-
-#~ msgid "panel.visibleSignature.reason.label"
-#~ msgstr "Arrazoia"
-
-#~ msgid "panel.visibleSignature.reason.placeholder"
-#~ msgstr "Ados"
-
-#~ msgid "trust.notice.title"
-#~ msgstr "Egoitza batek sinadura eskatzen dizunean"
-
-#~ msgid "trust.notice.localCa"
-#~ msgstr ""
-#~ "rFirmak konfiantzazko tokiko erakunde bat instalatu du zure "
-#~ "ordenagailuan. Hori behar da nabigatzaileak rFirmarekiko konexioa onar "
-#~ "dezan, egoitza elektroniko batek sinatzeko eskatzen dizunean."
-
-#~ msgid "trust.notice.localNetwork"
-#~ msgstr ""
-#~ "Lehen aldian, nabigatzaileak tokiko sarera sartzeko baimena eskatuko "
-#~ "dizu. Egoitzaren izenean eskatzen du, ez rFirmaren izenean; beraz, "
-#~ "baliteke ez ezagutzea. Eman baimena agertzen denean: baimen bakarra "
-#~ "nahikoa da, egoitzak hiru konexiotaraino probatzen baditu ere."
-
-#~ msgid "trust.notice.cannotTellIfDenied"
-#~ msgstr ""
-#~ "Ukatzen baduzu, rFirmak ezin izango du jakin, ez eta esan ere: abisu hori "
-#~ "osorik nabigatzailearen barruan gertatzen da."
-
-#~ msgid "trust.notice.acknowledge"
-#~ msgstr "Ulertuta"
-
-#~ msgid "pin.title"
-#~ msgstr "Sartu PINa"
-
-#~ msgid "pin.signingAs"
-#~ msgstr "{{holder}} · {{idNumber}}"
-
-#~ msgid "pin.subjectBrowser"
-#~ msgstr "{{browser}}(e)ko zure ziurtagiriak"
-
-#~ msgid "pin.label"
-#~ msgstr "PINa"
-
-#~ msgid "pin.incorrect"
-#~ msgstr "PIN okerra"
-
-#~ msgid "pin.incorrectPassword"
-#~ msgstr "Pasahitz okerra"
-
-#~ msgid "pin.submit"
-#~ msgstr "Sinatu"

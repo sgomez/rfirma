@@ -84,13 +84,17 @@ msgstr "Alguna cosa ha fallat"
 
 #. «Comentarios y ayuda» es header.help, el botón que sale debajo.
 msgid "errors.messages.retry.body"
-msgstr "Torna-ho a intentar. Si es repeteix, comparteix el detall tècnic a «Comentaris i ajuda»."
+msgstr ""
+"Torna-ho a intentar. Si es repeteix, comparteix el detall tècnic a "
+"«Comentaris i ajuda»."
 
 msgid "errors.messages.handlerNotAvailable.title"
 msgstr "No es pot canviar qui atén els enllaços"
 
 msgid "errors.messages.handlerNotAvailable.body"
-msgstr "Aquesta versió de rFirma no pot escriure aquesta elecció: es canvia als ajustos de l'escriptori."
+msgstr ""
+"Aquesta versió de rFirma no pot escriure aquesta elecció: es canvia als "
+"ajustos de l'escriptori."
 
 #. Mensaje genérico: elegir otra imagen de rúbrica. Lo usan notAnAcceptedImage, damagedImage, imageTooLarge, sourceUnreadable, storeUnwritable y storeUnreadable.
 msgid "errors.messages.otherImage.title"
@@ -208,13 +212,17 @@ msgid "errors.messages.noKeyring.title"
 msgstr "El clauer de l'escriptori no respon"
 
 msgid "errors.messages.noKeyring.body"
-msgstr "Desbloqueja'l o comprova que el teu escriptori en té un, i torna-ho a intentar."
+msgstr ""
+"Desbloqueja'l o comprova que el teu escriptori en té un, i torna-ho a "
+"intentar."
 
 msgid "errors.messages.keyringPinMissing.title"
 msgstr "El clauer ha perdut el PIN de l'Emmagatzematge"
 
 msgid "errors.messages.keyringPinMissing.body"
-msgstr "Buida l'Emmagatzematge a Preferències → Certificats i torna a instal·lar els teus certificats."
+msgstr ""
+"Buida l'Emmagatzematge a Preferències → Certificats i torna a instal·lar els "
+"teus certificats."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
@@ -791,7 +799,9 @@ msgstr[2] "{{count}} pàgines quedaran sense signatura visible"
 
 #. Cuerpo del diálogo de páginas sin firma visible; el título, en plural, dice cuántas páginas son.
 msgid "sealLoss.body"
-msgstr "El requadre no cap en pàgines més petites que aquella on el vas col·locar. La signatura serà vàlida a tot el document."
+msgstr ""
+"El requadre no cap en pàgines més petites que aquella on el vas col·locar. "
+"La signatura serà vàlida a tot el document."
 
 msgid "actions.signAnyway"
 msgstr "Signar de totes maneres"
@@ -1061,7 +1071,9 @@ msgid "preferences.consentCountdown.label"
 msgstr "Esperar 3 segons abans de signar"
 
 msgid "preferences.honourAutomaticSelection.label"
-msgstr "Si només serveix un certificat i la seu ho permet, fer-lo servir sense preguntar"
+msgstr ""
+"Si només serveix un certificat i la seu ho permet, fer-lo servir sense "
+"preguntar"
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar la meva activitat"
@@ -1138,7 +1150,10 @@ msgstr "Tens l'última versió"
 
 #. Cuerpo del aviso de independencia, bajo about.independenceLead.
 msgid "about.independence"
-msgstr "rFirma no està relacionada amb AutoFirma ni amb l'Administració General de l'Estat, ni compta amb el seu suport. Avisa dels seus errors al nostre repositori, no a l'equip d'AutoFirma."
+msgstr ""
+"rFirma no està relacionada amb AutoFirma ni amb l'Administració General de "
+"l'Estat, ni compta amb el seu suport. Avisa dels seus errors al nostre "
+"repositori, no a l'equip d'AutoFirma."
 
 #. Título del aviso de independencia, en Acerca de y en la bienvenida del asistente; le sigue about.independence.
 msgid "about.independenceLead"
@@ -1172,7 +1187,9 @@ msgid "setup.welcome.title"
 msgstr "Configurar rFirma"
 
 msgid "setup.welcome.body"
-msgstr "rFirma és compatible amb AutoFirma {{version}}. Per fer-la servir a les seus, cal preparar el teu equip."
+msgstr ""
+"rFirma és compatible amb AutoFirma {{version}}. Per fer-la servir a les "
+"seus, cal preparar el teu equip."
 
 msgid "setup.step"
 msgstr "Pas {{current}} de {{total}}"
@@ -1346,13 +1363,18 @@ msgid "sede.confirm.messages.pdfShadowAttackSuspect"
 msgstr "Sembla que el PDF s'ha modificat després de l'última signatura."
 
 msgid "sede.confirm.messages.signingCertifiedPdf"
-msgstr "El PDF que vols signar està certificat i no admet noves signatures. Afegir-hi la teva invalidarà la signatura anterior."
+msgstr ""
+"El PDF que vols signar està certificat i no admet noves signatures. Afegir-"
+"hi la teva invalidarà la signatura anterior."
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
-msgstr "El PDF té un formulari amb camps que s'han canviat després de signar-lo."
+msgstr ""
+"El PDF té un formulari amb camps que s'han canviat després de signar-lo."
 
 msgid "sede.confirm.messages.unknown"
-msgstr "El validador de signatures ha trobat alguna cosa que has de confirmar abans de seguir ({{code}})."
+msgstr ""
+"El validador de signatures ha trobat alguna cosa que has de confirmar abans "
+"de seguir ({{code}})."
 
 msgid "sede.marking.title"
 msgstr "Marca on va la teva signatura"
@@ -1471,7 +1493,10 @@ msgid "sede.oldWebClient.title"
 msgstr "Aquesta pàgina està desactualitzada"
 
 msgid "sede.oldWebClient.body"
-msgstr "La pàgina fa servir una versió antiga de la peça que parla amb rFirma, i pot tenir errors o no ser segura. Prem Continuar per seguir; si alguna cosa falla, avisa qui manté la pàgina."
+msgstr ""
+"La pàgina fa servir una versió antiga de la peça que parla amb rFirma, i pot "
+"tenir errors o no ser segura. Prem Continuar per seguir; si alguna cosa "
+"falla, avisa qui manté la pàgina."
 
 msgid "sede.refusals.retry"
 msgstr "Torna a la seu i prova-ho de nou."
@@ -1480,27 +1505,34 @@ msgid "sede.refusals.contactSite"
 msgstr "Contacta amb la seu per acabar el tràmit."
 
 msgid "sede.refusals.closeOther"
-msgstr "Tanca l'altre tràmit o l'altra aplicació de signatura i torna-ho a intentar."
+msgstr ""
+"Tanca l'altre tràmit o l'altra aplicació de signatura i torna-ho a intentar."
 
 msgid "sede.refusals.otherCertificate"
-msgstr "No es pot signar amb aquest certificat. Torna a la seu i tria'n un altre."
+msgstr ""
+"No es pot signar amb aquest certificat. Torna a la seu i tria'n un altre."
 
 #. La causa de seguridad, antes de la acción: la persona no lee el detalle técnico.
 msgid "sede.refusalCauses.sha1"
 msgstr "La seu ha demanat una signatura amb SHA-1, que ja no és segura."
 
 msgid "sede.refusalCauses.explicitXades"
-msgstr "La seu ha demanat un tipus de signatura antic que es podria fer passar per la d'un altre document."
+msgstr ""
+"La seu ha demanat un tipus de signatura antic que es podria fer passar per "
+"la d'un altre document."
 
 msgid "sede.refusalCauses.invoiceMultisignature"
-msgstr "La seu ha demanat afegir una segona signatura a una factura electrònica, que només n'admet una."
+msgstr ""
+"La seu ha demanat afegir una segona signatura a una factura electrònica, que "
+"només n'admet una."
 
 msgid "sede.refusalCauses.unsupportedCountersignature"
-msgstr "La seu ha demanat signar sobre la signatura d'una altra persona en un tipus de document que no ho permet."
+msgstr ""
+"La seu ha demanat signar sobre la signatura d'una altra persona en un tipus "
+"de document que no ho permet."
 
 msgid "sede.siteNotes.sha1"
-msgstr ""
-"Demaneu SHA256withRSA o superior."
+msgstr "Demaneu SHA256withRSA o superior."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""
@@ -1554,81 +1586,3 @@ msgstr[2] "El teu --filter no deixa cap dels teus {{count}} certificats"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Instal·la un altre certificat, o tanca i continua des de la seu."
-
-#~ msgid "tabs.open"
-#~ msgstr "Obre un PDF"
-
-#~ msgid "panel.visibleSignature.rubric.title"
-#~ msgstr "Imatge de la rúbrica"
-
-#~ msgid "panel.visibleSignature.content"
-#~ msgstr "Contingut"
-
-#~ msgid "panel.visibleSignature.fields.rubric"
-#~ msgstr "Rúbrica"
-
-#~ msgid "panel.visibleSignature.fields.rubricDisabled"
-#~ msgstr "Tria abans una imatge"
-
-#~ msgid "panel.visibleSignature.fields.signerName"
-#~ msgstr "Signant"
-
-#~ msgid "panel.visibleSignature.fields.issuer"
-#~ msgstr "Emissor"
-
-#~ msgid "panel.visibleSignature.fields.signedAt"
-#~ msgstr "Data"
-
-#~ msgid "panel.visibleSignature.fields.reason"
-#~ msgstr "Motiu"
-
-#~ msgid "panel.visibleSignature.reason.label"
-#~ msgstr "Motiu"
-
-#~ msgid "panel.visibleSignature.reason.placeholder"
-#~ msgstr "Conforme"
-
-#~ msgid "trust.notice.title"
-#~ msgstr "Quan una seu et demani la signatura"
-
-#~ msgid "trust.notice.localCa"
-#~ msgstr ""
-#~ "rFirma ha instal·lat al teu ordinador una entitat de confiança local. És "
-#~ "el que cal perquè el navegador accepti la connexió amb rFirma quan una "
-#~ "seu electrònica et demani signar."
-
-#~ msgid "trust.notice.localNetwork"
-#~ msgstr ""
-#~ "La primera vegada, el navegador et demanarà permís per accedir a la xarxa "
-#~ "local. Ho demana en nom de la seu, no de rFirma, així que pot ser que no "
-#~ "ho reconeguis. Permet-ho quan aparegui: amb un sol permís n'hi ha prou, "
-#~ "encara que la seu provi fins a tres connexions."
-
-#~ msgid "trust.notice.cannotTellIfDenied"
-#~ msgstr ""
-#~ "Si ho denegues, rFirma no ho podrà saber ni dir-t'ho: aquest avís passa "
-#~ "del tot dins del navegador."
-
-#~ msgid "trust.notice.acknowledge"
-#~ msgstr "Entesos"
-
-#~ msgid "pin.title"
-#~ msgstr "Introdueix el PIN"
-
-#~ msgid "pin.signingAs"
-#~ msgstr "{{holder}} · {{idNumber}}"
-
-#~ msgid "pin.subjectBrowser"
-#~ msgstr "Els teus certificats de {{browser}}"
-
-#~ msgid "pin.label"
-#~ msgstr "PIN"
-
-#~ msgid "pin.incorrect"
-#~ msgstr "PIN incorrecte"
-
-#~ msgid "pin.incorrectPassword"
-#~ msgstr "Contrasenya incorrecta"
-
-#~ msgid "pin.submit"
-#~ msgstr "Signar"

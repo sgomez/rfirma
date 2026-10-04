@@ -85,13 +85,17 @@ msgstr "Algo ha fallado"
 
 #. «Comentarios y ayuda» es header.help, el botón que sale debajo.
 msgid "errors.messages.retry.body"
-msgstr "Vuelve a intentarlo. Si se repite, comparte el detalle técnico en «Comentarios y ayuda»."
+msgstr ""
+"Vuelve a intentarlo. Si se repite, comparte el detalle técnico en "
+"«Comentarios y ayuda»."
 
 msgid "errors.messages.handlerNotAvailable.title"
 msgstr "No se puede cambiar quién atiende los enlaces"
 
 msgid "errors.messages.handlerNotAvailable.body"
-msgstr "Esta versión de rFirma no puede escribir esa elección: se cambia en los ajustes del escritorio."
+msgstr ""
+"Esta versión de rFirma no puede escribir esa elección: se cambia en los "
+"ajustes del escritorio."
 
 #. Mensaje genérico: elegir otra imagen de rúbrica. Lo usan notAnAcceptedImage, damagedImage, imageTooLarge, sourceUnreadable, storeUnwritable y storeUnreadable.
 msgid "errors.messages.otherImage.title"
@@ -209,13 +213,16 @@ msgid "errors.messages.noKeyring.title"
 msgstr "El llavero del escritorio no responde"
 
 msgid "errors.messages.noKeyring.body"
-msgstr "Desbloquéalo o comprueba que tu escritorio tiene uno, y vuelve a intentarlo."
+msgstr ""
+"Desbloquéalo o comprueba que tu escritorio tiene uno, y vuelve a intentarlo."
 
 msgid "errors.messages.keyringPinMissing.title"
 msgstr "El llavero ha perdido el PIN del Almacén"
 
 msgid "errors.messages.keyringPinMissing.body"
-msgstr "Vacía el Almacén en Preferencias → Certificados y vuelve a instalar tus certificados."
+msgstr ""
+"Vacía el Almacén en Preferencias → Certificados y vuelve a instalar tus "
+"certificados."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
@@ -792,7 +799,9 @@ msgstr[2] "{{count}} páginas se quedarán sin firma visible"
 
 #. Cuerpo del diálogo de páginas sin firma visible; el título, en plural, dice cuántas páginas son.
 msgid "sealLoss.body"
-msgstr "El recuadro no cabe en páginas más pequeñas que aquella donde lo colocaste. La firma será válida en todo el documento."
+msgstr ""
+"El recuadro no cabe en páginas más pequeñas que aquella donde lo colocaste. "
+"La firma será válida en todo el documento."
 
 msgid "actions.signAnyway"
 msgstr "Firmar de todos modos"
@@ -1062,7 +1071,8 @@ msgid "preferences.consentCountdown.label"
 msgstr "Esperar 3 segundos antes de firmar"
 
 msgid "preferences.honourAutomaticSelection.label"
-msgstr "Si solo sirve un certificado y la sede lo permite, usarlo sin preguntar"
+msgstr ""
+"Si solo sirve un certificado y la sede lo permite, usarlo sin preguntar"
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar mi actividad"
@@ -1139,7 +1149,10 @@ msgstr "Estás en la última versión"
 
 #. Cuerpo del aviso de independencia, bajo about.independenceLead.
 msgid "about.independence"
-msgstr "rFirma no está relacionada con AutoFirma ni con la Administración General del Estado, ni cuenta con su respaldo. Avisa de sus fallos en nuestro repositorio, no al equipo de AutoFirma."
+msgstr ""
+"rFirma no está relacionada con AutoFirma ni con la Administración General "
+"del Estado, ni cuenta con su respaldo. Avisa de sus fallos en nuestro "
+"repositorio, no al equipo de AutoFirma."
 
 #. Título del aviso de independencia, en Acerca de y en la bienvenida del asistente; le sigue about.independence.
 msgid "about.independenceLead"
@@ -1173,7 +1186,9 @@ msgid "setup.welcome.title"
 msgstr "Configurar rFirma"
 
 msgid "setup.welcome.body"
-msgstr "rFirma es compatible con AutoFirma {{version}}. Para usarla en sedes, hay que preparar tu equipo."
+msgstr ""
+"rFirma es compatible con AutoFirma {{version}}. Para usarla en sedes, hay "
+"que preparar tu equipo."
 
 msgid "setup.step"
 msgstr "Paso {{current}} de {{total}}"
@@ -1347,13 +1362,18 @@ msgid "sede.confirm.messages.pdfShadowAttackSuspect"
 msgstr "Parece que el PDF se ha modificado después de la última firma."
 
 msgid "sede.confirm.messages.signingCertifiedPdf"
-msgstr "El PDF que quieres firmar está certificado y no admite nuevas firmas. Añadir la tuya invalidará la firma anterior."
+msgstr ""
+"El PDF que quieres firmar está certificado y no admite nuevas firmas. Añadir "
+"la tuya invalidará la firma anterior."
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
-msgstr "El PDF tiene un formulario cuyos campos se han cambiado después de firmarlo."
+msgstr ""
+"El PDF tiene un formulario cuyos campos se han cambiado después de firmarlo."
 
 msgid "sede.confirm.messages.unknown"
-msgstr "El validador de firmas ha encontrado algo que debes confirmar antes de seguir ({{code}})."
+msgstr ""
+"El validador de firmas ha encontrado algo que debes confirmar antes de "
+"seguir ({{code}})."
 
 msgid "sede.marking.title"
 msgstr "Marca dónde va tu firma"
@@ -1472,7 +1492,10 @@ msgid "sede.oldWebClient.title"
 msgstr "Esta página está desactualizada"
 
 msgid "sede.oldWebClient.body"
-msgstr "La página usa una versión antigua de la pieza que habla con rFirma, y puede tener errores o no ser segura. Pulsa Continuar para seguir; si algo falla, avisa a quien mantiene la página."
+msgstr ""
+"La página usa una versión antigua de la pieza que habla con rFirma, y puede "
+"tener errores o no ser segura. Pulsa Continuar para seguir; si algo falla, "
+"avisa a quien mantiene la página."
 
 msgid "sede.refusals.retry"
 msgstr "Vuelve a la sede e inténtalo de nuevo."
@@ -1481,7 +1504,8 @@ msgid "sede.refusals.contactSite"
 msgstr "Contacta con la sede para terminar el trámite."
 
 msgid "sede.refusals.closeOther"
-msgstr "Cierra el otro trámite o la otra aplicación de firma y vuelve a intentarlo."
+msgstr ""
+"Cierra el otro trámite o la otra aplicación de firma y vuelve a intentarlo."
 
 msgid "sede.refusals.otherCertificate"
 msgstr "No se puede firmar con ese certificado. Vuelve a la sede y elige otro."
@@ -1491,17 +1515,22 @@ msgid "sede.refusalCauses.sha1"
 msgstr "La sede ha pedido una firma con SHA-1, que ya no es segura."
 
 msgid "sede.refusalCauses.explicitXades"
-msgstr "La sede ha pedido un tipo de firma antiguo que podría hacerse pasar por la de otro documento."
+msgstr ""
+"La sede ha pedido un tipo de firma antiguo que podría hacerse pasar por la "
+"de otro documento."
 
 msgid "sede.refusalCauses.invoiceMultisignature"
-msgstr "La sede ha pedido añadir una segunda firma a una factura electrónica, que solo admite una."
+msgstr ""
+"La sede ha pedido añadir una segunda firma a una factura electrónica, que "
+"solo admite una."
 
 msgid "sede.refusalCauses.unsupportedCountersignature"
-msgstr "La sede ha pedido firmar sobre la firma de otra persona en un tipo de documento que no lo permite."
+msgstr ""
+"La sede ha pedido firmar sobre la firma de otra persona en un tipo de "
+"documento que no lo permite."
 
 msgid "sede.siteNotes.sha1"
-msgstr ""
-"Pedid SHA256withRSA o superior."
+msgstr "Pedid SHA256withRSA o superior."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""
@@ -1554,57 +1583,3 @@ msgstr[2] "Tu --filter no deja ninguno de tus {{count}} certificados"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Instala otro certificado, o cierra y continúa desde la sede."
-
-#~ msgid "tabs.open"
-#~ msgstr "Abrir un PDF"
-
-#~ msgid "panel.visibleSignature.rubric.title"
-#~ msgstr "Imagen de la rúbrica"
-
-#~ msgid "panel.visibleSignature.content"
-#~ msgstr "Contenido"
-
-#~ msgid "panel.visibleSignature.fields.rubric"
-#~ msgstr "Rúbrica"
-
-#~ msgid "panel.visibleSignature.fields.rubricDisabled"
-#~ msgstr "Elige antes una imagen"
-
-#~ msgid "panel.visibleSignature.fields.signerName"
-#~ msgstr "Firmante"
-
-#~ msgid "panel.visibleSignature.fields.issuer"
-#~ msgstr "Emisor"
-
-#~ msgid "panel.visibleSignature.fields.signedAt"
-#~ msgstr "Fecha"
-
-#~ msgid "panel.visibleSignature.fields.reason"
-#~ msgstr "Motivo"
-
-#~ msgid "panel.visibleSignature.reason.label"
-#~ msgstr "Motivo"
-
-#~ msgid "panel.visibleSignature.reason.placeholder"
-#~ msgstr "Conforme"
-
-#~ msgid "pin.title"
-#~ msgstr "Introduce el PIN"
-
-#~ msgid "pin.signingAs"
-#~ msgstr "{{holder}} · {{idNumber}}"
-
-#~ msgid "pin.subjectBrowser"
-#~ msgstr "Tus certificados de {{browser}}"
-
-#~ msgid "pin.label"
-#~ msgstr "PIN"
-
-#~ msgid "pin.incorrect"
-#~ msgstr "PIN incorrecto"
-
-#~ msgid "pin.incorrectPassword"
-#~ msgstr "Contraseña incorrecta"
-
-#~ msgid "pin.submit"
-#~ msgstr "Firmar"

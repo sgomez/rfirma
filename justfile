@@ -176,6 +176,7 @@ po *args: po-import
     cd "{{ app }}/po"
     for f in *.po; do
         msgmerge --quiet --update --backup=none --no-fuzzy-matching "$f" messages.pot
+        msgattrib --no-obsolete --output-file="$f" "$f"
     done
     cd "{{ app }}"
     node tools/po-import.mjs {{ args }}
