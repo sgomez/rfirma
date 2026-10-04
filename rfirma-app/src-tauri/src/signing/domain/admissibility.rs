@@ -103,6 +103,12 @@ impl Waivers {
         signing_certified: None,
     };
 
+    /// Lo de quien solo lee las firmas, que no rompe una certificación.
+    pub const READING: Self = Self {
+        password: false,
+        signing_certified: Some(true),
+    };
+
     /// Las claves del original que levantan una negativa, leídas de los `extraParams`.
     pub fn declared_in<'p>(params: impl IntoIterator<Item = (&'p str, &'p str)>) -> Self {
         params

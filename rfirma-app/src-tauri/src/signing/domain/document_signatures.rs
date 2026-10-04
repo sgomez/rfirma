@@ -11,7 +11,7 @@ pub enum Validity {
 /// Por qué una firma está caducada o no es válida: el más grave de sus problemas (ADR-0043).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ValidityReason {
-    /// El certificado caducó en `date`; `holder` lo nombra si no es el del firmante.
+    /// El certificado caducó en `date`; `holder`, su nombre común, si no es el del firmante.
     CertificateExpired {
         date: String,
         holder: Option<String>,
@@ -24,7 +24,7 @@ pub enum ValidityReason {
         date: String,
     },
     UnknownSignatureType,
-    /// Cofirma de un documento que no admitía más firmas, cerrado por `closed_by`.
+    /// Cofirma de un documento que no admitía más firmas, cerrado por `closed_by`, su nombre común.
     CosignNotAdmitted {
         closed_by: Option<String>,
     },
@@ -35,7 +35,7 @@ pub enum ValidityReason {
 pub enum SigningDate {
     /// El instante ISO-8601 que declara la propia firma.
     Declared { at: String },
-    /// El instante ISO-8601 del sello de tiempo, y la TSA que lo selló.
+    /// El instante ISO-8601 del sello de tiempo, y el nombre común de la TSA que lo selló.
     Stamped { at: String, tsa: String },
 }
 

@@ -3,11 +3,6 @@
 import type { TFunction } from "i18next";
 import type { DocumentFinding, ValidityReason } from "./previousSignatures";
 
-function commonNameOf(name: string): string {
-  const match = /(?:^|,)\s*CN=([^,]+)/.exec(name);
-  return match?.[1]?.trim() ?? name;
-}
-
 function formatDate(instant: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(new Date(instant));
 }
@@ -20,7 +15,7 @@ export function validityReasonText(t: TFunction, reason: ValidityReason, locale:
         ? t("signatureReason.certificateExpired", { date })
         : t("signatureReason.certificateExpiredHolder", {
             date,
-            holder: commonNameOf(reason.holder),
+            holder: reason.holder,
           });
     }
     case "modifiedAfterSigning":
@@ -36,7 +31,7 @@ export function validityReasonText(t: TFunction, reason: ValidityReason, locale:
     case "cosignNotAdmitted":
       return reason.closedBy === null
         ? t("signatureReason.cosignNotAdmittedUnnamed")
-        : t("signatureReason.cosignNotAdmitted", { name: commonNameOf(reason.closedBy) });
+        : t("signatureReason.cosignNotAdmitted", { name: reason.closedBy });
   }
 }
 

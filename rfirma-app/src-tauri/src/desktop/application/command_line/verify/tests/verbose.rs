@@ -38,6 +38,7 @@ fn verbose_starts_with_the_format_and_the_count_and_lists_one_line_per_signature
         output,
         "\
 PAdES · 2 firmas
+
 ✓ NOMBRE APELLIDO1 APELLIDO2 · 2026-09-14
 ✓ OTRA PERSONA PRUEBA · 2026-09-21
 "
@@ -69,6 +70,7 @@ fn a_single_expired_signature_is_counted_as_expired_in_the_header() {
         output,
         "\
 PAdES · 3 firmas · 1 caducada
+
 ✓ UNA · 2026-09-14
 ⚠ OTRA · 2026-09-20
 ✓ TERCERA
@@ -111,9 +113,10 @@ fn the_document_findings_come_above_the_signatures_and_count_as_problems() {
         printed(&outcome),
         "\
 PAdES · 1 firma · 3 problemas
-⚠ El documento se modificó después de la última firma
-⚠ Se rellenó un formulario después de firmar
-⚠ Se añadió contenido encima de la firma
+⚠ Se ha modificado después de la última firma
+⚠ Se ha rellenado el formulario después de firmar
+⚠ Se ha añadido contenido encima de lo firmado
+
 ✓ UNA
 "
     );
@@ -160,7 +163,7 @@ fn verbose_names_the_format_of_cades_xades_and_facturae() {
 
         assert_eq!(
             printed(&outcome),
-            format!("{format} · 1 firma\n✓ UNA PERSONA\n")
+            format!("{format} · 1 firma\n\n✓ UNA PERSONA\n")
         );
     }
 }
@@ -187,6 +190,7 @@ fn verbose_indents_the_countersignatures_under_their_signature() {
         printed(&outcome),
         "\
 CAdES · 1 firma · 2 contrafirmas
+
 ✓ UNA PERSONA
     ✓ OTRA PERSONA
         ✓ TERCERA PERSONA
@@ -222,7 +226,7 @@ fn a_representation_certificate_is_named_with_the_entity_on_whose_behalf_it_sign
 
     assert_eq!(
         output,
-        "PAdES · 1 firma\n✓ NOMBRE APELLIDOUNO · por EMPRESA FICTICIA SL · 2026-09-14\n"
+        "PAdES · 1 firma\n\n✓ NOMBRE APELLIDOUNO · por EMPRESA FICTICIA SL · 2026-09-14\n"
     );
 }
 
@@ -234,7 +238,7 @@ fn a_company_seal_is_named_by_the_company() {
 
     let output = verbose(&["verify", "-v", "-i", "firmado.pdf"], vec![signature]);
 
-    assert_eq!(output, "PAdES · 1 firma\n✓ EMPRESA FICTICIA SL\n");
+    assert_eq!(output, "PAdES · 1 firma\n\n✓ EMPRESA FICTICIA SL\n");
 }
 
 #[test]
@@ -251,11 +255,12 @@ fn the_sheet_of_vv_has_the_signer_the_issuer_the_date_and_the_reason() {
         output,
         "\
 PAdES · 1 firma · 1 caducada
+
 ⚠ EIDAS CERTIFICADO PRUEBAS · 2026-09-20
   Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)
   Emisor:            AC FNMT Usuarios
   Fecha:             2026-09-20 18:01:44 +02:00
-  Motivo:            Certificado caducado el 2026-01-02
+  Motivo:            El certificado caducó el 2026-01-02
 "
     );
 }
@@ -285,28 +290,39 @@ fn the_reasons_are_written_in_the_sheet() {
                 date: "2026-01-02T00:00:00Z".to_owned(),
                 holder: Some("ACME SL".to_owned()),
             },
-            "Certificado caducado el 2026-01-02 (el de ACME SL)",
+            "El certificado de ACME SL caducó el 2026-01-02",
+        ),
+        (
+            ValidityReason::CertificateExpired {
+                date: "2026-01-02T00:00:00Z".to_owned(),
+                holder: None,
+            },
+            "El certificado caducó el 2026-01-02",
         ),
         (
             ValidityReason::ModifiedAfterSigning,
-            "Modificada después de firmarse",
+            "Se ha modificado después de firmarse",
         ),
-        (ValidityReason::Damaged, "Firma dañada"),
+        (ValidityReason::Damaged, "La firma está dañada"),
         (
             ValidityReason::CertificateNotYetValid {
                 date: "2027-01-02T00:00:00Z".to_owned(),
             },
-            "Certificado aún no en vigor hasta el 2027-01-02",
+            "El certificado no se podía usar antes del 2027-01-02",
         ),
         (
             ValidityReason::UnknownSignatureType,
-            "Tipo de firma desconocido",
+            "rFirma no conoce este tipo de firma",
         ),
         (
             ValidityReason::CosignNotAdmitted {
                 closed_by: Some("UNA".to_owned()),
             },
-            "Cofirma no admitida: el documento lo cerró UNA",
+            "UNA no admitía más firmas",
+        ),
+        (
+            ValidityReason::CosignNotAdmitted { closed_by: None },
+            "El documento no admitía más firmas",
         ),
     ] {
         let mut signature = a_signature("X", "", None);
@@ -387,4 +403,63 @@ fn the_new_rows_are_absent_below_the_third_level_and_when_the_field_is_unknown()
     assert!(unknown.contains("  Vigencia:          hasta 2030-06-30 14:30:00 +02:00\n"));
     assert!(unknown.contains("  Algoritmo:         SHA256withRSA\n"));
     assert!(!unknown.contains("Perfil"), "{unknown}");
+}
+
+#[test]
+fn the_sheets_of_vv_are_separated_by_a_blank_line() {
+    let mut signer = a_signature("UNA PERSONA", "", None);
+    signer.countersignatures = vec![a_signature("OTRA PERSONA", "", None)];
+    let second = a_signature("TERCERA PERSONA", "", None);
+
+    let output = verbose(
+        &["verify", "-i", "firmado.pdf", "-vv"],
+        vec![signer, second],
+    );
+
+    assert_eq!(
+        output,
+        "\
+PAdES · 2 firmas · 1 contrafirma
+
+✓ UNA PERSONA
+  Firmante:          UNA PERSONA
+  Emisor:            AC FNMT Usuarios
+
+    ✓ OTRA PERSONA
+      Firmante:          OTRA PERSONA
+      Emisor:            AC FNMT Usuarios
+
+✓ TERCERA PERSONA
+  Firmante:          TERCERA PERSONA
+  Emisor:            AC FNMT Usuarios
+"
+    );
+}
+
+#[test]
+fn the_sheets_of_vvv_are_separated_by_a_blank_line() {
+    let output = verbose(
+        &["verify", "-i", "firmado.pdf", "-vvv"],
+        vec![
+            a_signature("UNA PERSONA", "", None),
+            a_signature("OTRA PERSONA", "", None),
+        ],
+    );
+
+    assert_eq!(
+        output,
+        "\
+PAdES · 2 firmas
+
+✓ UNA PERSONA
+  Firmante:          UNA PERSONA
+  Emisor:            AC FNMT Usuarios
+  Número de serie:   0123ABCD
+
+✓ OTRA PERSONA
+  Firmante:          OTRA PERSONA
+  Emisor:            AC FNMT Usuarios
+  Número de serie:   0123ABCD
+"
+    );
 }

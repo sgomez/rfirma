@@ -144,7 +144,7 @@ fn a_previous_signature_carries_its_validity_and_the_worst_reason() {
     assert_eq!(
         closed.signatures()[0].validity_reason,
         Some(ValidityReason::CosignNotAdmitted {
-            closed_by: Some("CN=BABBAGE CHARLES".to_owned()),
+            closed_by: Some("BABBAGE CHARLES".to_owned()),
         })
     );
 }
@@ -258,7 +258,7 @@ fn the_signing_date_says_whether_it_is_declared_or_stamped_and_by_which_tsa() {
         stamped.signatures()[0].signing_date,
         Some(SigningDate::Stamped {
             at: "2019-01-01T00:00:00Z".to_owned(),
-            tsa: "CN=TSA".to_owned(),
+            tsa: "TSA".to_owned(),
         })
     );
 }
@@ -328,4 +328,45 @@ fn a_report_with_the_certificate_fields(fields: &str) -> String {
     format!(
         r#"{{"ok":true,"signatures":[{{"subject":"CN=A","issuer":"CN=B","serialNumber":"1",{fields}"signingTime":null,"status":null,"reason":null,"validity":"valid","closesDocument":false}}],"changedAfterLastSignature":false,"findings":[]}}"#
     )
+}
+
+#[test]
+fn the_holder_the_closer_and_the_tsa_cross_by_their_common_name() {
+    let distinguished = "CN=BABBAGE CHARLES - 00000000T,2.5.4.4=#0c0742414242414745,SERIALNUMBER=IDCES-00000000T,C=ES";
+    let expired = parse_previous_signatures(&a_report_with_one_signature(&format!(
+        r#""validity":"expired","validityReason":{{"kind":"certificateExpired",
+            "date":"2020-01-01T00:00:00Z","holder":"{distinguished}","closedBy":null}}"#
+    )))
+    .expect("es valida");
+    let closed = parse_previous_signatures(&a_report_with_one_signature(&format!(
+        r#""validity":"invalid","validityReason":{{"kind":"cosignNotAdmitted",
+            "date":null,"holder":null,"closedBy":"{distinguished}"}}"#
+    )))
+    .expect("es valida");
+    let stamped = parse_previous_signatures(&a_valid_signature_with(
+        r#""closesDocument":false,
+            "signingDate":{"kind":"stamped","at":"2019-01-01T00:00:00Z","tsa":"CN=Sellos de prueba,O=FNMT-RCM,C=ES"}"#,
+    ))
+    .expect("es valida");
+
+    assert_eq!(
+        expired.signatures()[0].validity_reason,
+        Some(ValidityReason::CertificateExpired {
+            date: "2020-01-01T00:00:00Z".to_owned(),
+            holder: Some("BABBAGE CHARLES - 00000000T".to_owned()),
+        })
+    );
+    assert_eq!(
+        closed.signatures()[0].validity_reason,
+        Some(ValidityReason::CosignNotAdmitted {
+            closed_by: Some("BABBAGE CHARLES - 00000000T".to_owned()),
+        })
+    );
+    assert_eq!(
+        stamped.signatures()[0].signing_date,
+        Some(SigningDate::Stamped {
+            at: "2019-01-01T00:00:00Z".to_owned(),
+            tsa: "Sellos de prueba".to_owned(),
+        })
+    );
 }

@@ -5,11 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PrivateKey;
@@ -159,6 +162,22 @@ class PreviousSignaturesBridgeTest {
         assertEquals(PreviousSignaturesBridge.Validity.INVALID, signatures.get(1).validity());
         assertEquals(PreviousSignaturesBridge.Problem.COSIGN_NOT_ADMITTED,
                 signatures.get(1).validityReason().problem());
+    }
+
+    @Test
+    void reading_a_pdf_writes_nothing_to_stderr() throws Exception {
+        final byte[] pdf = TestFixtures.certifiedPdfWithSignatureInALaterRevision();
+        final PrintStream stderr = System.err;
+        final ByteArrayOutputStream written = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(written, true, StandardCharsets.UTF_8));
+        try {
+            PreviousSignaturesBridge.read(pdf);
+        }
+        finally {
+            System.setErr(stderr);
+        }
+
+        assertEquals("", written.toString(StandardCharsets.UTF_8));
     }
 
     @Test

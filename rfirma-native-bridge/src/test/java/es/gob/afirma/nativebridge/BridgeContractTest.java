@@ -1,6 +1,7 @@
 package es.gob.afirma.nativebridge;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,6 +19,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -175,6 +178,14 @@ class BridgeContractTest {
                 + validity + "\",\"validityReason\":{\"kind\":\"" + kind
                 + "\",\"date\":\"2020-01-01T00:00:00Z\",\"holder\":\"CN=H\",\"closedBy\":\"CN=Z\"},"
                 + "\"signingDate\":null,\"closesDocument\":false,\"countersignatures\":[]}";
+    }
+
+    @Test
+    void autofirma_logs_never_reach_the_console() throws Exception {
+        Class.forName(NativeBridge.class.getName(), true, NativeBridge.class.getClassLoader());
+
+        assertFalse(Logger.getLogger("es.gob.afirma").isLoggable(Level.SEVERE));
+        assertEquals(0, Logger.getLogger("").getHandlers().length);
     }
 
     @Test
