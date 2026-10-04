@@ -1,38 +1,29 @@
 //! La fábrica de dobles de la ventana principal: el juego completo de puertos, con sobrescrituras por nombre.
 
-import {
-  type ExternalDestinationOpener,
-  unavailableExternalDestinationOpener,
-} from "../desktop/externalDestination";
+import type { MainWindowPorts } from "../App.ports";
+import { unavailableExternalDestinationOpener } from "../desktop/externalDestination";
 import { type FakeDocumentDrops, inMemoryDocumentDrops } from "../documents/drops";
+import { inMemoryDocumentPicker } from "../documents/picker";
 import { inMemoryRecents } from "../documents/recents";
+import { inMemoryPreferences } from "../preferences/preferences";
+import { defaults } from "../preferences/preferencesFixtures";
+import { absentWindowTheme } from "../preferences/theme";
+import { absentNativeTitlebar } from "../shell/nativeTitlebar";
 import { type CertificateStore, emptyCertificateStore } from "../signing/certificate";
-import {
-  type DestinationSource,
-  inMemoryDestination,
-  type SignedDocumentOpener,
-  unavailableOpener,
-} from "../signing/destination";
-import { type SigningBackend, unavailableSigningBackend } from "../signing/flow";
-import { emptyRubricPicker, type RubricPicker } from "../signing/rubric";
-import type { StatusPort } from "../status/status";
-import { inMemoryVersionCheck, type VersionCheck } from "../updates/newVersion";
-import { type PdfSource, unavailablePdfSource } from "../viewer/source";
+import { inMemoryDestination, unavailableOpener } from "../signing/destination";
+import { unavailableSigningBackend } from "../signing/flow";
+import { emptyRubricPicker } from "../signing/rubric";
+import { unavailableStampComposer } from "../signing/stampPreview";
+import { memoryStatus } from "../status/status";
+import { inMemoryVersionCheck } from "../updates/newVersion";
+import { unavailablePdfSource } from "../viewer/source";
 
 type Recents = ReturnType<typeof inMemoryRecents>;
 
-export interface MainWindowDoubles {
+/** Los puertos de la ventana principal, con los dobles que las pruebas manejan por dentro. */
+export interface MainWindowDoubles extends MainWindowPorts {
   recents: Recents;
-  pdfs: PdfSource;
-  certificates: CertificateStore;
-  rubrics: RubricPicker;
-  signer: SigningBackend;
   drops: FakeDocumentDrops;
-  versions: VersionCheck;
-  externalDestinations: ExternalDestinationOpener;
-  status: StatusPort | undefined;
-  destinations: DestinationSource;
-  opener: SignedDocumentOpener;
 }
 
 export type MainWindowDoubleOverrides = Partial<Omit<MainWindowDoubles, "certificates">> & {
@@ -43,17 +34,22 @@ export type MainWindowDoubleOverrides = Partial<Omit<MainWindowDoubles, "certifi
 export function aMainWindowDoubles(overrides: MainWindowDoubleOverrides = {}): MainWindowDoubles {
   return {
     recents: overrides.recents ?? inMemoryRecents(),
-    pdfs: overrides.pdfs ?? unavailablePdfSource(),
-    certificates: { ...emptyCertificateStore(), ...overrides.certificates },
-    rubrics: overrides.rubrics ?? emptyRubricPicker(),
-    signer: overrides.signer ?? unavailableSigningBackend(),
+    picker: overrides.picker ?? inMemoryDocumentPicker(),
     drops: overrides.drops ?? inMemoryDocumentDrops(null),
-    versions: overrides.versions ?? inMemoryVersionCheck(),
-    externalDestinations: overrides.externalDestinations ?? unavailableExternalDestinationOpener(),
-    status: overrides.status,
+    preferences: overrides.preferences ?? inMemoryPreferences(defaults),
+    pdfs: overrides.pdfs ?? unavailablePdfSource(),
     destinations:
       overrides.destinations ??
       inMemoryDestination({ folder: "Documentos", name: "contrato-firmado.pdf", writable: true }),
+    certificates: { ...emptyCertificateStore(), ...overrides.certificates },
+    rubrics: overrides.rubrics ?? emptyRubricPicker(),
+    stamps: overrides.stamps ?? unavailableStampComposer(),
+    signer: overrides.signer ?? unavailableSigningBackend(),
     opener: overrides.opener ?? unavailableOpener(),
+    versions: overrides.versions ?? inMemoryVersionCheck(),
+    externalDestinations: overrides.externalDestinations ?? unavailableExternalDestinationOpener(),
+    status: overrides.status ?? memoryStatus(),
+    titlebar: overrides.titlebar ?? absentNativeTitlebar(),
+    windowTheme: overrides.windowTheme ?? absentWindowTheme(),
   };
 }

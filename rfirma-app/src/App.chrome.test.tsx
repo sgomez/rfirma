@@ -12,19 +12,12 @@ import {
   row,
 } from "./App.testSupport";
 import { inMemoryExternalDestinationOpener } from "./desktop/externalDestination";
-import { inMemoryDocumentDrops } from "./documents/drops";
-import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents } from "./documents/recents";
 import type { PreferencesStore } from "./preferences/preferences";
 import type { Certificate } from "./signing/certificate";
-import { emptyCertificateStore } from "./signing/certificate";
-import { unavailableOpener } from "./signing/destination";
-import { unavailableSigningBackend } from "./signing/flow";
-import { emptyRubricPicker } from "./signing/rubric";
-import { unavailableStampComposer } from "./signing/stampPreview";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./signing/visibleSignature";
+import { aMainWindowDoubles } from "./testing/mainWindowDoubles";
 import { renderWithCatalog } from "./testing/render";
-import { inMemoryVersionCheck } from "./updates/newVersion";
 import { unavailablePdfSource } from "./viewer/source";
 
 // Grada A: el menú, los diálogos que abre y Privacidad, sobre la aplicación entera.
@@ -314,19 +307,12 @@ describe("App", () => {
     };
     renderWithCatalog(
       <App
-        recents={recents}
-        picker={inMemoryDocumentPicker([])}
-        drops={inMemoryDocumentDrops()}
-        pdfs={unavailablePdfSource()}
-        preferences={preferences}
-        destinations={aDestination()}
-        certificates={emptyCertificateStore()}
-        rubrics={emptyRubricPicker()}
-        stamps={unavailableStampComposer()}
-        signer={unavailableSigningBackend()}
-        opener={unavailableOpener()}
+        ports={aMainWindowDoubles({
+          recents,
+          preferences,
+          destinations: aDestination(),
+        })}
         initialSignature={DEFAULT_VISIBLE_SIGNATURE}
-        versions={inMemoryVersionCheck()}
         version="0.1.0"
         menuAnchor="header"
       />,

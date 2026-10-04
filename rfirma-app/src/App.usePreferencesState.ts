@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Preferences, PreferencesStore } from "./preferences/preferences";
-import { applyTheme, noWindowTheme, type WindowTheme } from "./preferences/theme";
+import { applyTheme, type WindowTheme } from "./preferences/theme";
 import type { Destination, DestinationSource } from "./signing/destination";
 import type { Rubric, RubricFailure, RubricPicker } from "./signing/rubric";
 import type { SigningState } from "./signing/useSigning";
@@ -14,8 +14,8 @@ import type { SigningState } from "./signing/useSigning";
 export function usePreferencesState(
   preferences: PreferencesStore,
   rubrics: RubricPicker,
-  covered = false,
-  windowTheme: WindowTheme = noWindowTheme,
+  covered: boolean,
+  windowTheme: WindowTheme,
 ) {
   const [settings, setSettings] = useState<Preferences | null>(null);
   const [rubric, setRubric] = useState<Rubric | null>(null);
