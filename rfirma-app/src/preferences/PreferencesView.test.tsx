@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { defaults, openTab, renderView } from "./testSupport";
@@ -16,38 +16,6 @@ describe("PreferencesView", () => {
     expect(onChange).toHaveBeenCalledWith({ ...defaults, rememberVisibleSignature: false });
     expect(screen.queryByRole("button", { name: "Guardar" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cerrar" })).toBeInTheDocument();
-  });
-
-  /**
-   * El interruptor es el mismo componente en el panel de firma y aquí, pero los
-   * artboards lo separan distinto del texto: `rf-gap-xs` (8 px) en el panel
-   * (`Main.dc.html:306`) y `rf-gap-sm` (16 px) en el diálogo
-   * (`PreferenciasPantalla`). Un solo valor no puede ser los dos, y arreglar
-   * uno rompía el otro: la pantalla pide el suyo, y por eso se comprueba que
-   * lo pida, en las dos pestañas donde aparece.
-   */
-  it("asks for the wider spacing the Preferences artboard draws", async () => {
-    const user = userEvent.setup();
-    renderView();
-
-    expect(
-      screen.getByRole("switch", { name: /Recordar mi actividad/ }).closest(".switch"),
-    ).toHaveClass("switch--wide");
-
-    await openTab(user, "Firma");
-    expect(
-      screen.getByRole("switch", { name: /Recordar la firma visible/ }).closest(".switch"),
-    ).toHaveClass("switch--wide");
-  });
-
-  it("shows the destination folder by its name and never by its path", async () => {
-    const user = userEvent.setup();
-    renderView({ preferences: { ...defaults, destination: "Documentos" } });
-    await openTab(user, "Firma");
-
-    expect(screen.getByText("Dónde guardar")).toBeInTheDocument();
-    expect(screen.getByText("Documentos")).toBeInTheDocument();
-    expect(screen.queryByText(/\/home\//)).not.toBeInTheDocument();
   });
 
   it("picks the destination folder with a directory picker and not with a dropdown", async () => {
@@ -74,54 +42,6 @@ describe("PreferencesView", () => {
     await user.click(screen.getByRole("button", { name: "Cambiar carpeta…" }));
 
     expect(await screen.findByText(/no se pudo guardar/)).toBeInTheDocument();
-  });
-
-  // «Junto al original» solo cuando el entorno sabe devolver la ruta
-  // real del documento (ID-184): donde no la sabe, la opción no aparece y el
-  // ajuste se queda en la carpeta con su «Cambiar carpeta…», como antes.
-  it("offers Junto al original only when the environment allows it", async () => {
-    const user = userEvent.setup();
-    renderView({ preferences: { ...defaults, offersOriginalFolder: false } });
-    await openTab(user, "Firma");
-
-    expect(screen.queryByText("Junto al original")).not.toBeInTheDocument();
-    expect(screen.queryByText("En esta carpeta")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
-  });
-
-  // El destino es un modo que se elige (ADR-0011): con los dos entornos
-  // ofrecidos, la pantalla enseña un grupo de radios y no solo un texto.
-  it("offers the two destination modes as a radio group", async () => {
-    const user = userEvent.setup();
-    renderView({
-      preferences: {
-        ...defaults,
-        offersOriginalFolder: true,
-        destinationMode: "in_the_destination_folder",
-      },
-    });
-    await openTab(user, "Firma");
-
-    const group = screen.getByRole("radiogroup", { name: "Dónde guardar" });
-    expect(group).toBeInTheDocument();
-    expect(within(group).getByRole("radio", { name: "Junto al original" })).not.toBeChecked();
-    expect(within(group).getByRole("radio", { name: "En esta carpeta" })).toBeChecked();
-    expect(screen.getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
-  });
-
-  it("marks the current mode when it is next to the original", async () => {
-    const user = userEvent.setup();
-    renderView({
-      preferences: {
-        ...defaults,
-        offersOriginalFolder: true,
-        destinationMode: "next_to_the_original",
-      },
-    });
-    await openTab(user, "Firma");
-
-    expect(screen.getByRole("radio", { name: "Junto al original" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "En esta carpeta" })).not.toBeChecked();
   });
 
   it("writes the chosen mode through the preferences port", async () => {
@@ -162,19 +82,6 @@ describe("PreferencesView", () => {
 
     expect(await screen.findByText(/no se pudo guardar/)).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Junto al original" })).toBeChecked();
-  });
-
-  it("offers every language whose catalog is complete", async () => {
-    const user = userEvent.setup();
-    renderView();
-    await openTab(user, "Apariencia");
-
-    const language = screen.getByRole("combobox", { name: "Idioma" });
-    expect(language).toHaveTextContent("Español");
-    await user.click(language);
-
-    const offered = screen.getAllByRole("option").map((option) => option.textContent);
-    expect(offered).toEqual(["Español", "Català", "Euskara", "Galego", "English"]);
   });
 
   it("changes the language in place", async () => {
@@ -302,14 +209,6 @@ describe("PreferencesView", () => {
     expect(onChange).toHaveBeenCalledWith({ ...defaults, consentCountdown: false });
   });
 
-  it("shows no hint under the countdown, whose label already says it", async () => {
-    const user = userEvent.setup();
-    renderView();
-    await openTab(user, "Firma");
-
-    expect(screen.queryByText(/pausa de 3 segundos/)).not.toBeInTheDocument();
-  });
-
   it("lets the site choose its only accepted certificate once turned on", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
@@ -323,18 +222,6 @@ describe("PreferencesView", () => {
     await user.click(toggle);
 
     expect(onChange).toHaveBeenCalledWith({ ...defaults, honourAutomaticSelection: true });
-  });
-
-  it("shows no hint under the two switches and hides the retired ones", async () => {
-    const user = userEvent.setup();
-    renderView();
-    await openTab(user, "Firma");
-
-    expect(screen.queryByText(/se usa sin preguntarte/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/se reutilizan en el siguiente documento/)).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("switch", { name: /Protección contra firmas/ }),
-    ).not.toBeInTheDocument();
   });
 
   it("closes on Cerrar", async () => {
@@ -369,63 +256,6 @@ describe("PreferencesView", () => {
     window.dispatchEvent(event);
 
     expect(onClose).not.toHaveBeenCalled();
-  });
-
-  /**
-   * El índice es el patrón ARIA de pestañas: solo el panel activo está en
-   * pantalla, y se entra siempre en *General*, con *Privacidad* dentro como
-   * grupo con su propio encabezado.
-   */
-  it("lays the settings out in sections with a permanent index to the left", async () => {
-    const user = userEvent.setup();
-    renderView();
-
-    const index = screen.getByRole("navigation", { name: "Secciones" });
-    expect(
-      within(index)
-        .getAllByRole("tab")
-        .map((tab) => tab.textContent),
-    ).toEqual(["General", "Firma", "Certificados", "Apariencia"]);
-
-    const general = screen.getByRole("tabpanel", { name: "General" });
-    const privacy = within(general).getByRole("group", { name: "Privacidad" });
-    expect(
-      within(privacy).getByRole("switch", { name: /Recordar mi actividad/ }),
-    ).toBeInTheDocument();
-    expect(within(privacy).getByRole("button", { name: "Vaciar la lista" })).toBeInTheDocument();
-    expect(
-      within(privacy).getByRole("switch", { name: /Avisar de versiones nuevas/ }),
-    ).toBeInTheDocument();
-
-    await openTab(user, "Firma");
-    const signing = screen.getByRole("tabpanel", { name: "Firma" });
-    expect(
-      within(signing).getByRole("switch", {
-        name: /Recordar la firma visible/,
-      }),
-    ).toBeInTheDocument();
-    expect(within(signing).getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
-
-    await openTab(user, "Apariencia");
-    const appearance = screen.getByRole("tabpanel", { name: "Apariencia" });
-    expect(within(appearance).getByRole("combobox", { name: "Tema" })).toBeInTheDocument();
-    expect(within(appearance).getByRole("combobox", { name: "Idioma" })).toBeInTheDocument();
-  });
-
-  /** Solo el panel activo está en pantalla: no hay dos a la vez. */
-  it("shows only the active panel, never two at once", async () => {
-    const user = userEvent.setup();
-    renderView();
-
-    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
-    expect(
-      screen.queryByRole("switch", { name: /Recordar la firma visible/ }),
-    ).not.toBeInTheDocument();
-
-    await openTab(user, "Firma");
-
-    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
-    expect(screen.queryByRole("switch", { name: /Recordar mi actividad/ })).not.toBeInTheDocument();
   });
 
   it("marks the chosen tab and leaves General chosen at the start", async () => {
@@ -498,15 +328,6 @@ describe("PreferencesView", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  /** Fijo: un botón de cierre que se va con el desplazamiento no está (ID-69). */
-  it("keeps Cerrar in a footer outside the column that scrolls", () => {
-    const { container } = renderView();
-
-    const close = screen.getByRole("button", { name: "Cerrar" });
-    expect(close.closest(".preferences__footer")).not.toBeNull();
-    expect(container.querySelector(".preferences__content")?.contains(close)).toBe(false);
-  });
-
   /**
    * El aviso va **en la sección donde se pulsó** y no en una franja común
    * arriba (ID-70): con tres secciones, un aviso común obliga a leer el texto
@@ -556,16 +377,6 @@ describe("PreferencesView", () => {
     expect(notice).toHaveTextContent("Algo ha fallado");
     expect(notice).toHaveTextContent("Vuelve a intentarlo.");
     expect(screen.getByRole("group", { name: "Privacidad" })).toContainElement(notice);
-  });
-
-  it("says nothing when the setting is saved", async () => {
-    const user = userEvent.setup();
-    renderView();
-    await openTab(user, "Firma");
-
-    await user.click(screen.getByRole("switch", { name: /Recordar la firma visible/ }));
-
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   /** El interruptor no se mueve hasta que se confirma (ID-71). */

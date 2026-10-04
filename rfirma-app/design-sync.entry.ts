@@ -1,4 +1,4 @@
-//! Lo que `/design-sync` compila para Claude Design: la ventana principal y sus piezas, el panel de estado y la retirada del certificado, la vista de la ventana de sede, los diálogos de firma, los primitivos, la raíz con idioma y tema, los iconos y el certificado.
+//! Lo que `/design-sync` compila para Claude Design: la ventana principal y sus piezas, el panel de estado y la retirada del certificado, la vista de la ventana de sede, Preferencias, los diálogos de firma, los primitivos, la raíz con idioma y tema, los iconos y el certificado.
 
 import "./src/design-system/index.css";
 import "./src/app.css";
@@ -16,6 +16,7 @@ export { Stack } from "./src/design-system/Stack";
 export { DocumentTabs } from "./src/documents/DocumentTabs";
 export { RecentRows, RecentsSection } from "./src/documents/RecentRows";
 export { ErrorNotice } from "./src/errors/ErrorNotice";
+export { PreferencesView } from "./src/preferences/PreferencesView";
 export { SedeView } from "./src/sede/SedeView";
 export { Header } from "./src/shell/Header";
 export { MainWindow } from "./src/shell/MainWindow";
