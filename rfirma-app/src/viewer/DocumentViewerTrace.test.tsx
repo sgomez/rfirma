@@ -1,7 +1,16 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import type { PageMode, Placement } from "../placement/pageSets";
+import {
+  movingTo,
+  NO_PAGE_SETS,
+  type PageMode,
+  type Placement,
+  type Placing as PlacingState,
+  placementOf,
+  sealingAt,
+  storing,
+} from "../placement/pageSets";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
 import type { PdfDocument } from "./pdf";
@@ -24,7 +33,7 @@ import {
  */
 
 describe("el recuadro trazado sobre la hoja", () => {
-  /** El visor con la colocación en estado, que es como lo monta `App`. */
+  /** El visor con la colocación en estado y sus reglas, que es como lo monta cada ventana. */
   function Placing({
     document,
     pageMode = "these",
@@ -36,16 +45,21 @@ describe("el recuadro trazado sobre la hoja", () => {
     start?: Placement | null;
     onPlace?: (next: Placement | null) => void;
   }) {
-    const [placement, setPlacement] = useState<Placement | null>(start);
+    const [placing, setPlacing] = useState<PlacingState>(() => ({
+      rect: start?.rect ?? null,
+      sets: storing(NO_PAGE_SETS, pageMode, start?.pages ?? null, document.pageCount),
+      mode: pageMode,
+    }));
+    const apply = (next: PlacingState) => {
+      setPlacing(next);
+      onPlace?.(placementOf(next.rect, next.sets, next.mode));
+    };
     return (
       <DocumentViewer
         pdf={document}
-        placement={placement}
-        pageMode={pageMode}
-        onPlace={(next) => {
-          setPlacement(next);
-          onPlace?.(next);
-        }}
+        placement={placementOf(placing.rect, placing.sets, placing.mode)}
+        onMove={(rect) => apply(movingTo(placing, rect))}
+        onTrace={(rect, page) => apply(sealingAt(placing, page, rect, document.pageCount))}
         onOpen={noop}
       />
     );
@@ -197,14 +211,14 @@ describe("el recuadro trazado sobre la hoja", () => {
   });
 
   it("traces nothing while the visible signature cannot be placed", async () => {
-    const onPlace = vi.fn();
+    const onTrace = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
       <DocumentViewer
         pdf={document}
         placement={null}
         canPlace={false}
-        onPlace={onPlace}
+        onTrace={onTrace}
         onOpen={noop}
       />,
     );
@@ -212,6 +226,6 @@ describe("el recuadro trazado sobre la hoja", () => {
 
     traceOver(sheet(), [100, 100], [300, 200]);
 
-    expect(onPlace).not.toHaveBeenCalled();
+    expect(onTrace).not.toHaveBeenCalled();
   });
 });

@@ -176,3 +176,121 @@ describe("usePlacement", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
+
+describe("sealing a page", () => {
+  const TRACED: UserSpaceRect = { x0: 30, y0: 40, x1: 230, y1: 120 };
+
+  function renderPlaced(placement: Placement) {
+    return renderPlacement(undefined, aDocument(placement));
+  }
+
+  it("replaces the page under «one page»", () => {
+    const { result } = renderPlaced({ rect: SAVED_RECT, pages: { only: [1] } });
+
+    act(() => result.current.sealPage(TRACED, 3));
+
+    expect(result.current.placement).toEqual({ rect: TRACED, pages: { only: [3] } });
+  });
+
+  it("adds the page under «these pages»", () => {
+    const { result } = renderPlaced({ rect: SAVED_RECT, pages: { only: [1, 4] } });
+
+    act(() => result.current.sealPage(TRACED, 2));
+
+    expect(result.current.placement).toEqual({ rect: TRACED, pages: { only: [1, 2, 4] } });
+  });
+
+  it("keeps every page under «all pages»", () => {
+    const { result } = renderPlaced({ rect: SAVED_RECT, pages: "all" });
+
+    act(() => result.current.sealPage(TRACED, 2));
+
+    expect(result.current.placement).toEqual({ rect: TRACED, pages: "all" });
+  });
+
+  it("starts the set from the page when nothing is placed", () => {
+    const { result } = renderPlacement();
+
+    act(() => result.current.sealPage(TRACED, 2));
+
+    expect(result.current.placement).toEqual({ rect: TRACED, pages: { only: [2] } });
+  });
+
+  it("starts the set from the page under «these pages» with no range yet", () => {
+    const { result } = renderPlacement();
+    act(() => result.current.changePageMode("these"));
+
+    act(() => result.current.sealPage(TRACED, 4));
+
+    expect(result.current.pageMode).toBe("these");
+    expect(result.current.placement).toEqual({ rect: TRACED, pages: { only: [4] } });
+  });
+
+  it("tells the change notice what would be signed", () => {
+    const onChange = vi.fn();
+    const { result } = renderPlacement(onChange);
+
+    act(() => result.current.sealPage(TRACED, 2));
+
+    expect(onChange).toHaveBeenLastCalledWith({ rect: TRACED, pages: { only: [2] } });
+  });
+});
+
+describe("moving the box", () => {
+  it("moves it on every page of the set and leaves the set alone", () => {
+    const moved: UserSpaceRect = { x0: 60, y0: 40, x1: 260, y1: 120 };
+    const { result } = renderPlacement(
+      undefined,
+      aDocument({ rect: SAVED_RECT, pages: { only: [1, 3] } }),
+    );
+
+    act(() => result.current.moveBox(moved));
+
+    expect(result.current.placement).toEqual({ rect: moved, pages: { only: [1, 3] } });
+  });
+});
+
+describe("unsealing a page", () => {
+  it("takes the page out of the set", () => {
+    const { result } = renderPlacement(
+      undefined,
+      aDocument({ rect: SAVED_RECT, pages: { only: [1, 3] } }),
+    );
+
+    act(() => result.current.unsealPage(3));
+
+    expect(result.current.placement).toEqual({ rect: SAVED_RECT, pages: { only: [1] } });
+  });
+
+  it("names the rest one by one when the whole document was sealed", () => {
+    const { result } = renderPlacement(undefined, aDocument({ rect: SAVED_RECT, pages: "all" }));
+    act(() => result.current.changePageMode("these"));
+
+    act(() => result.current.unsealPage(2));
+
+    expect(result.current.placement).toEqual({ rect: SAVED_RECT, pages: { only: [1, 3, 4, 5] } });
+  });
+
+  it("takes the whole placement away with the last page of the set", () => {
+    const onChange = vi.fn();
+    const { result } = renderPlacement(
+      onChange,
+      aDocument({ rect: SAVED_RECT, pages: { only: [2] } }),
+    );
+
+    act(() => result.current.unsealPage(2));
+
+    expect(result.current.placement).toBeNull();
+    expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it("does nothing, and tells nobody, when nothing is placed", () => {
+    const onChange = vi.fn();
+    const { result } = renderPlacement(onChange);
+
+    act(() => result.current.unsealPage(1));
+
+    expect(result.current.placement).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});

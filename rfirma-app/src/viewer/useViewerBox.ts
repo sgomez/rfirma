@@ -1,14 +1,7 @@
-//! Los gestos que colocan el recuadro de la firma visible —arrastrar, redimensionar, trazar y moverlo con las flechas— y sellar o quitar el sello de la página que se mira.
+//! Los gestos sobre el recuadro de la firma visible —arrastrar, redimensionar, trazar y moverlo con las flechas— y la petición de sellar o quitar el sello de la página que se mira; informa de ellos, no decide el conjunto de páginas.
 
 import { type KeyboardEvent, useEffect, useRef } from "react";
-import {
-  type PageMode,
-  type Placement,
-  sealing,
-  sealsPage,
-  type UserSpaceRect,
-  unsealing,
-} from "../placement/pageSets";
+import { type Placement, sealsPage, type UserSpaceRect } from "../placement/pageSets";
 import type { Viewport } from "./pdf";
 import {
   fitsInPage,
@@ -35,13 +28,14 @@ const NUDGE_FAST = 10;
 
 interface UseViewerBoxArgs {
   placement: Placement | null;
-  onPlace: (placement: Placement | null) => void;
-  pageMode: PageMode;
+  onMove?: (rect: UserSpaceRect) => void;
+  onTrace?: (rect: UserSpaceRect, page: number) => void;
+  onSeal?: (rect: UserSpaceRect, page: number) => void;
+  onUnseal?: (page: number) => void;
   placementRequest: { action: "seal" | "unseal" } | null;
   canPlace: boolean;
   onGesture?: (active: boolean) => void;
   page: number;
-  pageCount: number;
   zoom: number;
   viewport: Viewport | null;
   surface: HTMLDivElement | null;
@@ -56,13 +50,14 @@ interface UseViewerBoxArgs {
  */
 export function useViewerBox({
   placement,
-  onPlace,
-  pageMode,
+  onMove,
+  onTrace,
+  onSeal,
+  onUnseal,
   placementRequest,
   canPlace,
   onGesture,
   page,
-  pageCount,
   zoom,
   viewport,
   surface,
@@ -113,17 +108,11 @@ export function useViewerBox({
     if (!seen) element.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }, [page, viewport, surface]);
 
-  /**
-   * Confirma el recuadro movido o redimensionado, ya en píxeles del lienzo.
-   *
-   * El conjunto de páginas **no lo toca el gesto**: mover el recuadro de una
-   * página del conjunto lo mueve en todas, porque es un solo campo de firma con
-   * el widget replicado.
-   */
+  /** Informa del recuadro movido o redimensionado, dado en píxeles del lienzo. */
   const place = (moved: PixelRect) => {
     if (!viewport || !placement) return;
     setOutOfPage(false);
-    onPlace({ ...placement, rect: toUserSpace(viewport, moved) });
+    onMove?.(toUserSpace(viewport, moved));
   };
 
   // Los dos gestos avisan de que empiezan y de que acaban, sin que `useBoxDrag`
@@ -165,27 +154,6 @@ export function useViewerBox({
   });
 
   /**
-   * La colocación que resulta de sellar la página que se mira, con el recuadro
-   * en `rect`.
-   *
-   * Es la regla del conjunto y **la comparten los dos gestos que sellan**: la
-   * pastilla, que no toca el rectángulo, y el trazo, que trae uno nuevo.
-   * Trazar es «sellar esta página» con sitio elegido, así que dos reglas
-   * habrían sido dos maneras de contestar a la misma pregunta.
-   *
-   * Con `Solo 1 página` sellar **sustituye**: esa opción no puede nombrar dos, y
-   * sumar aquí dejaba la 1 y la 2 selladas a la vez con el panel diciendo
-   * «Página 1». Con las otras dos se añade, que es lo que significan.
-   */
-  const placedAt = (rect: UserSpaceRect): Placement => {
-    if (placement === null) {
-      return { rect, pages: pageMode === "all" ? "all" : { only: [page] } };
-    }
-    if (pageMode === "single") return { rect, pages: { only: [page] } };
-    return { ...sealing(placement, page), rect };
-  };
-
-  /**
    * Sellar la página que se está mirando.
    *
    * Sin nada colocado, el recuadro nace en su **posición estándar** —no hay
@@ -194,22 +162,15 @@ export function useViewerBox({
   const seal = () => {
     if (!viewport) return;
     setOutOfPage(false);
-    onPlace(placedAt(placement?.rect ?? toUserSpace(viewport, standardBox(viewport))));
+    onSeal?.(placement?.rect ?? toUserSpace(viewport, standardBox(viewport)), page);
   };
 
-  /**
-   * El recuadro trazado sobre la hoja, que es el gesto que lo hace nacer.
-   *
-   * Trazar dice dos cosas —esta página y aquí— y se aplican las dos: el
-   * rectángulo se mueve **en todas las páginas del conjunto**, porque el PDF
-   * lleva un solo campo de firma con el widget replicado, y el conjunto
-   * cambia según la opción activa, igual que al sellar.
-   */
+  /** Informa del recuadro trazado sobre la hoja y de la página donde se trazó. */
   const trace = (traced: PixelRect) => {
     if (!viewport) return;
     setOutOfPage(false);
     focusBox.current = true;
-    onPlace(placedAt(toUserSpace(viewport, traced)));
+    onTrace?.(toUserSpace(viewport, traced), page);
   };
 
   const tracing = useBoxTrace({
@@ -230,11 +191,10 @@ export function useViewerBox({
     boxElement.current.focus();
   }, [pixels]);
 
-  /** Quitar el sello de esta página, y con el último, la colocación entera. */
   const unseal = () => {
     if (placement === null) return;
     setOutOfPage(false);
-    onPlace(unsealing(placement, page, pageCount));
+    onUnseal?.(page);
   };
 
   // El botón que sella o quita el sello vive en el panel; la petición cruza
