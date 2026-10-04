@@ -92,7 +92,7 @@ fn an_expired_ca_in_the_key_info_makes_the_signature_expired_naming_it() {
         matches!(
             &signature.validity_reason,
             Some(ValidityReason::CertificateExpired { date, holder: Some(holder) })
-                if date.starts_with("2015-") && holder.contains("CN=rfirma CA caducada de pruebas")
+                if date.starts_with("2015-") && holder == "rfirma CA caducada de pruebas"
         ),
         "{:?}",
         signature.validity_reason

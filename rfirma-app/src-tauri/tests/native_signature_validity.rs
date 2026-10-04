@@ -449,7 +449,7 @@ fn a_signature_stamped_while_its_certificate_was_in_force_is_valid_though_it_exp
     assert_eq!(signature.validity_reason, None);
     assert_eq!(
         stamped_by(signature.signing_date.as_ref()),
-        ("2019-06-01T00:00:00Z", "CN=rfirma backdated TSA")
+        ("2019-06-01T00:00:00Z", "rfirma backdated TSA")
     );
 }
 
@@ -462,7 +462,7 @@ fn a_signature_stamped_after_its_certificate_expired_is_expired_and_dated_by_its
     assert_eq!(signature.validity, Validity::Expired);
     assert_eq!(
         stamped_by(signature.signing_date.as_ref()).1,
-        "CN=rfirma fake TSA"
+        "rfirma fake TSA"
     );
 }
 
