@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use crate::desktop::domain::command_line::{Command, WindowIntent, SEE_SIGNATURES};
+use crate::desktop::domain::platform::Platform;
 use crate::documents::domain::dropped::invoked_paths;
 use crate::site::domain::protocol::{AfirmaUrl, IMPLEMENTED_AUTOFIRMA_VERSION};
 
@@ -74,8 +75,8 @@ where
 
 pub use crate::desktop::domain::command_line::{HELP_FLAGS, VERSION_FLAGS};
 
-/// Texto informativo mostrado en la ayuda por consola.
-pub const HELP: &str = "\
+/// Ayuda: de la cabecera a los parámetros comunes.
+const HELP_OPENING: &str = "\
 rfirma — firma electrónica con certificado, compatible con AutoFirma.
 
 Uso:
@@ -116,11 +117,30 @@ Parámetros de las órdenes (rfirma <orden> --help da la sintaxis de cada una):
   --store <almacén>   Busca solo en ese almacén; sin él, en todos.
   --alias <alias>     Firma con ese certificado, sin preguntar.
   --filter <filtro>   Firma con el único certificado que cumple el filtro, o
-                      acota la lista de --certgui o --certtui.
-  --certgui           Elige certificado y PIN en la ventana de sede.
+";
+
+/// Ayuda: el final de `--filter` fuera de Windows.
+const HELP_FILTER_TAIL: &str = "                      acota la lista de --certgui o --certtui.
+";
+
+/// Ayuda: el final de `--filter` en Windows.
+const HELP_FILTER_TAIL_WINDOWS: &str = "                      acota la lista de --certgui.
+";
+
+/// Ayuda: el parámetro `--certgui`.
+const HELP_GUI_PARAMETER: &str =
+    "  --certgui           Elige certificado y PIN en la ventana de sede.
+";
+
+/// Ayuda: los parámetros de terminal, que Windows aún no ofrece.
+const HELP_TERMINAL_PARAMETERS: &str = "\
   --certtui           Elige certificado en la terminal. Propio de rFirma.
   --password-fd <N>   Lee el PIN del descriptor N, abierto por quien llama.
                       Propio de rFirma.
+";
+
+/// Ayuda: del resto de parámetros a las desviaciones.
+const HELP_COMMON_PARAMETERS: &str = "\
   --algorithm <alg>   sha512 (por omisión), sha384 o sha256.
   --config <texto>    Propiedades clave=valor de la firma, una por línea, las
                       mismas que se aceptan de una sede.
@@ -136,26 +156,64 @@ Salida de las órdenes:
   el XML de --xml o el JSON de --json. Los mensajes y los registros van a la salida de errores.
 
 Desviaciones de la línea de órdenes de AutoFirma:
+";
+
+/// Ayuda: el rechazo de `--password` fuera de Windows.
+const HELP_PASSWORD_DEVIATION: &str = "\
   --password          Se rechaza: la contraseña en la línea de órdenes la ve
                       cualquier usuario del equipo y queda en el historial. El
                       PIN se pide en la terminal, se lee de --password-fd o se
                       escribe en la ventana con --certgui.
+";
+
+/// Ayuda: el rechazo de `--password` en Windows.
+const HELP_PASSWORD_DEVIATION_WINDOWS: &str = "\
+  --password          Se rechaza: la contraseña en la línea de órdenes la ve
+                      cualquier usuario del equipo y queda en el historial. El
+                      PIN del almacén de Windows lo pide Windows; en los demás
+                      almacenes aparece el diálogo de escritorio o se escribe
+                      en la ventana con --certgui.
+";
+
+/// Ayuda: lo que AutoFirma tiene y rFirma no.
+const HELP_LEFT_OUT_DEVIATIONS: &str = "\
   countersign, batchsign
                       No existen.
   --preurl, --posturl, --hformat, --halgorithm, -r, --operation
                       No existen.
   --algorithm sha1    Se rechaza.
   --store             Un almacén que AutoFirma no reconoce se rechaza.
+";
+
+/// Ayuda: `--certgui` y `--certtui` fuera de Windows.
+const HELP_PICKER_DEVIATION: &str = "\
   --certgui, --certtui
                       No listan certificados caducados ni cambian de almacén.
+";
+
+/// Ayuda: `--certgui` en Windows.
+const HELP_PICKER_DEVIATION_WINDOWS: &str = "\
+  --certgui           No lista certificados caducados ni cambia de almacén.
+";
+
+/// Ayuda: la salida estándar y lo que sigue hasta los ejemplos.
+const HELP_OUTPUT_DEVIATION: &str = "\
   Salida estándar     No mezcla los mensajes con lo que se consume, al
                       contrario que AutoFirma.
 
+";
+
+/// Ayuda: el ejemplo con el llavero del escritorio, fuera de Windows.
+const HELP_KEYRING_EXAMPLE: &str = "\
 Ejemplo: firmar con el PIN guardado en el llavero del escritorio, sin que pase
 por la línea de órdenes ni por el historial:
   rfirma sign -i contrato.pdf -o contrato-firmado.pdf --alias mi-certificado \\
       --password-fd 3 3< <(secret-tool lookup service rfirma)
 
+";
+
+/// Ayuda: del ejemplo del flatpak al final.
+const HELP_CLOSING: &str = "\
 Ejemplo en el flatpak, con un fichero fuera de la carpeta de documentos:
   flatpak run --file-forwarding me.sgomez.rfirma sign -i @@ <fichero> @@ -o <salida>
 
@@ -167,6 +225,39 @@ Lo que rFirma atiende de una sede (protocolo 4, sobre wss:// en 127.0.0.1):
   cosign              Cofirma PAdES de un PDF.
   countersign, save y signandsave se rechazan con su código del catálogo.
 ";
+
+/// Texto informativo mostrado en la ayuda por consola de esta plataforma.
+pub fn help(platform: Platform) -> String {
+    let windows = platform == Platform::Windows;
+    let mut text = String::from(HELP_OPENING);
+    text.push_str(if windows {
+        HELP_FILTER_TAIL_WINDOWS
+    } else {
+        HELP_FILTER_TAIL
+    });
+    text.push_str(HELP_GUI_PARAMETER);
+    if !windows {
+        text.push_str(HELP_TERMINAL_PARAMETERS);
+    }
+    text.push_str(HELP_COMMON_PARAMETERS);
+    text.push_str(if windows {
+        HELP_PASSWORD_DEVIATION_WINDOWS
+    } else {
+        HELP_PASSWORD_DEVIATION
+    });
+    text.push_str(HELP_LEFT_OUT_DEVIATIONS);
+    text.push_str(if windows {
+        HELP_PICKER_DEVIATION_WINDOWS
+    } else {
+        HELP_PICKER_DEVIATION
+    });
+    text.push_str(HELP_OUTPUT_DEVIATION);
+    if !windows {
+        text.push_str(HELP_KEYRING_EXAMPLE);
+    }
+    text.push_str(HELP_CLOSING);
+    text
+}
 
 /// Determina si los argumentos de ejecución solicitan la visualización de la ayuda.
 pub fn help_was_asked_for<I, S>(arguments: I) -> bool
@@ -198,9 +289,13 @@ pub fn version_text(rfirma_version: &str) -> String {
 }
 
 /// Lo que se imprime en lugar de arrancar, si los argumentos piden la ayuda o la versión.
-pub fn informative_text(arguments: &[String], rfirma_version: &str) -> Option<String> {
+pub fn informative_text(
+    arguments: &[String],
+    rfirma_version: &str,
+    platform: Platform,
+) -> Option<String> {
     if help_was_asked_for(arguments) {
-        return Some(HELP.to_owned());
+        return Some(help(platform));
     }
     version_was_asked_for(arguments).then(|| version_text(rfirma_version))
 }

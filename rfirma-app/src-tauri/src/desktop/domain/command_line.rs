@@ -4,6 +4,8 @@ use std::fmt;
 
 use serde::Serialize;
 
+use crate::desktop::domain::platform::Platform;
+
 use super::sign_arguments::{self, ArgumentsRefusal};
 use super::store_scope::StoreRefusal;
 
@@ -81,8 +83,11 @@ impl Command {
     }
 
     /// La sintaxis de la orden, o nada si rFirma no la atiende.
-    pub fn syntax(self) -> Option<&'static str> {
+    pub fn syntax(self, platform: Platform) -> Option<&'static str> {
+        let windows = platform == Platform::Windows;
         match self {
+            Self::Sign if windows => Some(SIGN_SYNTAX_WINDOWS),
+            Self::Cosign if windows => Some(COSIGN_SYNTAX_WINDOWS),
             Self::Sign => Some(SIGN_SYNTAX),
             Self::Cosign => Some(COSIGN_SYNTAX),
             Self::ListAliases => Some(LIST_ALIASES_SYNTAX),
@@ -177,6 +182,8 @@ pub enum Refusal {
     UnknownCommand(String),
     /// La contraseña viene en argv.
     PasswordInArgv,
+    /// La contraseña viene en argv, en Windows.
+    PasswordInArgvOnWindows,
     /// Una orden del original que rFirma no atiende.
     CommandLeftOut(Command),
     /// Un parámetro del original que rFirma no atiende.
@@ -210,6 +217,13 @@ impl fmt::Display for Refusal {
                  cualquier usuario del equipo; usa {} <N>, la terminal o --certgui",
                 documented(PASSWORD),
                 documented(PASSWORD_FD)
+            ),
+            Self::PasswordInArgvOnWindows => write!(
+                formatter,
+                "{} no se acepta: la contraseña en la línea de órdenes la ve \
+                 cualquier usuario del equipo; el PIN del almacén de Windows lo pide Windows \
+                 y, para los demás almacenes, aparece el diálogo de escritorio o se usa --certgui",
+                documented(PASSWORD)
             ),
             Self::CommandLeftOut(command) => write!(
                 formatter,
@@ -258,18 +272,22 @@ impl fmt::Display for Refusal {
 }
 
 /// La orden de unos argumentos que empiezan por ella, o lo primero que se rechaza de ellos.
-pub fn command_of(arguments: &[String]) -> Result<Command, Refusal> {
+pub fn command_of(arguments: &[String], platform: Platform) -> Result<Command, Refusal> {
     if arguments
         .iter()
         .any(|argument| argument.eq_ignore_ascii_case(PASSWORD))
     {
-        return Err(Refusal::PasswordInArgv);
+        return Err(if platform == Platform::Windows {
+            Refusal::PasswordInArgvOnWindows
+        } else {
+            Refusal::PasswordInArgv
+        });
     }
     let Some(first) = arguments.first() else {
         return Err(Refusal::NoCommand);
     };
     let command = Command::named(first).ok_or_else(|| Refusal::UnknownCommand(first.clone()))?;
-    if command.syntax().is_none() {
+    if command.syntax(platform).is_none() {
         return Err(Refusal::CommandLeftOut(command));
     }
     Ok(command)
@@ -357,6 +375,29 @@ Uso: rfirma cosign -i <fichero> (-o <fichero> | --xml | --json)
                    [--filter <filtro>] [--store <almacén>]
                    [--format auto|pades|cades|xades] [--algorithm sha512|sha384|sha256]
                    [--config <propiedades>] [--password-fd <N>]
+
+Añade una firma al fichero ya firmado de -i y escribe el resultado en -o, que se
+sobrescribe si existe.
+";
+
+const SIGN_SYNTAX_WINDOWS: &str = "\
+Uso: rfirma sign -i <fichero> (-o <fichero> | --xml | --json)
+                 (--alias <alias> | --filter <filtro> | --certgui)
+                 [--filter <filtro>] [--store <almacén>]
+                 [--format auto|pades|cades|xades] [--algorithm sha512|sha384|sha256]
+                 [--config <propiedades>]
+     rfirma sign --gui -i <fichero>
+
+Firma el fichero de -i y escribe la firma en -o, que se sobrescribe si existe.
+Con --gui, entrega el fichero a la ventana de rFirma y no firma.
+";
+
+const COSIGN_SYNTAX_WINDOWS: &str = "\
+Uso: rfirma cosign -i <fichero> (-o <fichero> | --xml | --json)
+                   (--alias <alias> | --filter <filtro> | --certgui)
+                   [--filter <filtro>] [--store <almacén>]
+                   [--format auto|pades|cades|xades] [--algorithm sha512|sha384|sha256]
+                   [--config <propiedades>]
 
 Añade una firma al fichero ya firmado de -i y escribe el resultado en -o, que se
 sobrescribe si existe.

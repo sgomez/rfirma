@@ -131,6 +131,7 @@ fn chosen_with(
         reader: &Untouched,
         time_zone: &Untouched,
         language: crate::signing::domain::Language::Spanish,
+        platform: crate::desktop::domain::platform::Platform::Linux,
         signer,
         window,
     };

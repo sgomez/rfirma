@@ -22,16 +22,7 @@ const NEXT_LOCAL_CA_CERTIFICATE_FILE: &str = "local-ca-next.crt.pem";
 /// Fichero de clave privada siguiente de la CA local (ADR-0005).
 const NEXT_LOCAL_CA_KEY_FILE: &str = "local-ca-next.key.pem";
 
-/// Plataformas soportadas para la resolución de rutas.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Platform {
-    /// Entorno Linux basado en estándares XDG.
-    Linux,
-    /// Entorno Windows basado en perfiles de usuario.
-    Windows,
-    /// Entorno macOS basado en Application Support.
-    MacOs,
-}
+pub use crate::desktop::domain::platform::Platform;
 
 impl Platform {
     /// Plataforma sobre la que se compila la aplicación (ADR-0010).

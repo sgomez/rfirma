@@ -6,6 +6,7 @@ use chrono::{DateTime, FixedOffset, Utc};
 
 use super::*;
 use crate::desktop::domain::command_line::WindowIntent;
+use crate::desktop::domain::platform::Platform;
 use crate::desktop::domain::sign_arguments::Algorithm;
 use crate::desktop::ports::{
     AskedSecret, LocalTimeZone, OfferedCertificate, SecretDescriptor, SignatureReading,
@@ -123,6 +124,17 @@ fn attended_in(
     files: &FilesInMemory,
     signer: &RecordingSigner,
 ) -> Outcome {
+    attended_on(Platform::Linux, words, stores, desktop, files, signer)
+}
+
+fn attended_on(
+    platform: Platform,
+    words: &[&str],
+    stores: &dyn CertificateStores,
+    desktop: &RecordingDesktop,
+    files: &FilesInMemory,
+    signer: &RecordingSigner,
+) -> Outcome {
     let ports = CommandLinePorts {
         stores,
         terminal: &ScriptedTerminal,
@@ -134,6 +146,7 @@ fn attended_in(
         reader: &Untouched,
         time_zone: &Untouched,
         language: crate::signing::domain::Language::Spanish,
+        platform,
         signer,
         window: &Untouched,
     };
@@ -304,6 +317,7 @@ mod filter_and_xml;
 mod json;
 mod listaliases;
 mod listaliases_json;
+mod platform;
 #[path = "../../../../tests/command_line/schema.rs"]
 pub(super) mod schema;
 mod sign_config;
@@ -337,26 +351,6 @@ fn each_parameter_left_out_ends_with_a_refusal_that_names_it() {
         assert_eq!(outcome.exit_code, REFUSED, "{parameter}");
         assert!(outcome.stdout.is_empty());
         assert!(said(&outcome).contains(parameter), "{}", said(&outcome));
-    }
-}
-
-#[test]
-fn the_password_is_refused_in_any_position_with_a_message_naming_password_fd() {
-    for words in [
-        &["sign", "-password", "1234", "-i", "a.pdf"][..],
-        &["listaliases", "-store", "pkcs11", "-password", "1234"][..],
-        &["sign", "-help", "-password", "1234"][..],
-    ] {
-        let outcome = attended(words);
-
-        assert_eq!(outcome.exit_code, REFUSED);
-        assert!(outcome.stdout.is_empty());
-        assert!(
-            said(&outcome).contains("-password-fd"),
-            "{}",
-            said(&outcome)
-        );
-        assert!(!said(&outcome).contains("1234"), "nunca repite el secreto");
     }
 }
 

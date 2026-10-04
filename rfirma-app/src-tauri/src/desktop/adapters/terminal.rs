@@ -9,7 +9,7 @@ use crate::desktop::adapters::command_line_ports::{
     DiskFiles, EngineReading, NativeEngine, NativeFilter, NativeVerifier, SystemTimeZone,
 };
 use crate::desktop::adapters::handover::SpawnedDesktop;
-use crate::desktop::adapters::paths::Paths;
+use crate::desktop::adapters::paths::{Paths, Platform};
 use crate::desktop::adapters::site_window_picker::SiteWindowPicker;
 use crate::desktop::application::command_line::{attend, CommandLinePorts, FAILED};
 use crate::desktop::domain::sign_arguments::Algorithm;
@@ -337,6 +337,7 @@ pub fn run_the_command_line(argv: &[String], context: tauri::Context<tauri::Wry>
         reader: &EngineReading::over(&NativeEngine),
         time_zone: &SystemTimeZone,
         language: Language::first_of(sys_locale::get_locales()),
+        platform: Platform::CURRENT,
         signer: match &signer {
             Some(signer) => signer,
             None => &Homeless,

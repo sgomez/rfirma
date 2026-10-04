@@ -99,7 +99,7 @@ fn the_usable_certificates(
     ports: &CommandLinePorts,
 ) -> Result<Vec<TokenCertificate>, Outcome> {
     let filter = filter.map(the_site_filter_of).transpose()?;
-    let mut listed = listed_within_the_store(arguments, ports.stores)?;
+    let mut listed = listed_within_the_store(arguments, ports)?;
     if let Some(filter) = &filter {
         listed = accepted_by(filter, listed, ports)?;
     }

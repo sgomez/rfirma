@@ -1,5 +1,37 @@
 use super::*;
 
+#[test]
+fn the_password_refusal_on_windows_explains_who_asks_for_the_pin_without_naming_linux_things() {
+    let refusal = command_of(
+        &arguments(&["sign", "-password", "1234"]),
+        Platform::Windows,
+    )
+    .expect_err("se rechaza");
+
+    assert_eq!(refusal, Refusal::PasswordInArgvOnWindows);
+    let text = refusal.to_string();
+    assert!(text.contains("Windows"), "{text}");
+    assert!(text.contains("--certgui"), "{text}");
+    assert!(
+        !text.contains("password-fd") && !text.contains("secret-tool"),
+        "{text}"
+    );
+    assert!(!text.contains("1234"));
+}
+
+#[test]
+fn the_windows_syntax_of_sign_and_cosign_leaves_out_certtui_and_password_fd() {
+    for command in [Command::Sign, Command::Cosign] {
+        let syntax = command.syntax(Platform::Windows).expect("tiene sintaxis");
+
+        assert!(
+            !syntax.contains("certtui") && !syntax.contains("password-fd"),
+            "{syntax}"
+        );
+        assert!(syntax.contains("--certgui"), "{syntax}");
+    }
+}
+
 fn arguments(words: &[&str]) -> Vec<String> {
     words.iter().map(|word| (*word).to_owned()).collect()
 }
@@ -33,7 +65,7 @@ fn the_four_attended_commands_have_their_syntax() {
         Command::ListAliases,
         Command::Verify,
     ] {
-        let syntax = command.syntax().expect("tiene sintaxis");
+        let syntax = command.syntax(Platform::Linux).expect("tiene sintaxis");
         assert!(
             syntax.contains(&format!("rfirma {}", command.name())),
             "{syntax}"
@@ -44,7 +76,8 @@ fn the_four_attended_commands_have_their_syntax() {
 #[test]
 fn countersign_and_batchsign_are_refused_as_left_out() {
     for word in ["countersign", "BATCHSIGN"] {
-        let refusal = command_of(&arguments(&[word, "-i", "a.pdf"])).expect_err("se rechaza");
+        let refusal = command_of(&arguments(&[word, "-i", "a.pdf"]), Platform::Linux)
+            .expect_err("se rechaza");
 
         assert!(matches!(refusal, Refusal::CommandLeftOut(_)), "{refusal:?}");
         assert!(refusal.to_string().contains(&word.to_lowercase()));
@@ -59,7 +92,7 @@ fn the_password_is_refused_in_any_position_naming_password_fd() {
         &["-password", "1234", "sign"][..],
         &["countersign", "-password", "1234"][..],
     ] {
-        let refusal = command_of(&arguments(words)).expect_err("se rechaza");
+        let refusal = command_of(&arguments(words), Platform::Linux).expect_err("se rechaza");
 
         assert_eq!(refusal, Refusal::PasswordInArgv);
         assert!(refusal.to_string().contains(PASSWORD_FD));
@@ -73,7 +106,7 @@ fn the_password_is_refused_in_any_position_naming_password_fd() {
 #[test]
 fn the_password_descriptor_is_not_the_password() {
     assert_eq!(
-        command_of(&arguments(&["sign", "-password-fd", "3"])),
+        command_of(&arguments(&["sign", "-password-fd", "3"]), Platform::Linux),
         Ok(Command::Sign)
     );
 }
@@ -81,10 +114,10 @@ fn the_password_descriptor_is_not_the_password() {
 #[test]
 fn a_word_that_is_not_a_command_is_refused_as_unknown() {
     assert_eq!(
-        command_of(&arguments(&["firmar"])),
+        command_of(&arguments(&["firmar"]), Platform::Linux),
         Err(Refusal::UnknownCommand("firmar".to_owned()))
     );
-    assert_eq!(command_of(&[]), Err(Refusal::NoCommand));
+    assert_eq!(command_of(&[], Platform::Linux), Err(Refusal::NoCommand));
 }
 
 #[test]
