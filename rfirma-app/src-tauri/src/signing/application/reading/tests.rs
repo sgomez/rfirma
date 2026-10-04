@@ -107,6 +107,24 @@ fn the_signatures_of_a_certified_pdf_reach_the_engine() {
 }
 
 #[test]
+fn a_certified_pdf_is_read_as_closed() {
+    let document: &[u8] = b"%PDF-1.7\n9 0 obj\n<< /Type /Sig /Reference [ << /TransformMethod /DocMDP >> ] >>\nendobj";
+
+    let report = signatures_of(document, &AnEngineThatReports::default()).expect("se lee");
+
+    assert!(report.closed());
+}
+
+#[test]
+fn a_pdf_without_certification_is_not_closed() {
+    let document: &[u8] = b"%PDF-1.7 contenido";
+
+    let report = signatures_of(document, &AnEngineThatReports::default()).expect("se lee");
+
+    assert!(!report.closed());
+}
+
+#[test]
 fn the_signatures_of_an_encrypted_pdf_are_not_read() {
     let document: &[u8] = b"%PDF-1.7\ntrailer\n<< /Root 1 0 R /Encrypt 5 0 R >>";
     let engine = AnEngineThatReports::default();

@@ -1,4 +1,4 @@
-//! El aviso de firmas previas del panel y de la sede: una línea con cuántas hay y la peor validez, «Ver firmas →» y la franja de «ya lo firmaste tú».
+//! El aviso de firmas previas del panel y de la sede: una línea con cuántas hay y la peor validez, «Ver firmas →» y la franja de «cerrado» o de «ya lo firmaste tú».
 
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -57,7 +57,8 @@ export function PreviousSignaturesNotice({
   const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { worst, expired, invalid } = problemsOf(report);
-  const notice = sameSignerNotice(certificate, report.signatures);
+  const closed = presentation === "panel" && report.closed === true;
+  const notice = closed ? null : sameSignerNotice(certificate, report.signatures);
 
   return (
     <div
@@ -86,6 +87,14 @@ export function PreviousSignaturesNotice({
           {t("panel.previousSignatures.view")}
         </button>
       </div>
+      {closed && (
+        <div className="panel__co-signature-footer">
+          <span className="panel__notice-icon">
+            <AlertIcon />
+          </span>
+          <span className="rf-body">{t("panel.previousSignatures.closed")}</span>
+        </div>
+      )}
       {notice !== null && (
         <div className="panel__co-signature-footer">
           <span className="panel__notice-icon">

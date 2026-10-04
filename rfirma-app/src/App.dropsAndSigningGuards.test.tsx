@@ -643,4 +643,37 @@ describe("App · ¿Firmar de todos modos?", () => {
     await waitFor(() => expect(presigned).toHaveLength(1));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+
+  it("does not offer to sign a closed document, and says so instead of «ya lo firmaste tú»", async () => {
+    const user = userEvent.setup();
+    const closingSignature = aSignature({
+      name: remembered.holderName,
+      idNumber: remembered.idNumber,
+      issuer: remembered.issuer,
+      certificateSerialNumber: remembered.certificateSerialNumber,
+      closesDocument: true,
+    });
+    const presigned: SigningOrder[] = [];
+    renderApp(
+      inMemoryRecents(),
+      [document("cofirmado.pdf", { placement: aPlacement })],
+      pdfsOf({ "cofirmado.pdf": 4 }),
+      {},
+      { list: async () => [remembered] },
+      emptyRubricPicker(),
+      signerOver(
+        { signatures: [closingSignature], tone: "information", closed: true },
+        recordingPresign(presigned),
+      ),
+    );
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await within(panel).findByText("El documento está cerrado y no admite más firmas.");
+    await within(within(panel).getByRole("combobox")).findByText(remembered.holderName);
+
+    const sign = within(panel).getByRole("button", { name: "Firmar" });
+    expect(sign).toBeDisabled();
+    expect(sign).toHaveAttribute("title", "El documento está cerrado y no admite más firmas.");
+    expect(within(panel).queryByText("Ya lo firmaste tú con este certificado")).toBeNull();
+  });
 });

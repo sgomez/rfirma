@@ -117,6 +117,7 @@ pub struct DocumentSignatures {
     changed_after_last_signature: bool,
     format: SignatureStandard,
     findings: Vec<DocumentFinding>,
+    closed: bool,
 }
 
 impl DocumentSignatures {
@@ -127,6 +128,7 @@ impl DocumentSignatures {
             changed_after_last_signature,
             format: SignatureStandard::Pades,
             findings: Vec::new(),
+            closed: false,
         }
     }
 
@@ -143,6 +145,16 @@ impl DocumentSignatures {
     /// El mismo informe, de un documento en ese formato.
     pub fn in_format(self, format: SignatureStandard) -> Self {
         Self { format, ..self }
+    }
+
+    /// El mismo informe, de un documento que la firma local rechaza por certificado, o no.
+    pub fn closed_to_signing(self, closed: bool) -> Self {
+        Self { closed, ..self }
+    }
+
+    /// Si la firma local lo rechaza por certificado.
+    pub fn closed(&self) -> bool {
+        self.closed
     }
 
     /// El formato de firma del documento.
