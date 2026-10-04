@@ -1,7 +1,7 @@
 //! Las historias del diálogo de progreso de la firma, una por etapa en curso.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { inDialogWindow } from "../design-system/dialogStoryFrame";
+import { inDialogWindow } from "../../.storybook/decorators/dialogWindow";
 import { SigningProgressDialog } from "./SigningProgressDialog";
 
 const meta = {

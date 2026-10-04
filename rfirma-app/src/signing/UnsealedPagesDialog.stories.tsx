@@ -2,7 +2,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { inDialogWindow } from "../design-system/dialogStoryFrame";
+import { inDialogWindow } from "../../.storybook/decorators/dialogWindow";
 import { UnsealedPagesDialog } from "./UnsealedPagesDialog";
 
 const meta = {

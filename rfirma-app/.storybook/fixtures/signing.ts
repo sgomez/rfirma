@@ -1,13 +1,13 @@
 //! Las firmas previas, los certificados y la rúbrica de ejemplo que comparten las historias de firma. Sin React.
 
-import type { Certificate } from "./certificate";
+import type { Certificate } from "../../src/signing/certificate";
 import type {
   DocumentFinding,
   PreviousSignature,
   PreviousSignaturesReport,
   ValidityReason,
-} from "./previousSignatures";
-import type { Rubric } from "./rubric";
+} from "../../src/signing/previousSignatures";
+import type { Rubric } from "../../src/signing/rubric";
 
 export function aSignature(overrides: Partial<PreviousSignature>): PreviousSignature {
   return {

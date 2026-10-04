@@ -1,8 +1,8 @@
 //! El marco de las historias de sede: la ventana a su tamaño real, delimitada como una ventana, y la configuración común de sus historias.
 
 import type { Decorator } from "@storybook/react-vite";
-import { SedeView } from "./SedeView";
-import { sedeViewActions } from "./sedeStoryPort";
+import { SedeView } from "../../src/sede/SedeView";
+import { sedeViewActions } from "../fixtures/sedeView";
 
 /** La ventana con borde y sombra; el `transform` hace del marco el bloque contenedor de su `position: fixed`. */
 const inSedeWindow =

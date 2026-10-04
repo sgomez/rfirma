@@ -2,15 +2,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { placementOf } from "../viewer/signatureBox";
-import { SigningPanel } from "./SigningPanel";
 import {
   inPanelColumn,
   panelActions,
   panelStoryParameters,
   UNWRITABLE_DESTINATION,
   WRITABLE_DESTINATION,
-} from "./signingPanelStoryFrame";
+} from "../../.storybook/decorators/signingPanel";
 import {
   aReport,
   aSignature,
@@ -22,7 +20,9 @@ import {
   STORY_CERTIFICATES,
   STORY_RUBRIC,
   VALID_CLOSING,
-} from "./signingStoryFixtures";
+} from "../../.storybook/fixtures/signing";
+import { placementOf } from "../viewer/signatureBox";
+import { SigningPanel } from "./SigningPanel";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 const RECT = { x0: 100, y0: 100, x1: 300, y1: 180 };

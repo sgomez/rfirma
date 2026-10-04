@@ -2,8 +2,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
+import { manyStoryTabs, storyRecents, storyTabs } from "../../.storybook/fixtures/documents";
 import { DocumentTabs } from "./DocumentTabs";
-import { manyStoryTabs, storyRecents, storyTabs } from "./documentStoryData";
 
 const meta = {
   title: "Ventana principal/3 · Pestañas",

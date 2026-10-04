@@ -13,7 +13,7 @@ import {
   handlerNotOurs,
   handlerOurs,
   handlerWithoutAutoFirma,
-} from "./setupStoryFixtures";
+} from "./setupFixtures";
 
 const meta = {
   title: "Primer arranque",

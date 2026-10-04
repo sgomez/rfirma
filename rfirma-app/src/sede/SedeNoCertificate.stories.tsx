@@ -1,9 +1,9 @@
 //! Las historias de la sede sin certificado utilizable: ninguno instalado o todos excluidos, desde una sede o una orden de terminal.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
+import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
-import { sedeStoryMeta } from "./sedeStoryFrame";
-import { sedeErrand } from "./sedeStoryPort";
 
 const meta = { title: "Sede/5 · Sin certificado", ...sedeStoryMeta } satisfies Meta<
   typeof SedeView

@@ -1,25 +1,10 @@
-//! Los datos de ejemplo que comparten las historias de sede: el momento de consentimiento, firmas previas y un PDF en blanco.
+//! Los datos de ejemplo que comparten las historias de sede: las firmas previas y un PDF en blanco.
 
-import type { PreviousSignature, PreviousSignaturesReport } from "../signing/previousSignatures";
-import type { PdfDocument } from "../viewer/pdf";
-import type { ErrandStage } from "./errand";
-import { certificate, signedDocument } from "./sedeWindowFixtures";
-
-type ConsentStage = Extract<ErrandStage, { kind: "consent" }>;
-
-/** El consentimiento de una firma de PDF con un solo certificado; `overrides` cambia lo que cuente la variante. */
-export function consentStage(overrides: Partial<ConsentStage> = {}): ConsentStage {
-  return {
-    kind: "consent",
-    document: signedDocument,
-    signs: null,
-    signing: "pdf",
-    items: null,
-    certificates: [certificate()],
-    narrowed: false,
-    ...overrides,
-  };
-}
+import type {
+  PreviousSignature,
+  PreviousSignaturesReport,
+} from "../../src/signing/previousSignatures";
+import type { PdfDocument } from "../../src/viewer/pdf";
 
 /** Una firma previa válida de la misma persona que firma. */
 export function previousSignature(overrides: Partial<PreviousSignature> = {}): PreviousSignature {

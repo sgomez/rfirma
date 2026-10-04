@@ -1,10 +1,10 @@
 //! Las historias de la sede en su momento 4, el desenlace: cada final del trámite y un rechazo por cada acción que cuenta.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
+import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SiteOutcome } from "./errand";
 import type { SedeView } from "./SedeView";
-import { sedeStoryMeta } from "./sedeStoryFrame";
-import { sedeErrand } from "./sedeStoryPort";
 import { signedDocument } from "./sedeWindowFixtures";
 
 const meta = { title: "Sede/4 · Desenlace", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;

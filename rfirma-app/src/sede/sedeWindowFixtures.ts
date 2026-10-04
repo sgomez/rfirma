@@ -92,3 +92,19 @@ export const signedDocument: SiteDocument = {
   round: { kind: "sign" },
   previousSignatures: NO_PREVIOUS_SIGNATURES,
 };
+
+type ConsentStage = Extract<ErrandStage, { kind: "consent" }>;
+
+/** El consentimiento de una firma de PDF con un solo certificado; `overrides` cambia lo que cuente la variante. */
+export function consentStage(overrides: Partial<ConsentStage> = {}): ConsentStage {
+  return {
+    kind: "consent",
+    document: signedDocument,
+    signs: null,
+    signing: "pdf",
+    items: null,
+    certificates: [certificate()],
+    narrowed: false,
+    ...overrides,
+  };
+}

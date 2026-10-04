@@ -2,8 +2,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
+import { storyRecents } from "../../.storybook/fixtures/documents";
 import { DocumentTabs } from "../documents/DocumentTabs";
-import { storyRecents } from "../documents/documentStoryData";
 import { RecentsSection } from "../documents/RecentRows";
 import { NewVersionStrip } from "../updates/NewVersionStrip";
 import { DocumentViewer } from "../viewer/DocumentViewer";

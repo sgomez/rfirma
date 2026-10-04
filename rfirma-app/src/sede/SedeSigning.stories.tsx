@@ -1,9 +1,9 @@
 //! Las historias de la sede en su momento 3, firmando y devolviendo la firma, y las del fichero que pide el diálogo del portal.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
+import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
-import { sedeStoryMeta } from "./sedeStoryFrame";
-import { sedeErrand } from "./sedeStoryPort";
 import { certificate } from "./sedeWindowFixtures";
 
 const meta = { title: "Sede/3 · Firmando", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;

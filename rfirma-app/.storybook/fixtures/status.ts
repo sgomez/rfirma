@@ -1,6 +1,6 @@
 //! Las filas y los informes de ejemplo de las historias del panel de estado y de la retirada.
 
-import type { SignalRow, StoreDetail, WithdrawalReport } from "./status";
+import type { SignalRow, StoreDetail, WithdrawalReport } from "../../src/status/status";
 
 const base = { action: null, detail: null, candidates: null, restartFirefoxNotice: false };
 

@@ -1,9 +1,9 @@
 //! La historia de `Dialog`: un diálogo con dos salidas y otro sin ninguna.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { inDialogWindow } from "../../.storybook/decorators/dialogWindow";
 import { Button } from "./Button";
 import { Dialog } from "./Dialog";
-import { inDialogWindow } from "./dialogStoryFrame";
 import { Row } from "./Row";
 
 const meta = {

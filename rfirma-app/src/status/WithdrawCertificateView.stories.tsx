@@ -2,8 +2,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { StatusView } from "./StatusView";
-import { memoryStatus } from "./status";
+import { inStatusWindow } from "../../.storybook/decorators/statusWindow";
 import {
   caInstalledEverywhere,
   sitesHandledByRfirma,
@@ -11,8 +10,9 @@ import {
   withdrawalHandlerFailed,
   withdrawalPartial,
   withdrawalStores,
-} from "./statusStoryData";
-import { inStatusWindow } from "./statusStoryFrame";
+} from "../../.storybook/fixtures/status";
+import { StatusView } from "./StatusView";
+import { memoryStatus } from "./status";
 import { WithdrawCertificateView } from "./WithdrawCertificateView";
 
 const behindTheVeil = (

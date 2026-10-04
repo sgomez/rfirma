@@ -2,14 +2,19 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { SignedPanel } from "./SignedPanel";
 import {
   inPanelColumn,
   panelActions,
   panelStoryParameters,
   WRITABLE_DESTINATION,
-} from "./signingPanelStoryFrame";
-import { aSignature, EXPIRED, NOT_ADMITTED, VALID_CLOSING } from "./signingStoryFixtures";
+} from "../../.storybook/decorators/signingPanel";
+import {
+  aSignature,
+  EXPIRED,
+  NOT_ADMITTED,
+  VALID_CLOSING,
+} from "../../.storybook/fixtures/signing";
+import { SignedPanel } from "./SignedPanel";
 
 const OWN_SIGNATURE = aSignature({ name: "LOVELACE BYRON ADA", idNumber: "00000000T" });
 

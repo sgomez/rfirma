@@ -2,14 +2,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { inDialogWindow } from "../design-system/dialogStoryFrame";
-import { SignaturesDialog } from "./SignaturesDialog";
+import { inDialogWindow } from "../../.storybook/decorators/dialogWindow";
 import {
   ALL_VALID_REPORT,
   EXTREME_REPORT,
   MIXED_REPORT,
   UNRECOGNIZED_REPORT,
-} from "./signingStoryFixtures";
+} from "../../.storybook/fixtures/signing";
+import { SignaturesDialog } from "./SignaturesDialog";
 
 const meta = {
   title: "Diálogos de firma/3 · Ver firmas",

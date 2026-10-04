@@ -2,7 +2,7 @@
 
 import type { Decorator } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import type { Destination } from "./destination";
+import type { Destination } from "../../src/signing/destination";
 
 /** 380 × 608 —la zona que se desliza de 446 px y el pie de 162— con el `transform` que hace del marco el bloque contenedor de lo que flota. */
 export const inPanelColumn: Decorator = (Story) => (

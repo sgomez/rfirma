@@ -2,7 +2,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { storyRecents } from "./documentStoryData";
+import { storyRecents } from "../../.storybook/fixtures/documents";
 import { RecentRows, RecentsSection } from "./RecentRows";
 
 const meta = {

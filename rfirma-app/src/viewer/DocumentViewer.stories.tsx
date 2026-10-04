@@ -2,11 +2,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { storyRecents } from "../documents/documentStoryData";
+import { storyRecents } from "../../.storybook/fixtures/documents";
+import { storyPdf } from "../../.storybook/fixtures/pdf";
 import { RecentsSection } from "../documents/RecentRows";
 import { DocumentViewer } from "./DocumentViewer";
 import type { Placement } from "./signatureBox";
-import { storyPdf } from "./storyPdf";
 
 const meta = {
   title: "Ventana principal/5 · Visor",

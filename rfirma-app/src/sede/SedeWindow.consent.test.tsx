@@ -7,8 +7,7 @@ import { elapse } from "../testing/elapse";
 import { renderWithCatalog } from "../testing/render";
 import * as consentModule from "./SedeConsent.stories";
 import { SedeWindow } from "./SedeWindow";
-import { consentStage } from "./sedeStoryData";
-import { certificate, scriptedErrand, scriptedFrom } from "./sedeWindowFixtures";
+import { certificate, consentStage, scriptedErrand, scriptedFrom } from "./sedeWindowFixtures";
 
 /** Grada A: el momento 2, el consentimiento, con su cuenta atrás. Lo que enseña cada historia está en `SedeWindow.presentation.test.tsx`. */
 
