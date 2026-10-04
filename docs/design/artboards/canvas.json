@@ -15,16 +15,6 @@
   ],
   "artboards": [
     {
-      "file": "Main.dc.html",
-      "title": "5 · Ventana principal · todos los estados",
-      "x": 0,
-      "y": 0,
-      "w": 1214,
-      "h": 864,
-      "page": "recorrido",
-      "is_interactive": true
-    },
-    {
       "file": "firmar-fichero-local.dc.html",
       "title": "firmar-fichero-local · tuyo, sin tocar",
       "x": 0,

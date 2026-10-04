@@ -50,11 +50,7 @@ Cuando llegue la v1.0 habrá que decidir de nuevo si sigue haciendo falta.
 `canvas.json` numera los estados y los reparte en **tres** páginas. El orden de
 la página «Recorrido de firma» es el de la ficha `ventana-principal.md`. La
 ventana de sede ya no tiene artboards: su verdad son sus historias de Storybook
-y su ficha, [`ventana-de-sede.md`](../ventana-de-sede.md):
-
-| # | Artboard | Estado |
-| - | -------- | ------ |
-| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos (el selector con su buscador), firmando (diálogo con velo), firmado (el resumen, que es también el de `verify --gui`: con firmas, CAdES con contrafirmas, sin firmas, formato desconocido y fallo al leer) y error al firmar; la firma visible y su contenido, la cabecera por escritorio —en Linux la barra de título GTK con la tira de pestañas debajo; en Windows y macOS la barra única—, con el botón partido, «Abiertos recientemente», el desborde de pestañas, el menú y el botón de aviso, la vista sin pestañas, la franja de versión nueva bajo la barra, el destino, el zoom y la vista previa |
+y su ficha, [`ventana-de-sede.md`](../ventana-de-sede.md).
 
 No se ha importado `firmar-fichero-local.dc.html`: `canvas.json` lo aparta en
 la página «Otros» y lo marca como ajeno al recorrido.

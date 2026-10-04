@@ -116,8 +116,8 @@ que haya lista; un `.p12` instalado lo pide **al firmar**. Ver
 
 El recorrido nunca cambia de pantalla: los estados son combinaciones del
 contenido de las regiones. Los de la **ventana** y los del **visor** tienen
-historia; los del **panel** y los **diálogos** siguen dibujados en el artboard
-`Main` hasta que se migre su ficha.
+historia, y también los del **panel** y los **diálogos**, en sus propias
+historias.
 
 | Estado | Pestañas | Visor | Panel | Historia |
 | --- | --- | --- | --- | --- |
@@ -126,16 +126,16 @@ historia; los del **panel** y los **diálogos** siguen dibujados en el artboard
 | Versión nueva | ídem | ídem | no se monta | `NewVersionInstallable`, `NewVersionNotInstallable` |
 | Linux | solo la tira bajo la barra GTK | ídem | ídem | `NativeTitlebar` |
 | Con documento | el documento | documento, con o sin firma visible | editable | visor: `WithDocument`, `WithSignatureBox` |
-| Buscando certificados | el documento | documento | el selector dice que busca, y firmar está inactivo. Encima, el diálogo de secreto si el almacén lo pide para listar | `Main` |
-| Sin certificados | ídem | documento | el aviso de que no hay certificados arriba; el pie ofrece añadir uno y volver a buscar | `Main` |
-| Sin certificado elegido | ídem | documento, sin firma visible: su interruptor está desactivado hasta elegir | el selector pide elegir | `Main` |
-| Listo | ídem | documento, con la firma visible si está encendida | el selector con el certificado elegido, y firmar | `Main` |
-| Certificados abiertos | ídem | ídem | el buscador en el selector y la lista flotando sobre el panel | `Main` |
+| Buscando certificados | el documento | documento | el selector dice que busca, y firmar está inactivo. Encima, el diálogo de secreto si el almacén lo pide para listar | `Searching` de «Panel de firma/1 · Antes de firmar» |
+| Sin certificados | ídem | documento | el aviso de que no hay certificados arriba; el pie ofrece añadir uno y volver a buscar | `NoCertificates` de «Panel de firma/1 · Antes de firmar» |
+| Sin certificado elegido | ídem | documento, sin firma visible: su interruptor está desactivado hasta elegir | el selector pide elegir | `Unchosen` de «Panel de firma/1 · Antes de firmar» |
+| Listo | ídem | documento, con la firma visible si está encendida | el selector con el certificado elegido, y firmar | `Ready` de «Panel de firma/1 · Antes de firmar» |
+| Certificados abiertos | ídem | ídem | el buscador en el selector y la lista flotando sobre el panel | `Open` de «Firma/CertificateSelect» |
 | Pidiendo el secreto / secreto incorrecto | ídem | bajo el velo | bajo el velo | [ficha del secreto](dialogo-pin.md): ventana nativa, sin historia |
-| Viendo las firmas previas | ídem | bajo el velo | bajo el velo; encima, [Ver firmas](dialogo-ver-firmas.md) | `Main` |
-| ¿Firmar de todos modos? | ídem | bajo el velo | bajo el velo; encima, [el diálogo](dialogo-firmar-de-todos-modos.md) | `Main` |
-| Firmando | ídem | bajo el velo, hoja atenuada | bajo el velo; el diálogo de progreso encima | `Main` |
-| Firmado | la pestaña pasa al documento firmado, con su marca | documento firmado | la franja de hora, los hallazgos y el resumen con todas las firmas y su validez, la tuya como nueva | `Main` |
+| Viendo las firmas previas | ídem | bajo el velo | bajo el velo; encima, [Ver firmas](dialogo-ver-firmas.md) | las historias de «Diálogos de firma/3 · Ver firmas» |
+| ¿Firmar de todos modos? | ídem | bajo el velo | bajo el velo; encima, [el diálogo](dialogo-firmar-de-todos-modos.md) | las historias de «Diálogos de firma/2 · Firmar de todos modos» |
+| Firmando | ídem | bajo el velo, hoja atenuada | bajo el velo; el diálogo de progreso encima | `Signing` de «Panel de firma/1 · Antes de firmar» y «Diálogos de firma/4 · Progreso de firma» |
+| Firmado | la pestaña pasa al documento firmado, con su marca | documento firmado | la franja de hora, los hallazgos y el resumen con todas las firmas y su validez, la tuya como nueva | `JustSigned` de «Panel de firma/2 · Firmado» |
 | `verify --gui` | el documento | el documento; si no es PDF, el icono y el nombre sin vista previa | el mismo resumen sin franja, o el aviso de que no hay firmas, de formato no reconocido o del fallo al leer las firmas | visor: `WithoutPreview` |
 | Error al firmar | sin marca | documento sin tocar | el error sustituye al panel; el pie ofrece reintentar | aviso: `SigningFailed`, `SigningFailedWithoutRetry` |
 
@@ -186,6 +186,6 @@ en [panel-de-firma.md](panel-de-firma.md#certificado).
 
 Validado el 25/09/2026; el selector de certificado y la barra única, el
 27/09/2026; la validez de las firmas en el resumen y el diálogo «Ver firmas», el
-03/10/2026. Desde entonces la verdad de la ventana, la cabecera, las pestañas y
-el visor son sus historias; el artboard `Main` solo conserva lo que aún no se ha
-migrado (el panel y los diálogos).
+03/10/2026. Desde entonces la verdad de la ventana, la cabecera, las pestañas, el
+visor, el panel y los diálogos son sus historias, y el artboard `Main` ya no
+existe.
