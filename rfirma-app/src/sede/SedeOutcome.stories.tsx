@@ -9,6 +9,7 @@ const meta = {
   title: "Sede/4 · Rechazo",
   component: SedeWindow,
   decorators: [inSedeWindow],
+  parameters: { layout: "centered" },
   args: {
     errands: storyErrand({
       kind: "outcome",

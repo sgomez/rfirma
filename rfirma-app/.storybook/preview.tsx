@@ -12,6 +12,7 @@ const withCatalogAndTheme: Decorator = (Story, { globals }) => (
 
 const preview: Preview = {
   decorators: [withCatalogAndTheme],
+  parameters: { options: { storySort: { method: "alphabetical" } } },
   initialGlobals: { language: "es", theme: "light" },
   globalTypes: {
     language: {

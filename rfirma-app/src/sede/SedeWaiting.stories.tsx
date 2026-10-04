@@ -9,6 +9,7 @@ const meta = {
   title: "Sede/1 · Espera",
   component: SedeWindow,
   decorators: [inSedeWindow],
+  parameters: { layout: "centered" },
   args: { errands: storyErrand({ kind: "waiting" }) },
 } satisfies Meta<typeof SedeWindow>;
 

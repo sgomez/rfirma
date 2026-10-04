@@ -10,6 +10,7 @@ const meta = {
   title: "Sede/2 · Consentimiento",
   component: SedeWindow,
   decorators: [inSedeWindow],
+  parameters: { layout: "centered" },
   args: {
     consentCountdown: false,
     errands: storyErrand({
