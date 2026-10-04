@@ -1,11 +1,11 @@
 //! Las historias de la sede en su momento 2, el consentimiento: cada operación, ronda de firma, aviso y origen que cambia la pantalla.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
+import { previousSignature, previousSignaturesReport } from "../../.storybook/fixtures/sede";
+import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
-import { consentStage, previousSignature, previousSignaturesReport } from "./sedeStoryData";
-import { sedeStoryMeta } from "./sedeStoryFrame";
-import { sedeErrand } from "./sedeStoryPort";
-import { certificate, signedDocument } from "./sedeWindowFixtures";
+import { certificate, consentStage, signedDocument } from "./sedeWindowFixtures";
 
 const meta = { title: "Sede/2 · Consentimiento", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
 

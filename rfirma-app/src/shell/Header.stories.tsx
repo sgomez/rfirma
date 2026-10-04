@@ -2,8 +2,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
+import { storyRecents, storyTabs } from "../../.storybook/fixtures/documents";
 import { DocumentTabs } from "../documents/DocumentTabs";
-import { storyRecents, storyTabs } from "../documents/documentStoryData";
 import { Header } from "./Header";
 
 const tabs = (

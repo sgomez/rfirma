@@ -2,12 +2,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
-import { CertificateSelect } from "./CertificateSelect";
 import {
   ENTITY_CERTIFICATE,
   PERSONAL_CERTIFICATE,
   STORY_CERTIFICATES,
-} from "./signingStoryFixtures";
+} from "../../.storybook/fixtures/signing";
+import { CertificateSelect } from "./CertificateSelect";
 
 const meta = {
   title: "Firma/CertificateSelect",

@@ -8,7 +8,7 @@ alguno. **Informa y además hace.**
 
 Componente: `rfirma-app/src/setup/SetupWizard.tsx`. Historias:
 `SetupWizard.stories.tsx`, en «Primer arranque», con las filas de estado del
-equipo de `setupStoryFixtures.ts`, que comparten las pruebas.
+equipo de `setupFixtures.ts`, que comparten las pruebas.
 
 ## Casos de uso que la usan
 

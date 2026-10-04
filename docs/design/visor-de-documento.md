@@ -8,7 +8,7 @@ soltar.
 `viewer/DocumentViewer.stories.tsx` («Ventana principal/5 · Visor»). Esta ficha
 cuenta el flujo y el porqué; los textos salen del catálogo (`viewer.*` en
 `po/messages.pot`) y no se copian aquí. Las historias pintan una hoja de
-mentira (`viewer/storyPdf.ts`): no hay `pdf.js` en Storybook, y lo que se ve
+mentira (`.storybook/fixtures/pdf.ts`): no hay `pdf.js` en Storybook, y lo que se ve
 dentro del recuadro en la aplicación es el PDF que compone el backend.
 
 ## Casos de uso que la usan

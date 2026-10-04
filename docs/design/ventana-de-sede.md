@@ -356,9 +356,12 @@ recibe el trámite y sus órdenes por props y no conoce ningún puerto de Tauri;
 | 5 · sin certificado | `SedeNoCertificate.stories.tsx`: `NoneInstalled`, `ExcludedBySite`, `InstallFailed` y las dos de terminal |
 
 `src/stories.test.tsx` las pinta todas con axe, así que una historia nueva queda
-revisada sin escribir otro test. Los datos de ejemplo están en
-`sedeStoryData.ts`, el marco de 520 × 420 en `sedeStoryFrame.tsx` y los espías de
-las órdenes en `sedeStoryPort.ts`.
+revisada sin escribir otro test. El momento de consentimiento, que comparten las
+pruebas, está en `sedeWindowFixtures.ts`; el resto de lo que usan las historias,
+en `rfirma-app/.storybook/`: las firmas previas y el PDF en blanco en
+`fixtures/sede.ts`, los espías de las órdenes en `fixtures/sedeView.ts` y el
+marco de la ventana —520 × 420, y 1080 × 660 al marcar el área— en
+`decorators/sedeWindow.tsx`.
 
 ## Claves i18n
 

@@ -6,7 +6,7 @@ import { defaults } from "../preferences/preferencesFixtures";
 import { memoryStatus, type SignalRow } from "../status/status";
 import { renderWithCatalog } from "../testing/render";
 import { SetupWizard } from "./SetupWizard";
-import { aVersionRow, certificateNotInstalled, handlerNotOurs } from "./setupStoryFixtures";
+import { aVersionRow, certificateNotInstalled, handlerNotOurs } from "./setupFixtures";
 
 // Grada A: el asistente solo habla con `StatusPort`, sin puerto propio.
 describe("SetupWizard", () => {

@@ -1,9 +1,9 @@
 //! Las historias de la sede antes de la petición: el aviso del cliente web antiguo y la espera del canal, con sus dos reparaciones.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
+import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
-import { sedeStoryMeta } from "./sedeStoryFrame";
-import { sedeErrand } from "./sedeStoryPort";
 
 const meta = { title: "Sede/1 · Espera", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
 

@@ -1,10 +1,10 @@
 //! Las historias de la sede en su momento 1c, marcar el área de la firma visible sobre el PDF.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { sedeAreaStoryMeta } from "../../.storybook/decorators/sedeWindow";
+import { blankPdf } from "../../.storybook/fixtures/sede";
+import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
-import { blankPdf } from "./sedeStoryData";
-import { sedeAreaStoryMeta } from "./sedeStoryFrame";
-import { sedeErrand } from "./sedeStoryPort";
 
 const meta = { title: "Sede/1c · Marcar la firma", ...sedeAreaStoryMeta } satisfies Meta<
   typeof SedeView

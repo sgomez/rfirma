@@ -1,6 +1,6 @@
 //! Un PDF de mentira para las historias del visor: hojas A4 en blanco con renglones, sin `pdf.js` ni contexto `2d`.
 
-import type { PdfDocument, PdfPage, Viewport } from "./pdf";
+import type { PdfDocument, PdfPage, Viewport } from "../../src/viewer/pdf";
 
 const A4 = { width: 595, height: 842 };
 
