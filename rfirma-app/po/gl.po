@@ -1246,10 +1246,6 @@ msgstr ""
 msgid "sede.repair.retry"
 msgstr "Tras permitir, volve á sede e preme Reintentar."
 
-#. El sujeto de las frases cuando la petición no trae un origen válido.
-msgid "sede.origin.unknown"
-msgstr "A petición"
-
 msgid "sede.consent.asksSignature"
 msgstr "{{origin}} pide a túa sinatura."
 
@@ -1460,10 +1456,7 @@ msgid "sede.outcome.cancelledTitle"
 msgstr "Cancelaches a sinatura"
 
 msgid "sede.outcome.refusedTitle"
-msgstr "rFirma rexeitou a petición"
-
-msgid "sede.outcome.portsTakenTitle"
-msgstr "rFirma non puido abrir a canle coa páxina"
+msgstr "Non se completou a petición"
 
 msgid "sede.outcome.refusedNote"
 msgstr "Para quen mantén a sede:"
@@ -1480,154 +1473,30 @@ msgstr "Esta páxina está desactualizada"
 msgid "sede.oldWebClient.body"
 msgstr "A páxina usa unha versión antiga da peza que fala con rFirma, e pode ter erros ou non ser segura. Preme Continuar para seguir; se algo falla, avisa a quen mantén a páxina."
 
-msgid "sede.refusals.appendedSignaturePage"
-msgstr ""
-"{{origin}} pide colocar a sinatura nunha páxina engadida ao final, e rFirma "
-"non fai iso."
+msgid "sede.refusals.retry"
+msgstr "Volve á sede e téntao de novo."
 
-msgid "sede.refusals.unsupportedFilter"
-msgstr ""
-"{{origin}} pide filtrar os certificados cun criterio que rFirma non recoñece."
+msgid "sede.refusals.contactSite"
+msgstr "Contacta coa sede para rematar o trámite."
 
-msgid "sede.refusals.unsupportedProtocolVersion"
-msgstr "{{origin}} fala unha versión do protocolo que rFirma non entende."
+msgid "sede.refusals.closeOther"
+msgstr "Pecha AutoFirma ou o outro trámite que teñas aberto e téntao de novo desde a sede."
 
-msgid "sede.refusals.missingFormat"
-msgstr "{{origin}} non di en que formato hai que asinar."
+msgid "sede.refusals.otherCertificate"
+msgstr "Non se pode asinar con ese certificado. Volve á sede e escolle outro."
 
-msgid "sede.refusals.unsupportedKeyStore"
-msgstr ""
-"{{origin}} pide asinar cun almacén de certificados que rFirma non pode abrir."
+#. La causa de seguridad, antes de la acción: la persona no lee el detalle técnico.
+msgid "sede.refusalCauses.sha1"
+msgstr "A sede pediu unha sinatura con SHA-1, que xa non é segura."
 
-msgid "sede.refusals.errandInFlight"
-msgstr ""
-"{{origin}} pide unha sinatura con outro trámite aberto, e rFirma atende un "
-"de cada vez."
+msgid "sede.refusalCauses.explicitXades"
+msgstr "A sede pediu un tipo de sinatura antigo que podería facerse pasar pola doutro documento."
 
-msgid "sede.refusals.portsTaken"
-msgstr ""
-"{{origin}} ofrece uns portos que outra aplicación xa está a usar, así que "
-"rFirma non puido abrir a canle para contestala. Pecha esa aplicación —pode "
-"ser AutoFirma ou outra copia de rFirma— e volve tentalo desde a páxina."
+msgid "sede.refusalCauses.invoiceMultisignature"
+msgstr "A sede pediu engadir unha segunda sinatura a unha factura electrónica, que só admite unha."
 
-msgid "sede.refusals.unknown"
-msgstr "{{origin}} enviou algo que rFirma non pode atender."
-
-msgid "sede.refusals.saveCancelled"
-msgstr ""
-"Pechaches o diálogo de gardado sen escoller onde gardar o ficheiro que pedía "
-"{{origin}}."
-
-msgid "sede.refusals.loadCancelled"
-msgstr ""
-"Pechaches o diálogo de carga sen escoller ningún ficheiro para {{origin}}."
-
-msgid "sede.refusals.cannotSaveData"
-msgstr ""
-"O ficheiro que pedía {{origin}} non se puido escribir onde escolliches."
-
-msgid "sede.refusals.cannotLoadData"
-msgstr "Un dos ficheiros escollidos para {{origin}} non se puido ler."
-
-msgid "sede.refusals.batchPresignerUnreachable"
-msgstr "O servizo de {{origin}} que prepara o lote non contestou."
-
-msgid "sede.refusals.batchPostsignerUnreachable"
-msgstr "O servizo de {{origin}} que pecha o lote non contestou."
-
-msgid "sede.refusals.batchInvalidPresignResponse"
-msgstr ""
-"O servizo de {{origin}} que prepara o lote contestou algo que rFirma non "
-"sabe ler."
-
-msgid "sede.refusals.batchInvalidPostsignResponse"
-msgstr ""
-"O servizo de {{origin}} que pecha o lote contestou algo que rFirma non sabe "
-"ler."
-
-msgid "sede.refusals.batchSigningFailed"
-msgstr "A sinatura do lote que pedía {{origin}} non chegou a completarse."
-
-msgid "sede.refusals.triphaseServerUrlMissing"
-msgstr ""
-"{{origin}} pediu asinar co seu servizo de sinatura, pero non dixo onde está."
-
-msgid "sede.refusals.triphaseServerException"
-msgstr "O servizo de sinatura de {{origin}} deu un erro."
-
-msgid "sede.refusals.triphaseServerUnreachable"
-msgstr "O servizo de sinatura de {{origin}} non contestou."
-
-msgid "sede.refusals.triphaseServerUnexpectedAnswer"
-msgstr ""
-"O servizo de sinatura de {{origin}} contestou algo que rFirma non sabe ler."
-
-msgid "sede.refusals.certificateNotFound"
-msgstr ""
-"O certificado escollido xa non está dispoñible ou {{origin}} non o acepta."
-
-msgid "sede.refusals.folderMissing"
-msgstr ""
-"O cartafol no que rFirma tiña que escribir para {{origin}} xa non existe."
-
-msgid "sede.refusals.unwritable"
-msgstr "rFirma non puido escribir o ficheiro que necesitaba {{origin}}."
-
-msgid "sede.refusals.invalidSignature"
-msgstr "O documento que enviou {{origin}} trae unha sinatura que non é válida."
-
-msgid "sede.refusals.confirmationNeeded"
-msgstr ""
-"{{origin}} pediu asinar sen preguntarche, pero o documento precisa que "
-"confirmes algo antes."
-
-msgid "sede.refusals.localBatchSign"
-msgstr "O lote que enviou {{origin}} non se pode asinar tal como vén."
-
-msgid "sede.refusals.siteErrandNotLive"
-msgstr "O trámite con {{origin}} xa rematara cando chegou a túa resposta."
-
-msgid "sede.refusals.pdfHasUnregisteredSignatures"
-msgstr ""
-"O PDF que enviou {{origin}} trae sinaturas que non constan no seu "
-"formulario, e rFirma non asina enriba sen que o confirmes."
-
-msgid "sede.refusals.secretOnTheReaderKeypad"
-msgstr ""
-"O PIN deste certificado teclease no lector, e rFirma aínda non sabe pedilo "
-"así."
-
-msgid "sede.refusals.userCancelled"
-msgstr ""
-"Cancelaches a petición do PIN, así que a sinatura que pedía {{origin}} non "
-"se fixo."
-
-msgid "sede.refusals.promptFailed"
-msgstr "rFirma non puido pedirche o PIN para a sinatura que pedía {{origin}}."
-
-msgid "sede.refusals.sha1"
-msgstr ""
-"{{origin}} pediu un tipo de sinatura antigo que xa non é seguro, con SHA-1. Por iso rFirma non a fai. Non é un fallo teu; se precisas rematar o trámite, contacta con {{origin}}."
-
-msgid "sede.refusals.explicitXades"
-msgstr ""
-"{{origin}} pediu un tipo de sinatura antigo que xa non é seguro: esa "
-"sinatura podería facerse pasar pola doutro documento distinto do teu. Por "
-"iso rFirma non a fai. Non é un fallo teu; se precisas rematar o trámite, "
-"contacta con {{origin}}."
-
-msgid "sede.refusals.invoiceMultisignature"
-msgstr ""
-"{{origin}} pediu engadir unha sinatura a unha factura electrónica que xa "
-"está asinada. Unha factura electrónica só admite unha sinatura, así que "
-"rFirma non pode facelo. Non é un fallo teu; se precisas rematar o trámite, "
-"contacta con {{origin}}."
-
-msgid "sede.refusals.unsupportedCountersignature"
-msgstr ""
-"{{origin}} pediu asinar sobre a sinatura doutra persoa nun tipo de documento "
-"que non o permite, así que rFirma non pode facelo. Non é un fallo teu; se "
-"precisas rematar o trámite, contacta con {{origin}}."
+msgid "sede.refusalCauses.unsupportedCountersignature"
+msgstr "A sede pediu asinar sobre a sinatura doutra persoa nun tipo de documento que non o permite."
 
 msgid "sede.siteNotes.sha1"
 msgstr ""
@@ -1670,6 +1539,12 @@ msgid_plural "sede.noCertificate.excludedTitle"
 msgstr[0] "{{origin}} non acepta o teu certificado"
 msgstr[1] "{{origin}} non acepta ningún dos teus {{count}} certificados"
 msgstr[2] "{{origin}} non acepta ningún dos teus {{count}} certificados"
+
+msgid "sede.noCertificate.excludedTitleUnknownOrigin"
+msgid_plural "sede.noCertificate.excludedTitleUnknownOrigin"
+msgstr[0] "Non se acepta o teu certificado"
+msgstr[1] "Non se acepta ningún dos teus {{count}} certificados"
+msgstr[2] "Non se acepta ningún dos teus {{count}} certificados"
 
 msgid "sede.noCertificate.terminalExcludedTitle"
 msgid_plural "sede.noCertificate.terminalExcludedTitle"

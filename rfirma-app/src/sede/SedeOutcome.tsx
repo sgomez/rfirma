@@ -14,7 +14,9 @@ import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import { errorText } from "../errors/errorMessage";
 import { formatSize } from "../signing/SigningPanel";
 import {
+  isSedeRefusal,
   OUTCOME_CLOSE_MS,
+  REFUSAL_ACTION_OF,
   type RefusalSituation,
   type SiteDocument,
   type SiteOutcome,
@@ -36,9 +38,10 @@ interface SedeOutcomeProps {
  *
  * El **rechazo** cubre los del transporte, que ocurren antes de que haya nada
  * que consentir. El argumento para enseñarlo no es que la persona pueda
- * arreglarlo —no puede—: es que acaba de arrancarse un programa en su equipo a
- * petición de una web, y un rFirma que aparece y desaparece en silencio es
- * indistinguible de uno roto. Lo único accionable es el detalle copiable.
+ * arreglarlo —casi nunca puede—: es que acaba de arrancarse un programa en su
+ * equipo a petición de una web, y un rFirma que aparece y desaparece en
+ * silencio es indistinguible de uno roto. Se le dice qué puede hacer, y el
+ * detalle copiable nombra la causa.
  *
  * **Se cierra sola a los quince segundos**, no a los cinco: con cinco no daba
  * tiempo a leer, y el caso que lo decide es el rechazo, donde irse sola
@@ -141,8 +144,9 @@ export function SedeOutcome({
         )}
         {outcome.kind === "refused" && (
           <>
+            <RefusalCause situation={outcome.situation} />
             <p className="rf-prose">
-              <RefusalSentence situation={outcome.situation} origin={origin} />
+              <RefusalSentence situation={outcome.situation} />
             </p>
             <p className="rf-hint">{t("sede.outcome.refusedNote")}</p>
             <SiteNote situation={outcome.situation} />
@@ -222,102 +226,38 @@ function DocumentRow({ document }: { document: SiteDocument }) {
   );
 }
 
-/**
- * La incompatibilidad, enunciada nombrando el origen y **sin acusar a nadie**:
- * se dice el hecho y quien lee saca la conclusión.
- *
- * Cada clave se escribe **entera**, sin plantilla: una clave
- * ensamblada con plantilla no la ve ni `extract --ci` ni `status --unused`
- * (`src/AGENTS.md`). Lo que ya nombra el escritorio se cuenta con su título.
- *
- * Sin origen válido el sujeto es la petición: nombrar a secas atribuye sin
- * afirmar, y el hueco tampoco se rellena con un invento.
- */
-function RefusalSentence({
-  situation,
-  origin,
-}: {
-  situation: RefusalSituation;
-  origin: string | null;
-}) {
+/** Lo que puede hacer la persona; cada clave va entera para que la vea `extract`. */
+function RefusalSentence({ situation }: { situation: RefusalSituation }) {
   const { t } = useTranslation();
-  const subject = { origin: origin ?? t("sede.origin.unknown") };
+
+  if (!isSedeRefusal(situation)) return <>{errorText(situation, t).title}</>;
+  switch (REFUSAL_ACTION_OF[situation]) {
+    case "retry":
+      return <>{t("sede.refusals.retry")}</>;
+    case "contactSite":
+      return <>{t("sede.refusals.contactSite")}</>;
+    case "closeOther":
+      return <>{t("sede.refusals.closeOther")}</>;
+    case "otherCertificate":
+      return <>{t("sede.refusals.otherCertificate")}</>;
+  }
+}
+
+/** Por qué rFirma no hace una firma que la sede pide de forma insegura o imposible. */
+function RefusalCause({ situation }: { situation: RefusalSituation }) {
+  const { t } = useTranslation();
 
   switch (situation) {
-    case "appendedSignaturePage":
-      return <>{t("sede.refusals.appendedSignaturePage", subject)}</>;
-    case "unsupportedFilter":
-      return <>{t("sede.refusals.unsupportedFilter", subject)}</>;
-    case "unsupportedProtocolVersion":
-      return <>{t("sede.refusals.unsupportedProtocolVersion", subject)}</>;
-    case "missingFormat":
-      return <>{t("sede.refusals.missingFormat", subject)}</>;
-    case "unsupportedKeyStore":
-      return <>{t("sede.refusals.unsupportedKeyStore", subject)}</>;
-    case "errandInFlight":
-      return <>{t("sede.refusals.errandInFlight", subject)}</>;
-    case "portsTaken":
-      return <>{t("sede.refusals.portsTaken", subject)}</>;
     case "sha1":
-      return <>{t("sede.refusals.sha1", subject)}</>;
+      return <p className="rf-prose">{t("sede.refusalCauses.sha1")}</p>;
     case "explicitXades":
-      return <>{t("sede.refusals.explicitXades", subject)}</>;
+      return <p className="rf-prose">{t("sede.refusalCauses.explicitXades")}</p>;
     case "invoiceMultisignature":
-      return <>{t("sede.refusals.invoiceMultisignature", subject)}</>;
+      return <p className="rf-prose">{t("sede.refusalCauses.invoiceMultisignature")}</p>;
     case "unsupportedCountersignature":
-      return <>{t("sede.refusals.unsupportedCountersignature", subject)}</>;
-    case "saveCancelled":
-      return <>{t("sede.refusals.saveCancelled", subject)}</>;
-    case "loadCancelled":
-      return <>{t("sede.refusals.loadCancelled", subject)}</>;
-    case "cannotSaveData":
-      return <>{t("sede.refusals.cannotSaveData", subject)}</>;
-    case "cannotLoadData":
-      return <>{t("sede.refusals.cannotLoadData", subject)}</>;
-    case "batchPresignerUnreachable":
-      return <>{t("sede.refusals.batchPresignerUnreachable", subject)}</>;
-    case "batchPostsignerUnreachable":
-      return <>{t("sede.refusals.batchPostsignerUnreachable", subject)}</>;
-    case "batchInvalidPresignResponse":
-      return <>{t("sede.refusals.batchInvalidPresignResponse", subject)}</>;
-    case "batchInvalidPostsignResponse":
-      return <>{t("sede.refusals.batchInvalidPostsignResponse", subject)}</>;
-    case "batchSigningFailed":
-      return <>{t("sede.refusals.batchSigningFailed", subject)}</>;
-    case "triphaseServerUrlMissing":
-      return <>{t("sede.refusals.triphaseServerUrlMissing", subject)}</>;
-    case "triphaseServerException":
-      return <>{t("sede.refusals.triphaseServerException", subject)}</>;
-    case "triphaseServerUnreachable":
-      return <>{t("sede.refusals.triphaseServerUnreachable", subject)}</>;
-    case "triphaseServerUnexpectedAnswer":
-      return <>{t("sede.refusals.triphaseServerUnexpectedAnswer", subject)}</>;
-    case "certificateNotFound":
-      return <>{t("sede.refusals.certificateNotFound", subject)}</>;
-    case "folderMissing":
-      return <>{t("sede.refusals.folderMissing", subject)}</>;
-    case "unwritable":
-      return <>{t("sede.refusals.unwritable", subject)}</>;
-    case "invalidSignature":
-      return <>{t("sede.refusals.invalidSignature", subject)}</>;
-    case "confirmationNeeded":
-      return <>{t("sede.refusals.confirmationNeeded", subject)}</>;
-    case "localBatchSign":
-      return <>{t("sede.refusals.localBatchSign", subject)}</>;
-    case "siteErrandNotLive":
-      return <>{t("sede.refusals.siteErrandNotLive", subject)}</>;
-    case "pdfHasUnregisteredSignatures":
-      return <>{t("sede.refusals.pdfHasUnregisteredSignatures", subject)}</>;
-    case "secretOnTheReaderKeypad":
-      return <>{t("sede.refusals.secretOnTheReaderKeypad", subject)}</>;
-    case "userCancelled":
-      return <>{t("sede.refusals.userCancelled", subject)}</>;
-    case "promptFailed":
-      return <>{t("sede.refusals.promptFailed", subject)}</>;
-    case "unknown":
-      return <>{t("sede.refusals.unknown", subject)}</>;
+      return <p className="rf-prose">{t("sede.refusalCauses.unsupportedCountersignature")}</p>;
     default:
-      return <>{errorText(situation, t).title}</>;
+      return null;
   }
 }
 
@@ -351,10 +291,6 @@ function title(outcome: SiteOutcome, t: TFunction): string {
       return t("sede.outcome.loadedTitle");
     case "cancelled":
       return t("sede.outcome.cancelledTitle");
-    case "refused":
-      return outcome.situation === "portsTaken"
-        ? t("sede.outcome.portsTakenTitle")
-        : t("sede.outcome.refusedTitle");
     default:
       return t("sede.outcome.refusedTitle");
   }
