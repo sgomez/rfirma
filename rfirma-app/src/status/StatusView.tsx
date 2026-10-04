@@ -15,12 +15,12 @@ import {
   CrossCircleIcon,
   NotApplicableIcon,
 } from "../design-system/icons";
+import { Select } from "../design-system/Select";
 import type {
   ExternalDestination,
   ExternalDestinationOpener,
 } from "../desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "../desktop/externalDestination";
-import { Select } from "../preferences/Select";
 import {
   type Signal,
   type SignalDetail,

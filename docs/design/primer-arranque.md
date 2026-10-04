@@ -132,7 +132,7 @@ original no obligue a rehacer la traducción en los cinco idiomas
 
 ## Componentes y tokens
 
-`Button`, `Card`, `Row` y `Stack`; `Select` de Preferencias; `ErrorNotice`;
+`Button`, `Card`, `Row` y `Stack`; `Select` del sistema de diseño; `ErrorNotice`;
 los iconos de marca, aviso y spinner; el `Header` de la ventana principal;
 `.rf-heading`, `.rf-title`, `.rf-prose`, `.rf-hint`, `.rf-divider` y los tokens
 de color, radio y espacio. El indicador de paso, los círculos de los pasos y las
