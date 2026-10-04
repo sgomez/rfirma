@@ -1,8 +1,10 @@
 //! El diálogo «¿Firmar de todos modos?», justo antes de firmar, con una fila por problema del documento.
 
-import { useId } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
+import { Dialog } from "../design-system/Dialog";
 import { AlertIcon, CrossCircleIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
 import type { SigningProblem } from "./previousSignatures";
 import { findingText, validityReasonText } from "./validityReasons";
 import "./SignAnywayDialog.css";
@@ -23,40 +25,30 @@ interface SignAnywayDialogProps {
  */
 export function SignAnywayDialog({ problems, locale, onConfirm, onCancel }: SignAnywayDialogProps) {
   const { t } = useTranslation();
-  const titleId = useId();
 
   return (
-    <div className="rf-scrim">
-      <div
-        className="rf-dialog sign-anyway-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
-        <p className="rf-title" id={titleId}>
-          {t("signAnyway.title")}
-        </p>
+    <Dialog label={t("signAnyway.title")} onClose={onCancel} className="sign-anyway-dialog">
+      <p className="rf-title">{t("signAnyway.title")}</p>
 
-        <ul className="sign-anyway-dialog__list">
-          {problems.map((problem) => (
-            <ProblemRow key={problemKey(problem)} problem={problem} locale={locale} />
-          ))}
-        </ul>
+      <ul className="sign-anyway-dialog__list">
+        {problems.map((problem) => (
+          <ProblemRow key={problemKey(problem)} problem={problem} locale={locale} />
+        ))}
+      </ul>
 
-        <p className="rf-prose">{t("signAnyway.warning")}</p>
+      <p className="rf-prose">{t("signAnyway.warning")}</p>
 
-        <hr className="rf-divider" />
+      <hr className="rf-divider" />
 
-        <div className="rf-row sign-anyway-dialog__actions">
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
-            {t("actions.cancel")}
-          </button>
-          <button type="button" className="rf-btn rf-btn--primary" onClick={onConfirm}>
-            {t("actions.signAnyway")}
-          </button>
-        </div>
-      </div>
-    </div>
+      <Row className="sign-anyway-dialog__actions">
+        <Button variant="ghost" onClick={onCancel}>
+          {t("actions.cancel")}
+        </Button>
+        <Button variant="primary" onClick={onConfirm}>
+          {t("actions.signAnyway")}
+        </Button>
+      </Row>
+    </Dialog>
   );
 }
 
