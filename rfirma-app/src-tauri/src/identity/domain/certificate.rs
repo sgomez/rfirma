@@ -199,6 +199,16 @@ impl TokenCertificate {
             .map(|s| s.to_string())
     }
 
+    /// Desde cuándo y hasta cuándo está en vigor, si el DER se sabe leer.
+    pub fn validity(&self) -> Option<(SystemTime, SystemTime)> {
+        let certificate = Certificate::from_der(&self.der).ok()?;
+        let validity = certificate.tbs_certificate().validity();
+        Some((
+            UNIX_EPOCH + validity.not_before.to_unix_duration(),
+            UNIX_EPOCH + validity.not_after.to_unix_duration(),
+        ))
+    }
+
     /// Emisor y número de serie en DER: lo que identifica al certificado sea cual sea su almacén.
     pub fn issuer_and_serial(&self) -> Option<(Vec<u8>, Vec<u8>)> {
         let certificate = Certificate::from_der(&self.der).ok()?;

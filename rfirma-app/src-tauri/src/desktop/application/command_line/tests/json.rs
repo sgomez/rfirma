@@ -95,33 +95,6 @@ fn cosign_json_carries_the_signature_as_a_string() {
 }
 
 #[test]
-fn listaliases_json_says_what_listaliases_xml_says() {
-    same_information_in_both(
-        |flag| attended_with(&["listaliases", flag], &StoresWith::labels(&["UNO", "DOS"])),
-        &["alias"],
-    );
-    same_information_in_both(
-        |flag| attended_with(&["listaliases", flag], &StoresWith::labels(&[])),
-        &["alias"],
-    );
-}
-
-#[test]
-fn a_repeatable_element_is_a_list_with_one_or_with_none() {
-    let one = attended_with(&["listaliases", "-json"], &StoresWith::labels(&["UNO"]));
-    let none = attended_with(&["listaliases", "-json"], &StoresWith::labels(&[]));
-
-    assert_eq!(
-        json_of(&one),
-        json!({"afirma": {"result": "ok", "response": {"alias": ["UNO"]}}})
-    );
-    assert_eq!(
-        json_of(&none),
-        json!({"afirma": {"result": "ok", "response": {"alias": []}}})
-    );
-}
-
-#[test]
 fn json_with_xml_is_refused_whatever_the_command() {
     for words in [
         &["listaliases", "-json", "-xml"][..],
@@ -140,18 +113,6 @@ fn verify_json_is_refused_like_verify_xml() {
 
     assert_eq!(outcome.exit_code, FAILED);
     assert!(outcome.stdout.is_empty());
-}
-
-#[test]
-fn an_alias_with_quotes_backslash_and_control_characters_comes_out_escaped() {
-    let alias = "a\"b\\c\n\t\u{1}d";
-
-    let outcome = attended_with(&["listaliases", "-json"], &StoresWith::labels(&[alias]));
-
-    assert_eq!(
-        json_of(&outcome)["afirma"]["response"]["alias"],
-        json!([alias])
-    );
 }
 
 #[test]

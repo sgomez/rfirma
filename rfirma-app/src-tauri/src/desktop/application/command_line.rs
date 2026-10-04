@@ -29,8 +29,10 @@ use crate::site::domain::protocol::{site_filter, SiteFilter};
 mod certgui;
 mod certtui;
 mod config;
+mod json_output;
 mod response;
 mod verify;
+use json_output::ListedAliases;
 use response::{Document, Field, Response};
 pub use verify::{format_to_verify, UNKNOWN_FORMAT};
 
@@ -207,6 +209,11 @@ fn carried_out(
 fn list_aliases(arguments: &[String], stores: &dyn CertificateStores) -> Outcome {
     let document = document_asked_by(arguments);
     match (aliases_listed(arguments, stores), document) {
+        (Ok(certificates), Some(Document::Json)) => Outcome {
+            stdout: json_output::compact(&ListedAliases::of(&certificates)),
+            ..Outcome::aliases_of(&certificates)
+        },
+        (Err(failed), Some(Document::Json)) => failed,
         (Ok(certificates), Some(document)) => Outcome {
             stdout: aliases_response(&certificates).render(document),
             ..Outcome::aliases_of(&certificates)

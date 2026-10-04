@@ -1,4 +1,4 @@
-//! La respuesta de una orden como estructura, de la que salen el XML de `--xml` y el JSON de `--json`; no decide qué lleva.
+//! La respuesta de una orden como estructura, de la que salen el XML de `--xml` y el JSON de `--json` de las órdenes que aún no tienen el suyo; no decide qué lleva.
 
 use serde_json::{Map, Value};
 

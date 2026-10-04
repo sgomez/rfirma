@@ -303,6 +303,9 @@ mod cosign;
 mod filter_and_xml;
 mod json;
 mod listaliases;
+mod listaliases_json;
+#[path = "../../../../tests/command_line/schema.rs"]
+mod schema;
 mod sign_config;
 mod sign_formats;
 
