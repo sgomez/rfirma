@@ -1,7 +1,8 @@
-//! Las situaciones del campo de páginas de «Varias», redactadas, y la forma del botón que pone o quita la firma de la página. Sin React.
+//! Las situaciones del campo de páginas de «Varias», redactadas, y qué hace el botón que pone o quita la firma de la página. Sin React.
 
 import type { useTranslation } from "react-i18next";
-import type { PageRangeError } from "./pageRange";
+import { formatPageRange, type PageRangeError, parsePageRange } from "./pageRange";
+import { type PageMode, type PageSet, type Placement, sealsPage } from "./pageSets";
 
 type Translate = ReturnType<typeof useTranslation>["t"];
 
@@ -13,10 +14,42 @@ type Translate = ReturnType<typeof useTranslation>["t"];
  */
 export type FieldTrouble = PageRangeError | { kind: "empty" };
 
-/** «Ponerla aquí» o «Quitarla de aquí»: qué dice y qué hace al pulsarlo. */
-export interface PageButton {
-  label: string;
-  act: () => void;
+/** «Ponerla aquí» o «Quitarla de aquí». */
+export type PageAction = "seal" | "unseal";
+
+/** Lo que se escribe en el campo para un conjunto que llega de fuera. */
+export function typedTextOf(pages: PageSet | null, pageCount: number): string {
+  return pages === null ? "" : formatPageRange(pages, pageCount);
+}
+
+/** Lo tecleado, si nombra páginas: ni lo que no se entiende ni el campo vacío se aplican. */
+export function typedPagesOf(text: string, pageCount: number): PageSet | null {
+  const typed = parsePageRange(text, pageCount);
+  return typed.ok ? typed.pages : null;
+}
+
+/** La situación del campo bajo el modo activo; fuera de «Varias» no hay ninguna. */
+export function fieldTroubleOf(
+  text: string,
+  mode: PageMode,
+  pageCount: number,
+): FieldTrouble | null {
+  if (mode !== "these") return null;
+  if (text.trim() === "") return { kind: "empty" };
+  const typed = parsePageRange(text, pageCount);
+  return typed.ok ? null : typed.error;
+}
+
+/** Qué ofrece el botón de la página a la vista, o `null` si no hay botón. */
+export function pageActionOf(
+  placement: Placement | null,
+  mode: PageMode,
+  viewedPage: number,
+  trouble: FieldTrouble | null,
+): PageAction | null {
+  const here = placement !== null && sealsPage(placement.pages, viewedPage);
+  if (mode === "all" || (mode === "single" && here) || trouble !== null) return null;
+  return here ? "unseal" : "seal";
 }
 
 /** La situación del campo, redactada en la frase corta del diseño. */
