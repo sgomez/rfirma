@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, FixedOffset, Utc};
 use rfirma_lib::desktop::adapters::command_line_ports::{
-    DiskFiles, NativeFilter, NativeReader, NativeVerifier,
+    DiskFiles, EngineReading, NativeEngine, NativeFilter, NativeVerifier,
 };
 use rfirma_lib::desktop::adapters::handover::SpawnedDesktop;
 use rfirma_lib::desktop::adapters::terminal::{ProcessDescriptors, ProcessTerminal, SeenStores};
@@ -80,7 +80,7 @@ fn attended(words: &[&str]) -> Outcome {
             filter: &NativeFilter,
             files: &DiskFiles,
             verifier: &NativeVerifier,
-            reader: &NativeReader,
+            reader: &EngineReading::over(&NativeEngine),
             time_zone: &SummerInMadrid,
             signer: &NeverSigns,
             window: &NeverSigns,

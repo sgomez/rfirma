@@ -137,10 +137,10 @@ pub trait SignatureVerifier {
     fn results_of(&self, document: &[u8], format: Format) -> Result<Vec<String>, BridgeError>;
 }
 
-/// La lectura de las firmas de un documento: quién firmó, con qué emisor y cuándo dice que firmó.
-pub trait SignatureReader {
+/// La lectura de las firmas de un documento, que la línea de órdenes pide al caso de uso de `signing` por su raíz.
+pub trait SignatureReading {
     /// Las firmas del documento, en árbol con sus contrafirmas, o por qué no se han podido leer.
-    fn signatures_in(&self, document: &[u8]) -> Result<DocumentSignatures, BridgeError>;
+    fn signatures_in(&self, document: &[u8]) -> Result<DocumentSignatures, String>;
 }
 
 /// La zona horaria de quien lanza la orden.

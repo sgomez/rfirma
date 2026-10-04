@@ -5,10 +5,11 @@ use chrono::{DateTime, FixedOffset, Utc};
 
 use super::super::{attend, CommandLinePorts, Outcome, FAILED, REFUSED, SUCCEEDED};
 use super::*;
+use crate::desktop::adapters::command_line_ports::EngineReading;
 use crate::desktop::ports::{
     AskedSecret, CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning,
     DesktopHandover, DocumentSigner, GraphicalPicker, LocalTimeZone, OfferedCertificate,
-    SecretDescriptor, SignatureReader, SignatureVerifier, Terminal, WindowChoice, WindowOffer,
+    SecretDescriptor, SignatureVerifier, Terminal, WindowChoice, WindowOffer,
 };
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
@@ -17,6 +18,7 @@ use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::{
     DocumentFinding, DocumentSignature, DocumentSignatures, SigningDate, Validity, ValidityReason,
 };
+use crate::signing::ports::PreviousSignaturesEngine;
 use crate::site::domain::protocol::SiteFilter;
 
 const AN_XML: &[u8] = b"<?xml version=\"1.0\"?><root/>";
@@ -87,8 +89,8 @@ impl SignatureVerifier for Answering {
 /// La lectura de firmas que contesta siempre lo mismo.
 struct Reading(Result<Vec<DocumentSignature>, String>);
 
-impl SignatureReader for Reading {
-    fn signatures_in(&self, _document: &[u8]) -> Result<DocumentSignatures, BridgeError> {
+impl PreviousSignaturesEngine for Reading {
+    fn previous_signatures(&self, _document_b64: &str) -> Result<DocumentSignatures, BridgeError> {
         self.0
             .clone()
             .map(|signatures| DocumentSignatures::new(signatures, false))
@@ -99,8 +101,8 @@ impl SignatureReader for Reading {
 /// La lectura de firmas que además trae hallazgos del documento.
 struct ReadingWithFindings(Vec<DocumentSignature>, Vec<DocumentFinding>);
 
-impl SignatureReader for ReadingWithFindings {
-    fn signatures_in(&self, _document: &[u8]) -> Result<DocumentSignatures, BridgeError> {
+impl PreviousSignaturesEngine for ReadingWithFindings {
+    fn previous_signatures(&self, _document_b64: &str) -> Result<DocumentSignatures, BridgeError> {
         Ok(DocumentSignatures::new(self.0.clone(), false).with_findings(self.1.clone()))
     }
 }
@@ -177,11 +179,11 @@ impl GraphicalPicker for Untouched {
     }
 }
 
-impl SignatureReader for Untouched {
-    fn signatures_in(&self, document: &[u8]) -> Result<DocumentSignatures, BridgeError> {
+impl PreviousSignaturesEngine for Untouched {
+    fn previous_signatures(&self, document_b64: &str) -> Result<DocumentSignatures, BridgeError> {
         panic!(
-            "verify sin -v no lee las firmas de {} bytes",
-            document.len()
+            "verify no llega al motor de firmas con {} caracteres de Base64",
+            document_b64.len()
         )
     }
 }
@@ -210,9 +212,9 @@ fn verified(words: &[&str], files: &dyn CommandLineFiles, verifier: &Answering) 
     attended(words, files, verifier, &Untouched, &Untouched)
 }
 
-fn verified_reading_with(words: &[&str], reader: &dyn SignatureReader) -> Outcome {
+fn verified_reading_with(words: &[&str], engine: &dyn PreviousSignaturesEngine) -> Outcome {
     let verifier = Answering::with(&["Firma valida"]);
-    attended(words, &OneFile(A_PDF), &verifier, reader, &SummerInMadrid)
+    attended(words, &OneFile(A_PDF), &verifier, engine, &SummerInMadrid)
 }
 
 fn verified_reading(words: &[&str], reader: &Reading) -> Outcome {
@@ -224,7 +226,7 @@ fn attended(
     words: &[&str],
     files: &dyn CommandLineFiles,
     verifier: &Answering,
-    reader: &dyn SignatureReader,
+    engine: &dyn PreviousSignaturesEngine,
     time_zone: &dyn LocalTimeZone,
 ) -> Outcome {
     let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
@@ -238,7 +240,7 @@ fn attended(
             filter: &Untouched,
             files,
             verifier,
-            reader,
+            reader: &EngineReading::over(engine),
             time_zone,
             signer: &Untouched,
             window: &Untouched,

@@ -8,7 +8,7 @@ use super::*;
 use crate::desktop::domain::command_line::WindowIntent;
 use crate::desktop::domain::sign_arguments::Algorithm;
 use crate::desktop::ports::{
-    AskedSecret, LocalTimeZone, OfferedCertificate, SecretDescriptor, SignatureReader,
+    AskedSecret, LocalTimeZone, OfferedCertificate, SecretDescriptor, SignatureReading,
     WindowChoice, WindowOffer,
 };
 use crate::identity::domain::certificate::CertificateRef;
@@ -284,8 +284,8 @@ impl SignatureVerifier for Untouched {
     }
 }
 
-impl SignatureReader for Untouched {
-    fn signatures_in(&self, document: &[u8]) -> Result<DocumentSignatures, BridgeError> {
+impl SignatureReading for Untouched {
+    fn signatures_in(&self, document: &[u8]) -> Result<DocumentSignatures, String> {
         panic!("no debería leer las firmas de {} bytes", document.len())
     }
 }

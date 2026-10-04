@@ -199,6 +199,46 @@ CAdES · 1 firma · 2 contrafirmas
 }
 
 #[test]
+fn a_certified_pdf_shows_its_signatures() {
+    let certified: &[u8] =
+        b"%PDF-1.7\n9 0 obj\n<< /Type /Sig /Reference [ << /TransformMethod /DocMDP >> ] >>\nendobj";
+    let engine = Reading(Ok(vec![a_signature("UNA PERSONA", "", None)]));
+    let verifier = Answering::with(&["Firma valida"]);
+
+    let outcome = attended(
+        &["verify", "-v", "-i", "certificado.pdf"],
+        &OneFile(certified),
+        &verifier,
+        &engine,
+        &SummerInMadrid,
+    );
+
+    assert_eq!(printed(&outcome), "PAdES · 1 firma\n\n✓ UNA PERSONA\n");
+}
+
+#[test]
+fn an_encrypted_pdf_fails_to_read_without_reaching_the_engine() {
+    let encrypted: &[u8] = b"%PDF-1.7\ntrailer\n<< /Root 1 0 R /Encrypt 5 0 R >>";
+    let verifier = Answering::with(&["Firma valida"]);
+
+    let outcome = attended(
+        &["verify", "-v", "-i", "cifrado.pdf"],
+        &OneFile(encrypted),
+        &verifier,
+        &Untouched,
+        &SummerInMadrid,
+    );
+
+    assert!(outcome.stdout.is_empty());
+    assert_eq!(outcome.stderr.len(), 1);
+    assert!(
+        outcome.stderr[0].starts_with("rfirma: no se han podido leer las firmas del documento: "),
+        "{:?}",
+        outcome.stderr
+    );
+}
+
+#[test]
 fn signatures_that_cannot_be_read_print_nothing_warn_on_stderr_and_end_with_zero() {
     let reader = Reading(Err("el isolate no arranca".to_owned()));
 
