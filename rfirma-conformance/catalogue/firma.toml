@@ -453,23 +453,26 @@ que /Contents, y deja dentro bytes sin firmar, se aborta con SAF_39 en vez de fi
 [check.drive]
 mode = "v4"
 script = "cosignpadescheckingbyterange"
+act.consent = "AutoFirma da la firma previa por buena y pide certificado: elígelo para que la cofirma acabe. Si el cliente rechaza el PDF, no pide nada."
 expects.code = "SAF_39"
 
 [[check]]
-id = "check_signatures_cosigns_over_a_cades_with_an_expired_certificate"
+id = "check_signatures_stops_a_cosign_over_a_cades_with_an_expired_certificate"
 set = "firma"
-citation = "ProtocolInvocationLauncherSign.java:409-483"
+citation = "ProtocolInvocationLauncherSign.java:409-483; ValidateBinarySignature.java:65-67, 226-244"
 explained_by.rfirma = "ADR-0044"
 statement = """
 Con checkSignatures=true, una cofirma CAdES sobre una firma implícita íntegra cuyo certificado
-firmante ha caducado continúa: la caducidad no es un problema de integridad.
+firmante ha caducado se aborta con SAF_39: el validador comprueba siempre la vigencia del
+certificado.
 """
 
 [check.drive]
 mode = "v4"
 script = "cosigncadescheckingexpired"
 store = "expired"
-expects.completes = {}
+act.consent = "rFirma da la firma previa por buena y pide certificado: elígelo para que la cofirma acabe. AutoFirma la rechaza sin pedir nada."
+expects.code = "SAF_39"
 
 [[check]]
 id = "check_signatures_cosigns_a_pdf_with_several_signatures_and_nothing_after_them"
