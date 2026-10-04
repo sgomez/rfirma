@@ -1115,13 +1115,6 @@ msgstr "Kendu {{holder}}(r)en ziurtagiria"
 msgid "preferences.certificates.empty"
 msgstr "Oraindik ez duzu bat ere instalatu"
 
-msgid "preferences.certificates.expires"
-msgstr "{{date}}(e)an iraungitzen da"
-
-#. Insignia de la fila de un certificado caducado, que se queda en la lista.
-msgid "preferences.certificates.expired"
-msgstr "Iraungita"
-
 msgid "preferences.theme.label"
 msgstr "Gaia"
 

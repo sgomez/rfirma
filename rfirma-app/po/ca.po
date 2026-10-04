@@ -1114,13 +1114,6 @@ msgstr "Treure el certificat de {{holder}}"
 msgid "preferences.certificates.empty"
 msgstr "Encara no n'has instal·lat cap"
 
-msgid "preferences.certificates.expires"
-msgstr "caduca el {{date}}"
-
-#. Insignia de la fila de un certificado caducado, que se queda en la lista.
-msgid "preferences.certificates.expired"
-msgstr "Caducat"
-
 msgid "preferences.theme.label"
 msgstr "Tema"
 

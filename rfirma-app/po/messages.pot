@@ -1103,13 +1103,6 @@ msgstr ""
 msgid "preferences.certificates.empty"
 msgstr ""
 
-msgid "preferences.certificates.expires"
-msgstr ""
-
-#. Insignia de la fila de un certificado caducado, que se queda en la lista.
-msgid "preferences.certificates.expired"
-msgstr ""
-
 msgid "preferences.theme.label"
 msgstr ""
 

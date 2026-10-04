@@ -15,10 +15,29 @@ describe("certificates in a file", () => {
 
     const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
     expect(within(certificates).getByText("Ada Lovelace Byron")).toBeInTheDocument();
+    expect(within(certificates).getByText(/00000000T/)).toBeInTheDocument();
+    expect(certificates.textContent).not.toMatch(/[/\\][A-Za-z.]|\.p12/);
+  });
+
+  it("shows a certificate of representation by the entity, as the selector does", async () => {
+    const user = userEvent.setup();
+    renderView({
+      installedCertificates: [
+        anInstalledCertificate({
+          entityName: "Analytical Engines S.L.",
+          organizationIdentifier: "VATES-B00000000",
+        }),
+      ],
+    });
+    await openTab(user, "Certificados");
+
+    const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
     expect(
-      within(certificates).getByText(/IDCES-00000000T · Emitido por FNMT-RCM · caduca el /),
+      within(certificates).getByText("Analytical Engines S.L. · B00000000"),
     ).toBeInTheDocument();
-    expect(certificates.textContent).not.toMatch(/[/\\]/);
+    expect(
+      within(certificates).getByText("Representante · Ada Lovelace Byron · 00000000T"),
+    ).toBeInTheDocument();
   });
 
   it("offers the two gestures and nothing else", async () => {
@@ -47,7 +66,7 @@ describe("certificates in a file", () => {
   });
 
   /** Un caducado se queda: que desaparezca no le explica nada a quien lo instaló. */
-  it("keeps an expired certificate in the list, with its badge", async () => {
+  it("keeps an expired certificate in the list, with the reason it cannot sign", async () => {
     const user = userEvent.setup();
     renderView({
       installedCertificates: [
@@ -58,7 +77,7 @@ describe("certificates in a file", () => {
 
     const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
     expect(within(certificates).getByText("Ada Lovelace Byron")).toBeInTheDocument();
-    expect(within(certificates).getByText("Caducado")).toBeInTheDocument();
+    expect(within(certificates).getByText(/Caducó el /)).toBeInTheDocument();
   });
 
   /**
