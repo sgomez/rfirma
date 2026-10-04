@@ -26,7 +26,6 @@ const emptyViewer = (
   <DocumentViewer
     pdf={null}
     placement={null}
-    onPlace={fn()}
     onOpen={fn()}
     emptyExtra={<RecentsSection recents={storyRecents} onSelect={fn()} onClear={fn()} />}
   />

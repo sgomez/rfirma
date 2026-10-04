@@ -1,9 +1,9 @@
 import type { Dictionary } from "./es";
 
 export const eu: Dictionary = {
-  "meta.title": "rFirma — Mahaigainerako jatorrizko sinadura elektronikoa",
+  "meta.title": "rFirma: sinadura elektronikoa Javarik gabe, AutoFirmaren alternatiba",
   "meta.description":
-    "AutoFirmaren Swing interfazea eta tokiko zerbitzariak ordezten dituen Rust eta React aplikazioa, Administrazioaren kriptografia ofizialarekin.",
+    "Sinatu PDFak zure ziurtagiri digitalarekin edo NANe elektronikoarekin Linux, Windows eta macOS sistemetan. AutoFirma eskatzen duten egoitzetan dabil, Javarik gabe. Alfa bertsioa.",
   "meta.image.alt": "rFirmaren logotipoa hondo berdearen gainean, rfirma.sgomez.me domeinuarekin",
 
   "notice.aria": "Titulartasun ofizialari buruzko oharra",
@@ -30,10 +30,10 @@ export const eu: Dictionary = {
   "lang.en": "English",
 
   "hero.kicker": "AutoFirmaren alternatiba",
-  "hero.title.line1": "Jatorrizko sinadura elektronikoa.",
-  "hero.title.line2": "Javarik gabe, itxaronaldirik gabe.",
+  "hero.title.line1": "rFirma: jatorrizko sinadura elektronikoa,",
+  "hero.title.line2": "Javarik gabe.",
   "hero.body":
-    "AutoFirmaren Swing interfazea eta tokiko zerbitzariak ordezten dituen Rust eta React aplikazioa, Administrazioaren kriptografia ofizialarekin.",
+    "Itxaronaldirik gabe. AutoFirmaren Swing interfazea eta tokiko zerbitzariak ordezten dituen Rust eta React aplikazioa, Administrazioaren kriptografia ofizialarekin.",
   "hero.cta.primary": "Instalatu rFirma",
   "hero.cta.secondary": "Ikusi nola sinatzen den",
   "hero.trust.oss": "Kode irekia, EUPL 1.2",

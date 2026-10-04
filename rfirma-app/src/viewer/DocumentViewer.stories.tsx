@@ -19,7 +19,7 @@ const meta = {
       </div>
     ),
   ],
-  args: { pdf: null, placement: null, onPlace: fn(), onOpen: fn() },
+  args: { pdf: null, placement: null, onMove: fn(), onTrace: fn(), onOpen: fn() },
 } satisfies Meta<typeof DocumentViewer>;
 
 export default meta;
@@ -46,7 +46,6 @@ export const WithSignatureBox: Story = {
 export const SignatureBoxOnAllPages: Story = {
   args: {
     pdf: storyPdf(),
-    pageMode: "all",
     placement: { rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: "all" },
   },
 };

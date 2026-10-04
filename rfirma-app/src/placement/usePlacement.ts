@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   activating,
   firstSealedPage,
+  movingTo,
   type PageMode,
   type PageSet,
   type Placement,
@@ -12,8 +13,10 @@ import {
   placementOf,
   placingFrom,
   sealedPages,
+  sealingAt,
   storing,
   type UserSpaceRect,
+  unsealingAt,
 } from "./pageSets";
 
 /** La posición estándar del recuadro en una página del documento. */
@@ -83,13 +86,20 @@ export function usePlacement({ document, standardRectOn, onChange }: PlacementOp
     [apply, standardRectOn, pageCount],
   );
 
-  const rememberPlacement = useCallback(
-    (next: Placement | null) => {
-      apply({
-        rect: next?.rect ?? placing.rect,
-        sets: storing(placing.sets, placing.mode, next?.pages ?? null, pageCount),
-        mode: placing.mode,
-      });
+  const moveBox = useCallback(
+    (rect: UserSpaceRect) => apply(movingTo(placing, rect)),
+    [apply, placing],
+  );
+
+  const sealPage = useCallback(
+    (rect: UserSpaceRect, page: number) => apply(sealingAt(placing, page, rect, pageCount)),
+    [apply, placing, pageCount],
+  );
+
+  const unsealPage = useCallback(
+    (page: number) => {
+      const next = unsealingAt(placing, page, pageCount);
+      if (next !== placing) apply(next);
     },
     [apply, placing, pageCount],
   );
@@ -132,7 +142,9 @@ export function usePlacement({ document, standardRectOn, onChange }: PlacementOp
     placement,
     viewedPage,
     viewPage,
-    rememberPlacement,
+    moveBox,
+    sealPage,
+    unsealPage,
     choosePages,
     changePageMode,
     placeOnViewedPage,

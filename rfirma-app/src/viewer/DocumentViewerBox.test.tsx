@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { Placement } from "../placement/pageSets";
+import type { Placement, UserSpaceRect } from "../placement/pageSets";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
 import {
@@ -9,6 +9,7 @@ import {
   goToPage,
   noop,
   recordingDocument,
+  reportingTo,
   seated,
 } from "./testing/documentViewerFixtures";
 
@@ -27,14 +28,14 @@ describe("el recuadro de la firma", () => {
    * zoom raro no puede reescribir la fila guardada del documento (ID-74).
    */
   it("does not write the placement when a document opens", async () => {
-    const onPlace = vi.fn();
+    const reported = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={null} {...reportingTo(reported)} onOpen={noop} />,
     );
 
     await waitFor(() => expect(renders).toHaveLength(1));
-    expect(onPlace).not.toHaveBeenCalled();
+    expect(reported).not.toHaveBeenCalled();
     expect(
       screen.queryByRole("application", { name: "Recuadro de la firma visible" }),
     ).not.toBeInTheDocument();
@@ -43,9 +44,7 @@ describe("el recuadro de la firma", () => {
   /** ID-113 con el ID-96: en otra página no hay recuadro, así que `Tab` no lo alcanza. */
   it("shows the box only on its own page", async () => {
     const { document, renders } = recordingDocument(3);
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={seated} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
     expect(box()).toBeInTheDocument();
 
@@ -60,28 +59,33 @@ describe("el recuadro de la firma", () => {
   /**
    * El criterio del #126: reabrir un documento **repone su página**. El visor
    * arrancaba siempre en la 1, así que el efecto de colocación veía que no
-   * coincidía con la página guardada y la pisaba con la 1 a través de
-   * `onPlace` —que ahora escribe en la fila—.
+   * coincidía con la página guardada y la pisaba con la 1, que acababa
+   * escrita en la fila.
    */
   it("opens on the page the row remembered instead of resetting it to the first", async () => {
     const remembered: Placement = {
       rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
       pages: { only: [3] },
     };
-    const onPlace = vi.fn();
+    const reported = vi.fn();
     const { document, renders } = recordingDocument(5);
     const { rerender } = renderWithCatalog(
-      <DocumentViewer pdf={null} placement={null} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer pdf={null} placement={null} {...reportingTo(reported)} onOpen={noop} />,
     );
 
     rerender(
-      <DocumentViewer pdf={document} placement={remembered} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer
+        pdf={document}
+        placement={remembered}
+        {...reportingTo(reported)}
+        onOpen={noop}
+      />,
     );
 
     await waitFor(() => expect(renders).toHaveLength(1));
     expect(renders[0]?.page).toBe(3);
     expect(screen.getByLabelText("Número de página")).toHaveValue(3);
-    expect(onPlace).not.toHaveBeenCalled();
+    expect(reported).not.toHaveBeenCalled();
   });
 
   /** Una fila vieja con una página que el documento ya no tiene no lo rompe. */
@@ -92,10 +96,10 @@ describe("el recuadro de la firma", () => {
     };
     const { document, renders } = recordingDocument(3);
     const { rerender } = renderWithCatalog(
-      <DocumentViewer pdf={null} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={null} placement={null} onOpen={noop} />,
     );
 
-    rerender(<DocumentViewer pdf={document} placement={remembered} onPlace={noop} onOpen={noop} />);
+    rerender(<DocumentViewer pdf={document} placement={remembered} onOpen={noop} />);
 
     await waitFor(() => expect(renders).toHaveLength(1));
     expect(renders[0]?.page).toBe(3);
@@ -107,9 +111,14 @@ describe("el recuadro de la firma", () => {
       pages: { only: [1] },
     };
     const { document, renders } = recordingDocument();
-    const onPlace = vi.fn();
+    const reported = vi.fn();
     renderWithCatalog(
-      <DocumentViewer pdf={document} placement={placement} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer
+        pdf={document}
+        placement={placement}
+        {...reportingTo(reported)}
+        onOpen={noop}
+      />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -123,7 +132,7 @@ describe("el recuadro de la firma", () => {
     // Los píxeles siguen al zoom…
     expect(box().style.width).toBe(`${200 * scale}px`);
     // …y el recuadro guardado no se ha tocado: el zoom no lo mueve.
-    expect(onPlace).not.toHaveBeenCalled();
+    expect(reported).not.toHaveBeenCalled();
   });
 
   it("stores the drop in user space, converted by the viewport", async () => {
@@ -131,10 +140,10 @@ describe("el recuadro de la firma", () => {
       rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
       pages: { only: [1] },
     };
-    const onPlace = vi.fn();
+    const onMove = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
-      <DocumentViewer pdf={document} placement={placement} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={placement} onMove={onMove} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -143,10 +152,7 @@ describe("el recuadro de la firma", () => {
     fireEvent.pointerUp(box(), { pointerId: 1 });
 
     // A escala 1 y sin rotación: +10 en X y −20 en Y del documento.
-    expect(onPlace).toHaveBeenCalledWith({
-      pages: { only: [1] },
-      rect: { x0: 60, y0: 40, x1: 260, y1: 120 },
-    });
+    expect(onMove).toHaveBeenCalledWith({ x0: 60, y0: 40, x1: 260, y1: 120 });
   });
 
   it("refuses a drop that falls off the page instead of taking it silently", async () => {
@@ -154,10 +160,10 @@ describe("el recuadro de la firma", () => {
       rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
       pages: { only: [1] },
     };
-    const onPlace = vi.fn();
+    const onMove = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
-      <DocumentViewer pdf={document} placement={placement} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={placement} onMove={onMove} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -165,7 +171,7 @@ describe("el recuadro de la firma", () => {
     fireEvent.pointerMove(box(), { pointerId: 1, clientX: 900, clientY: 100 });
     fireEvent.pointerUp(box(), { pointerId: 1 });
 
-    expect(onPlace).not.toHaveBeenCalled();
+    expect(onMove).not.toHaveBeenCalled();
     expect(await screen.findByRole("alert")).toHaveTextContent(/no puede salir de la página/);
   });
 
@@ -174,19 +180,16 @@ describe("el recuadro de la firma", () => {
       rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
       pages: { only: [1] },
     };
-    const onPlace = vi.fn();
+    const onMove = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
-      <DocumentViewer pdf={document} placement={placement} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={placement} onMove={onMove} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
     fireEvent.keyDown(box(), { key: "ArrowRight" });
 
-    expect(onPlace).toHaveBeenCalledWith({
-      pages: { only: [1] },
-      rect: { x0: 51, y0: 60, x1: 251, y1: 140 },
-    });
+    expect(onMove).toHaveBeenCalledWith({ x0: 51, y0: 60, x1: 251, y1: 140 });
   });
 
   /**
@@ -195,10 +198,10 @@ describe("el recuadro de la firma", () => {
    * colocar con precisión obligaba a acercarse primero.
    */
   it("nudges by a user-space point, whatever the zoom", async () => {
-    const onPlace = vi.fn();
+    const onMove = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
-      <DocumentViewer pdf={document} placement={seated} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={seated} onMove={onMove} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -208,10 +211,7 @@ describe("el recuadro de la firma", () => {
 
     fireEvent.keyDown(box(), { key: "ArrowRight" });
 
-    expect(onPlace).toHaveBeenCalledWith({
-      pages: { only: [1] },
-      rect: { x0: 51, y0: 60, x1: 251, y1: 140 },
-    });
+    expect(onMove).toHaveBeenCalledWith({ x0: 51, y0: 60, x1: 251, y1: 140 });
   });
 });
 
@@ -224,9 +224,7 @@ describe("el conjunto de páginas en la hoja", () => {
 
   it("draws the same box on every page of the set, and no differently on any of them", async () => {
     const { document, renders } = recordingDocument(3);
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={onTwo} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={onTwo} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
     const first = { left: box().style.left, top: box().style.top, width: box().style.width };
 
@@ -248,7 +246,6 @@ describe("el conjunto de páginas en la hoja", () => {
       <DocumentViewer
         pdf={document}
         placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [3] } }}
-        onPlace={noop}
         onOpen={noop}
       />,
     );
@@ -266,9 +263,7 @@ describe("el conjunto de páginas en la hoja", () => {
       <DocumentViewer
         pdf={document}
         placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: "all" }}
-        onPlace={noop}
         onOpen={noop}
-        pageMode="all"
       />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
@@ -277,21 +272,6 @@ describe("el conjunto de páginas en la hoja", () => {
 
     expect(box()).toBeInTheDocument();
   });
-
-  /** Mover el recuadro en una página lo mueve en todas: es un widget replicado. */
-  it("keeps the set untouched when the box is dragged", async () => {
-    const onPlace = vi.fn();
-    const { document, renders } = recordingDocument(3);
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={onTwo} onPlace={onPlace} onOpen={noop} />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    fireEvent.keyDown(box(), { key: "ArrowRight" });
-
-    const [placed] = onPlace.mock.calls[0] as [Placement];
-    expect(placed.pages).toEqual({ only: [1, 3] });
-  });
 });
 
 /** ID-104: los tiradores son cromo, no papel. */
@@ -299,7 +279,7 @@ describe("los tiradores del recuadro", () => {
   it("measures the same on screen at 50 %, 100 % and 300 %", async () => {
     const { document, renders } = recordingDocument();
     const { container } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={seated} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -328,10 +308,10 @@ describe("los tiradores del recuadro", () => {
  */
 describe("la petición de sellar o quitar el sello", () => {
   it("places a document that has none, on this page, at the standard position", async () => {
-    const onPlace = vi.fn();
+    const onSeal = vi.fn();
     const { document, renders } = recordingDocument();
     const { rerender } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={null} onSeal={onSeal} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -339,27 +319,27 @@ describe("la petición de sellar o quitar el sello", () => {
       <DocumentViewer
         pdf={document}
         placement={null}
-        onPlace={onPlace}
+        onSeal={onSeal}
         onOpen={noop}
         placementRequest={{ action: "seal" }}
       />,
     );
 
-    const [placed] = onPlace.mock.calls[0] as [Placement];
-    expect(placed.pages).toEqual({ only: [1] });
+    const [rect, page] = onSeal.mock.calls[0] as [UserSpaceRect, number];
+    expect(page).toBe(1);
     // La posición estándar: abajo a la derecha, dentro de la página (ID-102).
-    expect(placed.rect.x1).toBeGreaterThan(A4.width / 2);
-    expect(placed.rect.x1).toBeLessThanOrEqual(A4.width);
+    expect(rect.x1).toBeGreaterThan(A4.width / 2);
+    expect(rect.x1).toBeLessThanOrEqual(A4.width);
   });
 
-  it("adds the page it is looking at to a placement that already exists", async () => {
-    const onPlace = vi.fn();
+  it("keeps the box where it is and names the page it is looking at", async () => {
+    const onSeal = vi.fn();
     const { document, renders } = recordingDocument(3);
     const { rerender } = renderWithCatalog(
       <DocumentViewer
         pdf={document}
         placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } }}
-        onPlace={onPlace}
+        onSeal={onSeal}
         onOpen={noop}
       />,
     );
@@ -370,54 +350,20 @@ describe("la petición de sellar o quitar el sello", () => {
       <DocumentViewer
         pdf={document}
         placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } }}
-        onPlace={onPlace}
+        onSeal={onSeal}
         onOpen={noop}
         placementRequest={{ action: "seal" }}
       />,
     );
 
-    expect(onPlace).toHaveBeenCalledWith({
-      rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
-      pages: { only: [1, 2] },
-    });
+    expect(onSeal).toHaveBeenCalledWith({ x0: 50, y0: 60, x1: 250, y1: 140 }, 2);
   });
 
-  it("moves the box to the page it is looking at under «one page» instead of adding it", async () => {
-    const onPlace = vi.fn();
-    const seated: Placement = { rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } };
-    const { document, renders } = recordingDocument(3);
-    const { rerender } = renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        pageMode="single"
-        onPlace={onPlace}
-        onOpen={noop}
-      />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-    await goToPage(2, renders);
-
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        pageMode="single"
-        onPlace={onPlace}
-        onOpen={noop}
-        placementRequest={{ action: "seal" }}
-      />,
-    );
-
-    expect(onPlace).toHaveBeenCalledWith({ rect: seated.rect, pages: { only: [2] } });
-  });
-
-  /** ID-92: quitar la última página devuelve al estado del PDF recién abierto. */
-  it("takes the whole placement away with the last page of the set", async () => {
-    const onPlace = vi.fn();
+  it("asks to unseal the page it is looking at", async () => {
+    const onUnseal = vi.fn();
     const { document, renders } = recordingDocument();
     const { rerender } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={seated} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={seated} onUnseal={onUnseal} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -425,13 +371,13 @@ describe("la petición de sellar o quitar el sello", () => {
       <DocumentViewer
         pdf={document}
         placement={seated}
-        onPlace={onPlace}
+        onUnseal={onUnseal}
         onOpen={noop}
         placementRequest={{ action: "unseal" }}
       />,
     );
 
-    expect(onPlace).toHaveBeenCalledWith(null);
+    expect(onUnseal).toHaveBeenCalledWith(1);
   });
 
   /**
@@ -440,10 +386,10 @@ describe("la petición de sellar o quitar el sello", () => {
    * haya cambiado.
    */
   it("acts again when asked for the same action twice", async () => {
-    const onPlace = vi.fn();
+    const onSeal = vi.fn();
     const { document, renders } = recordingDocument();
     const { rerender } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={null} onSeal={onSeal} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -451,23 +397,23 @@ describe("la petición de sellar o quitar el sello", () => {
       <DocumentViewer
         pdf={document}
         placement={null}
-        onPlace={onPlace}
+        onSeal={onSeal}
         onOpen={noop}
         placementRequest={{ action: "seal" }}
       />,
     );
-    expect(onPlace).toHaveBeenCalledTimes(1);
+    expect(onSeal).toHaveBeenCalledTimes(1);
 
     rerender(
       <DocumentViewer
         pdf={document}
         placement={null}
-        onPlace={onPlace}
+        onSeal={onSeal}
         onOpen={noop}
         placementRequest={{ action: "seal" }}
       />,
     );
-    expect(onPlace).toHaveBeenCalledTimes(2);
+    expect(onSeal).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -506,9 +452,7 @@ describe("el recuadro que se trae a la vista", () => {
 
     try {
       const { document, renders } = recordingDocument(3);
-      renderWithCatalog(
-        <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
-      );
+      renderWithCatalog(<DocumentViewer pdf={document} placement={seated} onOpen={noop} />);
       await waitFor(() => expect(renders).toHaveLength(1));
       expect(brought).not.toHaveBeenCalled();
 

@@ -21,7 +21,7 @@ import { ErrorNotice } from "../errors/ErrorNotice";
 import type { StampPreview } from "../signing/stampPreview";
 import type { RubricGap } from "../signing/visibleSignature";
 import "./DocumentViewer.css";
-import type { PageMode, Placement } from "../placement/pageSets";
+import type { Placement, UserSpaceRect } from "../placement/pageSets";
 import type { PdfDocument } from "./pdf";
 import { StampPill } from "./StampPill";
 import { GRIP_PX } from "./signatureBox";
@@ -47,19 +47,14 @@ interface DocumentViewerProps {
    * recuadro en ninguna parte.
    */
   placement: Placement | null;
-  /**
-   * El recuadro ha cambiado de sitio, de tamaño o de conjunto de páginas.
-   *
-   * `null` es quitar la colocación entera, que es lo que deja quitar el sello
-   * de la última página del conjunto.
-   */
-  onPlace: (placement: Placement | null) => void;
-  /**
-   * Cuál de las tres opciones del panel manda sobre el conjunto de páginas.
-   *
-   * El visor no la elige: la lee para saber si sellar sustituye o añade. Por omisión, `these`.
-   */
-  pageMode?: PageMode;
+  /** El recuadro se ha movido o redimensionado hasta `rect`. */
+  onMove?: (rect: UserSpaceRect) => void;
+  /** Se ha trazado un recuadro nuevo, `rect`, sobre la página `page`. */
+  onTrace?: (rect: UserSpaceRect, page: number) => void;
+  /** La petición de sellar, atendida: la página que se mira, con el recuadro que tenga o el estándar. */
+  onSeal?: (rect: UserSpaceRect, page: number) => void;
+  /** La petición de quitar el sello de la página que se mira, atendida. */
+  onUnseal?: (page: number) => void;
   /**
    * La página que se está mirando ha cambiado.
    *
@@ -174,10 +169,12 @@ interface DocumentViewerProps {
 export function DocumentViewer({
   pdf,
   placement,
-  onPlace,
+  onMove,
+  onTrace,
+  onSeal,
+  onUnseal,
   onOpen,
   emptyExtra = null,
-  pageMode = "these",
   onPageChange,
   placementRequest = null,
   canPlace = true,
@@ -218,13 +215,14 @@ export function DocumentViewer({
 
   const { boxElement, sheet, ghost, pixels, drag, tracing, gesturing, nudge } = useViewerBox({
     placement,
-    onPlace,
-    pageMode,
+    onMove,
+    onTrace,
+    onSeal,
+    onUnseal,
     placementRequest,
     canPlace,
     onGesture,
     page,
-    pageCount,
     zoom,
     viewport,
     surface,

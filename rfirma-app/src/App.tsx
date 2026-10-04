@@ -188,7 +188,9 @@ export function App({
     placement,
     viewedPage,
     viewPage,
-    rememberPlacement,
+    moveBox,
+    sealPage,
+    unsealPage,
     choosePages,
     changePageMode,
     placeOnViewedPage,
@@ -383,8 +385,10 @@ export function App({
             onGesture={setGesturing}
             placement={placement}
             canPlace={signature.enabled}
-            onPlace={rememberPlacement}
-            pageMode={pageMode}
+            onMove={moveBox}
+            onTrace={sealPage}
+            onSeal={sealPage}
+            onUnseal={unsealPage}
             onPageChange={viewPage}
             placementRequest={placementRequest}
             onOpen={openDocument}
