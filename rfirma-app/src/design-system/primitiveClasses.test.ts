@@ -8,19 +8,21 @@ import { describe, expect, it } from "vitest";
  *
  * Una clase `rf-*` que ya tiene primitivo no se escribe a mano fuera del
  * sistema de diseño: se compone con `Button`, `Card`, `Field`, `Badge`,
- * `Dialog`, `Stack` o `Row`. Las clases sin primitivo —texto, `rf-input`,
+ * `Dialog`, `ProgressBar`, `Stack` o `Row`. Las clases sin primitivo —texto, `rf-input`,
  * `rf-divider`…— siguen siendo clases.
  */
 
 const srcRoot = `${resolve(process.cwd(), "src")}/`;
 
-const covered = /\brf-(btn|card|field|badge|dialog|scrim|stack|row|gap)(?:--[a-z]+|-[a-z]+)?\b/g;
+const covered =
+  /\brf-(btn|card|field|badge|progress|dialog|scrim|stack|row|gap)(?:--[a-z]+|-[a-z]+)?\b/g;
 
 const primitiveOf: Record<string, string> = {
   btn: "Button",
   card: "Card",
   field: "Field",
   badge: "Badge",
+  progress: "ProgressBar",
   dialog: "Dialog",
   scrim: "Dialog",
   stack: "Stack",

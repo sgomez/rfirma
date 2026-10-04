@@ -4,6 +4,7 @@ import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../design-system/Dialog";
 import { CheckIcon } from "../design-system/icons";
+import { ProgressBar } from "../design-system/ProgressBar";
 import { SIGNING_STAGES, type SigningStage } from "./flow";
 import "./SigningProgressDialog.css";
 
@@ -61,19 +62,12 @@ export function SigningProgressDialog({ stage }: SigningProgressDialogProps) {
         })}
       </ol>
 
-      <div
-        className="progress-dialog__bar"
-        role="progressbar"
-        aria-valuemin={1}
-        aria-valuemax={SIGNING_STAGES.length}
-        aria-valuenow={current + 1}
+      <ProgressBar
+        value={current + 1}
+        min={1}
+        max={SIGNING_STAGES.length}
         aria-labelledby={titleId}
-      >
-        <span
-          className="progress-dialog__bar-fill"
-          style={{ width: `${((current + 1) / SIGNING_STAGES.length) * 100}%` }}
-        />
-      </div>
+      />
 
       <p className="rf-prose rf-text-muted">{t("progress.keepTheCard")}</p>
     </Dialog>
