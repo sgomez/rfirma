@@ -1,9 +1,14 @@
 //! Lo que este proceso sabe de sí mismo: su línea de órdenes, su carpeta, su relanzamiento y el proceso de sede de cada URL que macOS entrega por Apple Event; no decide el rol.
 
+use std::path::Path;
+
 use crate::desktop::adapters::paths::Platform;
 use crate::desktop::application::invocation::{
     arguments_before_the_single_instance, delivered_urls, informative_text, Arguments, Invocation,
+    RunningBuild,
 };
+use crate::desktop::domain::channel::Channel;
+use crate::signing::adapters::ffi::{candidates, locate};
 
 /// La invocación con la que arrancó este proceso.
 pub fn this_invocation() -> Invocation {
@@ -78,6 +83,33 @@ fn launch_a_site_process(url: &str) {
 
 /// Imprime la ayuda o la versión si la línea de órdenes las pide, y dice si lo hizo.
 pub fn printed_the_informative_text(command_line: &[String]) -> bool {
-    let text = informative_text(command_line, env!("CARGO_PKG_VERSION"), Platform::CURRENT);
+    let library = native_library_found_or_looked_for();
+    let build = RunningBuild {
+        channel: Channel::detected().label(),
+        system: &format!("{} {}", std::env::consts::OS, std::env::consts::ARCH),
+        library: &library,
+    };
+    let text = informative_text(
+        command_line,
+        env!("CARGO_PKG_VERSION"),
+        build,
+        Platform::CURRENT,
+    );
     text.inspect(|text| println!("{text}")).is_some()
+}
+
+fn native_library_found_or_looked_for() -> String {
+    let executable = std::env::current_exe().unwrap_or_default();
+    let directory = executable.parent().unwrap_or(Path::new("."));
+    let environment = |name: &str| std::env::var_os(name);
+    match locate(&environment, directory) {
+        Ok(path) => path.display().to_string(),
+        Err(_) => {
+            let looked_at: Vec<String> = candidates(&environment, directory)
+                .iter()
+                .map(ToString::to_string)
+                .collect();
+            format!("no encontrada, buscada en {}", looked_at.join("; "))
+        }
+    }
 }

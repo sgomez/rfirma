@@ -72,6 +72,19 @@ Dos módulos se leen antes que sus hermanos, porque cablean una ventana entera:
 `sede/main.tsx` (la de sede, `sede.html`), que monta la suya sin el árbol de
 `App`.
 
+## La dirección de los imports
+
+`src-tauri/tests/window_directions.rs` (de `just structural-guards`) vigila dos
+reglas:
+
+- **Nada fuera de la raíz importa de los `App.*`.** Lo que una zona necesita de
+  la ventana principal vive en la zona y la raíz es la que lo importa. Quedan
+  exentos el andamiaje de pruebas (`testing/`, `*.testSupport.*`, `*Fixtures.*`)
+  y los `*.test.*`: el juego de dobles de la ventana principal importa el tipo de
+  sus puertos.
+- **`placement/` no importa de otra zona**, salvo `design-system/` e `i18n/`.
+  Lo que necesita de fuera se lo pasa cada ventana.
+
 ## El circuito de cadenas (ADR-0009 enmendado)
 
 ```

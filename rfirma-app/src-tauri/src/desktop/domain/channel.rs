@@ -12,6 +12,15 @@ pub enum Channel {
 }
 
 impl Channel {
+    /// Nombre del canal tal como lo ve la persona usuaria.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Native => "nativo",
+            Self::Flatpak => "flatpak",
+            Self::Windows => "windows",
+        }
+    }
+
     /// Si la versión anunciada se puede instalar desde la aplicación.
     pub fn installs_from_the_app(self) -> bool {
         self == Self::Windows

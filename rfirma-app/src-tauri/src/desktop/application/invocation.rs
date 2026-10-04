@@ -98,8 +98,7 @@ Argumentos:
 
 Opciones:
   -h, --help          Muestra esta ayuda y termina.
-  --version           Muestra la versión de rFirma y la de AutoFirma de la que
-                      salen los validadores.
+  --version           Muestra la versión.
 
 Órdenes, las de AutoFirma, sin distinguir mayúsculas y siempre como primer
 argumento. Se atienden en la terminal, sin unirse a la ventana de rFirma que
@@ -283,21 +282,40 @@ where
         .any(|argument| VERSION_FLAGS.contains(&argument.as_ref()))
 }
 
-/// La versión de rFirma y, en una segunda línea, la de AutoFirma de la que salen los validadores.
-pub fn version_text(rfirma_version: &str) -> String {
-    format!("rfirma {rfirma_version}\nAutoFirma {IMPLEMENTED_AUTOFIRMA_VERSION}")
+/// Dónde corre rFirma: lo que `--version` añade a las versiones.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RunningBuild<'a> {
+    /// Canal de distribución.
+    pub channel: &'a str,
+    /// Sistema operativo y arquitectura.
+    pub system: &'a str,
+    /// Ruta de la librería nativa o, si falta, dónde se buscó.
+    pub library: &'a str,
+}
+
+/// Una línea: versión de rFirma, canal y sistema, AutoFirma con la que es compatible y librería nativa.
+pub fn version_text(rfirma_version: &str, build: RunningBuild<'_>) -> String {
+    let RunningBuild {
+        channel,
+        system,
+        library,
+    } = build;
+    format!(
+        "rfirma {rfirma_version} ({channel}, {system}) · compatible con AutoFirma {IMPLEMENTED_AUTOFIRMA_VERSION} · lib: {library}"
+    )
 }
 
 /// Lo que se imprime en lugar de arrancar, si los argumentos piden la ayuda o la versión.
 pub fn informative_text(
     arguments: &[String],
     rfirma_version: &str,
+    build: RunningBuild<'_>,
     platform: Platform,
 ) -> Option<String> {
     if help_was_asked_for(arguments) {
         return Some(help(platform));
     }
-    version_was_asked_for(arguments).then(|| version_text(rfirma_version))
+    version_was_asked_for(arguments).then(|| version_text(rfirma_version, build))
 }
 
 /// Las rutas que la invocación trae para la ventana principal: nada si es una llamada de sede.
