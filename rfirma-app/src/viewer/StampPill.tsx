@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import type { StampPreview } from "../signing/stampPreview";
 
 /**
@@ -48,14 +49,14 @@ export function StampPill({ state, onCompose }: { state: StampPreview; onCompose
       </p>
       <span className="viewer__stamp-slot">
         {said.button !== null && (
-          <button
-            type="button"
-            className="rf-btn rf-btn--secondary viewer__stamp-button"
+          <Button
+            variant="secondary"
+            className="viewer__stamp-button"
             aria-describedby={lineId}
             onClick={onCompose}
           >
             {said.button}
-          </button>
+          </Button>
         )}
       </span>
     </div>

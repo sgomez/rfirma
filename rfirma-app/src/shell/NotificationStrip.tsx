@@ -1,5 +1,6 @@
 //! La franja de notificación bajo la cabecera: el patrón, no el aviso concreto.
 
+import { Button } from "../design-system/Button";
 import { InfoIcon } from "../design-system/icons";
 import "./NotificationStrip.css";
 
@@ -55,22 +56,18 @@ export function NotificationStrip({
       </span>
       <p className="rf-body notification-strip__message">{message}</p>
       {action !== undefined && (
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost notification-strip__action"
-          onClick={action.onSelect}
-        >
+        <Button variant="ghost" className="notification-strip__action" onClick={action.onSelect}>
           {action.label}
-        </button>
+        </Button>
       )}
-      <button
-        type="button"
-        className="rf-btn rf-btn--ghost notification-strip__dismiss"
+      <Button
+        variant="ghost"
+        className="notification-strip__dismiss"
         aria-label={dismissLabel}
         onClick={onDismiss}
       >
         <span aria-hidden="true">×</span>
-      </button>
+      </Button>
     </div>
   );
 }
