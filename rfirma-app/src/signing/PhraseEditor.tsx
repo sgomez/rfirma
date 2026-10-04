@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { PlusIcon } from "../design-system/icons";
 import {
   datumOf,
@@ -219,10 +220,10 @@ export function PhraseEditor({ phrase, samples, onChange }: PhraseEditorProps) {
             dragged.current = null;
           }}
         />
-        <button
+        <Button
+          variant="secondary"
           ref={addButton}
-          type="button"
-          className="rf-btn rf-btn--secondary panel__phrase-add"
+          className="panel__phrase-add"
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           aria-controls={menuOpen ? menuId : undefined}
@@ -230,7 +231,7 @@ export function PhraseEditor({ phrase, samples, onChange }: PhraseEditorProps) {
         >
           <PlusIcon size={14} strokeWidth={2} />
           {t("panel.visibleSignature.phrase.addDatum")}
-        </button>
+        </Button>
       </div>
       {menuOpen && (
         <div
