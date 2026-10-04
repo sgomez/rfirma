@@ -12,7 +12,12 @@ import { aVersionRow, certificateNotInstalled, handlerNotOurs } from "./setupFix
 describe("SetupWizard", () => {
   it("does not mount at all once a previous run has seen it", () => {
     renderWithCatalog(
-      <SetupWizard preferences={inMemoryPreferences(defaults)} seen={true} onFinish={() => {}} />,
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        statusPort={memoryStatus()}
+        seen={true}
+        onFinish={() => {}}
+      />,
     );
 
     expect(screen.queryByText("Configurar rFirma")).not.toBeInTheDocument();
@@ -410,6 +415,7 @@ describe("SetupWizard", () => {
     const onOpenAbout = vi.fn();
     renderWithCatalog(
       <SetupWizard
+        statusPort={memoryStatus()}
         preferences={inMemoryPreferences(defaults)}
         seen={false}
         menuAnchor="header"

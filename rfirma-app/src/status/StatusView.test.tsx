@@ -3,12 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { StatusView } from "./StatusView";
+import { memoryStatus } from "./status";
 
 describe("StatusView", () => {
   it("calls onClose when clicking Cerrar", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    renderWithCatalog(<StatusView onClose={onClose} />);
+    renderWithCatalog(<StatusView statusPort={memoryStatus()} onClose={onClose} />);
 
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
@@ -18,7 +19,7 @@ describe("StatusView", () => {
   it("calls onClose when pressing Escape", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    renderWithCatalog(<StatusView onClose={onClose} />);
+    renderWithCatalog(<StatusView statusPort={memoryStatus()} onClose={onClose} />);
 
     await user.keyboard("{Escape}");
 
@@ -27,7 +28,7 @@ describe("StatusView", () => {
 
   it("does not call onClose when Escape was default-prevented", () => {
     const onClose = vi.fn();
-    renderWithCatalog(<StatusView onClose={onClose} />);
+    renderWithCatalog(<StatusView statusPort={memoryStatus()} onClose={onClose} />);
 
     const event = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
     event.preventDefault();
@@ -37,7 +38,9 @@ describe("StatusView", () => {
   });
 
   it("keeps the close button in a footer that is sibling to the scrollable body (WCAG 2.4.11)", () => {
-    const { container } = renderWithCatalog(<StatusView onClose={() => {}} />);
+    const { container } = renderWithCatalog(
+      <StatusView statusPort={memoryStatus()} onClose={() => {}} />,
+    );
 
     const body = container.querySelector(".status-view__body");
     const footer = container.querySelector(".status-view__footer");
