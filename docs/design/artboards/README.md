@@ -58,8 +58,6 @@ y su ficha, [`ventana-de-sede.md`](../ventana-de-sede.md):
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
 | — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4, sobre `Main` lista |
 | — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde y el idioma, y las dos acciones como pasos numerados —instalar el certificado propio y poner a rFirma por defecto— con la protección contra firmas accidentales aparte |
-| E1 | `PanelEstado` | El panel de estado: la tabla de las cuatro señales de la instalación, con sus cinco veredictos, sus reparaciones y el botón del certificado que alterna entre instalar y retirar |
-| E2 | `RetirarCertificado` | El panel de estado con el velo de la retirada encima: pregunta, avance almacén a almacén y desenlace, con y sin fallo |
 
 `PrimerArranque` vive también en la página «Recorrido de firma», pero **no es
 un paso del recorrido**: es la pantalla del primer arranque, la misma ventana de

@@ -47,7 +47,7 @@ const exceptions: Record<string, { classes: string[]; reason: string }> = {
     classes: ["rf-row", "rf-gap-xs"],
     reason: NOT_A_DIV,
   },
-  "status/WithdrawCertificateDialog.tsx": {
+  "status/WithdrawCertificateView.tsx": {
     classes: ["rf-stack", "rf-row", "rf-gap-xs"],
     reason: NOT_A_DIV,
   },

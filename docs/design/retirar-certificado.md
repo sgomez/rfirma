@@ -1,5 +1,10 @@
 # Retirar el certificado
 
+**La verdad del dibujo es el código y sus historias:**
+`status/WithdrawCertificateView.stories.tsx` («Estado/2 · Retirar certificado»),
+una historia por tiempo y por desenlace. Esta ficha cuenta el flujo y el porqué;
+los textos salen del catálogo (claves `status.withdrawal.*`) y no se copian.
+
 El velo que confirma, ejecuta y cuenta la retirada del certificado de rFirma de
 los navegadores donde esté. Lo abre el botón `Retirar…` de la fila
 `Certificado de rFirma` del [panel de estado](panel-de-estado.md), que es la
@@ -18,7 +23,7 @@ se vuelve a él, que es donde la retirada se lee de verdad.
 ## Qué resuelve
 
 Deshacer lo que el [primer arranque](primer-arranque.md) escribió **fuera del
-territorio de rFirma**, que son dos cosas y sólo dos:
+territorio de rFirma**, que son dos cosas y solo dos:
 
 1. Las **dos CA locales** —la vigente y la siguiente— del almacén de cada perfil
    de navegador, más los ficheros PEM de donde sale su huella.
@@ -28,163 +33,117 @@ territorio de rFirma**, que son dos cosas y sólo dos:
 
 **Lo que vive en las carpetas propias de rFirma no se toca, y por eso tampoco se
 nombra**: la rúbrica, los certificados en fichero importados y la configuración
-se quedan, como se quedan al desinstalar cualquier otra aplicación de Linux, y
-cada uno ya tiene su retirada por partes en [Preferencias](preferencias.md).
-Enumerarlos aquí para decir que se quedan abre una duda que nadie tenía.
+se quedan, como al desinstalar cualquier otra aplicación, y cada uno ya tiene su
+retirada por partes en [Preferencias](preferencias.md).
 
 **La aplicación no se cierra al retirar.** Nada reinstala la CA a tus espaldas:
-sólo la instala el arranque del proceso de sede, que sólo ocurre si una sede abre
-rFirma, y eso ya no pasa porque la retirada se lleva también el registro. Firmar
-un PDF arrastrándolo a la ventana sigue funcionando: el proceso de escritorio
-nunca ha tocado la CA.
+solo la instala el arranque del proceso de sede, que solo ocurre si una sede abre
+rFirma, y la retirada se lleva también el registro. Firmar un PDF arrastrándolo a
+la ventana sigue funcionando.
 
 ## Estructura
 
-**El velo empieza a los 44 px, bajo la cabecera, que se queda viva y sin
-atenuar.** Detrás no hay una reconstrucción parecida del panel: es el panel, con
-su misma cabecera, su misma fila de título, su misma tabla de cuatro columnas y
-su mismo pie.
-
-`.rf-scrim` sobre el cuerpo y `.rf-dialog` de 420 px centrado, con:
-
-1. **Título**, en `.rf-title` a 16 px, distinto en cada tiempo.
-2. **Cuerpo**, que es la enumeración de la pregunta o la lista por almacén.
-3. **Aviso del navegador**, con el triángulo de «Atención» de 16 px, sólo en el
-   desenlace.
-4. **Fila de botones** alineada a la derecha, que no cambia de sitio entre los
-   cuatro tiempos.
+Es un `Dialog` de rol `alertdialog` sobre el cuerpo del panel, de 420 px, con
+título, cuerpo, el aviso del navegador solo en el desenlace y una fila de
+botones alineada a la derecha que no cambia de sitio entre tiempos. Su vista es
+`WithdrawCertificateView`, sin estado ni puertos; `WithdrawCertificateDialog`
+lleva el momento y el informe del último intento y llama al puerto
+(`withdrawRfirma`).
 
 ### La cabecera no se tapa
 
-Y el porqué no es un parecido con otra pantalla, es un modelo: **la cabecera es
-permanente y el cuerpo es lo que cambia**. `Estado de rFirma` y `Preferencias`
-son **vistas del cuerpo**, no diálogos sobre la ventana, y un modal que nace
-dentro del cuerpo no puede tapar lo que no es suyo.
-
-La consecuencia es la que importa: **la cabecera sigue alcanzable durante la
-retirada, incluso mientras trabaja**. Irse no cancela nada y no se pierde nada,
-porque el panel de detrás ya está contando lo mismo en su celda de acción. **El
-diálogo es una comodidad, no la fuente**: la verdad está en la tabla.
+**El velo empieza bajo la cabecera, que se queda viva y sin atenuar**
+(`WithdrawCertificateView.css`). La cabecera es permanente y el cuerpo es lo que
+cambia: `Estado de rFirma` y `Preferencias` son vistas del cuerpo, y un modal que
+nace dentro del cuerpo no puede tapar lo que no es suyo. La cabecera sigue
+alcanzable durante la retirada, incluso mientras trabaja: irse no cancela nada,
+porque el panel de detrás ya lo cuenta. **El velo es una comodidad, no la
+fuente**: la verdad está en la tabla.
 
 ## Los cuatro tiempos
 
 Son la misma pantalla-estado en cuatro momentos, no cuatro pantallas.
 
-| Tiempo | Título | Cuerpo | Botones |
-| ------ | ------ | ------ | ------- |
-| Pregunta | `Retirar el certificado de rFirma` | Los dos renglones de lo que se lleva, y la pista de que se puede volver a instalar | `Cancelar` · `Retirar` |
-| Trabajando | `Retirando…` | La lista, almacén a almacén, con el que va en marcha marcado con el arco y los siguientes `En espera` | `Cerrar`, apagado |
-| Resultado | `Certificado retirado` | La lista con ✓ y el aviso del navegador | `Cerrar` |
-| Resultado con fallo | `Retirado a medias` | La lista con el ✗ y su motivo, y el aviso del navegador | `Cerrar` · `Reintentar` |
+| Tiempo | Historia | Título | Botones |
+| ------ | -------- | ------ | ------- |
+| Pregunta | `Question` | `status.withdrawal.title.question` | `actions.cancel` · `status.withdrawal.confirm` |
+| Trabajando | `Working` | `status.withdrawal.title.working` | `actions.close`, apagado |
+| Resultado | `Done` | `status.withdrawal.title.done` | `actions.close` |
+| Resultado con fallo | `Partial`, `HandlerFailed` | `status.withdrawal.title.partial` | `actions.close` · `actions.retry` |
 
 ### La pregunta enumera, no explica
 
-Dos renglones, en lo que la persona reconoce: «El certificado de rFirma, de los
-navegadores donde esté» y «Que las sedes abran rFirma». **`afirma://` no se
-nombra**, que es la misma regla del [primer arranque](primer-arranque.md) y del
-[panel de estado](panel-de-estado.md): quien firma no sabe qué es un esquema de
-protocolo, sabe qué programa abren las sedes.
+Dos renglones, en lo que la persona reconoce (`status.withdrawal.body.certificate`
+y `status.withdrawal.body.handler`). **`afirma://` no se nombra**, por la misma
+regla del [primer arranque](primer-arranque.md) y del
+[panel de estado](panel-de-estado.md): quien firma sabe qué programa abren las
+sedes, no qué es un esquema de protocolo.
 
-La única línea de prosa del diálogo es la que quita el miedo: «Se puede volver a
-instalar desde este panel». Sin ella, `Retirar` parece una puerta de un solo
-sentido, y no lo es.
+La única línea de prosa es la que quita el miedo, `status.withdrawal.hint`: sin
+ella `Retirar` parece una puerta de un solo sentido, y no lo es.
 
 **`Retirar` es el primario**, como `Borrar y apagar` en
-[Preferencias](preferencias.md). La paleta es monocroma y no hay rojo que gastar:
-lo destructivo se marca con el peso y con la posición, y `Cancelar` se queda en
-fantasma a su izquierda.
+[Preferencias](preferencias.md). La paleta es monocroma: lo destructivo se marca
+con el peso y la posición, y `Cancelar` se queda en fantasma a su izquierda.
 
 ### Trabajando: avance almacén a almacén, y sin salida
 
 Abrir la base NSS de cada perfil, encontrar las dos CA y borrarlas no es
-instantáneo, así que un giro indeterminado sólo diría «espera»; la lista dice
-**por dónde va**. No se puede cancelar a media faena —cortar entre dos escrituras
-deja un almacén a medias y otro sin tocar—, y eso lo dice el `Cerrar` **apagado**,
-no una frase: un botón desactivado ya explica que todavía no se puede salir, y la
-fila de botones no cambia de sitio al llegar el desenlace.
-
-Ese `Cerrar` apagado **no es una cárcel**: dice que ese diálogo todavía no tiene
-nada que contar, no que la aplicación esté bloqueada. La cabecera sigue ahí.
+instantáneo, así que la lista dice **por dónde va**, con el arco y
+`status.withdrawal.waiting` en cada almacén. No se puede cancelar a media faena
+—cortar entre dos escrituras deja un almacén a medias y otro sin tocar—, y eso lo
+dice el `Cerrar` **apagado**, y Escape no hace nada: un botón desactivado ya
+explica que todavía no se puede salir. No es una cárcel: la cabecera sigue ahí.
 
 ### El desenlace: la misma lista que cuando falla una instalación
 
-Marca, nombre del navegador y el motivo al lado del ✗ — literalmente el desplegable
-`Ver navegadores` del panel, que sólo estrecha el nombre de 230 a 190 px porque
-dentro de 420 px el motivo no cabría al lado. Dos formatos para la misma cuenta
-serían dos vocabularios. La cuarta línea es `Firma en sedes`, que es como se llama
-esa señal en el panel: así el desenlace se lee contra la tabla que hay detrás.
+Marca, nombre del navegador (`status.storeBrands.*`) y el motivo al lado del ✗,
+como el desplegable del panel: dos formatos para la misma cuenta serían dos
+vocabularios. La última línea es `Firma en sedes`, como se llama esa señal en el
+panel, para que el desenlace se lea contra la tabla que hay detrás.
 
-**El aviso del navegador va en el desenlace, no en la pregunta.** Los navegadores
-abiertos **siguen confiando hasta que se reinician**: la borrada entra bien, pero
-lo ya resuelto en memoria no se invalida, y por eso retirar es asimétrico
-respecto a instalar, que sí se ve en caliente. **Se advierte siempre**, sin
-condicionarlo a detectar si hay un navegador abierto: aunque no lo esté ahora, la
-sesión que lo estuviera antes ya se llevó la confianza en memoria. Y va después
-porque es una consecuencia de lo que acaba de pasar; ponerla antes sería una
-condición más que sopesar para decidir.
-
-**`Cerrar` cierra el diálogo, no la aplicación.** Es el mismo rótulo que el pie
-del panel, que también cierra lo suyo.
+**El aviso del navegador (`status.withdrawal.restartBrowserNotice`) va en el
+desenlace, no en la pregunta, y siempre.** Los navegadores abiertos siguen
+confiando hasta que se reinician, y aunque no haya ninguno abierto ahora, la
+sesión que lo estuviera antes ya se llevó la confianza en memoria. Va después
+porque es una consecuencia de lo que acaba de pasar.
 
 **Con fallo, `Reintentar` al lado de `Cerrar`, y el título cambia.** El motivo
 típico es el perfil en uso, que se arregla cerrando el navegador y volviendo a
-pulsar; por eso reintentar es la acción sugerida y se queda a la derecha. El
-fallo nunca atrapa, y aquí pesa más que en ningún otro sitio, porque el camino
-alternativo —volver a entrar después de haber decidido irse— no lo recorre nadie.
+pulsar. `Reintentar` solo vuelve a tocar lo que falló, con el informe anterior
+como referencia, y si la repetición lo arregla todo el velo pasa al desenlace
+completo. El fallo nunca atrapa: `Cerrar` está siempre.
 
-## Estados
+## Estados y flujo
 
-Los cuatro tiempos, y **el panel de detrás cambia con ellos**, con las reglas del
-propio panel y sin inventar ninguna:
-
-| Tiempo | Firma en sedes | Certificado de rFirma |
-| ------ | -------------- | --------------------- |
-| Pregunta | `rFirma`, Correcto | `3 de 3 navegadores`, Correcto, `Retirar…` |
-| Trabajando | `rFirma`, Correcto | `3 de 3 navegadores`, con `Retirando…` en la celda de acción y `Volver a comprobar` apagado |
-| Resultado | `Sin configurar`, Atención, `Usar rFirma` | `0 de 3 navegadores`, Incorrecto, `Instalar` |
-| Resultado con fallo | `Sin configurar`, Atención, `Usar rFirma` | `1 de 3 navegadores`, Atención, `Instalar`, con el detalle abierto |
-
-`Retirando…` ocupa **el mismo sitio y sigue el mismo patrón** que `Instalando…`:
-la celda de acción, con el arco. El velo deja ver lo que la retirada está
-cambiando.
+**Al cerrarse el velo, el panel vuelve a medir**: la verdad sigue viviendo en la
+tabla. Con la retirada hecha, `Firma en sedes` pasa a «Sin configurar» con
+`Usar rFirma` y el certificado a «Incorrecto» con `Instalar`; con fallo, el
+certificado queda «Atención» con lo que falte. Mientras el velo está delante, un
+Escape no cierra además el panel.
 
 ## Componentes y tokens
 
-No estrena nada. `.rf-scrim` y `.rf-dialog` son los del diálogo que confirma
-apagar `Recordar mi actividad` en [Preferencias](preferencias.md), con su ancho
-de 420 px sin tocar; el ✓ y el ✗ son los caracteres que ya usa `Ver navegadores`;
-el arco es el `path` de «Comprobando» y el triángulo, el de «Atención».
-
-Clases: `.rf-scrim`, `.rf-dialog`, `.rf-row`, `.rf-stack`, `.rf-gap-xs`,
-`.rf-title`, `.rf-prose`, `.rf-body`, `.rf-hint`, `.rf-text-muted`, `.rf-btn` con
-`--primary` y `--ghost`.
-
-Tokens: `--rf-text`, `--rf-text-muted`, `--rf-space-xs|sm`. Ni un color ni una
-sombra literales.
+No estrena nada: `Dialog`, `Button` (`primary`, `ghost`), `Row`, `Stack`, y las
+clases `.rf-title`, `.rf-prose`, `.rf-body`, `.rf-hint`, `.rf-text-muted`. Tokens
+`--rf-text`, `--rf-text-muted`, `--rf-space-xs|sm`; ni un color ni una sombra
+literales. El ✓ y el ✗ son los iconos de la lista del panel; el arco es el de
+«Comprobando».
 
 ## Decisiones
 
-Validado el **17/09/2026** en el canvas
-[Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
-artboard `RetirarCertificado` de la página «Estado de rFirma», cuya anotación
-guarda el porqué de cada punto. La copia legible sin cuenta está en
-[`docs/design/artboards/`](artboards/README.md).
-
-**El artboard es `PanelEstado` con el velo encima, y así se redactó.** El fichero
-es una copia del suyo y lo único que se le añade es el velo, con la tabla pintada
-por la misma función. Dos dibujos de la misma pantalla se desincronizan en el
-segundo cambio.
-
-**Se dispara desde el panel, no desde Preferencias.** Estaba previsto en
-Preferencias y se cambia: retirar no es cómo se comporta la aplicación, es
-deshacer una escritura, y lo escrito es exactamente lo que la fila `Certificado
-de rFirma` informa. El botón cuelga de la señal que lo cuenta, como cuelga
-`Instalar`.
+**El velo se dispara desde el panel, no desde Preferencias.** Retirar no es cómo
+se comporta la aplicación, es deshacer una escritura, y lo escrito es exactamente
+lo que la fila `Certificado de rFirma` informa. El botón cuelga de la señal que
+lo cuenta, como cuelga `Instalar`.
 
 **Un velo con cuatro tiempos, no cuatro diálogos.** Son momentos de la misma
 pantalla-estado, y separarlos obligaría a leer cuatro sitios para saber qué ve la
 persona de principio a fin.
 
 **No se detecta si hay un navegador abierto.** Detectar no aporta: lo ya resuelto
-en memoria no se invalida aunque no haya ninguno abierto ahora mismo. Advertir
-siempre cuesta menos y no miente.
+en memoria no se invalida aunque no haya ninguno abierto. Advertir siempre cuesta
+menos y no miente.
+
+Validado el 17/09/2026 en Claude Design. El dibujo ya no se guarda en el
+repositorio.
