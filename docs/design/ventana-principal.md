@@ -126,16 +126,16 @@ historias.
 | Versión nueva | ídem | ídem | no se monta | `NewVersionInstallable`, `NewVersionNotInstallable` |
 | Linux | solo la tira bajo la barra GTK | ídem | ídem | `NativeTitlebar` |
 | Con documento | el documento | documento, con o sin firma visible | editable | visor: `WithDocument`, `WithSignatureBox` |
-| Buscando certificados | el documento | documento | el selector dice que busca, y firmar está inactivo. Encima, el diálogo de secreto si el almacén lo pide para listar | el selector dice que busca, y firmar está inactivo. Encima, el diálogo de secreto si el almacén lo pide para listar | `Searching` de «Panel de firma/1 · Antes de firmar» |
-| Sin certificados | ídem | documento | el aviso de que no hay certificados arriba; el pie ofrece añadir uno y volver a buscar | volver a buscar | `NoCertificates` de «Panel de firma/1 · Antes de firmar» |
+| Buscando certificados | el documento | documento | el selector dice que busca, y firmar está inactivo. Encima, el diálogo de secreto si el almacén lo pide para listar | `Searching` de «Panel de firma/1 · Antes de firmar» |
+| Sin certificados | ídem | documento | el aviso de que no hay certificados arriba; el pie ofrece añadir uno y volver a buscar | `NoCertificates` de «Panel de firma/1 · Antes de firmar» |
 | Sin certificado elegido | ídem | documento, sin firma visible: su interruptor está desactivado hasta elegir | el selector pide elegir | `Unchosen` de «Panel de firma/1 · Antes de firmar» |
-| Listo | ídem | documento, con la firma visible si está encendida | el selector con el certificado elegido, y firmar | el selector con el certificado elegido, y firmar | `Ready` de «Panel de firma/1 · Antes de firmar» |
-| Certificados abiertos | ídem | ídem | el buscador en el selector y la lista flotando sobre el panel | la lista flotando sobre el panel | `Open` de «Firma/CertificateSelect» |
+| Listo | ídem | documento, con la firma visible si está encendida | el selector con el certificado elegido, y firmar | `Ready` de «Panel de firma/1 · Antes de firmar» |
+| Certificados abiertos | ídem | ídem | el buscador en el selector y la lista flotando sobre el panel | `Open` de «Firma/CertificateSelect» |
 | Pidiendo el secreto / secreto incorrecto | ídem | bajo el velo | bajo el velo | [ficha del secreto](dialogo-pin.md): ventana nativa, sin historia |
-| Viendo las firmas previas | ídem | bajo el velo | bajo el velo; encima, [Ver firmas](dialogo-ver-firmas.md) | [Ver firmas](dialogo-ver-firmas.md) | las historias de «Diálogos de firma/3 · Ver firmas» |
-| ¿Firmar de todos modos? | ídem | bajo el velo | bajo el velo; encima, [el diálogo](dialogo-firmar-de-todos-modos.md) | [el diálogo](dialogo-firmar-de-todos-modos.md) | las historias de «Diálogos de firma/2 · Firmar de todos modos» |
-| Firmando | ídem | bajo el velo, hoja atenuada | bajo el velo; el diálogo de progreso encima | el diálogo de progreso encima | `Signing` de «Panel de firma/1 · Antes de firmar» y «Diálogos de firma/4 · Progreso de firma» |
-| Firmado | la pestaña pasa al documento firmado, con su marca | documento firmado | la franja de hora, los hallazgos y el resumen con todas las firmas y su validez, la tuya como nueva | la tuya como nueva | `JustSigned` de «Panel de firma/2 · Firmado» |
+| Viendo las firmas previas | ídem | bajo el velo | bajo el velo; encima, [Ver firmas](dialogo-ver-firmas.md) | las historias de «Diálogos de firma/3 · Ver firmas» |
+| ¿Firmar de todos modos? | ídem | bajo el velo | bajo el velo; encima, [el diálogo](dialogo-firmar-de-todos-modos.md) | las historias de «Diálogos de firma/2 · Firmar de todos modos» |
+| Firmando | ídem | bajo el velo, hoja atenuada | bajo el velo; el diálogo de progreso encima | `Signing` de «Panel de firma/1 · Antes de firmar» y «Diálogos de firma/4 · Progreso de firma» |
+| Firmado | la pestaña pasa al documento firmado, con su marca | documento firmado | la franja de hora, los hallazgos y el resumen con todas las firmas y su validez, la tuya como nueva | `JustSigned` de «Panel de firma/2 · Firmado» |
 | `verify --gui` | el documento | el documento; si no es PDF, el icono y el nombre sin vista previa | el mismo resumen sin franja, o el aviso de que no hay firmas, de formato no reconocido o del fallo al leer las firmas | visor: `WithoutPreview` |
 | Error al firmar | sin marca | documento sin tocar | el error sustituye al panel; el pie ofrece reintentar | aviso: `SigningFailed`, `SigningFailedWithoutRetry` |
 
