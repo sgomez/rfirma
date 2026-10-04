@@ -31,7 +31,11 @@ import { unavailablePdfSource } from "./viewer/source";
 describe("App", () => {
   it("changes nothing when the dialog is closed without choosing", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 3 }));
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 3 }),
+    });
     await openPdf(user);
     await screen.findByRole("region", { name: "Panel de firma" });
 
@@ -46,7 +50,7 @@ describe("App", () => {
 
   it("opens Preferences from the menu, replacing the tabs and the viewer", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([row("a.pdf")]));
+    renderApp({ recents: inMemoryRecents([row("a.pdf")]) });
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -121,19 +125,19 @@ describe("App", () => {
     const user = userEvent.setup();
     const p12: Certificate = { ...aCertificate, id: "p12", stores: ["installed"] };
     let found: readonly Certificate[] = [];
-    renderApp(
-      inMemoryRecents(),
-      [],
-      unavailablePdfSource(),
-      {},
-      {
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: unavailablePdfSource(),
+      settings: {},
+      certificates: {
         list: async () => found,
         install: async () => {
           found = [p12];
           return true;
         },
       },
-    );
+    });
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
@@ -150,18 +154,18 @@ describe("App", () => {
     const user = userEvent.setup();
     const p12: Certificate = { ...aCertificate, id: "p12", stores: ["installed"] };
     let found: readonly Certificate[] = [p12];
-    renderApp(
-      inMemoryRecents(),
-      [],
-      unavailablePdfSource(),
-      {},
-      {
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: unavailablePdfSource(),
+      settings: {},
+      certificates: {
         list: async () => found,
         remove: async () => {
           found = [];
         },
       },
-    );
+    });
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
@@ -243,19 +247,7 @@ describe("App", () => {
   it("opens the source code from About", async () => {
     const user = userEvent.setup();
     const destinations = inMemoryExternalDestinationOpener();
-    renderApp(
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      destinations,
-    );
+    renderApp({ externalDestinations: destinations });
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Acerca de rFirma" }));
@@ -267,19 +259,7 @@ describe("App", () => {
   it("opens Comments and help from the menu", async () => {
     const user = userEvent.setup();
     const destinations = inMemoryExternalDestinationOpener();
-    renderApp(
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      destinations,
-    );
+    renderApp({ externalDestinations: destinations });
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Comentarios y ayuda" }));
@@ -290,7 +270,7 @@ describe("App", () => {
 
   it("empties the recents when Remember my activity is turned off", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([row("a.pdf")]));
+    renderApp({ recents: inMemoryRecents([row("a.pdf")]) });
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -365,7 +345,7 @@ describe("App", () => {
 
   it("stops remembering once Remember my activity is off, not just purges what there was", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([row("a.pdf")]), [document("factura.pdf")]);
+    renderApp({ recents: inMemoryRecents([row("a.pdf")]), documents: [document("factura.pdf")] });
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
