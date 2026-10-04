@@ -1,13 +1,14 @@
 //! 1c · El área de la firma visible trazada sobre el PDF, y sus páginas, con el visor y el segmentado de la ventana principal, antes del consentimiento.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { usePlacementControls } from "../App.usePlacementControls";
 import { firstSealedPage, type Placement } from "../placement/pageSets";
+import { usePlacement } from "../placement/usePlacement";
 import { PlacementFieldset } from "../signing/PlacementFieldset";
 import { usePlacementField } from "../signing/usePlacementField";
 import { DocumentViewer } from "../viewer/DocumentViewer";
 import type { PdfDocument } from "../viewer/pdf";
+import { standardRectOnPageOf } from "../viewer/signatureBox";
 import type { MarkedArea } from "./errand";
 import { SedeBody } from "./SedeFrame";
 import "../signing/SigningPanel.css";
@@ -30,8 +31,9 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   const [placementRequest, setPlacementRequest] = useState<{
     action: "seal" | "unseal";
   } | null>(null);
+  const standardRectOn = useMemo(() => (pdf === null ? null : standardRectOnPageOf(pdf)), [pdf]);
   const { placing, pageMode, placement, rememberPlacement, choosePages, changePageMode } =
-    usePlacementControls(pdf, keepNowhere, viewedPage);
+    usePlacement({ pageCount: pdf?.pageCount ?? 0, standardRectOn, viewedPage });
   const { pagesText, rangeError, pageButton, typePages } = usePlacementField({
     documentPages: pdf?.pageCount ?? 0,
     pageSets: placing.sets,
@@ -128,7 +130,5 @@ async function markedAreaOf(pdf: PdfDocument, placement: Placement): Promise<Mar
     rect: [x0, y0, x1, y1],
   };
 }
-
-async function keepNowhere() {}
 
 function noop() {}

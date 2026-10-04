@@ -53,7 +53,7 @@ sus comentarios a las formas que admite la regla 6 de `CLAUDE.md`.
 | `shell/` | La ventana y su cabecera (ADR-0007). |
 | `documents/` | Los documentos abiertos y los recientes. |
 | `signing/` | La firma, en el lado de la interfaz. |
-| `placement/` | El vocabulario de la colocación de la firma visible: el recuadro en espacio de usuario, el conjunto de páginas, sus modos y el conjunto tecleado. No sabe de píxeles ni de gestos. |
+| `placement/` | El vocabulario de la colocación de la firma visible: el recuadro en espacio de usuario, el conjunto de páginas, sus modos y el conjunto tecleado, y el estado de la colocación que comparten las dos ventanas. No sabe de píxeles ni de gestos, ni importa nada del visor: la posición estándar del recuadro se la pasa cada ventana. |
 | `viewer/` | El visor de PDF: los píxeles y los gestos sobre el recuadro. |
 | `status/` | El estado de la instalación. |
 | `preferences/` | Los ajustes. |
