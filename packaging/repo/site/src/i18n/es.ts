@@ -16,6 +16,7 @@ export const es = {
   "nav.features": "Características",
   "nav.comparison": "Comparativa",
   "nav.install": "Instalación",
+  "nav.manual": "Manual",
   "nav.transparency": "Transparencia",
   "nav.github": "GitHub",
 

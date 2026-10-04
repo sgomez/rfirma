@@ -1,6 +1,6 @@
 ---
 import Logo from "./Logo.astro";
-import { localePath, locales, translator, type Locale } from "../i18n";
+import { defaultLocale, localePath, locales, manualPath, translator, type Locale } from "../i18n";
 
 interface Props {
   locale: Locale;
@@ -9,6 +9,7 @@ interface Props {
 const { locale } = Astro.props;
 const t = translator(locale);
 const home = localePath(locale);
+const manualLanguage = locale === defaultLocale ? undefined : defaultLocale;
 const links = [
   { href: "#firmar", key: "nav.how" },
   { href: "#caracteristicas", key: "nav.features" },
@@ -56,6 +57,15 @@ const links = [
           </li>
         ))
       }
+      <li>
+        <a
+          href={manualPath}
+          hreflang={manualLanguage}
+          style="text-decoration:none;font-size:.9375rem;font-weight:500;color:var(--rf-text-muted)"
+        >
+          {t("nav.manual")}
+        </a>
+      </li>
     </ul>
 
     <div style="flex:1"></div>

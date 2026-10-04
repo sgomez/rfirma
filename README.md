@@ -103,72 +103,17 @@ sigue dejando en su directorio de construcción **no se copian nunca**: con
 
 ## ⌨️ Línea de órdenes
 
-`rfirma` atiende en la terminal las órdenes de AutoFirma, siempre como primer
-argumento y sin unirse a la ventana abierta: `sign`, `cosign`, `listaliases` y
-`verify`, con `-i`, `-o`, `--format`, `--store`, `--alias`, `--filter`, `--algorithm`,
-`--config` y `--xml`. `rfirma --help` las describe todas, `rfirma <orden> --help`
-da la sintaxis de cada una, y `rfirma --version` dice la versión de rFirma y la de
-AutoFirma de la que salen los validadores. El código de salida es 0 si termina bien; por la
-salida estándar solo sale lo que se consume (el XML de `--xml`) y los mensajes van
-a la de errores.
+`rfirma` atiende en la terminal las órdenes de AutoFirma `sign`, `cosign`,
+`listaliases` y `verify`, sin abrir la ventana:
 
 ```bash
 rfirma listaliases
 rfirma sign -i contrato.pdf -o contrato-firmado.pdf --alias mi-certificado
 ```
 
-**La contraseña no se acepta en la línea de órdenes** (`--password` se rechaza:
-la ve cualquier usuario del equipo y queda en el historial). Si el almacén no
-resuelve el PIN solo, se pide en la terminal sin eco, o se lee de un descriptor
-con `--password-fd`. Con `secret-tool`, el llavero del escritorio (GNOME Keyring,
-KWallet, KeePassXC) lo entrega sin pasar por argv:
-
-```bash
-rfirma sign -i contrato.pdf -o contrato-firmado.pdf --alias mi-certificado \
-    --password-fd 3 3< <(secret-tool lookup service rfirma)
-```
-
-### Ejemplo con aerc
-
-[aerc](https://aerc-mail.org) puede firmar el adjunto que tengas seleccionado
-con un atajo en `binds.conf`, ejecutando `rfirma` por `:pipe`. Aquí se firma el
-PDF recibido y el resultado queda en `~/Documents` (cada firma sobrescribe la
-anterior: cambia el nombre de salida si no quieres eso). Hace falta `bash`, no
-`sh`, por la sustitución de procesos:
-
-```ini
-[view]
-S = :pipe -b bash -c 'f=$(mktemp --suffix=.pdf) && trap "rm -f $f" EXIT && cat > "$f" && rfirma sign -i "$f" -o ~/Documents/firmado.pdf --alias mi-certificado --password-fd 3 3< <(secret-tool lookup service rfirma)'<Enter>
-```
-
-### En el flatpak
-
-Dentro del sandbox, `rfirma` solo ve la carpeta de documentos (`xdg-documents`). Para un fichero que esté
-fuera, `--file-forwarding` y `@@` hacen que flatpak lo exponga por el portal:
-
-```bash
-flatpak run --file-forwarding me.sgomez.rfirma sign -i @@ ~/Descargas/contrato.pdf @@ -o ~/Documents/firmado.pdf
-```
-
-### En Windows
-
-El instalador deja `rfirma.com`, el binario de consola, junto a `rfirma.exe`, y pone la carpeta de
-rFirma en el PATH del usuario: en una consola abierta después de instalar, `rfirma` resuelve al
-`.com`, que escribe en la consola y devuelve el código de salida. En cmd y en PowerShell se escribe
-igual que en Linux:
-
-```powershell
-rfirma listaliases
-rfirma sign -i contrato.pdf -o contrato-firmado.pdf --alias mi-certificado
-```
-
-`--store windows` (o `auto`) acota al almacén de certificados de Windows, y el PIN de sus
-certificados lo pide Windows. **En Git Bash dentro de Windows Terminal hay que escribir
-`rfirma.com`**: bash no prueba la extensión `.com` y encuentra `rfirma.exe`, el de la ventana, que
-ahí no responde en la consola. En la ventana propia de Git Bash (mintty), `rfirma` funciona tal
-cual, porque `rfirma.exe` responde por las tuberías de mintty.
-
-`--password-fd` y `--certtui` todavía no están en Windows.
+La referencia completa —parámetros, rechazos y ejemplos con `secret-tool`, el
+flatpak y Windows— está en el manual:
+[Línea de órdenes](https://rfirma.sgomez.me/manual/linea-de-ordenes/).
 
 ---
 

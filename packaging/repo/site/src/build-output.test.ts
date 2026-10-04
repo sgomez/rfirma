@@ -32,7 +32,18 @@ const landings = locales.map((locale) => ({
   name: `landing ${locale}`,
   file: landingFile(locale),
 }));
-const pages = [...landings, { name: "404", file: "404.html" }];
+function manualFiles(directory = "manual"): string[] {
+  return readdirSync(join(dist, directory), { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      return manualFiles(path);
+    }
+    return entry.name === "index.html" ? [path] : [];
+  });
+}
+
+const manual = manualFiles().map((file) => ({ name: `manual ${file}`, file }));
+const pages = [...landings, ...manual, { name: "404", file: "404.html" }];
 
 describe.each(pages)("$name", ({ file }) => {
   const document = page(file);
@@ -53,7 +64,7 @@ describe.each(pages)("$name", ({ file }) => {
 
   it("links a favicon in SVG and PNG and an apple-touch-icon that are published", () => {
     const icons = [
-      "link[rel='icon'][type='image/svg+xml']",
+      "link[rel~='icon'][type='image/svg+xml']",
       "link[rel='icon'][type='image/png']",
       "link[rel='apple-touch-icon']",
     ].map((selector) => attribute(document, selector, "href"));
@@ -91,6 +102,12 @@ describe.each(locales)("landing %s", (locale) => {
     expect(alternates.sort()).toEqual([...locales, "x-default"].sort());
   });
 
+  it("links to the manual from the header and the footer", () => {
+    for (const region of ["header", "footer"]) {
+      expect(document.querySelector(`${region} a[href='/manual/']`)).not.toBeNull();
+    }
+  });
+
   it("describes itself as a free SoftwareApplication in JSON-LD", () => {
     const script = document.querySelector("script[type='application/ld+json']");
     const data = JSON.parse(script?.textContent ?? "");
@@ -122,6 +139,26 @@ describe.each(landings)("screenshots of $name", ({ file }) => {
   });
 });
 
+describe("manual", () => {
+  it("publishes the command line page", () => {
+    expect(manual.map(({ file }) => file)).toContain(
+      join("manual", "linea-de-ordenes", "index.html"),
+    );
+  });
+
+  describe.each(manual)("$name", ({ file }) => {
+    const document = page(file);
+
+    it("declares no hreflang", () => {
+      expect(document.querySelectorAll("link[hreflang]")).toHaveLength(0);
+    });
+
+    it("is written in Spanish", () => {
+      expect(document.documentElement.lang).toBe("es");
+    });
+  });
+});
+
 describe("404", () => {
   const document = page("404.html");
 
@@ -145,6 +182,13 @@ describe("sitemap", () => {
     expect(urls).toEqual(
       expect.arrayContaining(locales.map((locale) => `${site}${localePath(locale)}`)),
     );
+  });
+
+  it("lists every page of the manual", () => {
+    const pagesOfTheManual = manual.map(
+      ({ file }) => `${site}/${file.replace(/index\.html$/, "")}`,
+    );
+    expect(urls).toEqual(expect.arrayContaining(pagesOfTheManual));
   });
 
   it("leaves the 404 out", () => {

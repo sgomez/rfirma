@@ -1,0 +1,31 @@
+/* El manual con el aspecto de la landing: la tipografía y la marca del sistema de diseño. */
+
+@import "../../../../../rfirma-app/src/design-system/bundle/fonts/fonts.css";
+@import "../../../../../rfirma-app/src/design-system/bundle/tokens/typography.css";
+
+:root {
+  --sl-font: var(--rf-font-body);
+  --sl-color-accent-low: #053e44;
+  --sl-color-accent: #0d9488;
+  --sl-color-accent-high: #99f6e4;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #ccfbf1;
+  --sl-color-accent: #067781;
+  --sl-color-accent-high: #0f766e;
+}
+
+.sidebar-content details:has(> ul:empty) > summary {
+  cursor: default;
+  pointer-events: none;
+}
+
+.sidebar-content details:has(> ul:empty) .caret {
+  display: none;
+}
+
+.sidebar-content details:has(> ul:empty) .group-label > .large {
+  font-weight: 400;
+  color: var(--sl-color-gray-3);
+}

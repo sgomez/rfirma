@@ -1,6 +1,6 @@
 ---
 import Logo from "./Logo.astro";
-import { translator, type Locale } from "../i18n";
+import { defaultLocale, manualPath, translator, type Locale } from "../i18n";
 
 interface Props {
   locale: Locale;
@@ -8,6 +8,7 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = translator(locale);
+const manualLanguage = locale === defaultLocale ? undefined : defaultLocale;
 ---
 
 <footer style="position:relative;overflow:clip;background:linear-gradient(135deg,#053e44 0%,#067781 100%);color:#ffffff">
@@ -30,6 +31,13 @@ const t = translator(locale);
             style="font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)"
             >{t("footer.col.project")}</li
           >
+          <li>
+            <a
+              href={manualPath}
+              hreflang={manualLanguage}
+              style="font-size:.9375rem;text-decoration:none;color:#ffffff">{t("nav.manual")}</a
+            >
+          </li>
           <li>
             <a
               href="https://github.com/sgomez/rfirma"

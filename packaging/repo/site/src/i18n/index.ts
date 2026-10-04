@@ -66,6 +66,7 @@ export const invariantKeys: readonly Key[] = [
   "nav.github",
   "nav.home.aria",
   "nav.install",
+  "nav.manual",
   "nav.transparency",
   "notice.badge",
   "pillars.crypto.title",
@@ -80,6 +81,9 @@ export function translator(locale: Locale): (key: Key) => string {
   const dictionary = dictionaries[locale];
   return (key) => dictionary[key];
 }
+
+/** Ruta del manual, que solo existe en castellano: lo enlazan las cinco landings. */
+export const manualPath = "/manual/";
 
 /** Ruta absoluta de la landing en un idioma: `/` para el castellano y `/<locale>/` para el resto. */
 export function localePath(locale: Locale): string {
