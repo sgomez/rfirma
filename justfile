@@ -69,6 +69,10 @@ worktree_target := ```
 
 cargo_target := if worktree_target == "" { tauri / "target" } else { worktree_target }
 
+# La libreria nativa de las pruebas sueltas: la del arbol si la tiene; si no,
+# en un worktree, la del checkout principal.
+test_native_lib_dir := if path_exists(native_lib) == "true" { parent_directory(native_lib) } else if worktree_target == "" { parent_directory(native_lib) } else { parent_directory(parent_directory(parent_directory(worktree_target))) / "rfirma-native-bridge/target/lib/rfirma" }
+
 # El arbol instrumentado de `cargo llvm-cov` va aparte del normal (ADR-0014).
 export CARGO_TARGET_DIR := if env("CARGO_LLVM_COV", "") == "" { cargo_target } else { cargo_target / "llvm-cov-target" }
 
@@ -258,7 +262,7 @@ outline +paths:
 # La prueba de Rust que tocas, sobre el arbol de compilacion de las recetas: `just test-one-rust <filtro>`.
 [group('checklist')]
 test-one-rust *args:
-    cd {{ tauri }} && cargo test {{ args }}
+    cd {{ tauri }} && RFIRMA_LIB_DIR="{{ test_native_lib_dir }}" cargo test {{ args }}
 
 # El fichero de vitest que tocas, con el reportero callado: `just test-one-ts <fichero>`.
 [group('checklist')]
