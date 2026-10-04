@@ -26,7 +26,7 @@ rfirma --version
   completa, y `rfirma --version`, la versión de rFirma y la de AutoFirma de la que
   salen sus validadores.
 
-### Lo que sale de una orden
+### Qué devuelve una orden
 
 | Código de salida | Cuándo                                                                     |
 | ---------------- | -------------------------------------------------------------------------- |
@@ -34,7 +34,7 @@ rfirma --version
 | `1`              | La orden se atiende y falla: no hay certificado, el fichero no se lee, etc. |
 | `2`              | La línea de órdenes se rechaza tal como llega: falta un parámetro, sobra otro o pide algo que rFirma no hace. |
 
-Por la **salida estándar** solo sale lo que se consume: la lista de `listaliases`, la
+Por la **salida estándar** solo salen los datos que se consumen: la lista de `listaliases`, la
 sintaxis de `--help` y el documento de `--xml` o `--json`. Los mensajes y los
 registros van a la **salida de errores**, así que se puede redirigir la salida
 estándar a un fichero o a otro programa sin que se mezclen.
@@ -82,7 +82,7 @@ rfirma listaliases [--store <almacén>] [--xml | --json]
 ```
 
 Escribe por la salida estándar el alias de cada certificado de los almacenes, uno
-por línea, o solo los del almacén de `--store`. El alias es lo que luego se pasa a
+por línea, o solo los del almacén de `--store`. Ese alias se pasa luego a
 `--alias`. Si no hay ningún certificado, la lista sale vacía y la salida de errores
 lo dice.
 
@@ -102,7 +102,7 @@ rfirma verify --gui -i <fichero>
 
 Valida las firmas del fichero de `-i` con la caducidad del certificado de quien
 firmó, sin consultar la revocación y sin red. **Sale con `0` aunque la firma no sea
-válida**, como AutoFirma: el resultado está en lo que escribe, no en el código de
+válida**, como AutoFirma: el resultado está en su salida, no en el código de
 salida.
 
 - Con `-v` (o `--verbose`) añade el formato y una ficha por firma: quién firma, en
@@ -182,7 +182,7 @@ rFirma no carga un módulo PKCS#11 solo porque lo nombre la orden. Los almacenes
 AutoFirma que rFirma no abre (`pkcs12`, `dni`, `dnie`, `mac`) se rechazan, y un
 nombre que AutoFirma no reconoce, también.
 
-## Lo que rFirma rechaza
+## Qué rechaza rFirma
 
 Estas formas de AutoFirma se rechazan con código de salida `2` y un mensaje que lo
 explica:

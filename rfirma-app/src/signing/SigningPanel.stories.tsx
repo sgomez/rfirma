@@ -21,7 +21,7 @@ import {
   STORY_RUBRIC,
   VALID_CLOSING,
 } from "../../.storybook/fixtures/signing";
-import { placementOf } from "../placement/pageSets";
+import { placementStateOf } from "../placement/placementFixtures";
 import { SigningPanel } from "./SigningPanel";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
@@ -41,7 +41,7 @@ const meta = {
   decorators: [inPanelColumn],
   parameters: panelStoryParameters,
   args: {
-    document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+    document: { id: "doc-1", name: "contrato.pdf", sizeBytes: 2_400_000 },
     previousSignatures: aReport([]),
     certificate: {
       kind: "chosen",
@@ -53,14 +53,7 @@ const meta = {
     onChooseModule: fn(),
     signature: DEFAULT_VISIBLE_SIGNATURE,
     onChangeSignature: fn(),
-    placement: null,
-    pageSets: { single: null, these: null },
-    onChoosePages: fn(),
-    pageMode: "single",
-    onChangePageMode: fn(),
-    viewedPage: 3,
-    onSeal: fn(),
-    onUnseal: fn(),
+    placementState: placementStateOf({ viewedPage: 3, pageCount: 27 }),
     rubric: null,
     rubricFailure: null,
     onChooseRubric: fn(),
@@ -76,13 +69,12 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+const singlePage = { rect: RECT, sets: { single: 3, these: null }, viewedPage: 3, pageCount: 27 };
+
 const singlePageSeal = {
   signature: visible,
-  placement: placementOf(RECT, { single: 3, these: null }, "single"),
-  pageSets: { single: 3, these: null },
+  placementState: placementStateOf(singlePage),
 } satisfies Story["args"];
-
-const severalPages = { single: 3, these: { only: [1, 6] } };
 
 export const Ready: Story = {};
 
@@ -110,34 +102,36 @@ export const VisibleSignatureOnePage: Story = { args: singlePageSeal };
 export const VisibleSignatureSeveralPages: Story = {
   args: {
     signature: visible,
-    pageMode: "these",
-    pageSets: severalPages,
-    placement: placementOf(RECT, severalPages, "these"),
+    placementState: placementStateOf({
+      ...singlePage,
+      sets: { single: 3, these: { only: [1, 6] } },
+      mode: "these",
+    }),
   },
 };
 
 export const VisibleSignatureEveryPage: Story = {
   args: {
     signature: visible,
-    pageMode: "all",
-    pageSets: { single: 3, these: null },
-    placement: placementOf(RECT, { single: 3, these: null }, "all"),
+    placementState: placementStateOf({ ...singlePage, mode: "all" }),
   },
 };
 
-export const VisibleSignatureOnAnotherPage: Story = { args: { ...singlePageSeal, viewedPage: 5 } };
-
-export const VisibleSignatureNotPlaced: Story = {
-  args: { signature: visible, pageSets: { single: null, these: null } },
+export const VisibleSignatureOnAnotherPage: Story = {
+  args: { ...singlePageSeal, placementState: placementStateOf({ ...singlePage, viewedPage: 5 }) },
 };
+
+export const VisibleSignatureNotPlaced: Story = { args: { signature: visible } };
 
 export const RangeOutOfDocument: Story = {
   args: {
     signature: visible,
-    pageMode: "these",
-    document: { id: "doc-1", name: "contrato.pdf", pages: 6, sizeBytes: 2_400_000 },
-    pageSets: { single: 3, these: { only: [10, 40] } },
-    placement: placementOf(RECT, { single: 3, these: { only: [10, 40] } }, "these"),
+    placementState: placementStateOf({
+      ...singlePage,
+      sets: { single: 3, these: { only: [10, 40] } },
+      mode: "these",
+      pageCount: 6,
+    }),
   },
 };
 

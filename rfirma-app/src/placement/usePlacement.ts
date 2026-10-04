@@ -1,4 +1,4 @@
-//! El estado de la colocación de la firma visible: el recuadro, lo que recuerda cada modo de páginas, el modo activo y la página a la vista, repuestos solos al cambiar de documento; mide con la posición estándar que se le pasa y no conoce el PDF.
+//! El estado de la colocación de la firma visible: el recuadro, lo que recuerda cada modo de páginas, el modo activo, la página a la vista y lo tecleado en «Varias», repuestos solos al cambiar de documento; mide con la posición estándar que se le pasa y no conoce el PDF.
 
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -18,6 +18,7 @@ import {
   type UserSpaceRect,
   unsealingAt,
 } from "./pageSets";
+import { fieldTroubleOf, pageActionOf, typedPagesOf, typedTextOf } from "./placementField";
 
 /** La posición estándar del recuadro en una página del documento. */
 export type StandardRectOn = (page: number) => Promise<UserSpaceRect>;
@@ -36,33 +37,56 @@ interface PlacementOptions {
   onChange?: (placement: Placement | null) => unknown;
 }
 
+/**
+ * Lo tecleado en «Varias» y el conjunto que dice. Se reescribe solo cuando el
+ * conjunto de «Varias» cambia **desde fuera** —el botón de la página, un trazo
+ * en el visor—: lo que se teclea no se reformatea bajo los dedos.
+ */
+interface Typed {
+  text: string;
+  pages: PageSet | null;
+}
+
 interface Front {
   document: PlacedDocument | null;
   placing: Placing;
   viewedPage: number;
+  typed: Typed;
+}
+
+function typedOf(pages: PageSet | null, pageCount: number): Typed {
+  return { text: typedTextOf(pages, pageCount), pages };
 }
 
 function frontOf(document: PlacedDocument | null): Front {
   const saved = document?.placement ?? null;
+  const pageCount = document?.pageCount ?? 0;
+  const placing = placingFrom(saved, pageCount);
   return {
     document,
-    placing: placingFrom(saved, document?.pageCount ?? 0),
+    placing,
     viewedPage: firstSealedPage(saved) ?? 1,
+    typed: typedOf(placing.sets.these, pageCount),
   };
+}
+
+function inStep(front: Front): Front {
+  const these = front.placing.sets.these;
+  if (these === front.typed.pages) return front;
+  return { ...front, typed: typedOf(these, front.document?.pageCount ?? 0) };
 }
 
 /** La colocación de la firma visible y las órdenes que la cambian. */
 export function usePlacement({ document, standardRectOn, onChange }: PlacementOptions) {
   const [front, setFront] = useState(() => frontOf(document));
-  let current = front;
-  if (front.document !== document) {
-    current = frontOf(document);
-    setFront(current);
-  }
-  const { placing, viewedPage } = current;
+  const current = inStep(front.document === document ? front : frontOf(document));
+  if (current !== front) setFront(current);
+  const { placing, viewedPage, typed } = current;
   const pageCount = document?.pageCount ?? 0;
   const pageMode = placing.mode;
   const placement = useMemo(() => placementOf(placing.rect, placing.sets, placing.mode), [placing]);
+  const rangeError = fieldTroubleOf(typed.text, pageMode, pageCount);
+  const pageAction = pageActionOf(placement, pageMode, viewedPage, rangeError);
 
   const viewPage = useCallback((page: number) => {
     setFront((was) => ({ ...was, viewedPage: page }));
@@ -123,6 +147,16 @@ export function usePlacement({ document, standardRectOn, onChange }: PlacementOp
     [placeStandard, placing, pageCount],
   );
 
+  /** Lo tecleado en «Varias»: lo que no nombra páginas se queda en el campo y no se aplica. */
+  const typePages = useCallback(
+    (text: string) => {
+      const pages = typedPagesOf(text, pageCount);
+      setFront((was) => ({ ...was, typed: { text, pages: pages ?? was.typed.pages } }));
+      if (pages !== null) choosePages(pages);
+    },
+    [choosePages, pageCount],
+  );
+
   const changePageMode = useCallback(
     (mode: PageMode) => {
       const previous = pagesOf(placing.sets, placing.mode);
@@ -150,6 +184,9 @@ export function usePlacement({ document, standardRectOn, onChange }: PlacementOp
     pageMode,
     placement,
     viewedPage,
+    pagesText: typed.text,
+    rangeError,
+    pageAction,
     viewPage,
     moveBox,
     sealPage,
@@ -157,7 +194,11 @@ export function usePlacement({ document, standardRectOn, onChange }: PlacementOp
     sealViewedPage,
     unsealViewedPage,
     choosePages,
+    typePages,
     changePageMode,
     placeOnViewedPage,
   };
 }
+
+/** Todo lo que entrega el estado de la colocación. */
+export type PlacementState = ReturnType<typeof usePlacement>;

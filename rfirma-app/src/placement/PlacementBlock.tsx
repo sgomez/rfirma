@@ -1,22 +1,26 @@
-//! El segmentado de páginas de la firma visible —«Una página», «Varias», «Todas»— y la línea o el campo de debajo.
+//! El bloque «Colocación»: el segmentado «Una página | Varias | Todas», la línea de «Una página», el campo de «Varias» con su error y el botón de la página, pintados de lo que entrega el estado.
 
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { AlertIcon } from "../design-system/icons";
 import { Stack } from "../design-system/Stack";
-import type { PageMode, PageSets } from "../placement/pageSets";
-import { type FieldTrouble, messageFor, type PageButton } from "../placement/placementField";
+import { messageFor } from "./placementField";
+import type { PlacementState } from "./usePlacement";
 
-interface PlacementFieldsetProps {
-  pageSets: PageSets;
-  pageMode: PageMode;
-  onChangePageMode: (mode: PageMode) => void;
-  pagesText: string;
-  onTypePages: (value: string) => void;
-  rangeError: FieldTrouble | null;
-  pageButton: PageButton | null;
-}
+/** Lo que el bloque lee del estado de la colocación. */
+export type PlacementBlockState = Pick<
+  PlacementState,
+  | "placing"
+  | "pageMode"
+  | "pagesText"
+  | "rangeError"
+  | "pageAction"
+  | "changePageMode"
+  | "typePages"
+  | "sealViewedPage"
+  | "unsealViewedPage"
+>;
 
 const MODES = [
   { mode: "single", label: "panel.placement.single" },
@@ -24,22 +28,19 @@ const MODES = [
   { mode: "all", label: "panel.placement.all" },
 ] as const;
 
-/** El segmentado «Una página | Varias | Todas» y la línea o el campo que va debajo. */
-export function PlacementFieldset({
-  pageSets,
-  pageMode,
-  onChangePageMode,
-  pagesText,
-  onTypePages,
-  rangeError,
-  pageButton,
-}: PlacementFieldsetProps) {
+/** El segmentado de los modos de páginas y la línea o el campo que va debajo. */
+export function PlacementBlock({ state }: { state: PlacementBlockState }) {
   const { t } = useTranslation();
   const group = useId();
+  const { placing, pageMode, pagesText, rangeError, pageAction } = state;
 
-  const button = pageButton && (
-    <Button variant="secondary" className="panel__page-button" onClick={pageButton.act}>
-      {pageButton.label}
+  const button = pageAction && (
+    <Button
+      variant="secondary"
+      className="panel__page-button"
+      onClick={pageAction === "seal" ? state.sealViewedPage : state.unsealViewedPage}
+    >
+      {pageAction === "seal" ? t("panel.placement.seal") : t("panel.placement.unseal")}
     </Button>
   );
 
@@ -58,17 +59,17 @@ export function PlacementFieldset({
               className="panel__segment-input"
               name={group}
               checked={pageMode === mode}
-              onChange={() => onChangePageMode(mode)}
+              onChange={() => state.changePageMode(mode)}
             />
             {t(label)}
           </label>
         ))}
       </div>
 
-      {pageMode === "single" && pageSets.single !== null && (
+      {pageMode === "single" && placing.sets.single !== null && (
         <div className="panel__page-line">
           <span className="panel__page-text">
-            {t("panel.placement.singlePage", { page: pageSets.single })}
+            {t("panel.placement.singlePage", { page: placing.sets.single })}
           </span>
           {button}
         </div>
@@ -88,7 +89,7 @@ export function PlacementFieldset({
               value={pagesText}
               aria-label={t("panel.placement.field")}
               aria-invalid={rangeError !== null}
-              onChange={(event) => onTypePages(event.target.value)}
+              onChange={(event) => state.typePages(event.target.value)}
             />
             {button}
           </div>
