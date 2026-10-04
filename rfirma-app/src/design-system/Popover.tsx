@@ -1,4 +1,4 @@
-//! El panel flotante de los desplegables: cierre al pulsar fuera, con Escape o con Tab, foco al abrir y al cerrar, y colocación opcional en un portal.
+//! El panel flotante de los desplegables: cierre al pulsar fuera, con Escape o con Tab desde dentro, foco al abrir y al cerrar, y colocación opcional en un portal.
 
 import {
   type ComponentPropsWithRef,
@@ -80,7 +80,7 @@ export function Popover({
         event.preventDefault();
         dismissedByEscape.current = true;
         onClose();
-      } else if (event.key === "Tab") {
+      } else if (event.key === "Tab" && own.current?.contains(event.target as Node)) {
         skipRestore.current = true;
         onClose();
       }

@@ -62,7 +62,7 @@ describe("Popover", () => {
     expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
-  it("closes on Tab and lets the focus go on its way", () => {
+  it("closes on Tab from inside the panel and lets the focus go on its way", () => {
     render(<Harness restoreFocus="always" />);
     screen.getByRole("button", { name: "fuera" }).focus();
 
@@ -70,6 +70,16 @@ describe("Popover", () => {
 
     expect(screen.queryByRole("menu")).toBeNull();
     expect(screen.getByRole("button", { name: "fuera" })).toHaveFocus();
+  });
+
+  it("stays open on Tab pressed in the trigger, so the focus can reach the panel", () => {
+    render(<Harness />);
+    const trigger = screen.getByRole("button", { name: "abrir" });
+    trigger.focus();
+
+    fireEvent.keyDown(trigger, { key: "Tab" });
+
+    expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
   it("focuses the panel when it opens if asked to", () => {
