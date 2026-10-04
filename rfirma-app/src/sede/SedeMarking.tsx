@@ -27,9 +27,6 @@ interface SedeMarkingProps {
  */
 export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   const { t } = useTranslation();
-  const [placementRequest, setPlacementRequest] = useState<{
-    action: "seal" | "unseal";
-  } | null>(null);
   const standardRectOn = useMemo(() => (pdf === null ? null : standardRectOnPageOf(pdf)), [pdf]);
   const document = useMemo(
     () => (pdf === null ? null : { placement: null, pageCount: pdf.pageCount }),
@@ -43,7 +40,8 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
     viewPage,
     moveBox,
     sealPage,
-    unsealPage,
+    sealViewedPage,
+    unsealViewedPage,
     choosePages,
     changePageMode,
   } = usePlacement({ document, standardRectOn });
@@ -54,8 +52,8 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
     placement,
     viewedPage,
     onChoosePages: choosePages,
-    onSeal: () => setPlacementRequest({ action: "seal" }),
-    onUnseal: () => setPlacementRequest({ action: "unseal" }),
+    onSeal: sealViewedPage,
+    onUnseal: unsealViewedPage,
   });
   const [handing, setHanding] = useState(false);
 
@@ -97,10 +95,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
               placement={placement}
               onMove={moveBox}
               onTrace={sealPage}
-              onSeal={sealPage}
-              onUnseal={unsealPage}
               onPageChange={viewPage}
-              placementRequest={placementRequest}
               onOpen={noop}
             />
           </div>

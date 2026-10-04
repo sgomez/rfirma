@@ -51,10 +51,6 @@ interface DocumentViewerProps {
   onMove?: (rect: UserSpaceRect) => void;
   /** Se ha trazado un recuadro nuevo, `rect`, sobre la página `page`. */
   onTrace?: (rect: UserSpaceRect, page: number) => void;
-  /** La petición de sellar, atendida: la página que se mira, con el recuadro que tenga o el estándar. */
-  onSeal?: (rect: UserSpaceRect, page: number) => void;
-  /** La petición de quitar el sello de la página que se mira, atendida. */
-  onUnseal?: (page: number) => void;
   /**
    * La página que se está mirando ha cambiado.
    *
@@ -62,16 +58,6 @@ interface DocumentViewerProps {
    * necesita para elegir la cara del botón de sellar.
    */
   onPageChange?: (page: number) => void;
-  /**
-   * El botón de sellar vive en el panel, pero sellar y quitar el sello siguen
-   * siendo del visor: es quien tiene el `viewport` de `pdf.js` que mide la
-   * posición estándar del recuadro.
-   *
-   * **Cada petición es un objeto nuevo**: pulsar
-   * el mismo botón dos veces tiene que actuar las dos veces, así que lo que
-   * dispara la acción es la identidad y no el valor.
-   */
-  placementRequest?: { action: "seal" | "unseal" } | null;
   /** Abrir un documento, que va por el portal igual que desde el botón partido de abrir. */
   onOpen: () => void;
   /** Lo que va debajo de la zona de soltar en el estado vacío: los recientes. */
@@ -171,12 +157,9 @@ export function DocumentViewer({
   placement,
   onMove,
   onTrace,
-  onSeal,
-  onUnseal,
   onOpen,
   emptyExtra = null,
   onPageChange,
-  placementRequest = null,
   canPlace = true,
   failure = null,
   withoutPreview = null,
@@ -217,9 +200,6 @@ export function DocumentViewer({
     placement,
     onMove,
     onTrace,
-    onSeal,
-    onUnseal,
-    placementRequest,
     canPlace,
     onGesture,
     page,

@@ -22,8 +22,8 @@ interface UsePlacementFieldArgs {
  * El campo de «Varias»: lo tecleado en el campo de páginas se mantiene a la
  * par del conjunto activo por **identidad** —el conjunto que este hook acaba
  * de emitir se apunta en `seenPages`, así que solo se reescribe el campo
- * cuando el conjunto cambia **desde fuera**, sellar o quitar una página en el
- * visor—. Sin esa distinción, teclear `1,2-3` se convertiría en `1-3`
+ * cuando el conjunto cambia **desde fuera**, con el botón de la página o un
+ * trazo en el visor—. Sin esa distinción, teclear `1,2-3` se convertiría en `1-3`
  * bajo los dedos, porque la forma comprimida no es la que se está escribiendo.
  */
 export function usePlacementField({
