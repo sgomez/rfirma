@@ -453,6 +453,7 @@ que /Contents, y deja dentro bytes sin firmar, se aborta con SAF_39 en vez de fi
 [check.drive]
 mode = "v4"
 script = "cosignpadescheckingbyterange"
+act.consent = "AutoFirma da la firma previa por buena y pide certificado: elígelo para que la cofirma acabe. Si el cliente rechaza el PDF, no pide nada."
 expects.code = "SAF_39"
 
 [[check]]
