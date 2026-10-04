@@ -64,7 +64,7 @@ export function SigningProgressDialog({ stage }: SigningProgressDialogProps) {
 
       <ProgressBar
         value={current + 1}
-        min={1}
+        min={0}
         max={SIGNING_STAGES.length}
         aria-labelledby={titleId}
       />

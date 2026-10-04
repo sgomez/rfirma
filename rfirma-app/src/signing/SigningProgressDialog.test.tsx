@@ -45,6 +45,7 @@ describe("SigningProgressDialog", () => {
       });
       const bar = screen.getByRole("progressbar");
       expect(bar).toHaveAttribute("aria-valuenow", String(current + 1));
+      expect(bar).toHaveAttribute("aria-valuemin", "0");
       expect(bar).toHaveAttribute("aria-valuemax", "3");
     },
   );
