@@ -1,8 +1,7 @@
 //! El selector de certificado: la caja de dos líneas que al abrirse es un buscador, primer bloque del panel de firma y el mismo en la sede.
 
 import type { TFunction } from "i18next";
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   CheckIcon,
@@ -12,6 +11,7 @@ import {
   SearchIcon,
   SpinnerIcon,
 } from "../design-system/icons";
+import { Popover } from "../design-system/Popover";
 import type { Certificate } from "./certificate";
 import {
   certificateCompactSubtitle,
@@ -37,15 +37,6 @@ interface CertificateSelectProps {
   disabled?: boolean;
 }
 
-interface Anchor {
-  top: number;
-  left: number;
-  width: number;
-  maxHeight: number;
-}
-
-const WINDOW_MARGIN = 8;
-
 /** Con qué certificado se firma: la caja de dos líneas que al abrirse es un buscador (docs/design/panel-de-firma.md). */
 export function CertificateSelect({
   certificates,
@@ -59,12 +50,9 @@ export function CertificateSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
-  const [anchor, setAnchor] = useState<Anchor | null>(null);
   const frame = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLButtonElement>(null);
   const search = useRef<HTMLInputElement>(null);
-  const layer = useRef<HTMLDivElement>(null);
-  const focusBoxOnClose = useRef(false);
   const labelId = useId();
   const listId = useId();
   const optionId = useId();
@@ -76,8 +64,7 @@ export function CertificateSelect({
   const shownUnusable = shown.filter((certificate) => !isUsable(certificate.status));
   const withHeaders = certificates.length > 1;
 
-  const close = useCallback((giveBackFocus: boolean) => {
-    focusBoxOnClose.current = giveBackFocus;
+  const close = useCallback(() => {
     setOpen(false);
     setQuery("");
   }, []);
@@ -88,63 +75,16 @@ export function CertificateSelect({
     setOpen(true);
   };
 
-  const place = useCallback(() => {
-    const rect = frame.current?.getBoundingClientRect();
-    if (!rect) return;
-    const top = rect.bottom + 4;
-    setAnchor({
-      top,
-      left: rect.left,
-      width: rect.width,
-      maxHeight: Math.min(listMaxHeight, window.innerHeight - top - WINDOW_MARGIN),
-    });
-  }, [listMaxHeight]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    place();
-    const onScroll = (event: Event) => {
-      if (layer.current?.contains(event.target as Node)) return;
-      place();
-    };
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", onScroll, true);
-    return () => {
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", onScroll, true);
-    };
-  }, [open, place]);
-
   useEffect(() => {
     if (!open) return;
     document.getElementById(`${optionId}-${active}`)?.scrollIntoView?.({ block: "nearest" });
   }, [open, active, optionId]);
 
-  useEffect(() => {
-    if (open) {
-      search.current?.focus();
-    } else if (focusBoxOnClose.current) {
-      focusBoxOnClose.current = false;
-      box.current?.focus();
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (frame.current?.contains(target) || layer.current?.contains(target)) return;
-      close(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open, close]);
-
   const choose = (index: number) => {
     const certificate = shown[index];
     if (certificate === undefined || !isUsable(certificate.status)) return;
     onChoose(certificate);
-    close(true);
+    close();
   };
 
   const onSearchKeyDown = (event: React.KeyboardEvent) => {
@@ -160,13 +100,6 @@ export function CertificateSelect({
       case "Enter":
         event.preventDefault();
         choose(active);
-        return;
-      case "Escape":
-        event.preventDefault();
-        close(true);
-        return;
-      case "Tab":
-        close(false);
         return;
       default:
     }
@@ -330,45 +263,40 @@ export function CertificateSelect({
           </button>
         )}
       </div>
-      {open &&
-        anchor &&
-        createPortal(
-          <div
-            ref={layer}
-            className="certificate-select__layer"
-            style={{
-              top: anchor.top,
-              left: anchor.left,
-              width: anchor.width,
-              maxHeight: anchor.maxHeight,
-            }}
-          >
-            {query.trim() !== "" && shown.length > 0 && (
-              <span className="rf-body rf-text-muted certificate-select__count">
-                {t("panel.certificate.matches", { shown: shown.length, total: all.length })}
-              </span>
-            )}
-            {shown.length === 0 && (
-              <span className="rf-body rf-text-muted certificate-select__empty">
-                {t("panel.certificate.noMatch")}
-              </span>
-            )}
-            <div
-              className="certificate-select__list"
-              id={listId}
-              role="listbox"
-              aria-labelledby={labelId}
-            >
-              {renderGroup(t("panel.certificate.groups.available"), shownAvailable, 0)}
-              {renderGroup(
-                t("panel.certificate.groups.cannotUse"),
-                shownUnusable,
-                shownAvailable.length,
-              )}
-            </div>
-          </div>,
-          document.body,
+      <Popover
+        open={open}
+        onClose={close}
+        anchorRef={frame}
+        initialFocus={search}
+        returnFocusRef={box}
+        restoreFocus="always"
+        portal={{ maxHeight: listMaxHeight }}
+        className="certificate-select__layer"
+      >
+        {query.trim() !== "" && shown.length > 0 && (
+          <span className="rf-body rf-text-muted certificate-select__count">
+            {t("panel.certificate.matches", { shown: shown.length, total: all.length })}
+          </span>
         )}
+        {shown.length === 0 && (
+          <span className="rf-body rf-text-muted certificate-select__empty">
+            {t("panel.certificate.noMatch")}
+          </span>
+        )}
+        <div
+          className="certificate-select__list"
+          id={listId}
+          role="listbox"
+          aria-labelledby={labelId}
+        >
+          {renderGroup(t("panel.certificate.groups.available"), shownAvailable, 0)}
+          {renderGroup(
+            t("panel.certificate.groups.cannotUse"),
+            shownUnusable,
+            shownAvailable.length,
+          )}
+        </div>
+      </Popover>
     </div>
   );
 }

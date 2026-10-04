@@ -1,8 +1,9 @@
 //! La cabecera única, sin barra de menús (ADR-0007): el hueco de las pestañas, el aviso de estado y el menú cuando se ancla en la cabecera.
 
-import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useCallback, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, ExternalLinkIcon, MenuIcon } from "../design-system/icons";
+import { Popover } from "../design-system/Popover";
 import "./Header.css";
 import type { MenuAnchor } from "./menuAnchor";
 
@@ -55,29 +56,9 @@ export function Header({
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const container = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
-
-  // Un menú desplegado se cierra al pulsar fuera y con Escape. Sin esto queda
-  // flotando sobre la ventana mientras se trabaja debajo.
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!container.current?.contains(event.target as Node)) close();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        close();
-      }
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, close]);
 
   const choose = (action: () => void) => () => {
     close();
@@ -110,6 +91,7 @@ export function Header({
           <div className="header__menu" ref={container}>
             <button
               type="button"
+              ref={trigger}
               className={
                 open ? "rf-btn header__button header__button--open" : "rf-btn header__button"
               }
@@ -121,49 +103,55 @@ export function Header({
             >
               <MenuIcon size={18} />
             </button>
-            {open && (
-              <div className="header__popup rf-card rf-card--elevated" id={menuId} role="menu">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="rf-btn header__entry"
-                  onClick={choose(onOpenStatus)}
-                >
-                  <span className="header__entryLabel">{t("status.title")}</span>
-                  <span className="header__entryIcon" aria-hidden="true" />
-                </button>
-                <hr className="rf-divider header__divider" />
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="rf-btn header__entry"
-                  onClick={choose(onOpenPreferences)}
-                >
-                  <span className="header__entryLabel">{t("header.preferences")}</span>
-                  <span className="header__entryIcon" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="rf-btn header__entry"
-                  onClick={choose(onOpenHelp)}
-                >
-                  <span className="header__entryLabel">{t("header.help")}</span>
-                  <span className="header__entryIcon" aria-hidden="true">
-                    <ExternalLinkIcon />
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="rf-btn header__entry"
-                  onClick={choose(onOpenAbout)}
-                >
-                  <span className="header__entryLabel">{t("header.about")}</span>
-                  <span className="header__entryIcon" aria-hidden="true" />
-                </button>
-              </div>
-            )}
+            <Popover
+              open={open}
+              onClose={close}
+              anchorRef={container}
+              returnFocusRef={trigger}
+              className="header__popup rf-card rf-card--elevated"
+              id={menuId}
+              role="menu"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                className="rf-btn header__entry"
+                onClick={choose(onOpenStatus)}
+              >
+                <span className="header__entryLabel">{t("status.title")}</span>
+                <span className="header__entryIcon" aria-hidden="true" />
+              </button>
+              <hr className="rf-divider header__divider" />
+              <button
+                type="button"
+                role="menuitem"
+                className="rf-btn header__entry"
+                onClick={choose(onOpenPreferences)}
+              >
+                <span className="header__entryLabel">{t("header.preferences")}</span>
+                <span className="header__entryIcon" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="rf-btn header__entry"
+                onClick={choose(onOpenHelp)}
+              >
+                <span className="header__entryLabel">{t("header.help")}</span>
+                <span className="header__entryIcon" aria-hidden="true">
+                  <ExternalLinkIcon />
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="rf-btn header__entry"
+                onClick={choose(onOpenAbout)}
+              >
+                <span className="header__entryLabel">{t("header.about")}</span>
+                <span className="header__entryIcon" aria-hidden="true" />
+              </button>
+            </Popover>
           </div>
         )}
       </div>
