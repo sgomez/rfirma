@@ -113,7 +113,6 @@ check: tools check-repo check-java check-ts check-landing check-rust
 check-repo: check-version fmt-check
     set -euo pipefail
     {{ root }}/packaging/flatpak/check-sources.sh
-    {{ root }}/rfirma-app/src/design-system/check-bundle.sh
     {{ root }}/.github/check-workflows.sh
     {{ root }}/scripts/check-versions.sh
     {{ root }}/packaging/repo/build-tree.test.sh
@@ -614,19 +613,6 @@ check-landing:
 [group('ci')]
 check-version:
     {{ root }}/scripts/app_version.py check
-
-# Resella el bundle del sistema de diseno.
-[group('release')]
-[script('bash')]
-seal-ds-bundle:
-    set -euo pipefail
-    cd "{{ root }}"
-    find rfirma-app/src/design-system/bundle -type f ! -name _ds_needs_recompile \
-        | LC_ALL=C sort \
-        | xargs sha256sum \
-        > rfirma-app/src/design-system/bundle.lock
-    echo
-    echo "resellado. Versiona rfirma-app/src/design-system/bundle.lock."
 
 # Arranca Storybook con las historias de la interfaz, en los cinco idiomas y los dos temas.
 [group('dev')]
