@@ -2,7 +2,9 @@
 
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { AlertIcon, FileIcon, FolderIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
 import type { Certificate } from "./certificate";
 import { isUsable } from "./certificate";
 import type { Destination } from "./destination";
@@ -80,23 +82,20 @@ export function PanelFooter(props: PanelFooterProps) {
   return (
     <footer className="panel__footer">
       <div className="panel__destination">
-        <div className="rf-row panel__destination-label-row">
+        <Row className="panel__destination-label-row">
           <p className="rf-label panel__destination-label">
             {t(signed ? "panel.signed.document" : "panel.footer.savedIn")}
           </p>
           {props.onChangeDestination !== undefined && (
-            <button
-              type="button"
-              className={
-                "rf-btn rf-btn--ghost panel__destination-change" +
-                (signing ? " panel__controls--dim" : "")
-              }
+            <Button
+              variant="ghost"
+              className={"panel__destination-change" + (signing ? " panel__controls--dim" : "")}
               onClick={props.onChangeDestination}
             >
               {t("actions.change")}
-            </button>
+            </Button>
           )}
-        </div>
+        </Row>
         {writable ? (
           <div className="panel__destination-box">
             {destination.folder !== "" && (
@@ -114,7 +113,7 @@ export function PanelFooter(props: PanelFooterProps) {
             </span>
           </div>
         ) : (
-          <div className="rf-row rf-gap-xs panel__destination-unwritable">
+          <Row gap="xs" className="panel__destination-unwritable">
             <AlertIcon size={16} />
             <span className="panel__destination-unwritable-text" title={destination.folder}>
               {unwritableMessage(
@@ -122,74 +121,62 @@ export function PanelFooter(props: PanelFooterProps) {
                 shortened.folder,
               )}
             </span>
-          </div>
+          </Row>
         )}
       </div>
       {props.signed ? (
-        <div className="rf-row rf-gap-xs panel__signed-actions">
-          <button
-            type="button"
-            className="rf-btn rf-btn--primary panel__signed-open"
-            onClick={props.onOpenDocument}
-          >
+        <Row gap="xs" className="panel__signed-actions">
+          <Button variant="primary" className="panel__signed-open" onClick={props.onOpenDocument}>
             {t(props.signable === false ? "panel.signed.openFile" : "panel.signed.openDocument")}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
             title={t("panel.signed.openFolder")}
-            className="rf-btn rf-btn--secondary panel__signed-folder"
+            className="panel__signed-folder"
             onClick={props.onOpenFolder}
           >
             <FolderIcon />
-          </button>
-          <button
-            type="button"
-            className="rf-btn rf-btn--ghost panel__signed-sign"
+          </Button>
+          <Button
+            variant="ghost"
+            className="panel__signed-sign"
             title={props.signable === false ? t("panel.signed.onlyPdfs") : undefined}
             disabled={props.signable === false}
             onClick={props.onSign}
           >
             {t("actions.sign")}
-          </button>
-        </div>
+          </Button>
+        </Row>
       ) : (
         <>
           {props.failure && (
-            <div className="rf-row rf-gap-xs panel__failure-actions">
-              <button
-                type="button"
-                className="rf-btn rf-btn--primary panel__failure-retry"
-                onClick={props.onSign}
-              >
+            <Row gap="xs" className="panel__failure-actions">
+              <Button variant="primary" className="panel__failure-retry" onClick={props.onSign}>
                 {t("actions.retry")}
-              </button>
-              <button
-                type="button"
-                className="rf-btn rf-btn--ghost panel__failure-back"
-                onClick={props.onBack}
-              >
+              </Button>
+              <Button variant="ghost" className="panel__failure-back" onClick={props.onBack}>
                 {t("actions.back")}
-              </button>
-            </div>
+              </Button>
+            </Row>
           )}
           {!props.failure &&
             (props.certificate.kind === "empty" || props.certificate.kind === "failed") && (
-              <div className="rf-row rf-gap-xs panel__certificate-actions">
-                <button
-                  type="button"
-                  className="rf-btn rf-btn--primary panel__add-certificate"
+              <Row gap="xs" className="panel__certificate-actions">
+                <Button
+                  variant="primary"
+                  className="panel__add-certificate"
                   onClick={props.onChooseModule}
                 >
                   {t("panel.footer.addCertificate")}
-                </button>
-                <button
-                  type="button"
-                  className="rf-btn rf-btn--secondary panel__retry"
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="panel__retry"
                   onClick={props.onRetryCertificates}
                 >
                   {t("actions.lookAgain")}
-                </button>
-              </div>
+                </Button>
+              </Row>
             )}
           {!props.failure &&
             props.certificate.kind !== "empty" &&
@@ -221,17 +208,17 @@ function SignButton({ chosen, signing, blocked, closed, onSign }: SignButtonProp
   const { t } = useTranslation();
   const usable = chosen !== null && isUsable(chosen.status);
   return (
-    <div className="rf-row panel__sign-row">
-      <button
-        type="button"
-        className="rf-btn rf-btn--primary panel__sign"
+    <Row className="panel__sign-row">
+      <Button
+        variant="primary"
+        className="panel__sign"
         title={signButtonTitle(t, closed)}
         disabled={signing || blocked || closed || !usable}
         onClick={onSign}
       >
         {t(signing ? "panel.footer.signing" : "actions.sign")}
-      </button>
-    </div>
+      </Button>
+    </Row>
   );
 }
 

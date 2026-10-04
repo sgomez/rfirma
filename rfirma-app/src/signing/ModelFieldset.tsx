@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { RubricIcon } from "../design-system/icons";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { Certificate } from "./certificate";
@@ -203,15 +204,11 @@ export function ModelFieldset({
               title={noImageTitle}
             />
           )}
-          <button
-            type="button"
-            className="rf-btn rf-btn--secondary panel__rubric-choose"
-            onClick={onChooseRubric}
-          >
+          <Button variant="secondary" className="panel__rubric-choose" onClick={onChooseRubric}>
             {rubric
               ? t("panel.visibleSignature.rubric.change")
               : t("panel.visibleSignature.rubric.choose")}
-          </button>
+          </Button>
         </div>
         {rubricFailure && (
           <ErrorNotice

@@ -2,6 +2,7 @@
 
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { SignedMarkIcon } from "../design-system/icons";
 import "./DocumentTabs.css";
 import type { RecentDocument } from "./recents";
@@ -69,13 +70,9 @@ export function RecentsSection({ recents, onSelect, onClear }: RecentsSectionPro
     <section className="recents-section" aria-label={t("recents.heading")}>
       <div className="recents-heading">
         <span className="rf-label recents-heading__label">{t("recents.heading")}</span>
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost recents-heading__clear"
-          onClick={onClear}
-        >
+        <Button variant="ghost" className="recents-heading__clear" onClick={onClear}>
           {t("recents.clear")}
-        </button>
+        </Button>
       </div>
       <RecentRows recents={recents} openIds={NOTHING_OPEN} onSelect={onSelect} />
     </section>
