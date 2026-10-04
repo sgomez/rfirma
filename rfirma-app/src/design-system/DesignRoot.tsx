@@ -43,7 +43,8 @@ function useBodyAsPortalRoot(theme: Theme) {
   useLayoutEffect(() => {
     const own = entry.current;
     return () => {
-      mounted.splice(mounted.indexOf(own), 1);
+      const index = mounted.indexOf(own);
+      if (index !== -1) mounted.splice(index, 1);
       paintBody();
     };
   }, []);
@@ -55,8 +56,10 @@ function paintBody() {
   if (first === undefined) {
     body.classList.remove("rf-root");
     body.removeAttribute("data-theme");
+    body.style.removeProperty("background");
     return;
   }
   body.classList.add("rf-root");
   body.setAttribute("data-theme", first.theme);
+  body.style.setProperty("background", "transparent");
 }

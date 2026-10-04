@@ -19,5 +19,5 @@ const meta = {
 export default meta;
 
 export const Default: StoryObj<typeof meta> = {};
-export const SmallGap: StoryObj<typeof meta> = { args: { gap: "xs" } };
-export const LargeGap: StoryObj<typeof meta> = { args: { gap: "md" } };
+export const GapXs: StoryObj<typeof meta> = { args: { gap: "xs" } };
+export const GapMd: StoryObj<typeof meta> = { args: { gap: "md" } };
