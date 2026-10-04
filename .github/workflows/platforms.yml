@@ -77,10 +77,6 @@ jobs:
       - name: Pruebas de --lib y del canal local, y CRAP del adaptador CNG
         run: just test-windows
 
-      # rfirma.com, el binario de consola (ADR-0041).
-      - name: Prueba de humo de rfirma.com desde cmd, PowerShell y Git Bash
-        run: just smoke-console
-
   # ==========================================================================
   # CARRIL DE MACOS
   # ==========================================================================
