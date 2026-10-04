@@ -2,12 +2,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
+import { inDialogWindow } from "../design-system/dialogStoryFrame";
 import { UnsealedPagesDialog } from "./UnsealedPagesDialog";
 
 const meta = {
   title: "Diálogos de firma/1 · Páginas sin firma visible",
   component: UnsealedPagesDialog,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "centered" },
+  decorators: [inDialogWindow],
   args: { fallen: 3, onConfirm: fn(), onCancel: fn() },
 } satisfies Meta<typeof UnsealedPagesDialog>;
 

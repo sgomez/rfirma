@@ -13,7 +13,20 @@
     "2b·Confirmar": "SedeView",
     "3·Firmando": "SedeView",
     "4·Desenlace": "SedeView",
-    "5·Sincertificado": "SedeView"
+    "5·Sincertificado": "SedeView",
+    "1·Páginassinfirmavisible": "UnsealedPagesDialog",
+    "2·Firmardetodosmodos": "SignAnywayDialog",
+    "3·Verfirmas": "SignaturesDialog",
+    "4·Progresodefirma": "SigningProgressDialog",
+    "1·Panel": "StatusView",
+    "2·Retirarcertificado": "WithdrawCertificateView",
+    "1·Ventana": "MainWindow",
+    "2·Cabecera": "Header",
+    "3·Pestañas": "DocumentTabs",
+    "4·Recientes": "RecentsSection",
+    "5·Visor": "DocumentViewer",
+    "6·Franjadeversiónnueva": "NewVersionStrip",
+    "7·Avisodeerror": "ErrorNotice"
   },
   "extraEntries": [
     "./design-sync.entry.ts"
@@ -32,6 +45,53 @@
     "SedeView": {
       "cardMode": "single",
       "primaryStory": "Consent"
+    },
+    "Dialog": {
+      "cardMode": "single",
+      "primaryStory": "Closable",
+      "viewport": "1340x780"
+    },
+    "Popover": {
+      "cardMode": "single",
+      "primaryStory": "Open"
+    },
+    "UnsealedPagesDialog": {
+      "cardMode": "single",
+      "viewport": "1340x780"
+    },
+    "SignAnywayDialog": {
+      "cardMode": "single",
+      "viewport": "1340x780"
+    },
+    "SignaturesDialog": {
+      "cardMode": "single",
+      "viewport": "1340x780"
+    },
+    "SigningProgressDialog": {
+      "cardMode": "single",
+      "viewport": "1340x780"
+    },
+    "StatusView": {
+      "cardMode": "column",
+      "viewport": "1240x760"
+    },
+    "DocumentViewer": {
+      "cardMode": "column"
+    },
+    "ErrorNotice": {
+      "cardMode": "column"
+    },
+    "MainWindow": {
+      "cardMode": "column",
+      "viewport": "1160x620"
+    },
+    "RecentsSection": {
+      "cardMode": "column"
+    },
+    "WithdrawCertificateView": {
+      "cardMode": "single",
+      "primaryStory": "Question",
+      "viewport": "1240x760"
     }
   },
   "readmeHeader": ".design-sync/conventions.md"
