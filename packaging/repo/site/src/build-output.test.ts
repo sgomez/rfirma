@@ -68,6 +68,16 @@ describe.each(locales)("landing %s", (locale) => {
   const document = page(landingFile(locale));
   const description = attribute(document, "meta[name='description']", "content");
 
+  it("names rFirma in the h1", () => {
+    expect(document.querySelector("h1")?.textContent).toContain("rFirma");
+  });
+
+  it("does not repeat the hero body as its description", () => {
+    const heroBody = document.querySelector("h1")?.parentElement?.querySelector("p")?.textContent;
+    expect(heroBody?.trim()).toBeTruthy();
+    expect(description).not.toBe(heroBody?.trim());
+  });
+
   it("shares its description with Open Graph and Twitter", () => {
     expect(attribute(document, "meta[property='og:description']", "content")).toBe(description);
     expect(attribute(document, "meta[name='twitter:description']", "content")).toBe(description);

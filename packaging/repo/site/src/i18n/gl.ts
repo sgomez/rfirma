@@ -1,9 +1,9 @@
 import type { Dictionary } from "./es";
 
 export const gl: Dictionary = {
-  "meta.title": "rFirma — Sinatura electrónica nativa para o escritorio",
+  "meta.title": "rFirma: sinatura electrónica sen Java, alternativa a AutoFirma",
   "meta.description":
-    "Aplicación de escritorio en Rust e React que substitúe a interface Swing e os servidores locais de AutoFirma, coa criptografía oficial da Administración.",
+    "Asina PDF co teu certificado dixital ou DNIe en Linux, Windows e macOS. Funciona nas sedes que piden AutoFirma, sen Java. Versión alfa.",
   "meta.image.alt": "Logotipo de rFirma sobre fondo verde co dominio rfirma.sgomez.me",
 
   "notice.aria": "Aviso sobre titularidade oficial",
@@ -30,10 +30,10 @@ export const gl: Dictionary = {
   "lang.en": "English",
 
   "hero.kicker": "Unha alternativa a AutoFirma",
-  "hero.title.line1": "Sinatura electrónica nativa.",
-  "hero.title.line2": "Sen Java, sen esperas.",
+  "hero.title.line1": "rFirma: sinatura electrónica nativa,",
+  "hero.title.line2": "sen Java.",
   "hero.body":
-    "Aplicación de escritorio en Rust e React que substitúe a interface Swing e os servidores locais de AutoFirma, coa criptografía oficial da Administración.",
+    "Sen esperas. Aplicación de escritorio en Rust e React que substitúe a interface Swing e os servidores locais de AutoFirma, coa criptografía oficial da Administración.",
   "hero.cta.primary": "Instalar rFirma",
   "hero.cta.secondary": "Ver como se asina",
   "hero.trust.oss": "Código aberto, EUPL 1.2",

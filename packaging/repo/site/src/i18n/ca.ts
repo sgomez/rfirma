@@ -1,9 +1,9 @@
 import type { Dictionary } from "./es";
 
 export const ca: Dictionary = {
-  "meta.title": "rFirma — Signatura electrònica nativa per a l'escriptori",
+  "meta.title": "rFirma: signatura electrònica sense Java, alternativa a AutoFirma",
   "meta.description":
-    "Aplicació d'escriptori en Rust i React que substitueix la interfície Swing i els servidors locals d'AutoFirma, amb la criptografia oficial de l'Administració.",
+    "Signa PDF amb el teu certificat digital o DNIe a Linux, Windows i macOS. Funciona a les seus que demanen AutoFirma, sense Java. Versió alfa.",
   "meta.image.alt": "Logotip de rFirma sobre fons verd amb el domini rfirma.sgomez.me",
 
   "notice.aria": "Avís sobre titularitat oficial",
@@ -30,10 +30,10 @@ export const ca: Dictionary = {
   "lang.en": "English",
 
   "hero.kicker": "Una alternativa a AutoFirma",
-  "hero.title.line1": "Signatura electrònica nativa.",
-  "hero.title.line2": "Sense Java, sense espera.",
+  "hero.title.line1": "rFirma: signatura electrònica nativa,",
+  "hero.title.line2": "sense Java.",
   "hero.body":
-    "Aplicació d'escriptori en Rust i React que substitueix la interfície Swing i els servidors locals d'AutoFirma, amb la criptografia oficial de l'Administració.",
+    "Sense espera. Aplicació d'escriptori en Rust i React que substitueix la interfície Swing i els servidors locals d'AutoFirma, amb la criptografia oficial de l'Administració.",
   "hero.cta.primary": "Instal·lar rFirma",
   "hero.cta.secondary": "Veure com es signa",
   "hero.trust.oss": "Codi obert, EUPL 1.2",
