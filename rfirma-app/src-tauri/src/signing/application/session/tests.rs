@@ -11,10 +11,7 @@ use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
 use crate::signing::application::tests::{
     an_order, AnEngineThatReports, DocumentsInMemory, NoIsolate,
 };
-use crate::signing::domain::{
-    DocumentSignature, DocumentSignatures, Format, PageSet, SignatureConfig, SignatureStandard,
-    SigningChoice, Validity, Waivers,
-};
+use crate::signing::domain::{Format, PageSet, SignatureConfig, SigningChoice, Waivers};
 use base64::Engine;
 use serde_json::json;
 
@@ -450,132 +447,6 @@ fn a_placeholder_typed_into_the_phrase_does_not_reach_the_bridge() {
 
     let text = config.layer2_text.expect("la ventana compone el texto");
     assert!(!text.contains("$$"), "{text}");
-}
-
-#[test]
-fn previous_signatures_in_sends_the_document_as_base_64_to_the_engine() {
-    let files = DocumentsInMemory::default().with("/tmp/documento.pdf", b"%PDF-1.7 contenido");
-    let document = Document::opened("/tmp/documento.pdf");
-    let engine = AnEngineThatReports::default();
-
-    previous_signatures_in(&files, &engine, &document).expect("el motor contesta");
-
-    assert_eq!(
-        base64::engine::general_purpose::STANDARD
-            .decode(engine.last_document_b64())
-            .expect("es base64"),
-        b"%PDF-1.7 contenido"
-    );
-}
-
-#[test]
-fn previous_signatures_in_returns_what_the_engine_reports() {
-    let files = DocumentsInMemory::default().with("/tmp/documento.pdf", b"%PDF-1.7 contenido");
-    let document = Document::opened("/tmp/documento.pdf");
-    let signature = DocumentSignature {
-        name: "LOVELACE BYRON ADA".to_owned(),
-        id_number: "IDCES-00000000T".to_owned(),
-        organization_identifier: None,
-        organization_name: None,
-        issuer: "AC FNMT Usuarios".to_owned(),
-        certificate_serial_number: "1".to_owned(),
-        certificate_valid_from: None,
-        certificate_valid_until: None,
-        signature_algorithm: None,
-        profile: None,
-        signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
-        validity: Validity::Valid,
-        validity_reason: None,
-        signing_date: None,
-        closes_document: false,
-        countersignatures: Vec::new(),
-    };
-    let engine = AnEngineThatReports::default()
-        .answering(DocumentSignatures::new(vec![signature.clone()], false));
-
-    let report = previous_signatures_in(&files, &engine, &document).expect("el motor contesta");
-
-    assert_eq!(report.signatures(), [signature]);
-}
-
-#[test]
-fn the_signatures_of_a_pdf_are_told_as_pades() {
-    let files = DocumentsInMemory::default().with("/tmp/documento.pdf", b"%PDF-1.7 contenido");
-    let engine = AnEngineThatReports::default();
-
-    let report = previous_signatures_in(&files, &engine, &Document::opened("/tmp/documento.pdf"))
-        .expect("el motor contesta");
-
-    assert_eq!(report.format(), SignatureStandard::Pades);
-}
-
-#[test]
-fn a_cades_reaches_the_engine_and_is_told_as_cades() {
-    let cades = [
-        0x30, 0x80, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x07, 0x02, 0xa0, 0x80,
-    ];
-    let files = DocumentsInMemory::default().with("/tmp/datos.csig", &cades);
-    let engine = AnEngineThatReports::default();
-
-    let report = previous_signatures_in(&files, &engine, &Document::opened("/tmp/datos.csig"))
-        .expect("el motor contesta");
-
-    assert_eq!(report.format(), SignatureStandard::Cades);
-    assert!(engine.was_asked());
-}
-
-#[test]
-fn a_xades_reaches_the_engine_and_is_told_as_xades() {
-    let files =
-        DocumentsInMemory::default().with("/tmp/datos.xsig", b"<?xml version=\"1.0\"?><a/>");
-    let engine = AnEngineThatReports::default();
-
-    let report = previous_signatures_in(&files, &engine, &Document::opened("/tmp/datos.xsig"))
-        .expect("el motor contesta");
-
-    assert_eq!(report.format(), SignatureStandard::Xades);
-    assert!(engine.was_asked());
-}
-
-#[test]
-fn a_file_of_an_unrecognized_format_has_no_signatures_and_does_not_reach_the_engine() {
-    let files = DocumentsInMemory::default().with("/tmp/foto.png", b"\x89PNG\r\n\x1a\n datos");
-    let engine = AnEngineThatReports::default();
-
-    let report = previous_signatures_in(&files, &engine, &Document::opened("/tmp/foto.png"))
-        .expect("no hace falta el motor");
-
-    assert_eq!(report.format(), SignatureStandard::Unrecognized);
-    assert_eq!(report.count(), 0);
-    assert!(!engine.was_asked());
-}
-
-#[test]
-fn the_signatures_of_a_certified_pdf_reach_the_engine() {
-    let files = DocumentsInMemory::default().with(
-        "/tmp/certificado.pdf",
-        b"%PDF-1.7\n9 0 obj\n<< /Type /Sig /Reference [ << /TransformMethod /DocMDP >> ] >>\nendobj",
-    );
-    let engine = AnEngineThatReports::default();
-
-    previous_signatures_in(&files, &engine, &Document::opened("/tmp/certificado.pdf"))
-        .expect("leer las firmas no las rompe");
-
-    assert!(engine.was_asked());
-}
-
-#[test]
-fn the_signatures_of_an_encrypted_pdf_are_not_read() {
-    let files = DocumentsInMemory::default().with(
-        "/tmp/cifrado.pdf",
-        b"%PDF-1.7\ntrailer\n<< /Root 1 0 R /Encrypt 5 0 R >>",
-    );
-    let engine = AnEngineThatReports::default();
-
-    assert!(
-        previous_signatures_in(&files, &engine, &Document::opened("/tmp/cifrado.pdf")).is_err()
-    );
-    assert!(!engine.was_asked());
 }
 
 #[test]

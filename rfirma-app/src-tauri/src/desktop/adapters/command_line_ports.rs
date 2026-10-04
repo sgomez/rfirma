@@ -1,4 +1,4 @@
-//! Los adaptadores de los puertos de la línea de órdenes que leen el disco, la zona horaria y el puente nativo —validador, filtros y lectura de firmas—, no la terminal.
+//! Los adaptadores de los puertos de la línea de órdenes que leen el disco, la zona horaria y el puente nativo —validador, filtros y motor de firmas—, no la terminal.
 
 use std::path::Path;
 
@@ -6,12 +6,13 @@ use base64::Engine;
 use chrono::{DateTime, FixedOffset, Local, Offset, Utc};
 
 use crate::desktop::ports::{
-    CertificateFilter, CommandLineFiles, LocalTimeZone, SignatureReader, SignatureVerifier,
+    CertificateFilter, CommandLineFiles, LocalTimeZone, SignatureReading, SignatureVerifier,
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::adapters::ffi::NativeBridge;
 use crate::signing::domain::bridge::{BridgeError, Format};
 use crate::signing::domain::DocumentSignatures;
+use crate::signing::ports::PreviousSignaturesEngine;
 use crate::site::domain::protocol::SiteFilter;
 use crate::site::ports::FilterEngine;
 
@@ -38,12 +39,28 @@ impl SignatureVerifier for NativeVerifier {
     }
 }
 
-/// La lectura de firmas de la raíz de `signing`, que carga el puente solo cuando se le pregunta.
-pub struct NativeReader;
+/// El motor de firmas previas en la librería nativa, que se carga solo cuando se le pregunta.
+pub struct NativeEngine;
 
-impl SignatureReader for NativeReader {
-    fn signatures_in(&self, document: &[u8]) -> Result<DocumentSignatures, BridgeError> {
-        crate::signing::signatures_in(document)
+impl PreviousSignaturesEngine for NativeEngine {
+    fn previous_signatures(&self, document_b64: &str) -> Result<DocumentSignatures, BridgeError> {
+        NativeBridge::open()?.previous_signatures(document_b64)
+    }
+}
+
+/// La lectura de firmas de la raíz de `signing` sobre el motor que se le da.
+pub struct EngineReading<'a>(&'a dyn PreviousSignaturesEngine);
+
+impl<'a> EngineReading<'a> {
+    /// Lee con este motor.
+    pub fn over(engine: &'a dyn PreviousSignaturesEngine) -> Self {
+        Self(engine)
+    }
+}
+
+impl SignatureReading for EngineReading<'_> {
+    fn signatures_in(&self, document: &[u8]) -> Result<DocumentSignatures, String> {
+        crate::signing::read_signatures(document, self.0).map_err(|error| error.to_string())
     }
 }
 

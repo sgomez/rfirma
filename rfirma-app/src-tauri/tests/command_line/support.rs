@@ -7,7 +7,7 @@ pub use std::path::{Path, PathBuf};
 pub use std::process::{Command, Output};
 
 pub use rfirma_lib::desktop::adapters::command_line_ports::{
-    DiskFiles, NativeFilter, NativeReader, NativeVerifier, SystemTimeZone,
+    DiskFiles, EngineReading, NativeEngine, NativeFilter, NativeVerifier, SystemTimeZone,
 };
 pub use rfirma_lib::desktop::adapters::paths::Paths;
 pub use rfirma_lib::desktop::adapters::terminal::{ProcessDescriptors, RootsSigner, SeenStores};
@@ -248,7 +248,7 @@ pub fn attended_with_the_window(
         filter: &NativeFilter,
         files: &DiskFiles,
         verifier: &NativeVerifier,
-        reader: &NativeReader,
+        reader: &EngineReading::over(&NativeEngine),
         time_zone: &SystemTimeZone,
         signer: &RootsSigner::of(roots),
         window,

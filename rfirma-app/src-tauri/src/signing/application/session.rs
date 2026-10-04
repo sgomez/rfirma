@@ -4,8 +4,6 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use base64::Engine;
-
 use crate::documents::domain::document::Document;
 use crate::documents::domain::error::DocumentError;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
@@ -18,10 +16,11 @@ use crate::signing::application::bare_pkcs1::BarePkcs1;
 use crate::signing::application::cycle::{
     self, CycleError, OpenCycle, SigningRequest, NOTHING_FROM_A_SITE,
 };
+use crate::signing::application::reading::signatures_of;
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{
     compose_visible_content, AdmissibleDocument, CompletedCycle, DocumentSignatures, Format,
-    PlacementError, SessionSeal, SignatureConfig, SignatureStandard, SigningChoice, VisibleData,
+    PlacementError, SessionSeal, SignatureConfig, SigningChoice, VisibleData,
 };
 use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures, Waivers};
 use crate::signing::ports::ProtectedSecret;
@@ -408,32 +407,7 @@ pub fn previous_signatures_in(
     let bytes = files
         .read(document.reading_path())
         .map_err(DocumentError::Unreadable)?;
-    let format = standard_of(&bytes);
-    match format {
-        SignatureStandard::Unrecognized => {
-            return Ok(DocumentSignatures::default().in_format(format))
-        }
-        SignatureStandard::Pades => {
-            AdmissibleDocument::check_for(Format::Pades, &bytes, Waivers::READING)
-                .map_err(CycleError::from)?;
-        }
-        SignatureStandard::Cades | SignatureStandard::Xades => {}
-    }
-    let document_b64 = base64::engine::general_purpose::STANDARD.encode(bytes);
-    Ok(engine
-        .previous_signatures(&document_b64)
-        .map_err(CycleError::from)?
-        .in_format(format))
-}
-
-fn standard_of(bytes: &[u8]) -> SignatureStandard {
-    use crate::site::domain::protocol::detection::{is_cms_signed_data, shape_of, DetectedShape};
-    match shape_of(bytes) {
-        DetectedShape::Pdf => SignatureStandard::Pades,
-        DetectedShape::Invoice | DetectedShape::Xml => SignatureStandard::Xades,
-        DetectedShape::Binary if is_cms_signed_data(bytes) => SignatureStandard::Cades,
-        DetectedShape::Binary => SignatureStandard::Unrecognized,
-    }
+    Ok(signatures_of(&bytes, engine)?)
 }
 
 /// Firmas del último documento firmado entregado en esta sesión, la propia incluida.
