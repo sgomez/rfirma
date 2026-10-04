@@ -5,6 +5,7 @@ import { fn } from "storybook/test";
 import { storyRecents } from "../documents/documentStoryData";
 import { RecentsSection } from "../documents/RecentRows";
 import { DocumentViewer } from "./DocumentViewer";
+import type { Placement } from "./signatureBox";
 import { storyPdf } from "./storyPdf";
 
 const meta = {
@@ -61,4 +62,55 @@ export const FailureOverDocument: Story = {
     pdf: storyPdf(),
     failure: { situation: "documentEncrypted", detail: "password required" },
   },
+};
+
+const sealed: Placement = { rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } };
+
+export const StampUnplaced: Story = {
+  args: { pdf: storyPdf(), placement: null, stamp: { kind: "unplaced" } },
+};
+
+export const StampNoCertificate: Story = {
+  args: {
+    pdf: storyPdf(),
+    placement: sealed,
+    stamp: { kind: "noCertificate" },
+    rubricGap: "beside",
+  },
+};
+
+export const StampComposed: Story = {
+  args: { pdf: storyPdf(), placement: sealed, stamp: { kind: "composed" } },
+};
+
+export const StampFrozen: Story = {
+  args: { pdf: storyPdf(), placement: sealed, stamp: { kind: "frozen" } },
+};
+
+export const StampOnDemand: Story = {
+  args: { pdf: storyPdf(), placement: sealed, stamp: { kind: "onDemand" }, onComposeStamp: fn() },
+};
+
+export const StampComposing: Story = {
+  args: { pdf: storyPdf(), placement: sealed, stamp: { kind: "composing" } },
+};
+
+export const StampFailed: Story = {
+  args: {
+    pdf: storyPdf(),
+    placement: sealed,
+    stamp: {
+      kind: "failed",
+      failure: { situation: "documentUnreadable", detail: "password required" },
+    },
+    onComposeStamp: fn(),
+  },
+};
+
+export const RubricGapBesideText: Story = {
+  args: { pdf: storyPdf(), placement: sealed, stamp: { kind: "composed" }, rubricGap: "beside" },
+};
+
+export const RubricGapFillingBox: Story = {
+  args: { pdf: storyPdf(), placement: sealed, stamp: { kind: "composing" }, rubricGap: "fill" },
 };

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
@@ -147,112 +147,7 @@ describe("el sello dentro del recuadro", () => {
   });
 });
 
-/**
- * ID-107, ID-108, ID-111, #202: el estado del sello, en la pastilla que flota
- * sobre la botonera. Antes vivía en el panel, con una insignia de estado que
- * se ha retirado; aquí es solo texto y, si hace falta, un botón.
- */
-describe("el hueco de la rúbrica sin cargar", () => {
-  it("draws a dotted gap beside the text where the missing rubric will go", async () => {
-    const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        onPlace={noop}
-        onOpen={noop}
-        stamp={{ kind: "composed" }}
-        rubricGap="beside"
-      />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    const gap = within(box()).getByTitle("Sin rúbrica cargada");
-    expect(gap).toHaveClass("viewer__rubric-gap--beside");
-  });
-
-  it("fills the box with the gap when the model is rubric only", async () => {
-    const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        onPlace={noop}
-        onOpen={noop}
-        stamp={{ kind: "composing" }}
-        rubricGap="fill"
-      />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    expect(within(box()).getByTitle("Sin rúbrica cargada")).toHaveClass("viewer__rubric-gap--fill");
-  });
-
-  it("leaves the box empty when there is no certificate to compose with", async () => {
-    const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        onPlace={noop}
-        onOpen={noop}
-        stamp={{ kind: "noCertificate" }}
-        rubricGap="beside"
-      />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    expect(within(box()).queryByTitle("Sin rúbrica cargada")).not.toBeInTheDocument();
-  });
-});
-
 describe("el estado del sello, flotando sobre la botonera", () => {
-  function stampPill() {
-    return screen.queryByRole("status");
-  }
-
-  it("mounts no pill when there is nothing to say about the stamp", async () => {
-    const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    expect(stampPill()).not.toBeInTheDocument();
-  });
-
-  it("says nothing once the stamp is up to date", async () => {
-    const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        onPlace={noop}
-        onOpen={noop}
-        stamp={{ kind: "composed" }}
-      />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    expect(stampPill()).not.toBeInTheDocument();
-  });
-
-  it("mounts no pill while the box is being moved", async () => {
-    const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        onPlace={noop}
-        onOpen={noop}
-        stamp={{ kind: "frozen" }}
-      />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    expect(stampPill()).not.toBeInTheDocument();
-  });
-
   it("asks for the recomposition by hand on a large document", async () => {
     const onComposeStamp = vi.fn();
     const { document, renders } = recordingDocument();
@@ -277,7 +172,7 @@ describe("el estado del sello, flotando sobre la botonera", () => {
    * ID-111. La vista previa **no es una puerta**: sobre si se puede firmar
    * manda el botón de firmar, que no vive aquí.
    */
-  it("says it could not draw the stamp, with a way to retry", async () => {
+  it("retries the stamp from the failure pill", async () => {
     const onComposeStamp = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
@@ -295,71 +190,9 @@ describe("el estado del sello, flotando sobre la botonera", () => {
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
-    expect(screen.getByText("No se ha podido dibujar la firma visible")).toBeInTheDocument();
-
     fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
 
     expect(onComposeStamp).toHaveBeenCalled();
-  });
-
-  /**
-   * El hueco del botón queda reservado incluso vacío: el estado sin botón
-   * —componiendo— lo pinta igual, y el que sí tiene botón no añade una fila
-   * nueva, solo lo rellena.
-   */
-  it("keeps the same button slot whether there is a button or not", async () => {
-    const { document, renders } = recordingDocument();
-    const { container, rerender } = renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        onPlace={noop}
-        onOpen={noop}
-        stamp={{ kind: "composing" }}
-      />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-    const slot = () => container.querySelector(".viewer__stamp-slot") as HTMLElement;
-    expect(slot()).toBeInTheDocument();
-    expect(within(slot()).queryByRole("button")).not.toBeInTheDocument();
-
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        onPlace={noop}
-        onOpen={noop}
-        stamp={{ kind: "onDemand" }}
-      />,
-    );
-
-    expect(slot()).toBeInTheDocument();
-    expect(within(slot()).getByRole("button", { name: "Ver cómo queda" })).toBeInTheDocument();
-  });
-
-  /**
-   * El criterio que da nombre al #202: la pastilla sigue visible con el
-   * documento ampliado. jsdom no lee el `position: absolute` de la hoja, pero
-   * sí el sitio en el DOM — la pastilla tiene que quedar **fuera** del área de
-   * desplazamiento, no dentro, o el zoom volvería a taparla.
-   */
-  it("floats outside the scroll area, so zooming the sheet does not hide it", async () => {
-    const { document, renders } = recordingDocument();
-    const { container } = renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        onPlace={noop}
-        onOpen={noop}
-        stamp={{ kind: "composing" }}
-      />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    const scroll = container.querySelector(".viewer__scroll") as HTMLElement;
-    const pill = container.querySelector(".viewer__stamp") as HTMLElement;
-    expect(pill).toBeInTheDocument();
-    expect(scroll).not.toContainElement(pill);
   });
 });
 

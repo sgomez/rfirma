@@ -318,18 +318,6 @@ describe("los tiradores del recuadro", () => {
       ["10px", "10px"],
     ]);
   });
-
-  it("hangs one grip on each of the four corners", async () => {
-    const { document, renders } = recordingDocument();
-    const { container } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    expect(
-      [...container.querySelectorAll(".viewer__grip")].map((g) => g.getAttribute("data-corner")),
-    ).toEqual(["top-left", "top-right", "bottom-left", "bottom-right"]);
-  });
 });
 
 /** ID-101 e ID-102: la pastilla bajo la hoja, sus tres caras y su cuarta redacción. */

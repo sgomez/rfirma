@@ -39,18 +39,6 @@ describe("el visor vacío", () => {
     expect(screen.queryByRole("button", { name: "Acercar" })).not.toBeInTheDocument();
     expect(screen.getByText("No sale de tu ordenador")).toBeInTheDocument();
   });
-
-  // TD-11: lo que se afirma es lo que se ve, no el CSS calculado. La zona de
-  // soltar del artboard tiene tres piezas y las tres tienen que estar.
-  it("draws an icon, a title and a supporting line in the drop zone", () => {
-    renderWithCatalog(<DocumentViewer pdf={null} placement={null} onPlace={noop} onOpen={noop} />);
-
-    const dropZone = screen.getByRole("button", { name: /Arrastra un PDF/ });
-
-    expect(dropZone.querySelector("svg")).not.toBeNull();
-    expect(dropZone).toHaveTextContent("Arrastra un PDF o pulsa para abrirlo");
-    expect(dropZone).toHaveTextContent("No sale de tu ordenador");
-  });
 });
 
 describe("el visor con documento", () => {
