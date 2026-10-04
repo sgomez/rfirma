@@ -1172,6 +1172,38 @@ msgstr "{{name}}(e)k ez zituen sinadura gehiago onartzen"
 msgid "signatureReason.cosignNotAdmittedUnnamed"
 msgstr "Dokumentuak ez zituen sinadura gehiago onartzen"
 
+#. La cabecera de «rfirma verify -v» de un documento sin firmas, tras el formato: «PAdES · sin firmas».
+msgid "commandLine.verify.noSignatures"
+msgstr "sinadurarik ez"
+
+#. En la línea de una firma de «rfirma verify -v», la entidad en cuyo nombre firma. {{entity}}: la entidad.
+msgid "commandLine.verify.onBehalfOf"
+msgstr "{{entity}} erakundearen izenean"
+
+#. Rótulo de la ficha de «rfirma verify -vvv»: el número de serie del certificado.
+msgid "commandLine.verify.field.serialNumber"
+msgstr "Serie-zenbakia"
+
+#. Rótulo de la ficha de «rfirma verify -vvv»: el periodo de vigencia del certificado.
+msgid "commandLine.verify.field.validity"
+msgstr "Indarraldia"
+
+#. Rótulo de la ficha de «rfirma verify -vvv»: el algoritmo de la firma.
+msgid "commandLine.verify.field.algorithm"
+msgstr "Algoritmoa"
+
+#. Rótulo de la ficha de «rfirma verify -vvv»: el perfil de la firma.
+msgid "commandLine.verify.field.profile"
+msgstr "Profila"
+
+#. Vigencia de un certificado que solo dice cuándo empieza. {{date}}: el inicio.
+msgid "commandLine.verify.validFrom"
+msgstr "{{date}}(e)tik aurrera"
+
+#. Vigencia de un certificado que solo dice cuándo acaba. {{date}}: el final.
+msgid "commandLine.verify.validUntil"
+msgstr "{{date}} arte"
+
 msgid "status.title"
 msgstr "rFirmaren egoera"
 

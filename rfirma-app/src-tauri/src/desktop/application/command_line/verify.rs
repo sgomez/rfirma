@@ -11,7 +11,7 @@ use crate::desktop::domain::command_line::{
 use crate::desktop::ports::LocalTimeZone;
 use crate::identity::domain::holder::without_semantics_prefix;
 use crate::signing::domain::bridge::{Format, XadesVariant};
-use crate::signing::domain::catalog::translated;
+use crate::signing::domain::catalog::{counted, translated};
 use crate::signing::domain::{
     DocumentFinding, DocumentSignature, DocumentSignatures, Language, SigningDate, Validity,
     ValidityReason,
@@ -21,8 +21,6 @@ use crate::site::domain::protocol::detection::{is_cms_signed_data, shape_of, Det
 /// Lo que el original imprime de unos datos que no son de ningún formato de firma que reconozca.
 pub const UNKNOWN_FORMAT: &str = "Firma no valida: los datos proporcionados no se corresponden \
                                   con ningún formato de firma reconocido";
-
-const UNRECOGNIZED_FORMAT_HEADER: &str = "Formato no reconocido";
 
 pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
     if let Some(parameter) = [XML, JSON]
@@ -45,7 +43,11 @@ pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome 
     };
     let Some(format) = format_to_verify(&document) else {
         if verbosity(arguments) > 0 {
-            return Outcome::printed(&[UNRECOGNIZED_FORMAT_HEADER.to_owned()]);
+            return Outcome::printed(&[translated(
+                ports.language,
+                "panel.signed.unrecognized.title",
+                &[],
+            )]);
         }
         return Outcome::printed(&[UNKNOWN_FORMAT.to_owned()]);
     };
@@ -76,13 +78,14 @@ fn with_the_signatures(
             return outcome;
         }
     };
-    let mut lines = vec![header_of(&signatures, format)];
-    lines.extend(
-        signatures
-            .findings()
-            .iter()
-            .map(|finding| format!("{WARNING} {}", finding_text(*finding))),
-    );
+    let language = ports.language;
+    let mut lines = vec![header_of(&signatures, format, language)];
+    lines.extend(signatures.findings().iter().map(|finding| {
+        format!(
+            "{WARNING} {}",
+            translated(language, finding_key(*finding), &[])
+        )
+    }));
     for (index, signature) in signatures.signatures().iter().enumerate() {
         if index == 0 || has_sheets(verbosity) {
             lines.push(String::new());
@@ -100,10 +103,13 @@ const VALID: &str = "✓";
 const WARNING: &str = "⚠";
 const INVALID: &str = "✗";
 
-fn header_of(signatures: &DocumentSignatures, format: Format) -> String {
+fn header_of(signatures: &DocumentSignatures, format: Format, language: Language) -> String {
     let family = family_of(format);
     if signatures.count() == 0 {
-        return format!("{family} · sin firmas");
+        return format!(
+            "{family} · {}",
+            translated(language, "commandLine.verify.noSignatures", &[])
+        );
     }
     let all: Vec<&DocumentSignature> = signatures.signatures().iter().flat_map(flattened).collect();
     let counter_count = all.len() - signatures.count();
@@ -116,20 +122,28 @@ fn header_of(signatures: &DocumentSignatures, format: Format) -> String {
         .filter(|signature| signature.validity == Validity::Invalid)
         .count();
     let findings = signatures.findings().len();
-    let mut parts = vec![family.to_owned(), counted(signatures.count(), "firma")];
+    let mut parts = vec![
+        family.to_owned(),
+        counted(language, "panel.signed.count", signatures.count()),
+    ];
     if counter_count > 0 {
-        parts.push(counted(counter_count, "contrafirma"));
+        parts.push(counted(
+            language,
+            "panel.signed.countersignatureCount",
+            counter_count,
+        ));
     }
     if invalid + findings > 0 {
-        parts.push(counted(expired + invalid + findings, "problema"));
+        parts.push(counted(
+            language,
+            "panel.previousSignatures.problems",
+            expired + invalid + findings,
+        ));
     } else if expired > 0 {
-        parts.push(format!(
-            "{expired} {}",
-            if expired == 1 {
-                "caducada"
-            } else {
-                "caducadas"
-            }
+        parts.push(counted(
+            language,
+            "panel.previousSignatures.expired",
+            expired,
         ));
     }
     parts.join(" · ")
@@ -141,19 +155,11 @@ fn flattened(signature: &DocumentSignature) -> Vec<&DocumentSignature> {
         .collect()
 }
 
-fn counted(count: usize, noun: &str) -> String {
-    format!("{count} {noun}{}", if count == 1 { "" } else { "s" })
-}
-
-fn finding_text(finding: DocumentFinding) -> &'static str {
+fn finding_key(finding: DocumentFinding) -> &'static str {
     match finding {
-        DocumentFinding::ModifiedAfterLastSignature => {
-            "Se ha modificado después de la última firma"
-        }
-        DocumentFinding::FormFilledAfterSigning => {
-            "Se ha rellenado el formulario después de firmar"
-        }
-        DocumentFinding::ContentAddedOnTop => "Se ha añadido contenido encima de lo firmado",
+        DocumentFinding::ModifiedAfterLastSignature => "documentFinding.modifiedAfterLastSignature",
+        DocumentFinding::FormFilledAfterSigning => "documentFinding.formFilledAfterSigning",
+        DocumentFinding::ContentAddedOnTop => "documentFinding.contentAddedOnTop",
     }
 }
 
@@ -172,7 +178,7 @@ fn tree_of(
     ports: &CommandLinePorts,
 ) -> Vec<String> {
     let indent = " ".repeat(4 * depth);
-    let mut lines = vec![format!("{indent}{}", line_of(signature, ports.time_zone))];
+    let mut lines = vec![format!("{indent}{}", line_of(signature, ports))];
     if has_sheets(verbosity) {
         lines.extend(
             sheet_of(signature, verbosity, ports)
@@ -189,7 +195,7 @@ fn tree_of(
     lines
 }
 
-fn line_of(signature: &DocumentSignature, time_zone: &dyn LocalTimeZone) -> String {
+fn line_of(signature: &DocumentSignature, ports: &CommandLinePorts) -> String {
     let icon = match signature.validity {
         Validity::Valid => VALID,
         Validity::Expired => WARNING,
@@ -201,9 +207,14 @@ fn line_of(signature: &DocumentSignature, time_zone: &dyn LocalTimeZone) -> Stri
         signer.map(|(name, _)| name).unwrap_or_default()
     );
     if let Some((entity, _)) = on_behalf_of {
-        line.push_str(&format!(" · por {entity}"));
+        let on_behalf_of = translated(
+            ports.language,
+            "commandLine.verify.onBehalfOf",
+            &[("entity", &entity)],
+        );
+        line.push_str(&format!(" · {on_behalf_of}"));
     }
-    if let Some(day) = signing_instant_of(signature).map(|at| in_local_day(&at, time_zone)) {
+    if let Some(day) = signing_instant_of(signature).map(|at| in_local_day(&at, ports.time_zone)) {
         line.push_str(&format!(" · {day}"));
     }
     line
@@ -221,17 +232,20 @@ fn sheet_of(
     verbosity: usize,
     ports: &CommandLinePorts,
 ) -> Vec<String> {
-    let time_zone = ports.time_zone;
+    let (time_zone, language) = (ports.time_zone, ports.language);
     let (signer, on_behalf_of) = parties_of(signature);
     let issuer = Some(signature.issuer.clone()).filter(|issuer| !issuer.is_empty());
     let (date_label, date) = match &signature.signing_date {
         Some(SigningDate::Stamped { at, tsa }) => (
-            "Sellada",
+            "panel.signed.field.sealed",
             Some(format!("{} ({tsa})", in_local_time(at, time_zone))),
         ),
-        Some(SigningDate::Declared { at }) => ("Fecha", Some(in_local_time(at, time_zone))),
+        Some(SigningDate::Declared { at }) => (
+            "panel.signed.field.date",
+            Some(in_local_time(at, time_zone)),
+        ),
         None => (
-            "Fecha",
+            "panel.signed.field.date",
             signature
                 .signing_time
                 .as_deref()
@@ -241,32 +255,40 @@ fn sheet_of(
     let reason = signature
         .validity_reason
         .as_ref()
-        .map(|reason| reason_text(reason, ports.language, time_zone));
+        .map(|reason| reason_text(reason, language, time_zone));
     let at_third_level =
         |value: Option<String>| value.filter(|text| verbosity > 2 && !text.is_empty());
     let serial = at_third_level(Some(signature.certificate_serial_number.clone()));
-    let validity = at_third_level(certificate_validity_of(signature, time_zone));
+    let validity = at_third_level(certificate_validity_of(signature, language, time_zone));
     [
-        ("Firmante", signer.map(rendered)),
-        ("En nombre de", on_behalf_of.map(rendered)),
-        ("Emisor", issuer),
+        ("panel.signed.field.signer", signer.map(rendered)),
+        ("panel.signed.field.onBehalfOf", on_behalf_of.map(rendered)),
+        ("panel.signed.field.issuer", issuer),
         (date_label, date),
-        ("Motivo", reason),
-        ("Número de serie", serial),
-        ("Vigencia", validity),
+        ("panel.signed.field.reason", reason),
+        ("commandLine.verify.field.serialNumber", serial),
+        ("commandLine.verify.field.validity", validity),
         (
-            "Algoritmo",
+            "commandLine.verify.field.algorithm",
             at_third_level(signature.signature_algorithm.clone()),
         ),
-        ("Perfil", at_third_level(signature.profile.clone())),
+        (
+            "commandLine.verify.field.profile",
+            at_third_level(signature.profile.clone()),
+        ),
     ]
     .into_iter()
-    .filter_map(|(label, value)| value.map(|value| format!("  {:<19}{value}", format!("{label}:"))))
+    .filter_map(|(label, value)| value.map(|value| row(&translated(language, label, &[]), &value)))
     .collect()
+}
+
+fn row(label: &str, value: &str) -> String {
+    format!("  {:<18} {value}", format!("{label}:"))
 }
 
 fn certificate_validity_of(
     signature: &DocumentSignature,
+    language: Language,
     time_zone: &dyn LocalTimeZone,
 ) -> Option<String> {
     let from = signature
@@ -279,8 +301,16 @@ fn certificate_validity_of(
         .map(|instant| in_local_time(instant, time_zone));
     match (from, until) {
         (Some(from), Some(until)) => Some(format!("{from} – {until}")),
-        (Some(from), None) => Some(format!("desde {from}")),
-        (None, Some(until)) => Some(format!("hasta {until}")),
+        (Some(from), None) => Some(translated(
+            language,
+            "commandLine.verify.validFrom",
+            &[("date", &from)],
+        )),
+        (None, Some(until)) => Some(translated(
+            language,
+            "commandLine.verify.validUntil",
+            &[("date", &until)],
+        )),
         (None, None) => None,
     }
 }

@@ -222,7 +222,11 @@ fn verified_reading(words: &[&str], reader: &Reading) -> Outcome {
     attended(words, &OneFile(A_PDF), &verifier, reader, &SummerInMadrid)
 }
 
-fn verified_reading_in(language: Language, words: &[&str], reader: &Reading) -> Outcome {
+fn verified_reading_in(
+    language: Language,
+    words: &[&str],
+    reader: &dyn PreviousSignaturesEngine,
+) -> Outcome {
     let verifier = Answering::with(&["Firma valida"]);
     attended_in(
         language,
@@ -417,4 +421,5 @@ fn verify_in_xml_is_not_available_yet() {
     assert!(outcome.stdout.is_empty());
 }
 
+mod in_other_languages;
 mod verbose;

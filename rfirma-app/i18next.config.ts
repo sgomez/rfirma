@@ -64,6 +64,8 @@ export default defineConfig({
       "updates.install.failed.*",
       // Del diálogo nativo GTK de arranque: no hay ventana donde `t()` las lea.
       "errors.startup.*",
+      // De `rfirma verify -v`: las imprime la terminal, no la ventana.
+      "commandLine.verify.*",
       "languages.*",
       "panel.certificate.stores.*",
       "actions.chooseCertificate",
