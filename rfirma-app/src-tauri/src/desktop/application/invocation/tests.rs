@@ -538,8 +538,17 @@ fn the_version_is_asked_for_in_either_form() {
 }
 
 #[test]
-fn the_version_text_names_rfirma_and_then_the_autofirma_it_comes_from() {
-    assert_eq!(version_text("1.2.3"), "rfirma 1.2.3\nAutoFirma 1.9.2");
+fn the_version_text_is_one_line_with_the_build_and_the_compatible_autofirma() {
+    let build = RunningBuild {
+        channel: "flatpak",
+        system: "linux x86_64",
+        library: "/app/lib/librfirma_crypto.so",
+    };
+
+    assert_eq!(
+        version_text("1.2.3", build),
+        "rfirma 1.2.3 (flatpak, linux x86_64) · compatible con AutoFirma 1.9.2 · lib: /app/lib/librfirma_crypto.so"
+    );
 }
 
 #[test]
@@ -562,9 +571,14 @@ fn the_windows_help_offers_neither_password_fd_nor_certtui_nor_the_keyring_examp
 #[test]
 fn the_windows_help_is_what_the_process_prints_on_windows() {
     let arguments = ["rfirma".to_owned(), "--help".to_owned()];
+    let build = RunningBuild {
+        channel: "windows",
+        system: "windows x86_64",
+        library: "rfirma_crypto.dll",
+    };
 
     assert_eq!(
-        informative_text(&arguments, "1.0.0", Platform::Windows),
+        informative_text(&arguments, "1.0.0", build, Platform::Windows),
         Some(help(Platform::Windows))
     );
 }
