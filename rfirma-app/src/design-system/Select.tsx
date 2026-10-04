@@ -1,9 +1,9 @@
 //! Un desplegable de la aplicación, no el `<select>` del sistema, con su teclado y su accesibilidad repuestos a mano.
 
 import { useCallback, useId, useRef, useState } from "react";
-import { Field } from "../design-system/Field";
-import { ChevronDownIcon } from "../design-system/icons";
-import { Popover } from "../design-system/Popover";
+import { Field } from "./Field";
+import { ChevronDownIcon } from "./icons";
+import { Popover } from "./Popover";
 import "./Select.css";
 
 /** Una opción del desplegable: el valor que se guarda y el texto que se ve. */

@@ -54,7 +54,6 @@ const exceptions: Record<string, { classes: string[]; reason: string }> = {
     reason: NOT_A_DIV,
   },
   "shell/Header.tsx": { classes: ["rf-card", "rf-card--elevated"], reason: POPOVER_PANEL },
-  "preferences/Select.tsx": { classes: ["rf-card", "rf-card--elevated"], reason: POPOVER_PANEL },
 };
 
 function sourcesOutsideTheDesignSystem(): string[] {

@@ -6,6 +6,7 @@ import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { Row } from "../design-system/Row";
+import { Select } from "../design-system/Select";
 import { Stack } from "../design-system/Stack";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
@@ -15,7 +16,6 @@ import type { Certificate } from "../signing/certificate";
 import type { DestinationMode } from "./destinationMode";
 import type { SaveFailure, Section } from "./PreferencesView";
 import type { Preferences } from "./preferences";
-import { Select } from "./Select";
 import { Switch } from "./Switch";
 import { THEMES } from "./theme";
 
