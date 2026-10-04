@@ -310,8 +310,8 @@ Pista de 40 × 24 px con `--rf-radius-pill`, borde de 1 px en
 transparente y pomo `--rf-border-strong` a la izquierda. **Encendido**: borde
 transparente, pista `--rf-primary` y pomo `--rf-on-primary` desplazado 16 px.
 Bloqueado, al 45 % con el motivo en el `title`. No está en el bundle: es
-`rfirma-app/src/preferences/Switch.tsx` con `Switch.css`, y lo usan Preferencias
-y la firma visible del panel de firma.
+`rfirma-app/src/design-system/Switch.tsx` con `Switch.css`, y lo usan Preferencias,
+la firma visible, «Con rúbrica» y la cuenta atrás del asistente.
 
 ### Insignia
 

@@ -8,6 +8,7 @@ import { Button } from "../design-system/Button";
 import { Row } from "../design-system/Row";
 import { Select } from "../design-system/Select";
 import { Stack } from "../design-system/Stack";
+import { Switch } from "../design-system/Switch";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { LANGUAGES, type LanguageTag } from "../i18n/languages";
@@ -16,7 +17,6 @@ import type { Certificate } from "../signing/certificate";
 import type { DestinationMode } from "./destinationMode";
 import type { SaveFailure, Section } from "./PreferencesView";
 import type { Preferences } from "./preferences";
-import { Switch } from "./Switch";
 import { THEMES } from "./theme";
 
 /** El título de página que abre cada panel: versalitas, con su divisoria debajo. */
