@@ -196,4 +196,10 @@ export const en: Dictionary = {
   "footer.col.origin": "Origin",
   "footer.clienteafirma": "clienteafirma",
   "footer.comparison": "Differences from AutoFirma",
+
+  "notFound.title": "Page not found — rFirma",
+  "notFound.description": "The address you opened does not exist on rfirma.sgomez.me.",
+  "notFound.heading": "This page does not exist",
+  "notFound.body": "The link may be mistyped, or the page may have moved.",
+  "notFound.home": "Back to the home page",
 };

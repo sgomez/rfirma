@@ -607,7 +607,7 @@ mutants:
     cargo mutants --in-place --in-diff "$diff" \
         --exclude 'adapters/tauri.rs' --exclude 'main.rs' --exclude '{{ ffi_allow }}'
 
-# Lint, pruebas y construccion de la landing de rfirma.sgomez.me.
+# Lint, construccion y pruebas de la landing de rfirma.sgomez.me; las pruebas leen la salida de dist/.
 [group('ci')]
 [script('bash')]
 check-landing:
@@ -616,8 +616,8 @@ check-landing:
     pnpm install --frozen-lockfile --reporter=silent --filter . --filter rfirma-landing
     pnpm exec biome ci packaging/repo/site
     cd packaging/repo/site
-    pnpm exec vitest run --reporter=dot
     pnpm exec astro build
+    pnpm exec vitest run --reporter=dot
 
 # Comprueba que la version de la aplicacion y el nombre del producto cuadran en todos sus sitios.
 [group('ci')]

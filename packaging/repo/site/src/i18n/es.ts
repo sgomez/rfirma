@@ -195,6 +195,12 @@ export const es = {
   "footer.col.origin": "Origen",
   "footer.clienteafirma": "clienteafirma",
   "footer.comparison": "Diferencias con AutoFirma",
+
+  "notFound.title": "Página no encontrada — rFirma",
+  "notFound.description": "La dirección que has abierto no existe en rfirma.sgomez.me.",
+  "notFound.heading": "Esta página no existe",
+  "notFound.body": "Puede que el enlace esté mal escrito o que la página haya cambiado de sitio.",
+  "notFound.home": "Volver a la portada",
 } as const;
 
 export type Key = keyof typeof es;

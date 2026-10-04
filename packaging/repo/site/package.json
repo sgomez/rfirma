@@ -10,7 +10,10 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@astrojs/sitemap": "3.7.4",
+    "@types/jsdom": "30.0.0",
     "astro": "7.3.5",
+    "jsdom": "catalog:",
     "vitest": "5.0.1"
   }
 }

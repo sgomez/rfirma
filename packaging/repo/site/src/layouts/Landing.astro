@@ -1,5 +1,6 @@
 ---
 import Comparison from "../components/Comparison.astro";
+import Favicons from "../components/Favicons.astro";
 import Footer from "../components/Footer.astro";
 import Formats from "../components/Formats.astro";
 import Hero from "../components/Hero.astro";
@@ -20,6 +21,21 @@ const { locale } = Astro.props;
 const t = translator(locale);
 const canonical = new URL(localePath(locale), Astro.site);
 const image = new URL("/og.png", Astro.site);
+const description = t("meta.description");
+const application = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "rFirma",
+  description,
+  url: canonical.href,
+  inLanguage: locale,
+  operatingSystem: "Linux, Windows, macOS",
+  applicationCategory: "SecurityApplication",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+  downloadUrl: new URL("#instalacion", canonical).href,
+  isBasedOn: { "@type": "SoftwareSourceCode", codeRepository: "https://github.com/sgomez/rfirma" },
+};
+const structuredData = JSON.stringify(application).replaceAll("<", "\\u003c");
 ---
 
 <!doctype html>
@@ -28,8 +44,9 @@ const image = new URL("/og.png", Astro.site);
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{t("meta.title")}</title>
-    <meta name="description" content={t("meta.description")} />
+    <meta name="description" content={description} />
     <link rel="canonical" href={canonical.href} />
+    <Favicons />
     {
       locales.map((other) => (
         <link rel="alternate" hreflang={other} href={new URL(localePath(other), Astro.site).href} />
@@ -38,7 +55,7 @@ const image = new URL("/og.png", Astro.site);
     <link rel="alternate" hreflang="x-default" href={new URL(localePath(defaultLocale), Astro.site).href} />
     <meta property="og:site_name" content="rFirma" />
     <meta property="og:title" content={t("meta.title")} />
-    <meta property="og:description" content={t("footer.tagline")} />
+    <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical.href} />
     <meta property="og:locale" content={openGraphLocales[locale]} />
@@ -54,10 +71,11 @@ const image = new URL("/og.png", Astro.site);
     <meta property="og:image:alt" content={t("meta.image.alt")} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={t("meta.title")} />
-    <meta name="twitter:description" content={t("footer.tagline")} />
+    <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={image.href} />
     <meta name="twitter:image:alt" content={t("meta.image.alt")} />
     <meta name="theme-color" content="#067781" />
+    <script type="application/ld+json" set:html={structuredData} />
   </head>
   <body>
     <div class="rf-root landing" data-theme="light">
