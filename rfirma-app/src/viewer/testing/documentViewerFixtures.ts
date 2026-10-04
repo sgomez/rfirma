@@ -75,6 +75,11 @@ export function recordingDocument(pageCount = 3): Recorder {
 
 export const noop = () => {};
 
+/** Los cuatro avisos de gesto del visor, todos a un mismo espía. */
+export function reportingTo(spy: (...args: unknown[]) => unknown) {
+  return { onMove: spy, onTrace: spy, onSeal: spy, onUnseal: spy };
+}
+
 /**
  * Un recuadro ya colocado. El visor **no lo crea**: quien lo
  * quiera en pantalla lo entrega, igual que hace la fila que lo recuerda.

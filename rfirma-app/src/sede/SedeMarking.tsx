@@ -41,7 +41,9 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
     placement,
     viewedPage,
     viewPage,
-    rememberPlacement,
+    moveBox,
+    sealPage,
+    unsealPage,
     choosePages,
     changePageMode,
   } = usePlacement({ document, standardRectOn });
@@ -93,8 +95,10 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
             <DocumentViewer
               pdf={pdf}
               placement={placement}
-              onPlace={rememberPlacement}
-              pageMode={pageMode}
+              onMove={moveBox}
+              onTrace={sealPage}
+              onSeal={sealPage}
+              onUnseal={unsealPage}
               onPageChange={viewPage}
               placementRequest={placementRequest}
               onOpen={noop}

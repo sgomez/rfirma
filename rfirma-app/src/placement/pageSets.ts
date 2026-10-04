@@ -39,14 +39,7 @@ export interface Placement {
   pages: PageSet;
 }
 
-/**
- * Cuál de los tres modos de páginas del panel manda sobre el conjunto.
- *
- * El visor no la elige —vive en el panel— pero la necesita para dos cosas: la cuarta
- * redacción del botón («Colocar el sello aquí» cuando se sellan todas) y que con `Solo 1
- * página` o `Todas las páginas` una página ya sellada **no ofrezca pastilla**, porque no queda
- * nada que ofrecer.
- */
+/** Cuál de los tres modos de páginas del panel manda sobre el conjunto. */
 export type PageMode = "single" | "these" | "all";
 
 /** ¿Esta página lleva recuadro? */
@@ -223,4 +216,42 @@ export function placingFrom(placement: Placement | null, pageCount: number): Pla
     return { rect, sets: { single: only[0], these: null }, mode: "single" };
   }
   return { rect, sets: { single: null, these: pages }, mode: "these" };
+}
+
+/** El recuadro llevado a `rect`, sin tocar el conjunto de ningún modo: es un solo campo replicado. */
+export function movingTo(placing: Placing, rect: UserSpaceRect): Placing {
+  return { ...placing, rect };
+}
+
+/**
+ * Sellar `page` con el recuadro en `rect`, del botón o de un trazo.
+ *
+ * En «Solo 1 página» sustituye, en los otros dos modos añade y, sin nada colocado, el conjunto nace del modo.
+ */
+export function sealingAt(
+  placing: Placing,
+  page: number,
+  rect: UserSpaceRect,
+  pageCount: number,
+): Placing {
+  const { sets, mode } = placing;
+  const pages = pagesSealingAt(placementOf(placing.rect, sets, mode), mode, page);
+  return { rect, sets: storing(sets, mode, pages, pageCount), mode };
+}
+
+function pagesSealingAt(current: Placement | null, mode: PageMode, page: number): PageSet {
+  if (current === null) return mode === "all" ? "all" : { only: [page] };
+  if (mode === "single") return { only: [page] };
+  return sealing(current, page).pages;
+}
+
+/** Quitar `page` del conjunto del modo activo; el recuadro se queda donde estaba. */
+export function unsealingAt(placing: Placing, page: number, pageCount: number): Placing {
+  const current = placementOf(placing.rect, placing.sets, placing.mode);
+  if (current === null) return placing;
+  const rest = unsealing(current, page, pageCount);
+  return {
+    ...placing,
+    sets: storing(placing.sets, placing.mode, rest?.pages ?? null, pageCount),
+  };
 }

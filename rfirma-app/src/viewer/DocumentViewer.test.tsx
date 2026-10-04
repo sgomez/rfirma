@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Placement } from "../placement/pageSets";
+import type { UserSpaceRect } from "../placement/pageSets";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
 import { movedBy, toPixels, toUserSpace } from "./signatureBox";
@@ -10,6 +10,7 @@ import {
   noop,
   type Recorder,
   recordingDocument,
+  reportingTo,
   seated,
   sheet,
   stubResizeObserver,
@@ -30,9 +31,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("el visor vacío", () => {
   it("offers the way in, and no floating bar", () => {
     const onOpen = vi.fn();
-    renderWithCatalog(
-      <DocumentViewer pdf={null} placement={null} onPlace={noop} onOpen={onOpen} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={null} placement={null} onOpen={onOpen} />);
 
     fireEvent.click(screen.getByRole("button", { name: /Arrastra un PDF/ }));
 
@@ -54,7 +53,6 @@ describe("el visor con documento", () => {
       <DocumentViewer
         pdf={document}
         placement={null}
-        onPlace={noop}
         onOpen={noop}
         failure={{ situation: "documentUnreadable", detail: "roto" }}
       />,
@@ -66,9 +64,7 @@ describe("el visor con documento", () => {
 
   it("renders the first page and counts the rest", async () => {
     const { document, renders } = recordingDocument(27);
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={null} onOpen={noop} />);
 
     await waitFor(() => expect(renders).toHaveLength(1));
     expect(renders[0]?.page).toBe(1);
@@ -86,7 +82,7 @@ describe("el visor con documento", () => {
     try {
       const { document, renders } = recordingDocument();
       const { container } = renderWithCatalog(
-        <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+        <DocumentViewer pdf={document} placement={null} onOpen={noop} />,
       );
 
       await waitFor(() => expect(renders).toHaveLength(1));
@@ -118,25 +114,25 @@ describe("el visor con documento", () => {
     const original = window.devicePixelRatio;
     Object.defineProperty(window, "devicePixelRatio", { value: 2, configurable: true });
     try {
-      const onPlace = vi.fn();
+      const onMove = vi.fn();
       const { document, renders } = recordingDocument();
       renderWithCatalog(
-        <DocumentViewer pdf={document} placement={seated} onPlace={onPlace} onOpen={noop} />,
+        <DocumentViewer pdf={document} placement={seated} onMove={onMove} onOpen={noop} />,
       );
 
       await waitFor(() => expect(renders).toHaveLength(1));
 
       fireEvent.keyDown(box(), { key: "ArrowRight", shiftKey: true });
 
-      await waitFor(() => expect(onPlace).toHaveBeenCalled());
-      const placed = onPlace.mock.calls[0]?.[0] as Placement;
+      await waitFor(() => expect(onMove).toHaveBeenCalled());
+      const [rect] = onMove.mock.calls[0] as [UserSpaceRect];
 
       // El mismo cálculo con el viewport de píxeles CSS (escala 1), nunca el
       // del mapa de bits (escala `devicePixelRatio`): si `toUserSpace` se
       // rompiera y empezara a usar el viewport equivocado, este valor
       // esperado ya no coincidiría con lo que produce el componente.
       const moved = movedBy(toPixels(viewportAt(1), seated.rect), 10, 0);
-      expect(placed.rect).toEqual(toUserSpace(viewportAt(1), moved));
+      expect(rect).toEqual(toUserSpace(viewportAt(1), moved));
     } finally {
       Object.defineProperty(window, "devicePixelRatio", { value: original, configurable: true });
     }
@@ -144,9 +140,7 @@ describe("el visor con documento", () => {
 
   it("cancels the render in flight when the zoom changes", async () => {
     const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={null} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
 
     fireEvent.click(screen.getByRole("button", { name: "Acercar" }));
@@ -161,9 +155,7 @@ describe("el visor con documento", () => {
 
   it("cancels the render in flight when the page changes", async () => {
     const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={null} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
 
     fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
@@ -174,9 +166,7 @@ describe("el visor con documento", () => {
 
   it("walks to the last page and stops there", async () => {
     const { document, renders } = recordingDocument(3);
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={null} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
 
     fireEvent.click(screen.getByRole("button", { name: "Última página" }));
@@ -191,7 +181,7 @@ describe("el zoom continuo", () => {
   it("magnifies with Ctrl and the wheel, which is also how the trackpad pinch arrives", async () => {
     const { document, renders } = recordingDocument();
     const { container } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={null} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -214,7 +204,7 @@ describe("el zoom continuo", () => {
   it("cancels the browser's own zoom, which a passive listener could not", async () => {
     const { document, renders } = recordingDocument();
     const { container } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={null} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -234,7 +224,7 @@ describe("el zoom continuo", () => {
   it("leaves the wheel alone without Ctrl, which is how the document scrolls", async () => {
     const { document, renders } = recordingDocument();
     const { container } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={null} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -245,9 +235,7 @@ describe("el zoom continuo", () => {
 
   it("takes the percentage typed in the bar, clipped to the range", async () => {
     const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={null} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
     const level = screen.getByLabelText("Nivel de zoom");
 
@@ -259,9 +247,7 @@ describe("el zoom continuo", () => {
 
   it("comes back to 100 % with Ctrl+0", async () => {
     const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={null} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
     fireEvent.click(screen.getByRole("button", { name: "Acercar" }));
     await waitFor(() => expect(renders).toHaveLength(2));
@@ -274,9 +260,7 @@ describe("el zoom continuo", () => {
   /** ID-116: los botones ± tropiezan con los siete escalones. */
   it("trips over the steps with the buttons, and reaches the ceiling from the last one", async () => {
     const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={null} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
 
     fireEvent.click(screen.getByRole("button", { name: "Acercar" }));
@@ -290,7 +274,7 @@ describe("«ajustar» como modo", () => {
     const observer = stubResizeObserver();
     const first = recordingDocument(3);
     const { container, rerender } = renderWithCatalog(
-      <DocumentViewer pdf={first.document} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={first.document} placement={null} onOpen={noop} />,
     );
     await waitFor(() => expect(first.renders).toHaveLength(1));
     observer.resizeTo(surfaceOf(container), 800, 600);
@@ -311,9 +295,7 @@ describe("«ajustar» como modo", () => {
     // Y se abre otro documento: el modo cruza, porque describe cómo se mira y
     // no cuánto se amplía *ese* documento.
     const second = recordingDocument(3);
-    rerender(
-      <DocumentViewer pdf={second.document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
+    rerender(<DocumentViewer pdf={second.document} placement={null} onOpen={noop} />);
     await waitFor(() => expect(second.renders.length).toBeGreaterThan(0));
     await waitFor(() => expect(latest(second.renders)?.scale).toBeCloseTo((1200 - 2) / A4.width));
   });
@@ -328,10 +310,10 @@ describe("«ajustar» como modo", () => {
     const observer = stubResizeObserver();
     const { document, renders } = recordingDocument();
     const { container, rerender } = renderWithCatalog(
-      <DocumentViewer pdf={null} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={null} placement={null} onOpen={noop} />,
     );
 
-    rerender(<DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />);
+    rerender(<DocumentViewer pdf={document} placement={null} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
     observer.resizeTo(surfaceOf(container), 800, 600);
 
@@ -344,7 +326,7 @@ describe("«ajustar» como modo", () => {
     const observer = stubResizeObserver();
     const { document, renders } = recordingDocument();
     const { container } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={null} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
     observer.resizeTo(surfaceOf(container), 800, 400);
@@ -358,7 +340,7 @@ describe("«ajustar» como modo", () => {
     const observer = stubResizeObserver();
     const { document, renders } = recordingDocument();
     const { container } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={null} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
     const surface = surfaceOf(container);
@@ -376,7 +358,7 @@ describe("«ajustar» como modo", () => {
     const observer = stubResizeObserver();
     const first = recordingDocument();
     const { container, rerender } = renderWithCatalog(
-      <DocumentViewer pdf={first.document} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={first.document} placement={null} onOpen={noop} />,
     );
     await waitFor(() => expect(first.renders).toHaveLength(1));
     observer.resizeTo(surfaceOf(container), 700, 600);
@@ -391,9 +373,7 @@ describe("«ajustar» como modo", () => {
     expect(latest(first.renders)?.scale).toBe(1.25);
 
     const second = recordingDocument();
-    rerender(
-      <DocumentViewer pdf={second.document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
+    rerender(<DocumentViewer pdf={second.document} placement={null} onOpen={noop} />);
 
     // El porcentaje fijado a mano sobrevive al documento siguiente: manda lo
     // último que dijo la persona usuaria, no el ajuste de partida.
@@ -405,7 +385,7 @@ describe("«ajustar» como modo", () => {
     const observer = stubResizeObserver();
     const { document, renders } = recordingDocument();
     const { container } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={null} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -420,7 +400,7 @@ describe("«ajustar» como modo", () => {
     const observer = stubResizeObserver();
     const { document, renders } = recordingDocument();
     const { container } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={null} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -432,10 +412,10 @@ describe("«ajustar» como modo", () => {
   /** ID-114: ni el zoom ni el redimensionado escriben en la colocación. */
   it("writes nothing to the placement while zooming and resizing", async () => {
     const observer = stubResizeObserver();
-    const onPlace = vi.fn();
+    const reported = vi.fn();
     const { document, renders } = recordingDocument(3);
     const { container } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={seated} onPlace={onPlace} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={seated} {...reportingTo(reported)} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -445,16 +425,14 @@ describe("«ajustar» como modo", () => {
     fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
     await waitFor(() => expect(renders.length).toBeGreaterThan(1));
 
-    expect(onPlace).not.toHaveBeenCalled();
+    expect(reported).not.toHaveBeenCalled();
   });
 });
 
 describe("el reparto del foco", () => {
   it("turns the pages with the focus on the sheet", async () => {
     const { document, renders } = recordingDocument(5);
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={null} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
 
     fireEvent.keyDown(sheet(), { key: "PageDown" });
@@ -473,9 +451,7 @@ describe("el reparto del foco", () => {
    */
   it("turns the pages from inside the box too, because the keys bubble", async () => {
     const { document, renders } = recordingDocument(5);
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={seated} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
 
     fireEvent.keyDown(box(), { key: "PageDown" });
@@ -485,9 +461,7 @@ describe("el reparto del foco", () => {
 
   it("gives the focus back to the sheet with Esc", async () => {
     const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={seated} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
     box().focus();
 
@@ -498,9 +472,7 @@ describe("el reparto del foco", () => {
 
   it("makes both the sheet and the box reachable with Tab", async () => {
     const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
-    );
+    renderWithCatalog(<DocumentViewer pdf={document} placement={seated} onOpen={noop} />);
     await waitFor(() => expect(renders).toHaveLength(1));
 
     expect(sheet()).toHaveAttribute("tabindex", "0");
@@ -520,7 +492,7 @@ describe("el tope del mapa de bits", () => {
     try {
       const { document, renders } = recordingDocument();
       const { container } = renderWithCatalog(
-        <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+        <DocumentViewer pdf={document} placement={null} onOpen={noop} />,
       );
       await waitFor(() => expect(renders).toHaveLength(1));
 
@@ -546,13 +518,7 @@ describe("la página que se está mirando", () => {
     const onPageChange = vi.fn();
     const { document, renders } = recordingDocument(3);
     renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        onPlace={noop}
-        onOpen={noop}
-        onPageChange={onPageChange}
-      />,
+      <DocumentViewer pdf={document} placement={null} onOpen={noop} onPageChange={onPageChange} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
     expect(onPageChange).toHaveBeenCalledWith(1);
@@ -575,14 +541,14 @@ function latest(renders: Recorder["renders"]) {
  */
 describe("el visor cuando no se puede colocar la firma visible", () => {
   it("ignores a seal request, since the panel should not have offered the button either", async () => {
-    const onPlace = vi.fn();
+    const onSeal = vi.fn();
     const { document, renders } = recordingDocument();
     const { rerender } = renderWithCatalog(
       <DocumentViewer
         pdf={document}
         placement={null}
         canPlace={false}
-        onPlace={onPlace}
+        onSeal={onSeal}
         onOpen={noop}
       />,
     );
@@ -593,13 +559,13 @@ describe("el visor cuando no se puede colocar la firma visible", () => {
         pdf={document}
         placement={null}
         canPlace={false}
-        onPlace={onPlace}
+        onSeal={onSeal}
         onOpen={noop}
         placementRequest={{ action: "seal" }}
       />,
     );
 
-    expect(onPlace).not.toHaveBeenCalled();
+    expect(onSeal).not.toHaveBeenCalled();
   });
 
   // La colocación **no se borra** al apagar (así lo hace ya el panel): lo que
@@ -607,21 +573,13 @@ describe("el visor cuando no se puede colocar la firma visible", () => {
   it("paints no box over the sheet, and paints it again when switched back on", async () => {
     const { document, renders } = recordingDocument();
     const { rerender } = renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        canPlace={false}
-        onPlace={noop}
-        onOpen={noop}
-      />,
+      <DocumentViewer pdf={document} placement={seated} canPlace={false} onOpen={noop} />,
     );
 
     await waitFor(() => expect(renders).toHaveLength(1));
     expect(screen.queryByRole("application")).not.toBeInTheDocument();
 
-    rerender(
-      <DocumentViewer pdf={document} placement={seated} canPlace onPlace={noop} onOpen={noop} />,
-    );
+    rerender(<DocumentViewer pdf={document} placement={seated} canPlace onOpen={noop} />);
 
     expect(box()).toBeInTheDocument();
   });
