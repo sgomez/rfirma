@@ -1,6 +1,8 @@
 //! 3 · Los dos tramos de la firma, firmar y devolver a la sede, sin nombrar ninguna fase del motor.
 
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
+import { Stack } from "../design-system/Stack";
 import type { Certificate } from "../signing/certificate";
 import type { SigningPhase } from "./errand";
 import { SedeBody } from "./SedeFrame";
@@ -46,14 +48,14 @@ export function SedeSigning({ origin, certificate, phase, onCancel }: SedeSignin
         returning ? null : (
           <>
             <div className="sede-window__spacer" />
-            <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
+            <Button variant="ghost" onClick={onCancel}>
               {t("actions.cancel")}
-            </button>
+            </Button>
           </>
         )
       }
     >
-      <div className="rf-stack sede-signing">
+      <Stack className="sede-signing">
         <p className="rf-title sede-signing__title">
           {returning
             ? origin === null
@@ -79,7 +81,7 @@ export function SedeSigning({ origin, certificate, phase, onCancel }: SedeSignin
         >
           <div className="sede-signing__bar" style={{ width: `${PROGRESS[phase]}%` }} />
         </div>
-      </div>
+      </Stack>
     </SedeBody>
   );
 }
