@@ -9,11 +9,6 @@ const designSystem = fileURLToPath(
   new URL("../../../rfirma-app/src/design-system", import.meta.url),
 );
 
-/** Una página del índice del manual que aún no está escrita: se ve en la barra lateral y no se publica. */
-function pending(label) {
-  return { label, items: [], collapsed: true, badge: { text: "Próximamente", variant: "note" } };
-}
-
 // El sitio es estático puro: lo sirve Caddy desde la imagen (ADR-0015), y sharp
 // optimiza las imágenes al compilar.
 // Sin `i18n` de Astro: Starlight no lo admite junto a sus `locales`, y la landing no lo usa.
@@ -44,11 +39,11 @@ export default defineConfig({
         { label: "Instalación", slug: "manual/instalacion" },
         { label: "Firmar un PDF", slug: "manual/firmar-un-pdf" },
         { label: "Ver las firmas", slug: "manual/ver-las-firmas" },
-        pending("Firmar en una sede electrónica"),
+        { label: "Firmar en una sede electrónica", slug: "manual/firmar-en-una-sede" },
         { label: "Línea de órdenes", slug: "manual/linea-de-ordenes" },
         { label: "Preferencias", slug: "manual/preferencias" },
-        pending("Problemas frecuentes"),
-        pending("Si vienes de AutoFirma"),
+        { label: "Problemas frecuentes", slug: "manual/problemas-frecuentes" },
+        { label: "Si vienes de AutoFirma", slug: "manual/si-vienes-de-autofirma" },
       ],
     }),
     sitemap(),

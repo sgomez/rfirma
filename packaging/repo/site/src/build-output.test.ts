@@ -144,10 +144,28 @@ describe.each(landings)("screenshots of $name", ({ file }) => {
 });
 
 describe("manual", () => {
-  it("publishes the command line page", () => {
-    expect(manual.map(({ file }) => file)).toContain(
-      join("manual", "linea-de-ordenes", "index.html"),
+  it.each([
+    "linea-de-ordenes",
+    "firmar-en-una-sede",
+    "problemas-frecuentes",
+    "si-vienes-de-autofirma",
+  ])("publishes the %s page", (slug) => {
+    expect(manual.map(({ file }) => file)).toContain(join("manual", slug, "index.html"));
+  });
+
+  it("gives every page its own title and description", () => {
+    const documents = manual.map(({ file }) => page(file));
+    const titles = documents.map((document) => document.title);
+    const descriptions = documents.map((document) =>
+      attribute(document, "meta[name='description']", "content"),
     );
+    expect(new Set(titles).size).toBe(manual.length);
+    expect(new Set(descriptions).size).toBe(manual.length);
+  });
+
+  it("links the command line page from the page for those coming from AutoFirma", () => {
+    const document = page(join("manual", "si-vienes-de-autofirma", "index.html"));
+    expect(document.querySelector("main a[href='/manual/linea-de-ordenes/']")).not.toBeNull();
   });
 
   it.each(["instalacion", "firmar-un-pdf", "ver-las-firmas", "preferencias"])(
