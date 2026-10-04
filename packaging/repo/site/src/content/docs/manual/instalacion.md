@@ -7,9 +7,9 @@ rFirma se instala desde un repositorio de tu sistema operativo, de modo que las
 actualizaciones llegan con el gestor de paquetes. No necesitas tener Java: el motor
 criptográfico va dentro del paquete.
 
-**Elige un solo canal.** Instalar rFirma por dos vías son dos aplicaciones con
-memorias separadas: ni los documentos recientes, ni la rúbrica, ni las preferencias se
-comparten.
+**Elige un solo canal.** Si instalas rFirma por dos vías, tendrás dos aplicaciones
+con memorias separadas: no comparten los documentos recientes, ni la rúbrica, ni las
+preferencias.
 
 ## Linux con apt (Debian, Ubuntu y derivadas)
 
@@ -129,5 +129,5 @@ Los `.deb` no se firman uno a uno, porque apt firma el índice del repositorio: 
 ## Después de instalar
 
 La primera vez que abras rFirma, un asistente instala el certificado que hace segura la
-conexión del navegador con la aplicación y la pone como programa que abren las sedes
+conexión del navegador con la aplicación y deja rFirma como el programa que abren las sedes
 electrónicas. Después, [firma tu primer PDF](/manual/firmar-un-pdf/).

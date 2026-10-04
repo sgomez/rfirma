@@ -40,7 +40,7 @@ El grupo **Privacidad**:
 
 ## Certificados
 
-La lista de los ficheros `.p12` que has instalado en rFirma. Tiene dos gestos:
+La lista de los ficheros `.p12` que has instalado en rFirma. Tiene dos acciones:
 
 - **Añadir…** instala un certificado. rFirma guarda lo necesario y no recuerda de dónde
   vino. Se rechaza al instalar una clave que no sea RSA ni de curva elíptica.

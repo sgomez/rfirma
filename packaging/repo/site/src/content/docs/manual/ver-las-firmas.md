@@ -10,8 +10,6 @@ de que firmes. Solo se mira y se cierra: no firma ni pregunta nada.
 
 - Al abrir un PDF que ya está firmado, el panel de firma muestra una línea con el
   número de firmas y, si los hay, los problemas. Pulsa **Ver firmas →**.
-- Desde la terminal, `rfirma verify -i documento.pdf -gui` abre la ventana con el
-  documento y el resumen de sus firmas. Está en [Línea de órdenes](/manual/linea-de-ordenes/).
 - En una sede electrónica, el consentimiento de firma ofrece el mismo botón.
 
 Se cierra con **Cerrar** o con `Escape`, y vuelves a donde estabas.
@@ -37,7 +35,7 @@ una zona que se desplaza:
 
 ## Qué significa cada validez
 
-Una firma tiene siempre una de tres validez. Se distinguen por el icono, la palabra y el
+Una firma tiene siempre una de estas tres valideces. Se distinguen por el icono, la palabra y el
 peso del texto, no por el color.
 
 | Validez | Qué significa |
@@ -66,13 +64,18 @@ Pesa como una firma no válida:
 - Se ha modificado después de la última firma.
 - Se ha rellenado el formulario después de firmar.
 - Se ha añadido contenido encima de lo firmado.
-- Se modificó antes de tu firma.
 
-## Si no hay firmas
+## El resumen de `verify -gui` y tras firmar
 
-El panel lo dice con **Sin firmas**. Si el fichero no es un PDF ni una firma CAdES o
-XAdES, dice **Formato no reconocido**, y si no se han podido leer, **No se han podido
-leer las firmas**.
+Desde la terminal, `rfirma verify -i documento.pdf -gui` abre la ventana con el
+documento y el resumen de sus firmas (véase [Línea de órdenes](/manual/linea-de-ordenes/)).
+El panel enseña también ese resumen justo después de firmar. Usa las mismas fichas,
+valideces y hallazgos que el diálogo; tras firmar, un documento modificado antes de tu
+firma se muestra como **Se modificó antes de tu firma**.
+
+Si no hay firmas que mostrar, el resumen lo dice con **Sin firmas**. Si el fichero no
+es un PDF ni una firma CAdES o XAdES, dice **Formato no reconocido**, y si no se han
+podido leer, **No se han podido leer las firmas**.
 
 ## Firmar con problemas
 

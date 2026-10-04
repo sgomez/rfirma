@@ -3,7 +3,7 @@ title: Firmar un PDF
 description: "Cómo firmar un PDF con rFirma, paso a paso: abrir el documento, elegir certificado, poner la firma visible y la rúbrica, teclear el PIN y encontrar el documento firmado."
 ---
 
-Firmar un PDF en rFirma ocurre en una sola ventana: abres el documento, eliges el
+En rFirma, un PDF se firma en una sola ventana: abres el documento, eliges el
 certificado y pulsas **Firmar**. El resultado es un PAdES, el formato de firma de los
 PDF.
 
@@ -37,8 +37,8 @@ El mismo certificado en varios almacenes sale como una sola fila.
 - Cada fila dice el titular (o la entidad, si es un certificado de representante), el
   NIF, el almacén y cuándo caduca.
 - El buscador filtra por nombre, empresa, NIF o almacén.
-- Un certificado caducado, aún no vigente o revocado aparece en la lista, con el
-  motivo, pero no se puede elegir.
+- Un certificado caducado o aún no vigente aparece en la lista, con el motivo, pero no
+  se puede elegir. rFirma todavía no comprueba si un certificado está revocado.
 - Si no hay ninguno, el pie del panel ofrece **Añadir un certificado…**, para instalar
   un `.p12` (también se hace desde [Preferencias](/manual/preferencias/)).
 
@@ -63,7 +63,7 @@ estás mirando. Lo puedes arrastrar o dibujar de nuevo con el ratón. En el pane
   - **Personalizada**: escribes tu frase y le añades datos (**Firmante**, **Emisor**,
     **Fecha**) con el botón **Dato**.
 - **La rúbrica**: tu firma manuscrita como imagen. Se carga con **Cargar…** (PNG o
-  JPEG), y con **Con rúbrica** la llevan las tarjetas y el recuadro. Con **Solo
+  JPEG), y con **Con rúbrica** la llevan las tarjetas de modelo y el recuadro. Con **Solo
   rúbrica** es obligatoria.
 
 El DNI de la frase se oculta en parte, como hace AutoFirma. El visor enseña la firma
@@ -73,7 +73,7 @@ tal como quedará.
 
 ![Diálogo nativo para introducir el PIN del certificado](../../../assets/how-step3.png)
 
-Si tu certificado vive en un token PKCS#11, rFirma pide su **PIN**; si vive en un
+Si tu certificado está en un token PKCS#11, rFirma pide su **PIN**; si está en un
 fichero `.p12`, pide su **contraseña**. Lo pide una ventana del sistema, no la de la
 aplicación: el secreto nunca pasa por la interfaz web de rFirma, y la clave privada
 no sale del almacén.
