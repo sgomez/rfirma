@@ -1,52 +1,51 @@
+import { composeStories } from "@storybook/react-vite";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import type { SigningStage } from "./flow";
-import { SigningProgressDialog } from "./SigningProgressDialog";
+import * as stories from "./SigningProgressDialog.stories";
 
-function renderProgress(stage: SigningStage) {
-  return renderWithCatalog(<SigningProgressDialog stage={stage} />);
-}
+const { Presign, Sign, Postsign } = composeStories(stories);
 
-// Grada A: el diálogo solo sabe en qué etapa va.
 describe("SigningProgressDialog", () => {
-  it("blocks the window while the three stages run", () => {
-    const { container } = renderProgress("sign");
+  it("blocks the window with no way out, and warns about not removing the card", () => {
+    renderWithCatalog(<Sign />);
 
     const dialog = screen.getByRole("dialog", { name: "Firmando el documento…" });
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(container.querySelector(".rf-scrim")).toBeInTheDocument();
-    // No hay salida: una vez empezada la firma en la tarjeta no hay marcha atrás.
+    expect(document.querySelector(".rf-scrim")).toBeInTheDocument();
     expect(within(dialog).queryAllByRole("button")).toEqual([]);
-  });
-
-  it("warns about not removing the card", () => {
-    renderProgress("presign");
-
     expect(screen.getByText("No retires la tarjeta hasta que termine.")).toBeInTheDocument();
   });
 
   it("names the three stages in plain language, without the domain term", () => {
-    renderProgress("presign");
+    renderWithCatalog(<Presign />);
 
-    const stages = screen.getAllByRole("listitem").map((item) => item.textContent);
-    expect(stages).toEqual(["Preparando la firma", "Firmando en la tarjeta", "Ensamblando el PDF"]);
+    expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "Preparando la firma",
+      "Firmando en la tarjeta",
+      "Ensamblando el PDF",
+    ]);
   });
 
-  it("marks only the stage under way as the current step", () => {
-    renderProgress("sign");
+  it.each([
+    { Story: Presign, current: 0 },
+    { Story: Sign, current: 1 },
+    { Story: Postsign, current: 2 },
+  ])(
+    "marks only stage $current as the step under way and advances the bar",
+    ({ Story, current }) => {
+      renderWithCatalog(<Story />);
 
-    const stages = screen.getAllByRole("listitem");
-    expect(stages[0]).not.toHaveAttribute("aria-current");
-    expect(stages[1]).toHaveAttribute("aria-current", "step");
-    expect(stages[2]).not.toHaveAttribute("aria-current");
-  });
-
-  it("advances the bar with the stage", () => {
-    renderProgress("postsign");
-
-    const bar = screen.getByRole("progressbar");
-    expect(bar).toHaveAttribute("aria-valuenow", "3");
-    expect(bar).toHaveAttribute("aria-valuemax", "3");
-  });
+      screen.getAllByRole("listitem").forEach((item, index) => {
+        if (index === current) {
+          expect(item).toHaveAttribute("aria-current", "step");
+        } else {
+          expect(item).not.toHaveAttribute("aria-current");
+        }
+      });
+      const bar = screen.getByRole("progressbar");
+      expect(bar).toHaveAttribute("aria-valuenow", String(current + 1));
+      expect(bar).toHaveAttribute("aria-valuemax", "3");
+    },
+  );
 });

@@ -39,6 +39,19 @@ export function aReport(
   };
 }
 
+export function aSignatureBy(
+  certificate: Certificate,
+  overrides: Partial<PreviousSignature> = {},
+): PreviousSignature {
+  return aSignature({
+    idNumber: certificate.idNumber,
+    organizationIdentifier: certificate.organizationIdentifier,
+    issuer: certificate.issuer,
+    certificateSerialNumber: certificate.certificateSerialNumber,
+    ...overrides,
+  });
+}
+
 export const VALID_CLOSING = aSignature({ closesDocument: true });
 
 export const EXPIRED = aSignature({

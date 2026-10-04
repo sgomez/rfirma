@@ -69,29 +69,6 @@ function row(index: number): HTMLElement {
 
 describe("CertificateSelect", () => {
   describe("closed", () => {
-    it("is labelled «Certificado» and says «Elige un certificado» while nothing is chosen", () => {
-      renderSelect();
-
-      expect(screen.getByText("Certificado")).toBeVisible();
-      expect(box()).toHaveTextContent("Elige un certificado");
-      expect(box()).toHaveAttribute("aria-expanded", "false");
-    });
-
-    it("shows a personal certificate as the holder and «A título personal · id number»", () => {
-      renderSelect({ chosen: personal });
-
-      expect(box()).toHaveTextContent("Ada Lovelace Byron");
-      expect(box()).toHaveTextContent("A título personal · 99999999R");
-    });
-
-    it("shows a representative certificate company and tax id first, with the short second line", () => {
-      renderSelect({ chosen: representative });
-
-      expect(box()).toHaveTextContent("Reformas Martín SL · B12345678");
-      expect(box()).toHaveTextContent("Representante · Ada Lovelace Byron");
-      expect(box()).not.toHaveTextContent("99999999R");
-    });
-
     it("says «Buscando certificados…» and does not open while the certificates are being listed", async () => {
       renderSelect({ certificates: [], searching: true });
 

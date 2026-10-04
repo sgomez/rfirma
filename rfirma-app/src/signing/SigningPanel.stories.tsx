@@ -14,6 +14,7 @@ import {
 import {
   aReport,
   aSignature,
+  aSignatureBy,
   ENTITY_CERTIFICATE,
   EXPIRED_ONLY_REPORT,
   MIXED_REPORT,
@@ -194,20 +195,53 @@ export const PreviousSignaturesWithProblems: Story = {
 };
 
 export const PreviousSignaturesSameCertificate: Story = {
-  args: {
-    previousSignatures: aReport([aSignature({ idNumber: PERSONAL_CERTIFICATE.idNumber })]),
-  },
+  args: { previousSignatures: aReport([aSignatureBy(PERSONAL_CERTIFICATE)]) },
 };
 
 export const PreviousSignaturesOtherCertificate: Story = {
   args: {
     certificate: entityChosen,
-    previousSignatures: aReport([aSignature({ idNumber: ENTITY_CERTIFICATE.idNumber })]),
+    previousSignatures: aReport([
+      aSignatureBy(ENTITY_CERTIFICATE, { certificateSerialNumber: "renewed" }),
+    ]),
+  },
+};
+
+export const PreviousSignaturesOnlyAFinding: Story = {
+  args: {
+    previousSignatures: aReport(
+      [aSignature({ idNumber: "other" })],
+      ["modifiedAfterLastSignature"],
+    ),
+  },
+};
+
+export const PreviousSignaturesMany: Story = {
+  args: {
+    previousSignatures: aReport(
+      Array.from({ length: 6 }, (_, index) =>
+        aSignature({ idNumber: "other", certificateSerialNumber: String(index) }),
+      ),
+    ),
   },
 };
 
 export const ClosedDocument: Story = {
   args: { previousSignatures: { ...aReport([VALID_CLOSING]), closed: true } },
+};
+
+export const VisibleSignatureWithoutCertificate: Story = {
+  args: { signature: visible, certificate: { kind: "unchosen", certificates: STORY_CERTIFICATES } },
+};
+
+export const LongDestinationName: Story = {
+  args: {
+    destination: {
+      folder: "Documentos",
+      name: `contrato-de-arrendamiento-${"largo-".repeat(6)}firmado-2.pdf`,
+      writable: true,
+    },
+  },
 };
 
 export const Signing: Story = { args: { ...singlePageSeal, signing: true } };
