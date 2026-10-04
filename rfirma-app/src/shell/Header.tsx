@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { AlertIcon, ExternalLinkIcon, MenuIcon } from "../design-system/icons";
-import { Popover } from "../design-system/Popover";
+import { Menu, MenuItem } from "../design-system/Menu";
 import "./Header.css";
 import type { MenuAnchor } from "./menuAnchor";
 
@@ -100,35 +100,34 @@ export function Header({
             >
               <MenuIcon size={18} />
             </Button>
-            <Popover
+            <Menu
               open={open}
               onClose={close}
               anchorRef={container}
               returnFocusRef={trigger}
               className="header__popup rf-card rf-card--elevated"
               id={menuId}
-              role="menu"
             >
-              <Button role="menuitem" className="header__entry" onClick={choose(onOpenStatus)}>
+              <MenuItem className="header__entry" onClick={choose(onOpenStatus)}>
                 <span className="header__entryLabel">{t("status.title")}</span>
                 <span className="header__entryIcon" aria-hidden="true" />
-              </Button>
+              </MenuItem>
               <hr className="rf-divider header__divider" />
-              <Button role="menuitem" className="header__entry" onClick={choose(onOpenPreferences)}>
+              <MenuItem className="header__entry" onClick={choose(onOpenPreferences)}>
                 <span className="header__entryLabel">{t("header.preferences")}</span>
                 <span className="header__entryIcon" aria-hidden="true" />
-              </Button>
-              <Button role="menuitem" className="header__entry" onClick={choose(onOpenHelp)}>
+              </MenuItem>
+              <MenuItem className="header__entry" onClick={choose(onOpenHelp)}>
                 <span className="header__entryLabel">{t("header.help")}</span>
                 <span className="header__entryIcon" aria-hidden="true">
                   <ExternalLinkIcon />
                 </span>
-              </Button>
-              <Button role="menuitem" className="header__entry" onClick={choose(onOpenAbout)}>
+              </MenuItem>
+              <MenuItem className="header__entry" onClick={choose(onOpenAbout)}>
                 <span className="header__entryLabel">{t("header.about")}</span>
                 <span className="header__entryIcon" aria-hidden="true" />
-              </Button>
-            </Popover>
+              </MenuItem>
+            </Menu>
           </div>
         )}
       </div>
