@@ -79,7 +79,7 @@ expect "historia" "java=false web=true rust=false native=false landing=false win
 expect "historia del sistema de diseno" "java=false web=true rust=false native=false landing=false windows=false macos=false" "rfirma-app/src/design-system/Button.stories.tsx"
 expect "configuracion de storybook" "java=false web=true rust=false native=false landing=false windows=false macos=false" "rfirma-app/.storybook/preview.tsx"
 expect "consola" "java=false web=true rust=false native=false landing=false windows=false macos=false" "rfirma-conformance/console/src/App.tsx"
-expect "raiz del workspace" "$linux windows=false macos=false" "pnpm-lock.yaml"
+expect "candado de pnpm" "java=false web=true rust=false native=false landing=true windows=false macos=false" "pnpm-lock.yaml"
 expect "la union de dos" "java=false web=true rust=true native=true landing=false windows=false macos=false" "rfirma-app/src/App.tsx" "rfirma-app/src-tauri/src/lib.rs"
 
 platforms="--platform-files $work/platform-files"

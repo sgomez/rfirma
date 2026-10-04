@@ -58,7 +58,7 @@ storybook_only() {
 java_ignores() {
     case "$1" in
         scripts/bootstrap.sh | scripts/pinned-version.sh | scripts/ci-lanes.sh) return 1 ;;
-        docs/* | rfirma-app/* | rfirma-conformance/* | packaging/* | scripts/* | testdata/site-driver/*) return 0 ;;
+        docs/* | rfirma-app/* | rfirma-conformance/* | packaging/* | scripts/* | testdata/site-driver/* | pnpm-lock.yaml) return 0 ;;
     esac
     return 1
 }
@@ -79,7 +79,7 @@ rust_ignores() {
     storybook_only "$1" && return 0
     case "$1" in
         rfirma-native-bridge/testbench/* | scripts/pinned-version.sh | scripts/install-tools.sh | scripts/ci-lanes.sh) return 1 ;;
-        docs/design/* | rfirma-conformance/* | packaging/* | scripts/* | rfirma-native-bridge/*) return 0 ;;
+        docs/design/* | rfirma-conformance/* | packaging/* | scripts/* | rfirma-native-bridge/* | pnpm-lock.yaml) return 0 ;;
     esac
     return 1
 }
@@ -99,7 +99,7 @@ landing_ignores() {
 native_ignores() {
     storybook_only "$1" && return 0
     case "$1" in
-        docs/* | packaging/* | rfirma-conformance/* | rfirma-app/src/* | rfirma-app/po/*) return 0 ;;
+        docs/* | packaging/* | rfirma-conformance/* | rfirma-app/src/* | rfirma-app/po/* | pnpm-lock.yaml) return 0 ;;
     esac
     return 1
 }
