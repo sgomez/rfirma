@@ -34,7 +34,12 @@ describe("App", () => {
    * React: los tokens de color cuelgan de `<html>`.
    */
   it("puts the remembered theme on the document as soon as the settings are read", async () => {
-    renderApp(inMemoryRecents(), [], unavailablePdfSource(), { theme: "dark" });
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: unavailablePdfSource(),
+      settings: { theme: "dark" },
+    });
 
     await waitFor(() =>
       expect(globalThis.document.documentElement).toHaveAttribute("data-theme", "dark"),
@@ -43,7 +48,12 @@ describe("App", () => {
 
   it("leaves the theme to the desktop when nothing was chosen", async () => {
     globalThis.document.documentElement.setAttribute("data-theme", "dark");
-    renderApp(inMemoryRecents(), [], unavailablePdfSource(), { theme: "system" });
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: unavailablePdfSource(),
+      settings: { theme: "system" },
+    });
 
     await waitFor(() =>
       expect(globalThis.document.documentElement).not.toHaveAttribute("data-theme"),
@@ -63,17 +73,14 @@ describe("App", () => {
       choose: async () => null,
       stored: async () => ({ dataUrl: "data:image/jpeg;base64,/9j/", width: 200, height: 80 }),
     };
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      // Con certificado: desde el ID-108 el bloque entero de firma visible
-      // —la rúbrica incluida— está apagado hasta que hay con qué firmar.
-      // `remembered` porque sin él no hay preselección, ni con uno solo.
-      failingCertificateStore(0, [{ ...aCertificate, remembered: true }]),
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: failingCertificateStore(0, [{ ...aCertificate, remembered: true }]),
       rubrics,
-    );
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -87,22 +94,14 @@ describe("App", () => {
   // Encender el interruptor enseña el modelo y la rúbrica recordados; no los siembra.
   it("starts a new document with the model and rubric flag a previous session left", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      failingCertificateStore(0, [{ ...aCertificate, remembered: true }]),
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      { enabled: false, withRubric: true, content: { model: "rubricOnly" } },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: failingCertificateStore(0, [{ ...aCertificate, remembered: true }]),
+      initialSignature: { enabled: false, withRubric: true, content: { model: "rubricOnly" } },
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -182,7 +181,7 @@ describe("App", () => {
 
   it("opens a document from the + menu without putting its badge in the header", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("factura.pdf")]);
+    renderApp({ recents: inMemoryRecents(), documents: [document("factura.pdf")] });
 
     await openPdf(user);
 
@@ -197,7 +196,11 @@ describe("App", () => {
    */
   it("paints the chosen document in the viewer and opens it in a tab", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 7 }));
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 7 }),
+    });
 
     await openPdf(user);
 
@@ -215,13 +218,13 @@ describe("App", () => {
    */
   it("names the failure and offers to look again when the certificate search rejects", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      failingCertificateStore(1),
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: failingCertificateStore(1),
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -242,13 +245,13 @@ describe("App", () => {
 
   it("loads the list when looking again with the problem already solved", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      failingCertificateStore(1, [aCertificate]),
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: failingCertificateStore(1, [aCertificate]),
+    });
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const retry = await within(panel).findByRole("button", { name: "Volver a buscar" });
@@ -278,13 +281,13 @@ describe("App", () => {
       givenName: "Grace",
       surname: "Hopper Murray",
     };
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      { list: async () => [aCertificate, other] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: { list: async () => [aCertificate, other] },
+    });
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
@@ -324,13 +327,13 @@ describe("App", () => {
       surname: "Hopper Murray",
       remembered: true,
     };
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      { list: async () => [aCertificate, used] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: { list: async () => [aCertificate, used] },
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -357,13 +360,13 @@ describe("App", () => {
       givenName: "Grace",
       surname: "Hopper Murray",
     };
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      { list: async () => [aCertificate, other] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: { list: async () => [aCertificate, other] },
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -386,13 +389,13 @@ describe("App", () => {
       status: { kind: "expired", notAfter: 0 },
       remembered: true,
     };
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      { list: async () => [aCertificate, expired] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: { list: async () => [aCertificate, expired] },
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -405,13 +408,13 @@ describe("App", () => {
    * utilizable— también desaparece: nunca se elige por su cuenta. */
   it("does not preselect the sole certificate even when it can be used", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      { list: async () => [aCertificate] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: { list: async () => [aCertificate] },
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -429,13 +432,13 @@ describe("App", () => {
       ...aCertificate,
       status: { kind: "expired", notAfter: 0 },
     };
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      { list: async () => [expired] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: { list: async () => [expired] },
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -446,7 +449,11 @@ describe("App", () => {
 
   it("names the error of a PDF it cannot read instead of leaving an empty viewer", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("corrupto.pdf")], pdfsOf({}));
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("corrupto.pdf")],
+      pdfs: pdfsOf({}),
+    });
 
     await openPdf(user);
 
@@ -455,11 +462,11 @@ describe("App", () => {
 
   it("repaints a document when its tab is chosen again, one after another", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("primero.pdf"), document("segundo.pdf")],
-      pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("primero.pdf"), document("segundo.pdf")],
+      pdfs: pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+    });
     await openPdf(user);
     await screen.findByRole("region", { name: "Panel de firma" });
 
@@ -480,13 +487,13 @@ describe("App", () => {
    */
   it("signs without a visible signature by default, and turning it on places the box", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 3 }),
-      {},
-      { list: async () => [{ ...aCertificate, remembered: true }] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 3 }),
+      settings: {},
+      certificates: { list: async () => [{ ...aCertificate, remembered: true }] },
+    });
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await within(panel).findByRole("button", { name: "Firmar" });
@@ -507,13 +514,13 @@ describe("App", () => {
 
   it("brings back the box where it was when the switch goes off and on again", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 3 }),
-      {},
-      { list: async () => [{ ...aCertificate, remembered: true }] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 3 }),
+      settings: {},
+      certificates: { list: async () => [{ ...aCertificate, remembered: true }] },
+    });
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await within(panel).findByRole("button", { name: "Firmar" });
@@ -539,21 +546,18 @@ describe("App", () => {
       { folder: "Documentos", name: "factura-firmado.pdf", writable: true },
       { id: "single-42", folder: "Escritorio", name: "factura-firmado-2.pdf", writable: true },
     );
-    const { preferences } = renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 2 }),
-      {},
-      {},
-      emptyRubricPicker(),
-      unavailableSigningBackend(),
-      null,
-      undefined,
-      inMemoryVersionCheck(),
-      undefined,
-      undefined,
+    const { preferences } = renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+      settings: {},
+      certificates: {},
+      rubrics: emptyRubricPicker(),
+      signer: unavailableSigningBackend(),
+      invoked: null,
+      versions: inMemoryVersionCheck(),
       destinations,
-    );
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });

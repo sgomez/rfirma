@@ -52,25 +52,24 @@ function renderOnLinux({
   store = inMemoryRecents(recentRows) as RecentsStore,
 } = {}) {
   const titlebar = inMemoryNativeTitlebar();
-  renderApp(
-    store,
-    pdfNames.map((name) => document(name)),
-    pdfNames.length === 0
-      ? unavailablePdfSource()
-      : pdfsOf(Object.fromEntries(pdfNames.map((name) => [name, 1]))),
-    {},
-    emptyCertificateStore(),
-    emptyRubricPicker(),
-    unavailableSigningBackend(),
-    null,
-    inMemoryDocumentDrops(null),
-    inMemoryVersionCheck(),
+  renderApp({
+    recents: store,
+    documents: pdfNames.map((name) => document(name)),
+    pdfs:
+      pdfNames.length === 0
+        ? unavailablePdfSource()
+        : pdfsOf(Object.fromEntries(pdfNames.map((name) => [name, 1]))),
+    settings: {},
+    certificates: emptyCertificateStore(),
+    rubrics: emptyRubricPicker(),
+    signer: unavailableSigningBackend(),
+    invoked: null,
+    drops: inMemoryDocumentDrops(null),
+    versions: inMemoryVersionCheck(),
     externalDestinations,
     status,
-    undefined,
-    undefined,
     titlebar,
-  );
+  });
   const press = (action: TitlebarActionName) => act(() => titlebar.press({ action }));
   const pressRecent = (path: string) => act(() => titlebar.press({ action: "recent", path }));
   return { titlebar, press, pressRecent };

@@ -73,7 +73,11 @@ describe("isOpenShortcut", () => {
 describe("App, el atajo Ctrl+O", () => {
   it("opens the system dialog and puts the chosen PDF in a tab", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 2 }));
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+    });
 
     await user.keyboard("{Control>}o{/Control}");
 
@@ -82,7 +86,11 @@ describe("App, el atajo Ctrl+O", () => {
 
   it("does nothing while About is open", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 2 }));
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+    });
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Acerca de rFirma" }));
     const about = screen.getByRole("dialog");
@@ -100,7 +108,11 @@ describe("App, el atajo Ctrl+O", () => {
     ["Estado de rFirma", "heading", "Estado de rFirma"],
   ] as const)("does nothing in %s", async (entry, role, name) => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 2 }));
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+    });
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: entry }));
     await screen.findByRole(role, { name });

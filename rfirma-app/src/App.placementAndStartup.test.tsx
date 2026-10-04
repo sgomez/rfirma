@@ -24,13 +24,13 @@ describe("App · Firma visible, en qué páginas", () => {
 
   async function openVisible() {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 8 }),
-      {},
-      { list: async () => [remembered] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 8 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+    });
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await within(panel).findByRole("button", { name: "Firmar" });
@@ -96,13 +96,13 @@ describe("App · Firma visible, en qué páginas", () => {
 
   it("places the box on a document opened with the switch already on", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("primero.pdf"), document("segundo.pdf")],
-      pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
-      {},
-      { list: async () => [remembered] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("primero.pdf"), document("segundo.pdf")],
+      pdfs: pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+    });
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await within(panel).findByRole("button", { name: "Firmar" });
@@ -124,13 +124,13 @@ describe("App · Firma visible, en qué páginas", () => {
 
   it("places the box on page 1 of a document opened while another was on page 3", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("primero.pdf"), document("segundo.pdf")],
-      pdfsOf({ "primero.pdf": 5, "segundo.pdf": 5 }),
-      {},
-      { list: async () => [remembered] },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("primero.pdf"), document("segundo.pdf")],
+      pdfs: pdfsOf({ "primero.pdf": 5, "segundo.pdf": 5 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+    });
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await within(panel).findByRole("button", { name: "Firmar" });
@@ -163,7 +163,11 @@ describe("App · Firma visible, en qué páginas", () => {
 describe("App, sin un certificado elegido todavía", () => {
   it("draws no box and keeps the visible-signature switch disabled", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 3 }));
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("factura.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 3 }),
+    });
 
     await openPdf(user);
     await screen.findByRole("document", { name: "Hoja del documento" });
@@ -184,16 +188,21 @@ describe("App, sin un certificado elegido todavía", () => {
  */
 describe("App, invocada con un documento", () => {
   it("opens the invoked PDF in the full window, just like a dropped one", async () => {
-    renderApp(
-      inMemoryRecents(),
-      [],
-      pdfsOf({ "contrato.pdf": 3 }),
-      {},
-      emptyCertificateStore(),
-      emptyRubricPicker(),
-      unavailableSigningBackend(),
-      { document: document("contrato.pdf"), alsoEntering: [], failure: null, discarded: 0 },
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: pdfsOf({ "contrato.pdf": 3 }),
+      settings: {},
+      certificates: emptyCertificateStore(),
+      rubrics: emptyRubricPicker(),
+      signer: unavailableSigningBackend(),
+      invoked: {
+        document: document("contrato.pdf"),
+        alsoEntering: [],
+        failure: null,
+        discarded: 0,
+      },
+    });
 
     await screen.findByRole("region", { name: "Panel de firma" });
     expect(screen.getByRole("tab", { name: "contrato.pdf", selected: true })).toBeInTheDocument();
@@ -225,17 +234,17 @@ describe("App, invocada con un documento", () => {
       },
     };
 
-    renderApp(
-      inMemoryRecents(),
-      [],
-      pdfsOf({ "contrato.pdf": 3 }),
-      { rememberActivity: false },
-      emptyCertificateStore(),
-      emptyRubricPicker(),
-      unavailableSigningBackend(),
-      null,
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: pdfsOf({ "contrato.pdf": 3 }),
+      settings: { rememberActivity: false },
+      certificates: emptyCertificateStore(),
+      rubrics: emptyRubricPicker(),
+      signer: unavailableSigningBackend(),
+      invoked: null,
       drops,
-    );
+    });
 
     // Los ajustes ya han llegado, así que el efecto se ha rehecho: la lectura
     // de la invocación sigue viva y no se ha vuelto a pedir.
@@ -254,21 +263,21 @@ describe("App, invocada con un documento", () => {
 
   /** ID-158: no arranca ningún modo especial, abre la ventana y lo dice. */
   it("opens the normal window and says so when the argument is not a PDF", async () => {
-    renderApp(
-      inMemoryRecents(),
-      [],
-      unavailablePdfSource(),
-      {},
-      emptyCertificateStore(),
-      emptyRubricPicker(),
-      unavailableSigningBackend(),
-      {
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: unavailablePdfSource(),
+      settings: {},
+      certificates: emptyCertificateStore(),
+      rubrics: emptyRubricPicker(),
+      signer: unavailableSigningBackend(),
+      invoked: {
         document: null,
         alsoEntering: [],
         failure: { situation: "notAPdf", detail: "el fichero no es un PDF" },
         discarded: 0,
       },
-    );
+    });
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Ese fichero no es un PDF");
     expect(screen.getByRole("navigation", { name: "Documentos abiertos" })).toBeInTheDocument();
@@ -282,18 +291,18 @@ describe("App, invocada con un documento", () => {
    */
   describe("the new-version notice", () => {
     const withVersionCheck = (versions: VersionCheck) =>
-      renderApp(
-        inMemoryRecents(),
-        [],
-        unavailablePdfSource(),
-        {},
-        emptyCertificateStore(),
-        emptyRubricPicker(),
-        unavailableSigningBackend(),
-        null,
-        inMemoryDocumentDrops(),
+      renderApp({
+        recents: inMemoryRecents(),
+        documents: [],
+        pdfs: unavailablePdfSource(),
+        settings: {},
+        certificates: emptyCertificateStore(),
+        rubrics: emptyRubricPicker(),
+        signer: unavailableSigningBackend(),
+        invoked: null,
+        drops: inMemoryDocumentDrops(),
         versions,
-      );
+      });
 
     it("shows a strip under the header, and nothing modal, when there is a new version", async () => {
       withVersionCheck(inMemoryVersionCheck({ version: "0.4.1", installable: false }));
@@ -317,18 +326,18 @@ describe("App, invocada con un documento", () => {
      * comprobación sigue corriendo, pero la franja no se monta.
      */
     it("says nothing when Avisar de versiones nuevas is turned off", async () => {
-      renderApp(
-        inMemoryRecents(),
-        [],
-        unavailablePdfSource(),
-        { notifyNewVersion: false },
-        emptyCertificateStore(),
-        emptyRubricPicker(),
-        unavailableSigningBackend(),
-        null,
-        inMemoryDocumentDrops(),
-        inMemoryVersionCheck({ version: "0.4.1", installable: false }),
-      );
+      renderApp({
+        recents: inMemoryRecents(),
+        documents: [],
+        pdfs: unavailablePdfSource(),
+        settings: { notifyNewVersion: false },
+        certificates: emptyCertificateStore(),
+        rubrics: emptyRubricPicker(),
+        signer: unavailableSigningBackend(),
+        invoked: null,
+        drops: inMemoryDocumentDrops(),
+        versions: inMemoryVersionCheck({ version: "0.4.1", installable: false }),
+      });
 
       await screen.findByRole("navigation", { name: "Documentos abiertos" });
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -445,18 +454,18 @@ describe("App, invocada con un documento", () => {
       });
 
       it("offers nothing in the strip when notify is off, but About still shows the status", async () => {
-        renderApp(
-          inMemoryRecents(),
-          [],
-          unavailablePdfSource(),
-          { notifyNewVersion: false },
-          emptyCertificateStore(),
-          emptyRubricPicker(),
-          unavailableSigningBackend(),
-          null,
-          inMemoryDocumentDrops(),
-          inMemoryVersionCheck(installable),
-        );
+        renderApp({
+          recents: inMemoryRecents(),
+          documents: [],
+          pdfs: unavailablePdfSource(),
+          settings: { notifyNewVersion: false },
+          certificates: emptyCertificateStore(),
+          rubrics: emptyRubricPicker(),
+          signer: unavailableSigningBackend(),
+          invoked: null,
+          drops: inMemoryDocumentDrops(),
+          versions: inMemoryVersionCheck(installable),
+        });
 
         await screen.findByRole("navigation", { name: "Documentos abiertos" });
         expect(screen.queryByRole("button", { name: "Actualizar ahora" })).not.toBeInTheDocument();
@@ -510,20 +519,20 @@ describe("App, el triángulo de aviso del menú", () => {
 
   it("lights up at startup when Firma en sedes is Sin configurar", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [],
-      unavailablePdfSource(),
-      {},
-      emptyCertificateStore(),
-      emptyRubricPicker(),
-      unavailableSigningBackend(),
-      null,
-      inMemoryDocumentDrops(null),
-      inMemoryVersionCheck(),
-      unavailableExternalDestinationOpener(),
-      memoryStatus(rowsWithSitesUnconfigured()),
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: unavailablePdfSource(),
+      settings: {},
+      certificates: emptyCertificateStore(),
+      rubrics: emptyRubricPicker(),
+      signer: unavailableSigningBackend(),
+      invoked: null,
+      drops: inMemoryDocumentDrops(null),
+      versions: inMemoryVersionCheck(),
+      externalDestinations: unavailableExternalDestinationOpener(),
+      status: memoryStatus(rowsWithSitesUnconfigured()),
+    });
 
     await user.click(
       await screen.findByRole("button", { name: "Estado de rFirma: requiere atención" }),
@@ -537,20 +546,20 @@ describe("App, el triángulo de aviso del menú", () => {
 
   it("stays off when the sites open AutoFirma, the trap a naive implementation breaks", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [],
-      unavailablePdfSource(),
-      {},
-      emptyCertificateStore(),
-      emptyRubricPicker(),
-      unavailableSigningBackend(),
-      null,
-      inMemoryDocumentDrops(null),
-      inMemoryVersionCheck(),
-      unavailableExternalDestinationOpener(),
-      memoryStatus(rowsWithSitesOpeningAutoFirma()),
-    );
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: unavailablePdfSource(),
+      settings: {},
+      certificates: emptyCertificateStore(),
+      rubrics: emptyRubricPicker(),
+      signer: unavailableSigningBackend(),
+      invoked: null,
+      drops: inMemoryDocumentDrops(null),
+      versions: inMemoryVersionCheck(),
+      externalDestinations: unavailableExternalDestinationOpener(),
+      status: memoryStatus(rowsWithSitesOpeningAutoFirma()),
+    });
 
     await user.click(await screen.findByRole("button", { name: "Menú" }));
 
