@@ -175,7 +175,7 @@ describe("App", () => {
     await waitFor(() => expect(refused).toHaveBeenCalledOnce());
     expect(remember).toHaveAttribute("aria-checked", "true");
     const notice = await screen.findByRole("alert");
-    expect(notice).toHaveTextContent("No hemos podido guardar el ajuste");
+    expect(notice).toHaveTextContent("Algo ha fallado");
     expect(screen.getByRole("tabpanel", { name: "Firma" })).toContainElement(notice);
     expect(screen.getByText("no se deja escribir")).toBeInTheDocument();
   });
@@ -231,7 +231,7 @@ describe("App", () => {
     );
     // El mensaje es el del fallo clasificado, y **no** el de «no hay ninguno».
     expect(within(panel).getByRole("alert")).toHaveTextContent(
-      "No hemos podido cargar el módulo de la tarjeta",
+      "No se ha podido cargar el módulo de la tarjeta",
     );
     expect(within(panel).queryByText("Sin certificados")).toBeNull();
     expect(within(panel).getByRole("button", { name: "Volver a buscar" })).toBeInTheDocument();
@@ -450,7 +450,7 @@ describe("App", () => {
 
     await openPdf(user);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("No hemos podido leer el documento");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se ha podido leer el documento");
   });
 
   it("repaints a document when its tab is chosen again, one after another", async () => {

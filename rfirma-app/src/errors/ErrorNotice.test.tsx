@@ -26,7 +26,7 @@ function renderIn(language: LanguageTag, children: ReactNode) {
  * `t()` alguna vez.
  */
 const RAW_DETAIL =
-  "CKR_PIN_INCORRECT (0x000000A0) errors.situations.unknown.title " +
+  "CKR_PIN_INCORRECT (0x000000A0) errors.messages.retry.title " +
   "es.gob.afirma.core.AOException: Error en la postfirma PAdES del documento " +
   "adjunto, con un mensaje incrustado en el código y sin ningún .properties " +
   "localizado detrás del que tirar para enseñarlo en otro idioma.";
@@ -35,13 +35,13 @@ describe("el aviso de error", () => {
   it("enseña la situación traducida, y no el texto del token", () => {
     renderIn("es", <ErrorNotice situation="unknown" technicalDetail={RAW_DETAIL} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("No se ha podido completar la operación");
+    expect(screen.getByRole("alert")).toHaveTextContent("Algo ha fallado");
   });
 
   it("traduce la situación al idioma de la aplicación", () => {
-    renderIn("en", <ErrorNotice situation="unknown" technicalDetail={RAW_DETAIL} />);
+    renderIn("en", <ErrorNotice situation="incorrectPin" technicalDetail={RAW_DETAIL} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("We couldn't complete the operation");
+    expect(screen.getByRole("alert")).toHaveTextContent("The PIN isn't correct");
   });
 
   it("enseña el texto original crudo: ni traducido ni recortado", () => {
@@ -53,7 +53,7 @@ describe("el aviso de error", () => {
 
     expect(raw.textContent).toBe(RAW_DETAIL);
     // La parte del texto que es una clave de traducción sigue siendo texto.
-    expect(raw.textContent).toContain("errors.situations.unknown.title");
+    expect(raw.textContent).toContain("errors.messages.retry.title");
   });
 
   it("no toca el texto original al cambiar de idioma", () => {
@@ -92,12 +92,41 @@ describe("el aviso de error", () => {
     const alert = screen.getByRole("alert");
     const text = alert.textContent ?? "";
     expect(text.indexOf("No se ha podido firmar")).toBeLessThan(
-      text.indexOf("No encontramos la tarjeta"),
+      text.indexOf("Falta la tarjeta o el certificado"),
     );
-    expect(text.indexOf("No encontramos la tarjeta")).toBeLessThan(
+    expect(text.indexOf("Falta la tarjeta o el certificado")).toBeLessThan(
       text.indexOf("El documento sigue como estaba"),
     );
     expect(screen.getByRole("button", { name: "Copiar detalle" })).toBeInTheDocument();
+  });
+
+  it("leaves the vague cause out of a signing failure it cannot explain", () => {
+    renderIn(
+      "es",
+      <ErrorNotice situation="unknown" technicalDetail={RAW_DETAIL} documentUnchanged />,
+    );
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("No se ha podido firmar");
+    expect(alert).not.toHaveTextContent("Algo ha fallado");
+    expect(alert).toHaveTextContent("El documento sigue como estaba");
+  });
+
+  it("tells an expired certificate with its own title and remedy", () => {
+    renderIn("es", <ErrorNotice situation="certificateExpired" technicalDetail={RAW_DETAIL} />);
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Tu certificado ha caducado");
+    expect(alert).toHaveTextContent("Renuévalo con su emisora.");
+  });
+
+  it("tells a revoked certificate in one line and keeps its technical detail", () => {
+    renderIn("es", <ErrorNotice situation="certificateRevoked" technicalDetail={RAW_DETAIL} />);
+
+    const alert = screen.getByRole("alert");
+    expect(alert.querySelectorAll("p.rf-prose")).toHaveLength(0);
+    expect(alert).toHaveTextContent("Ese certificado no sirve para firmar");
+    expect(screen.getByText(RAW_DETAIL)).toBeInTheDocument();
   });
 
   it("copies the raw technical detail to the clipboard", async () => {
@@ -126,7 +155,7 @@ describe("el aviso de error", () => {
       "es",
       <ErrorNotice situation="tokenAbsent" technicalDetail={RAW_DETAIL} documentUnchanged />,
     );
-    expect(screen.queryByText(/Comprueba que sigue insertada/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Comprueba la tarjeta y el lector/)).not.toBeInTheDocument();
   });
 
   it("does not offer help or reload on a signing failure", () => {
@@ -143,14 +172,18 @@ describe("el aviso de error", () => {
     expect(screen.queryByRole("button", { name: /Recargar/ })).not.toBeInTheDocument();
   });
 
-  it.each(["bridgeFailed", "sealMismatch", "unknown", "renderFailed"] as const)(
-    "enseña el enlace a Comentarios y ayuda en la situación %s",
-    (situation) => {
-      renderIn("es", <ErrorNotice situation={situation} technicalDetail={RAW_DETAIL} />);
+  it.each([
+    "bridgeFailed",
+    "sealMismatch",
+    "unknown",
+    "renderFailed",
+    "settingNotSaved",
+    "expiredSession",
+  ] as const)("enseña el enlace a Comentarios y ayuda en la situación %s", (situation) => {
+    renderIn("es", <ErrorNotice situation={situation} technicalDetail={RAW_DETAIL} />);
 
-      expect(screen.getByRole("button", { name: /Comentarios y ayuda/ })).toBeInTheDocument();
-    },
-  );
+    expect(screen.getByRole("button", { name: /Comentarios y ayuda/ })).toBeInTheDocument();
+  });
 
   it.each([
     "incorrectPin",

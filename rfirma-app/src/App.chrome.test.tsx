@@ -358,7 +358,7 @@ describe("App", () => {
     await user.click(await screen.findByRole("button", { name: "Vaciar la lista" }));
 
     const notice = await screen.findByRole("alert");
-    expect(notice).toHaveTextContent("No hemos podido vaciar la lista");
+    expect(notice).toHaveTextContent("Algo ha fallado");
     expect(screen.getByRole("group", { name: "Privacidad" })).toContainElement(notice);
     expect(screen.queryByText("a.pdf")).not.toBeInTheDocument();
   });

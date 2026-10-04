@@ -1,5 +1,6 @@
 //! El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand` y las constantes de sus relojes. Sin React.
 
+import type { ErrorSituation } from "../errors/errorMessage";
 import type { Catalog } from "../i18n/catalog";
 import type { Certificate } from "../signing/certificate";
 import type { SigningOrder } from "../signing/flow";
@@ -54,11 +55,11 @@ export interface SiteDocument {
  * backend (ADR-0009).
  *
  * Las propias de la sede salen de `sede.refusals`; las del token, el puente y
- * el documento se cuentan con el título que ya les da el escritorio.
+ * el documento se cuentan con el título del mensaje que les da el escritorio.
  */
 export type RefusalSituation = keyof Catalog["sede"]["refusals"] | NamedByTheDesk;
 
-/** Las situaciones del escritorio que la ventana de sede cuenta con su mismo título. */
+/** Las situaciones del escritorio que la ventana de sede cuenta con el título de su mensaje. */
 export const NAMED_BY_THE_DESK = [
   "incorrectPin",
   "pinLocked",
@@ -85,7 +86,7 @@ export const NAMED_BY_THE_DESK = [
   "removalNotSupported",
   "noKeyring",
   "keyringPinMissing",
-] as const satisfies readonly (keyof Catalog["errors"]["situations"])[];
+] as const satisfies readonly ErrorSituation[];
 
 type NamedByTheDesk = (typeof NAMED_BY_THE_DESK)[number];
 

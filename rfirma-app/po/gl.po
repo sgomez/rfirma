@@ -78,336 +78,143 @@ msgstr "O documento segue igual: non se gardou nada."
 msgid "errors.signingFailedTitle"
 msgstr "Non se puido asinar"
 
-msgid "errors.situations.unknown.title"
-msgstr "Non se puido completar a operación"
+#. Mensaje genérico: reintentar. Lo usan unknown, expiredSession, sealMismatch, bridgeFailed, settingNotSaved, activityNotForgotten, handlerListUnreadable y handlerListUnwritable.
+msgid "errors.messages.retry.title"
+msgstr "Algo fallou"
 
-msgid "errors.situations.unknown.body"
-msgstr ""
-"Téntao de novo. Se segue a ocorrer, achega o detalle técnico ao informe do "
-"fallo."
+#. «Comentarios y ayuda» es header.help, el botón que sale debajo.
+msgid "errors.messages.retry.body"
+msgstr "Téntao de novo. Se se repite, comparte o detalle técnico en «Comentarios e axuda»."
 
-msgid "errors.situations.handlerNotAvailable.title"
+msgid "errors.messages.handlerNotAvailable.title"
 msgstr "Non se pode cambiar quen atende as ligazóns"
 
-msgid "errors.situations.handlerNotAvailable.body"
-msgstr ""
-"Esta versión de rFirma non pode escribir esa escolla: cámbiase nos axustes "
-"do escritorio."
+msgid "errors.messages.handlerNotAvailable.body"
+msgstr "Esta versión de rFirma non pode escribir esa escolla: cámbiase nos axustes do escritorio."
 
-msgid "errors.situations.handlerListUnreadable.title"
-msgstr "Non se puido ler a escolla do escritorio"
+#. Mensaje genérico: elegir otra imagen de rúbrica. Lo usan notAnAcceptedImage, damagedImage, imageTooLarge, sourceUnreadable, storeUnwritable y storeUnreadable.
+msgid "errors.messages.otherImage.title"
+msgstr "Non se puido usar a imaxe"
 
-msgid "errors.situations.handlerListUnreadable.body"
-msgstr ""
-"O ficheiro onde o escritorio a garda non se puido ler, así que se deixou "
-"como estaba."
+msgid "errors.messages.otherImage.body"
+msgstr "Escolle un PNG ou un JPEG que non sexa moi grande."
 
-msgid "errors.situations.handlerListUnwritable.title"
-msgstr "Non se puido gardar quen atende as ligazóns"
-
-msgid "errors.situations.handlerListUnwritable.body"
-msgstr "O ficheiro onde o escritorio a garda non se puido escribir."
-
-msgid "errors.situations.notAnAcceptedImage.title"
-msgstr "Esa imaxe non vale como rúbrica"
-
-msgid "errors.situations.notAnAcceptedImage.body"
-msgstr "A rúbrica ten que ser un PNG ou un JPEG."
-
-msgid "errors.situations.damagedImage.title"
-msgstr "Non puidemos abrir a imaxe"
-
-msgid "errors.situations.damagedImage.body"
-msgstr ""
-"O ficheiro é un PNG ou un JPEG, pero está danado. Proba con outra copia."
-
-msgid "errors.situations.imageTooLarge.title"
-msgstr "A imaxe é demasiado grande"
-
-msgid "errors.situations.imageTooLarge.body"
-msgstr "Escolle unha imaxe máis pequena ou gárdaa con menos resolución."
-
-msgid "errors.situations.sourceUnreadable.title"
-msgstr "Non puidemos ler o ficheiro que escolliches"
-
-msgid "errors.situations.sourceUnreadable.body"
-msgstr "Comproba que segue onde estaba e volve escollelo."
-
-msgid "errors.situations.storeUnwritable.title"
-msgstr "Non puidemos gardar a túa rúbrica"
-
-msgid "errors.situations.storeUnwritable.body"
-msgstr ""
-"Volve escoller a imaxe. Se segue a ocorrer, achega o detalle técnico ao "
-"informe do fallo."
-
-msgid "errors.situations.storeUnreadable.title"
-msgstr "Non puidemos ler a túa rúbrica gardada"
-
-msgid "errors.situations.storeUnreadable.body"
-msgstr "Volve escoller a imaxe para substituíla."
-
-msgid "errors.situations.incorrectPin.title"
+msgid "errors.messages.incorrectPin.title"
 msgstr "O PIN non é correcto"
 
-msgid "errors.situations.incorrectPin.body"
-msgstr "Volve introducilo. A tarxeta bloquéase tras varios intentos fallidos."
+msgid "errors.messages.incorrectPin.body"
+msgstr "A tarxeta bloquéase tras varios intentos fallidos."
 
-msgid "errors.situations.pinLocked.title"
+msgid "errors.messages.pinLocked.title"
 msgstr "A tarxeta está bloqueada"
 
-msgid "errors.situations.pinLocked.body"
-msgstr ""
-"Bloqueouse tras demasiados intentos fallidos co PIN. Desbloquéaa co seu PUK "
-"antes de volver asinar."
+msgid "errors.messages.pinLocked.body"
+msgstr "Desbloquéaa co PUK."
 
-msgid "errors.situations.tokenAbsent.title"
-msgstr "Non atopamos a tarxeta"
+#. Mensaje genérico: revisar la tarjeta y volver a buscar. Lo usan tokenAbsent y certificateNotFound.
+msgid "errors.messages.checkToken.title"
+msgstr "Falta a tarxeta ou o certificado"
 
-msgid "errors.situations.tokenAbsent.body"
-msgstr ""
-"Comproba que segue inserida e que o lector está conectado, e téntao de novo."
+msgid "errors.messages.checkToken.body"
+msgstr "Comproba a tarxeta e o lector, e volve buscar."
 
-msgid "errors.situations.expiredSession.title"
-msgstr "A sesión coa tarxeta caducou"
+msgid "errors.messages.moduleNotFound.title"
+msgstr "Non se puido cargar o módulo da tarxeta"
 
-msgid "errors.situations.expiredSession.body"
-msgstr ""
-"Téntao de novo: abrirase unha sesión nova e pedirémosche o PIN outra vez."
+msgid "errors.messages.moduleNotFound.body"
+msgstr "Comproba a súa ruta ou escolle outro módulo."
 
-msgid "errors.situations.moduleNotFound.title"
-msgstr "Non puidemos cargar o módulo da tarxeta"
+msgid "errors.messages.certificateExpired.title"
+msgstr "O teu certificado caducou"
 
-msgid "errors.situations.moduleNotFound.body"
-msgstr "Comproba que o módulo PKCS#11 está onde dixeches, ou escolle outro."
+msgid "errors.messages.certificateExpired.body"
+msgstr "Renóvao coa súa emisora."
 
-msgid "errors.situations.certificateNotFound.title"
-msgstr "O certificado xa non está na tarxeta"
+#. Mensaje genérico de un solo renglón, sin cuerpo: elegir otro certificado. Lo usan certificateRevoked, certificateNotYetValid, certificateUnreadable, keyKindUnsupported y mechanismNotOffered.
+msgid "errors.messages.otherCertificate.title"
+msgstr "Ese certificado non serve para asinar"
 
-msgid "errors.situations.certificateNotFound.body"
-msgstr "Volve buscar os certificados e escolle un dos que haxa."
+#. Mensaje genérico: elegir otro fichero .p12 o .pfx. Lo usan pkcs12Unreadable y pkcs12NoPrivateKey.
+msgid "errors.messages.otherCertificateFile.title"
+msgstr "Ese ficheiro non serve como certificado"
 
-msgid "errors.situations.certificateExpired.title"
-msgstr "O certificado caducou"
+msgid "errors.messages.otherCertificateFile.body"
+msgstr "Escolle un .p12 ou .pfx coa súa clave privada."
 
-msgid "errors.situations.certificateExpired.body"
-msgstr ""
-"Un certificado caducado non serve para asinar. Renóvao coa súa emisora e "
-"téntao de novo."
-
-msgid "errors.situations.certificateNotYetValid.title"
-msgstr "O certificado aínda non está en vigor"
-
-msgid "errors.situations.certificateNotYetValid.body"
-msgstr ""
-"Aínda non comezou o seu período de validez, así que non serve para asinar."
-
-msgid "errors.situations.certificateRevoked.title"
-msgstr "O certificado está revogado"
-
-msgid "errors.situations.certificateRevoked.body"
-msgstr ""
-"A súa emisora revogouno, así que non serve para asinar. Necesitas un novo."
-
-msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "Non puidemos ler o ficheiro"
-
-msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "Iso non é un certificado en formato .p12 ou .pfx."
-
-msgid "errors.situations.incorrectPkcs12Password.title"
+#. Un solo renglón, sin cuerpo.
+msgid "errors.messages.incorrectPkcs12Password.title"
 msgstr "O contrasinal non é correcto"
 
-msgid "errors.situations.incorrectPkcs12Password.body"
-msgstr "Compróbao e vólveo intentar."
+msgid "errors.messages.removalNotSupported.title"
+msgstr "Non se pode quitar só este certificado"
 
-#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
-#. msgid "errors.situations.pkcs12NoPrivateKey.body".
-msgid "errors.situations.pkcs12NoPrivateKey.title"
-msgstr "Ese ficheiro non trae ningunha clave privada"
+msgid "errors.messages.removalNotSupported.body"
+msgstr "Quitalo borraría todos os do Almacén de rFirma."
 
-#. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
-#. hay msgid "errors.situations.keyKindUnsupported.body".
-msgid "errors.situations.keyKindUnsupported.title"
-msgstr "Ese certificado non é compatible con rFirma"
-
-msgid "errors.situations.mechanismNotOffered.title"
-msgstr "O token non admite ese algoritmo de sinatura"
-
-msgid "errors.situations.mechanismNotOffered.body"
-msgstr "Proba con outro certificado ou pídelle á sede que use SHA-256 con RSA."
-
-msgid "errors.situations.removalNotSupported.title"
-msgstr "Ese certificado non se pode quitar por separado"
-
-msgid "errors.situations.removalNotSupported.body"
-msgstr ""
-"O Almacén de rFirma é unha única base compartida: quitalo levaría tamén os "
-"demais certificados instalados. Aínda non hai xeito de borrar só un."
-
-msgid "errors.situations.certificateUnreadable.title"
-msgstr "Non puidemos ler o certificado"
-
-msgid "errors.situations.certificateUnreadable.body"
-msgstr ""
-"O que hai na tarxeta non é un certificado que saibamos ler. Proba con outro."
-
-msgid "errors.situations.notAPdf.title"
+#. Un solo renglón, sin cuerpo.
+msgid "errors.messages.notAPdf.title"
 msgstr "Ese ficheiro non é un PDF"
 
-msgid "errors.situations.notAPdf.body"
-msgstr "rFirma asina PDF. Escolle un documento PDF e téntao de novo."
-
-msgid "errors.situations.documentEncrypted.title"
+msgid "errors.messages.documentEncrypted.title"
 msgstr "O PDF está protexido"
 
-msgid "errors.situations.documentEncrypted.body"
-msgstr ""
-"Está cifrado ou ten os permisos restrinxidos, así que non se pode asinar. "
-"Ábreo co seu contrasinal, gárdao sen protección e téntao de novo."
+msgid "errors.messages.documentEncrypted.body"
+msgstr "Gárdao sen protección e volve abrilo."
 
-msgid "errors.situations.documentCertified.title"
-msgstr "O PDF está certificado"
+#. Es el aviso de seguridad: en la tarjeta de error de firma y en la ventana de sede solo se ve el título.
+msgid "errors.messages.documentCertified.title"
+msgstr "Asinalo invalidaría a certificación do autor"
 
-msgid "errors.situations.documentCertified.body"
-msgstr ""
-"O seu autor asinouno prohibindo os cambios, así que engadir unha sinatura "
-"invalidaría a súa. Pídelle unha copia sen certificar."
+msgid "errors.messages.documentCertified.body"
+msgstr "Pídelle ao autor unha copia sen certificar."
 
-msgid "errors.situations.documentUnreadable.title"
-msgstr "Non puidemos ler o documento"
+#. Mensaje genérico: volver a abrir el documento. Lo usan documentUnreadable y droppedFileUnreadable.
+msgid "errors.messages.reopenDocument.title"
+msgstr "Non se puido ler o documento"
 
-msgid "errors.situations.documentUnreadable.body"
-msgstr "Comproba que segue onde estaba e volve abrilo."
+msgid "errors.messages.reopenDocument.body"
+msgstr "Volve abrilo con «Abrir PDF…»."
 
-msgid "errors.situations.droppedFileUnreadable.title"
-msgstr "Non puidemos ler o ficheiro que soltaches"
-
-msgid "errors.situations.droppedFileUnreadable.body"
-msgstr ""
-"Arrastrar non nos dá permiso para ler de calquera cartafol. Ábreo co botón "
-"de abrir, que si nolo dá."
-
-msgid "errors.situations.droppedSomeDiscarded.title"
+msgid "errors.messages.droppedSomeDiscarded.title"
 msgstr "Algúns ficheiros non se engadiron"
 
-msgid "errors.situations.droppedSomeDiscarded.body"
-msgstr ""
-"Os demais PDF que soltaches abríronse en lapelas. Os que non eran PDF non se "
-"engadiron."
+msgid "errors.messages.droppedSomeDiscarded.body"
+msgstr "Só se abren os PDF."
 
-msgid "errors.situations.boxOutOfPage.title"
-msgstr "O cadro sae da páxina"
+#. Mensaje genérico de un solo renglón, sin cuerpo: recolocar la firma visible. Lo usan boxOutOfPage y pageOutOfDocument.
+msgid "errors.messages.moveVisibleSignature.title"
+msgstr "A sinatura visible sae do documento"
 
-msgid "errors.situations.boxOutOfPage.body"
-msgstr ""
-"Arrástrao dentro da páxina e volve asinar. Se o deixásemos así, quedaría "
-"recortado no PDF sen avisar."
-
-msgid "errors.situations.pageOutOfDocument.title"
-msgstr "O documento non chega a esa páxina"
-
-msgid "errors.situations.pageOutOfDocument.body"
-msgstr ""
-"Escolle unha páxina que exista no documento e volve asinar. Se o deixásemos "
-"así, a sinatura visible acabaría na última páxina sen avisar."
-
-msgid "errors.situations.sealMismatch.title"
-msgstr "A sinatura interrompeuse a medias"
-
-msgid "errors.situations.sealMismatch.body"
-msgstr ""
-"O que preparamos ao comezar e o que recibimos ao rematar non coinciden, así "
-"que paramos antes de escribir nada. Volve asinar o documento."
-
-msgid "errors.situations.bridgeFailed.title"
-msgstr "Non puidemos preparar a sinatura"
-
-msgid "errors.situations.bridgeFailed.body"
-msgstr ""
-"Fallou o compoñente que arma o PDF asinado. Téntao de novo e, se segue a "
-"ocorrer, achega o detalle técnico ao informe do fallo."
-
-msgid "errors.situations.renderFailed.title"
+msgid "errors.messages.renderFailed.title"
 msgstr "Esta pantalla deixou de funcionar"
 
-msgid "errors.situations.renderFailed.body"
-msgstr ""
-"Recarga a fiestra para continuar. Se segue a ocorrer, achega o detalle "
-"técnico ao informe do fallo."
+msgid "errors.messages.renderFailed.body"
+msgstr "Recarga a fiestra para continuar."
 
-msgid "errors.situations.folderMissing.title"
-msgstr "O cartafol de destino xa non está"
+#. Mensaje genérico: elegir otra carpeta de destino. Lo usan folderMissing, notAFolder, folderUnreadable y folderUnwritable.
+msgid "errors.messages.otherFolder.title"
+msgstr "O cartafol de destino non está dispoñible"
 
-msgid "errors.situations.folderMissing.body"
-msgstr ""
-"Non o creamos por ti: se o creásemos, o documento parecería gardado e non o "
-"estaría. Volve crealo ou escolle outro en Preferencias."
+msgid "errors.messages.otherFolder.body"
+msgstr "Escolle outro en Preferencias e volve asinar."
 
-msgid "errors.situations.notAFolder.title"
-msgstr "O destino non é un cartafol"
+msgid "errors.messages.noFreeName.title"
+msgstr "Hai demasiados documentos con ese nome"
 
-msgid "errors.situations.notAFolder.body"
-msgstr ""
-"Hai un ficheiro con ese nome onde esperabamos un cartafol. Escolle outro "
-"destino en Preferencias."
+msgid "errors.messages.noFreeName.body"
+msgstr "Move ou renomea os anteriores e volve asinar."
 
-msgid "errors.situations.folderUnreadable.title"
-msgstr "Non puidemos consultar o cartafol de destino"
+msgid "errors.messages.noKeyring.title"
+msgstr "O chaveiro do escritorio non responde"
 
-msgid "errors.situations.folderUnreadable.body"
-msgstr ""
-"Pode ser cousa dos permisos ou dunha unidade que non responde. Escolle outro "
-"destino en Preferencias."
+msgid "errors.messages.noKeyring.body"
+msgstr "Desbloquéao ou comproba que o teu escritorio ten un, e volve tentalo."
 
-msgid "errors.situations.folderUnwritable.title"
-msgstr "Non puidemos gardar o documento asinado"
+msgid "errors.messages.keyringPinMissing.title"
+msgstr "O chaveiro perdeu o PIN do Almacén"
 
-msgid "errors.situations.folderUnwritable.body"
-msgstr ""
-"A sinatura saíu ben, pero o ficheiro non se puido escribir no cartafol de "
-"destino. Escolle outro en Preferencias e volve asinar."
-
-msgid "errors.situations.noFreeName.title"
-msgstr "Xa hai demasiados documentos con ese nome"
-
-msgid "errors.situations.noFreeName.body"
-msgstr ""
-"Para non machacar ningún, paramos. Move ou renomea os anteriores e volve "
-"asinar."
-
-msgid "errors.situations.settingNotSaved.title"
-msgstr "Non puidemos gardar o axuste"
-
-msgid "errors.situations.settingNotSaved.body"
-msgstr ""
-"Volvemos ao valor anterior, que é o que segue gardado. Téntao de novo e, se "
-"segue a ocorrer, achega o detalle técnico ao informe do fallo."
-
-msgid "errors.situations.activityNotForgotten.title"
-msgstr "Non puidemos baleirar a lista"
-
-msgid "errors.situations.activityNotForgotten.body"
-msgstr ""
-"Os documentos recentes e o certificado seguen gardados. Téntao de novo e, se "
-"segue a ocorrer, achega o detalle técnico ao informe do fallo."
-
-msgid "errors.situations.noKeyring.title"
-msgstr "Non puidemos acceder ao chaveiro do escritorio"
-
-msgid "errors.situations.noKeyring.body"
-msgstr ""
-"rFirma precisa o chaveiro para gardar o certificado de forma protexida. "
-"Comproba que o teu escritorio ten un dispoñible, desbloquéao se cho pide, e "
-"volve tentalo."
-
-msgid "errors.situations.keyringPinMissing.title"
-msgstr "O chaveiro perdeu o PIN do Almacén de rFirma"
-
-msgid "errors.situations.keyringPinMissing.body"
-msgstr ""
-"Sen ese PIN non podemos abrir o almacén que xa tiñas. Vai a Preferencias → "
-"Certificados e báleiro para volver instalar os teus certificados desde cero."
+msgid "errors.messages.keyringPinMissing.body"
+msgstr "Baleira o Almacén en Preferencias → Certificados e volve instalar os teus certificados."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"

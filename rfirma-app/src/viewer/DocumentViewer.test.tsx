@@ -72,7 +72,7 @@ describe("el visor con documento", () => {
     );
 
     await waitFor(() => expect(renders).toHaveLength(1));
-    expect(screen.getByText("No hemos podido leer el documento")).toBeInTheDocument();
+    expect(screen.getByText("No se ha podido leer el documento")).toBeInTheDocument();
   });
 
   it("renders the first page and counts the rest", async () => {

@@ -11,6 +11,7 @@ import {
   FileIcon,
 } from "../design-system/icons";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
+import { errorText } from "../errors/errorMessage";
 import { formatSize } from "../signing/SigningPanel";
 import {
   OUTCOME_CLOSE_MS,
@@ -315,56 +316,8 @@ function RefusalSentence({
       return <>{t("sede.refusals.promptFailed", subject)}</>;
     case "unknown":
       return <>{t("sede.refusals.unknown", subject)}</>;
-    case "incorrectPin":
-      return <>{t("errors.situations.incorrectPin.title")}</>;
-    case "pinLocked":
-      return <>{t("errors.situations.pinLocked.title")}</>;
-    case "tokenAbsent":
-      return <>{t("errors.situations.tokenAbsent.title")}</>;
-    case "expiredSession":
-      return <>{t("errors.situations.expiredSession.title")}</>;
-    case "moduleNotFound":
-      return <>{t("errors.situations.moduleNotFound.title")}</>;
-    case "pkcs12Unreadable":
-      return <>{t("errors.situations.pkcs12Unreadable.title")}</>;
-    case "incorrectPkcs12Password":
-      return <>{t("errors.situations.incorrectPkcs12Password.title")}</>;
-    case "pkcs12NoPrivateKey":
-      return <>{t("errors.situations.pkcs12NoPrivateKey.title")}</>;
-    case "keyKindUnsupported":
-      return <>{t("errors.situations.keyKindUnsupported.title")}</>;
-    case "mechanismNotOffered":
-      return <>{t("errors.situations.mechanismNotOffered.title")}</>;
-    case "notAPdf":
-      return <>{t("errors.situations.notAPdf.title")}</>;
-    case "documentEncrypted":
-      return <>{t("errors.situations.documentEncrypted.title")}</>;
-    case "documentCertified":
-      return <>{t("errors.situations.documentCertified.title")}</>;
-    case "documentUnreadable":
-      return <>{t("errors.situations.documentUnreadable.title")}</>;
-    case "boxOutOfPage":
-      return <>{t("errors.situations.boxOutOfPage.title")}</>;
-    case "pageOutOfDocument":
-      return <>{t("errors.situations.pageOutOfDocument.title")}</>;
-    case "sealMismatch":
-      return <>{t("errors.situations.sealMismatch.title")}</>;
-    case "bridgeFailed":
-      return <>{t("errors.situations.bridgeFailed.title")}</>;
-    case "notAFolder":
-      return <>{t("errors.situations.notAFolder.title")}</>;
-    case "folderUnreadable":
-      return <>{t("errors.situations.folderUnreadable.title")}</>;
-    case "folderUnwritable":
-      return <>{t("errors.situations.folderUnwritable.title")}</>;
-    case "noFreeName":
-      return <>{t("errors.situations.noFreeName.title")}</>;
-    case "removalNotSupported":
-      return <>{t("errors.situations.removalNotSupported.title")}</>;
-    case "noKeyring":
-      return <>{t("errors.situations.noKeyring.title")}</>;
-    case "keyringPinMissing":
-      return <>{t("errors.situations.keyringPinMissing.title")}</>;
+    default:
+      return <>{errorText(situation, t).title}</>;
   }
 }
 

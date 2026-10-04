@@ -78,278 +78,142 @@ msgstr ""
 msgid "errors.signingFailedTitle"
 msgstr ""
 
-msgid "errors.situations.unknown.title"
+#. Mensaje genérico: reintentar. Lo usan unknown, expiredSession, sealMismatch, bridgeFailed, settingNotSaved, activityNotForgotten, handlerListUnreadable y handlerListUnwritable.
+msgid "errors.messages.retry.title"
 msgstr ""
 
-msgid "errors.situations.unknown.body"
+#. «Comentarios y ayuda» es header.help, el botón que sale debajo.
+msgid "errors.messages.retry.body"
 msgstr ""
 
-msgid "errors.situations.handlerNotAvailable.title"
+msgid "errors.messages.handlerNotAvailable.title"
 msgstr ""
 
-msgid "errors.situations.handlerNotAvailable.body"
+msgid "errors.messages.handlerNotAvailable.body"
 msgstr ""
 
-msgid "errors.situations.handlerListUnreadable.title"
+#. Mensaje genérico: elegir otra imagen de rúbrica. Lo usan notAnAcceptedImage, damagedImage, imageTooLarge, sourceUnreadable, storeUnwritable y storeUnreadable.
+msgid "errors.messages.otherImage.title"
 msgstr ""
 
-msgid "errors.situations.handlerListUnreadable.body"
+msgid "errors.messages.otherImage.body"
 msgstr ""
 
-msgid "errors.situations.handlerListUnwritable.title"
+msgid "errors.messages.incorrectPin.title"
 msgstr ""
 
-msgid "errors.situations.handlerListUnwritable.body"
+msgid "errors.messages.incorrectPin.body"
 msgstr ""
 
-msgid "errors.situations.notAnAcceptedImage.title"
+msgid "errors.messages.pinLocked.title"
 msgstr ""
 
-msgid "errors.situations.notAnAcceptedImage.body"
+msgid "errors.messages.pinLocked.body"
 msgstr ""
 
-msgid "errors.situations.damagedImage.title"
+#. Mensaje genérico: revisar la tarjeta y volver a buscar. Lo usan tokenAbsent y certificateNotFound.
+msgid "errors.messages.checkToken.title"
 msgstr ""
 
-msgid "errors.situations.damagedImage.body"
+msgid "errors.messages.checkToken.body"
 msgstr ""
 
-msgid "errors.situations.imageTooLarge.title"
+msgid "errors.messages.moduleNotFound.title"
 msgstr ""
 
-msgid "errors.situations.imageTooLarge.body"
+msgid "errors.messages.moduleNotFound.body"
 msgstr ""
 
-msgid "errors.situations.sourceUnreadable.title"
+msgid "errors.messages.certificateExpired.title"
 msgstr ""
 
-msgid "errors.situations.sourceUnreadable.body"
+msgid "errors.messages.certificateExpired.body"
 msgstr ""
 
-msgid "errors.situations.storeUnwritable.title"
+#. Mensaje genérico de un solo renglón, sin cuerpo: elegir otro certificado. Lo usan certificateRevoked, certificateNotYetValid, certificateUnreadable, keyKindUnsupported y mechanismNotOffered.
+msgid "errors.messages.otherCertificate.title"
 msgstr ""
 
-msgid "errors.situations.storeUnwritable.body"
+#. Mensaje genérico: elegir otro fichero .p12 o .pfx. Lo usan pkcs12Unreadable y pkcs12NoPrivateKey.
+msgid "errors.messages.otherCertificateFile.title"
 msgstr ""
 
-msgid "errors.situations.storeUnreadable.title"
+msgid "errors.messages.otherCertificateFile.body"
 msgstr ""
 
-msgid "errors.situations.storeUnreadable.body"
+#. Un solo renglón, sin cuerpo.
+msgid "errors.messages.incorrectPkcs12Password.title"
 msgstr ""
 
-msgid "errors.situations.incorrectPin.title"
+msgid "errors.messages.removalNotSupported.title"
 msgstr ""
 
-msgid "errors.situations.incorrectPin.body"
+msgid "errors.messages.removalNotSupported.body"
 msgstr ""
 
-msgid "errors.situations.pinLocked.title"
+#. Un solo renglón, sin cuerpo.
+msgid "errors.messages.notAPdf.title"
 msgstr ""
 
-msgid "errors.situations.pinLocked.body"
+msgid "errors.messages.documentEncrypted.title"
 msgstr ""
 
-msgid "errors.situations.tokenAbsent.title"
+msgid "errors.messages.documentEncrypted.body"
 msgstr ""
 
-msgid "errors.situations.tokenAbsent.body"
+#. Es el aviso de seguridad: en la tarjeta de error de firma y en la ventana de sede solo se ve el título.
+msgid "errors.messages.documentCertified.title"
 msgstr ""
 
-msgid "errors.situations.expiredSession.title"
+msgid "errors.messages.documentCertified.body"
 msgstr ""
 
-msgid "errors.situations.expiredSession.body"
+#. Mensaje genérico: volver a abrir el documento. Lo usan documentUnreadable y droppedFileUnreadable.
+msgid "errors.messages.reopenDocument.title"
 msgstr ""
 
-msgid "errors.situations.moduleNotFound.title"
+msgid "errors.messages.reopenDocument.body"
 msgstr ""
 
-msgid "errors.situations.moduleNotFound.body"
+msgid "errors.messages.droppedSomeDiscarded.title"
 msgstr ""
 
-msgid "errors.situations.certificateNotFound.title"
+msgid "errors.messages.droppedSomeDiscarded.body"
 msgstr ""
 
-msgid "errors.situations.certificateNotFound.body"
+#. Mensaje genérico de un solo renglón, sin cuerpo: recolocar la firma visible. Lo usan boxOutOfPage y pageOutOfDocument.
+msgid "errors.messages.moveVisibleSignature.title"
 msgstr ""
 
-msgid "errors.situations.certificateExpired.title"
+msgid "errors.messages.renderFailed.title"
 msgstr ""
 
-msgid "errors.situations.certificateExpired.body"
+msgid "errors.messages.renderFailed.body"
 msgstr ""
 
-msgid "errors.situations.certificateNotYetValid.title"
+#. Mensaje genérico: elegir otra carpeta de destino. Lo usan folderMissing, notAFolder, folderUnreadable y folderUnwritable.
+msgid "errors.messages.otherFolder.title"
 msgstr ""
 
-msgid "errors.situations.certificateNotYetValid.body"
+msgid "errors.messages.otherFolder.body"
 msgstr ""
 
-msgid "errors.situations.certificateRevoked.title"
+msgid "errors.messages.noFreeName.title"
 msgstr ""
 
-msgid "errors.situations.certificateRevoked.body"
+msgid "errors.messages.noFreeName.body"
 msgstr ""
 
-msgid "errors.situations.pkcs12Unreadable.title"
+msgid "errors.messages.noKeyring.title"
 msgstr ""
 
-msgid "errors.situations.pkcs12Unreadable.body"
+msgid "errors.messages.noKeyring.body"
 msgstr ""
 
-msgid "errors.situations.incorrectPkcs12Password.title"
+msgid "errors.messages.keyringPinMissing.title"
 msgstr ""
 
-msgid "errors.situations.incorrectPkcs12Password.body"
-msgstr ""
-
-#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
-#. msgid "errors.situations.pkcs12NoPrivateKey.body".
-msgid "errors.situations.pkcs12NoPrivateKey.title"
-msgstr ""
-
-#. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
-#. hay msgid "errors.situations.keyKindUnsupported.body".
-msgid "errors.situations.keyKindUnsupported.title"
-msgstr ""
-
-msgid "errors.situations.mechanismNotOffered.title"
-msgstr ""
-
-msgid "errors.situations.mechanismNotOffered.body"
-msgstr ""
-
-msgid "errors.situations.removalNotSupported.title"
-msgstr ""
-
-msgid "errors.situations.removalNotSupported.body"
-msgstr ""
-
-msgid "errors.situations.certificateUnreadable.title"
-msgstr ""
-
-msgid "errors.situations.certificateUnreadable.body"
-msgstr ""
-
-msgid "errors.situations.notAPdf.title"
-msgstr ""
-
-msgid "errors.situations.notAPdf.body"
-msgstr ""
-
-msgid "errors.situations.documentEncrypted.title"
-msgstr ""
-
-msgid "errors.situations.documentEncrypted.body"
-msgstr ""
-
-msgid "errors.situations.documentCertified.title"
-msgstr ""
-
-msgid "errors.situations.documentCertified.body"
-msgstr ""
-
-msgid "errors.situations.documentUnreadable.title"
-msgstr ""
-
-msgid "errors.situations.documentUnreadable.body"
-msgstr ""
-
-msgid "errors.situations.droppedFileUnreadable.title"
-msgstr ""
-
-msgid "errors.situations.droppedFileUnreadable.body"
-msgstr ""
-
-msgid "errors.situations.droppedSomeDiscarded.title"
-msgstr ""
-
-msgid "errors.situations.droppedSomeDiscarded.body"
-msgstr ""
-
-msgid "errors.situations.boxOutOfPage.title"
-msgstr ""
-
-msgid "errors.situations.boxOutOfPage.body"
-msgstr ""
-
-msgid "errors.situations.pageOutOfDocument.title"
-msgstr ""
-
-msgid "errors.situations.pageOutOfDocument.body"
-msgstr ""
-
-msgid "errors.situations.sealMismatch.title"
-msgstr ""
-
-msgid "errors.situations.sealMismatch.body"
-msgstr ""
-
-msgid "errors.situations.bridgeFailed.title"
-msgstr ""
-
-msgid "errors.situations.bridgeFailed.body"
-msgstr ""
-
-msgid "errors.situations.renderFailed.title"
-msgstr ""
-
-msgid "errors.situations.renderFailed.body"
-msgstr ""
-
-msgid "errors.situations.folderMissing.title"
-msgstr ""
-
-msgid "errors.situations.folderMissing.body"
-msgstr ""
-
-msgid "errors.situations.notAFolder.title"
-msgstr ""
-
-msgid "errors.situations.notAFolder.body"
-msgstr ""
-
-msgid "errors.situations.folderUnreadable.title"
-msgstr ""
-
-msgid "errors.situations.folderUnreadable.body"
-msgstr ""
-
-msgid "errors.situations.folderUnwritable.title"
-msgstr ""
-
-msgid "errors.situations.folderUnwritable.body"
-msgstr ""
-
-msgid "errors.situations.noFreeName.title"
-msgstr ""
-
-msgid "errors.situations.noFreeName.body"
-msgstr ""
-
-msgid "errors.situations.settingNotSaved.title"
-msgstr ""
-
-msgid "errors.situations.settingNotSaved.body"
-msgstr ""
-
-msgid "errors.situations.activityNotForgotten.title"
-msgstr ""
-
-msgid "errors.situations.activityNotForgotten.body"
-msgstr ""
-
-msgid "errors.situations.noKeyring.title"
-msgstr ""
-
-msgid "errors.situations.noKeyring.body"
-msgstr ""
-
-msgid "errors.situations.keyringPinMissing.title"
-msgstr ""
-
-msgid "errors.situations.keyringPinMissing.body"
+msgid "errors.messages.keyringPinMissing.body"
 msgstr ""
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.

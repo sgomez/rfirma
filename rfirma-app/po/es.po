@@ -79,344 +79,143 @@ msgstr "El documento sigue como estaba: no se ha guardado nada."
 msgid "errors.signingFailedTitle"
 msgstr "No se ha podido firmar"
 
-msgid "errors.situations.unknown.title"
-msgstr "No se ha podido completar la operación"
+#. Mensaje genérico: reintentar. Lo usan unknown, expiredSession, sealMismatch, bridgeFailed, settingNotSaved, activityNotForgotten, handlerListUnreadable y handlerListUnwritable.
+msgid "errors.messages.retry.title"
+msgstr "Algo ha fallado"
 
-msgid "errors.situations.unknown.body"
-msgstr ""
-"Vuelve a intentarlo. Si sigue ocurriendo, adjunta el detalle técnico al "
-"informe del fallo."
+#. «Comentarios y ayuda» es header.help, el botón que sale debajo.
+msgid "errors.messages.retry.body"
+msgstr "Vuelve a intentarlo. Si se repite, comparte el detalle técnico en «Comentarios y ayuda»."
 
-msgid "errors.situations.handlerNotAvailable.title"
+msgid "errors.messages.handlerNotAvailable.title"
 msgstr "No se puede cambiar quién atiende los enlaces"
 
-msgid "errors.situations.handlerNotAvailable.body"
-msgstr ""
-"Esta versión de rFirma no puede escribir esa elección: se cambia en los "
-"ajustes del escritorio."
+msgid "errors.messages.handlerNotAvailable.body"
+msgstr "Esta versión de rFirma no puede escribir esa elección: se cambia en los ajustes del escritorio."
 
-msgid "errors.situations.handlerListUnreadable.title"
-msgstr "No se ha podido leer la elección del escritorio"
+#. Mensaje genérico: elegir otra imagen de rúbrica. Lo usan notAnAcceptedImage, damagedImage, imageTooLarge, sourceUnreadable, storeUnwritable y storeUnreadable.
+msgid "errors.messages.otherImage.title"
+msgstr "No se ha podido usar la imagen"
 
-msgid "errors.situations.handlerListUnreadable.body"
-msgstr ""
-"El fichero donde el escritorio la guarda no se ha podido leer, así que se ha "
-"dejado como estaba."
+msgid "errors.messages.otherImage.body"
+msgstr "Elige un PNG o un JPEG que no sea muy grande."
 
-msgid "errors.situations.handlerListUnwritable.title"
-msgstr "No se ha podido guardar quién atiende los enlaces"
-
-msgid "errors.situations.handlerListUnwritable.body"
-msgstr "El fichero donde el escritorio la guarda no se ha podido escribir."
-
-msgid "errors.situations.notAnAcceptedImage.title"
-msgstr "Esa imagen no vale como rúbrica"
-
-msgid "errors.situations.notAnAcceptedImage.body"
-msgstr "La rúbrica tiene que ser un PNG o un JPEG."
-
-msgid "errors.situations.damagedImage.title"
-msgstr "No hemos podido abrir la imagen"
-
-msgid "errors.situations.damagedImage.body"
-msgstr ""
-"El fichero es un PNG o un JPEG, pero está dañado. Prueba con otra copia."
-
-msgid "errors.situations.imageTooLarge.title"
-msgstr "La imagen es demasiado grande"
-
-msgid "errors.situations.imageTooLarge.body"
-msgstr "Elige una imagen más pequeña o guárdala con menos resolución."
-
-msgid "errors.situations.sourceUnreadable.title"
-msgstr "No hemos podido leer el fichero que elegiste"
-
-msgid "errors.situations.sourceUnreadable.body"
-msgstr "Comprueba que sigue donde estaba y vuelve a elegirlo."
-
-msgid "errors.situations.storeUnwritable.title"
-msgstr "No hemos podido guardar tu rúbrica"
-
-msgid "errors.situations.storeUnwritable.body"
-msgstr ""
-"Vuelve a elegir la imagen. Si sigue ocurriendo, adjunta el detalle técnico "
-"al informe del fallo."
-
-msgid "errors.situations.storeUnreadable.title"
-msgstr "No hemos podido leer tu rúbrica guardada"
-
-msgid "errors.situations.storeUnreadable.body"
-msgstr "Vuelve a elegir la imagen para reemplazarla."
-
-msgid "errors.situations.incorrectPin.title"
+msgid "errors.messages.incorrectPin.title"
 msgstr "El PIN no es correcto"
 
-msgid "errors.situations.incorrectPin.body"
-msgstr ""
-"Vuelve a introducirlo. La tarjeta se bloquea tras varios intentos fallidos."
+msgid "errors.messages.incorrectPin.body"
+msgstr "La tarjeta se bloquea tras varios intentos fallidos."
 
-msgid "errors.situations.pinLocked.title"
+msgid "errors.messages.pinLocked.title"
 msgstr "La tarjeta está bloqueada"
 
-msgid "errors.situations.pinLocked.body"
-msgstr ""
-"Se ha bloqueado tras demasiados intentos fallidos con el PIN. Desbloquéala "
-"con su PUK antes de volver a firmar."
+msgid "errors.messages.pinLocked.body"
+msgstr "Desbloquéala con el PUK."
 
-msgid "errors.situations.tokenAbsent.title"
-msgstr "No encontramos la tarjeta"
+#. Mensaje genérico: revisar la tarjeta y volver a buscar. Lo usan tokenAbsent y certificateNotFound.
+msgid "errors.messages.checkToken.title"
+msgstr "Falta la tarjeta o el certificado"
 
-msgid "errors.situations.tokenAbsent.body"
-msgstr ""
-"Comprueba que sigue insertada y que el lector está conectado, y vuelve a "
-"intentarlo."
+msgid "errors.messages.checkToken.body"
+msgstr "Comprueba la tarjeta y el lector, y vuelve a buscar."
 
-msgid "errors.situations.expiredSession.title"
-msgstr "La sesión con la tarjeta ha caducado"
+msgid "errors.messages.moduleNotFound.title"
+msgstr "No se ha podido cargar el módulo de la tarjeta"
 
-msgid "errors.situations.expiredSession.body"
-msgstr ""
-"Vuelve a intentarlo: se abrirá una sesión nueva y te pediremos el PIN otra "
-"vez."
+msgid "errors.messages.moduleNotFound.body"
+msgstr "Comprueba su ruta o elige otro módulo."
 
-msgid "errors.situations.moduleNotFound.title"
-msgstr "No hemos podido cargar el módulo de la tarjeta"
+msgid "errors.messages.certificateExpired.title"
+msgstr "Tu certificado ha caducado"
 
-msgid "errors.situations.moduleNotFound.body"
-msgstr "Comprueba que el módulo PKCS#11 está donde dijiste, o elige otro."
+msgid "errors.messages.certificateExpired.body"
+msgstr "Renuévalo con su emisora."
 
-msgid "errors.situations.certificateNotFound.title"
-msgstr "El certificado ya no está en la tarjeta"
+#. Mensaje genérico de un solo renglón, sin cuerpo: elegir otro certificado. Lo usan certificateRevoked, certificateNotYetValid, certificateUnreadable, keyKindUnsupported y mechanismNotOffered.
+msgid "errors.messages.otherCertificate.title"
+msgstr "Ese certificado no sirve para firmar"
 
-msgid "errors.situations.certificateNotFound.body"
-msgstr "Vuelve a buscar los certificados y elige uno de los que haya."
+#. Mensaje genérico: elegir otro fichero .p12 o .pfx. Lo usan pkcs12Unreadable y pkcs12NoPrivateKey.
+msgid "errors.messages.otherCertificateFile.title"
+msgstr "Ese fichero no sirve como certificado"
 
-msgid "errors.situations.certificateExpired.title"
-msgstr "El certificado ha caducado"
+msgid "errors.messages.otherCertificateFile.body"
+msgstr "Elige un .p12 o .pfx con su clave privada."
 
-msgid "errors.situations.certificateExpired.body"
-msgstr ""
-"Un certificado caducado no sirve para firmar. Renuévalo con su emisora y "
-"vuelve a intentarlo."
-
-msgid "errors.situations.certificateNotYetValid.title"
-msgstr "El certificado todavía no está en vigor"
-
-msgid "errors.situations.certificateNotYetValid.body"
-msgstr ""
-"Aún no ha empezado su periodo de validez, así que no sirve para firmar."
-
-msgid "errors.situations.certificateRevoked.title"
-msgstr "El certificado está revocado"
-
-msgid "errors.situations.certificateRevoked.body"
-msgstr ""
-"Su emisora lo ha revocado, así que no sirve para firmar. Necesitas uno nuevo."
-
-msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "No hemos podido leer el fichero"
-
-msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "No es un certificado en formato .p12 o .pfx."
-
-msgid "errors.situations.incorrectPkcs12Password.title"
+#. Un solo renglón, sin cuerpo.
+msgid "errors.messages.incorrectPkcs12Password.title"
 msgstr "La contraseña no es correcta"
 
-msgid "errors.situations.incorrectPkcs12Password.body"
-msgstr "Compruébala y vuelve a intentarlo."
+msgid "errors.messages.removalNotSupported.title"
+msgstr "No se puede quitar solo este certificado"
 
-#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
-#. msgid "errors.situations.pkcs12NoPrivateKey.body".
-msgid "errors.situations.pkcs12NoPrivateKey.title"
-msgstr "Ese fichero no trae ninguna clave privada"
+msgid "errors.messages.removalNotSupported.body"
+msgstr "Quitarlo borraría todos los del Almacén de rFirma."
 
-#. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
-#. hay msgid "errors.situations.keyKindUnsupported.body".
-msgid "errors.situations.keyKindUnsupported.title"
-msgstr "Ese certificado no es compatible con rFirma"
-
-msgid "errors.situations.mechanismNotOffered.title"
-msgstr "El token no admite ese algoritmo de firma"
-
-msgid "errors.situations.mechanismNotOffered.body"
-msgstr "Prueba con otro certificado o pide a la sede que use SHA-256 con RSA."
-
-msgid "errors.situations.removalNotSupported.title"
-msgstr "Ese certificado no se puede quitar por separado"
-
-msgid "errors.situations.removalNotSupported.body"
-msgstr ""
-"El Almacén de rFirma es una única base compartida: quitarlo se llevaría "
-"también los demás certificados instalados. Todavía no hay forma de borrar "
-"solo uno."
-
-msgid "errors.situations.certificateUnreadable.title"
-msgstr "No hemos podido leer el certificado"
-
-msgid "errors.situations.certificateUnreadable.body"
-msgstr ""
-"Lo que hay en la tarjeta no es un certificado que sepamos leer. Prueba con "
-"otro."
-
-msgid "errors.situations.notAPdf.title"
+#. Un solo renglón, sin cuerpo.
+msgid "errors.messages.notAPdf.title"
 msgstr "Ese fichero no es un PDF"
 
-msgid "errors.situations.notAPdf.body"
-msgstr "rFirma firma PDF. Elige un documento PDF y vuelve a intentarlo."
-
-msgid "errors.situations.documentEncrypted.title"
+msgid "errors.messages.documentEncrypted.title"
 msgstr "El PDF está protegido"
 
-msgid "errors.situations.documentEncrypted.body"
-msgstr ""
-"Está cifrado o tiene los permisos restringidos, así que no se puede firmar. "
-"Ábrelo con su contraseña, guárdalo sin protección y vuelve a intentarlo."
+msgid "errors.messages.documentEncrypted.body"
+msgstr "Guárdalo sin protección y vuelve a abrirlo."
 
-msgid "errors.situations.documentCertified.title"
-msgstr "El PDF está certificado"
+#. Es el aviso de seguridad: en la tarjeta de error de firma y en la ventana de sede solo se ve el título.
+msgid "errors.messages.documentCertified.title"
+msgstr "Firmarlo invalidaría la certificación del autor"
 
-msgid "errors.situations.documentCertified.body"
-msgstr ""
-"Su autor lo firmó prohibiendo los cambios, así que añadir una firma "
-"invalidaría la suya. Pídele una copia sin certificar."
+msgid "errors.messages.documentCertified.body"
+msgstr "Pide al autor una copia sin certificar."
 
-msgid "errors.situations.documentUnreadable.title"
-msgstr "No hemos podido leer el documento"
+#. Mensaje genérico: volver a abrir el documento. Lo usan documentUnreadable y droppedFileUnreadable.
+msgid "errors.messages.reopenDocument.title"
+msgstr "No se ha podido leer el documento"
 
-msgid "errors.situations.documentUnreadable.body"
-msgstr "Comprueba que sigue donde estaba y vuelve a abrirlo."
+msgid "errors.messages.reopenDocument.body"
+msgstr "Ábrelo de nuevo con «Abrir PDF…»."
 
-msgid "errors.situations.droppedFileUnreadable.title"
-msgstr "No hemos podido leer el fichero que has soltado"
-
-msgid "errors.situations.droppedFileUnreadable.body"
-msgstr ""
-"Arrastrar no nos da permiso para leer de cualquier carpeta. Ábrelo con el "
-"botón de abrir, que sí nos lo da."
-
-msgid "errors.situations.droppedSomeDiscarded.title"
+msgid "errors.messages.droppedSomeDiscarded.title"
 msgstr "Algunos ficheros no se han añadido"
 
-msgid "errors.situations.droppedSomeDiscarded.body"
-msgstr ""
-"Los demás PDF que has soltado se han abierto en pestañas. Los que no eran "
-"PDF no se han añadido."
+msgid "errors.messages.droppedSomeDiscarded.body"
+msgstr "Solo se abren los PDF."
 
-msgid "errors.situations.boxOutOfPage.title"
-msgstr "El recuadro se sale de la página"
+#. Mensaje genérico de un solo renglón, sin cuerpo: recolocar la firma visible. Lo usan boxOutOfPage y pageOutOfDocument.
+msgid "errors.messages.moveVisibleSignature.title"
+msgstr "La firma visible se sale del documento"
 
-msgid "errors.situations.boxOutOfPage.body"
-msgstr ""
-"Arrástralo dentro de la página y vuelve a firmar. Si lo dejásemos así, "
-"quedaría recortado en el PDF sin avisar."
-
-msgid "errors.situations.pageOutOfDocument.title"
-msgstr "El documento no llega a esa página"
-
-msgid "errors.situations.pageOutOfDocument.body"
-msgstr ""
-"Elige una página que exista en el documento y vuelve a firmar. Si lo "
-"dejásemos así, la firma visible acabaría en la última página sin avisar."
-
-msgid "errors.situations.sealMismatch.title"
-msgstr "La firma se ha interrumpido a medias"
-
-msgid "errors.situations.sealMismatch.body"
-msgstr ""
-"Lo que preparamos al empezar y lo que hemos recibido al terminar no "
-"coinciden, así que hemos parado antes de escribir nada. Vuelve a firmar el "
-"documento."
-
-msgid "errors.situations.bridgeFailed.title"
-msgstr "No hemos podido preparar la firma"
-
-msgid "errors.situations.bridgeFailed.body"
-msgstr ""
-"Ha fallado el componente que arma el PDF firmado. Vuelve a intentarlo y, si "
-"sigue ocurriendo, adjunta el detalle técnico al informe del fallo."
-
-msgid "errors.situations.renderFailed.title"
+msgid "errors.messages.renderFailed.title"
 msgstr "Esta pantalla ha dejado de funcionar"
 
-msgid "errors.situations.renderFailed.body"
-msgstr ""
-"Recarga la ventana para seguir. Si sigue ocurriendo, adjunta el detalle "
-"técnico al informe del fallo."
+msgid "errors.messages.renderFailed.body"
+msgstr "Recarga la ventana para seguir."
 
-msgid "errors.situations.folderMissing.title"
-msgstr "La carpeta de destino ya no está"
+#. Mensaje genérico: elegir otra carpeta de destino. Lo usan folderMissing, notAFolder, folderUnreadable y folderUnwritable.
+msgid "errors.messages.otherFolder.title"
+msgstr "La carpeta de destino no está disponible"
 
-msgid "errors.situations.folderMissing.body"
-msgstr ""
-"No la creamos por ti: si la creásemos, el documento parecería guardado y no "
-"estaría. Vuelve a crearla o elige otra en Preferencias."
+msgid "errors.messages.otherFolder.body"
+msgstr "Elige otra en Preferencias y vuelve a firmar."
 
-msgid "errors.situations.notAFolder.title"
-msgstr "El destino no es una carpeta"
+msgid "errors.messages.noFreeName.title"
+msgstr "Hay demasiados documentos con ese nombre"
 
-msgid "errors.situations.notAFolder.body"
-msgstr ""
-"Hay un fichero con ese nombre donde esperábamos una carpeta. Elige otro "
-"destino en Preferencias."
+msgid "errors.messages.noFreeName.body"
+msgstr "Mueve o renombra los anteriores y vuelve a firmar."
 
-msgid "errors.situations.folderUnreadable.title"
-msgstr "No hemos podido consultar la carpeta de destino"
+msgid "errors.messages.noKeyring.title"
+msgstr "El llavero del escritorio no responde"
 
-msgid "errors.situations.folderUnreadable.body"
-msgstr ""
-"Puede ser cosa de los permisos o de una unidad que no responde. Elige otro "
-"destino en Preferencias."
+msgid "errors.messages.noKeyring.body"
+msgstr "Desbloquéalo o comprueba que tu escritorio tiene uno, y vuelve a intentarlo."
 
-msgid "errors.situations.folderUnwritable.title"
-msgstr "No hemos podido guardar el documento firmado"
+msgid "errors.messages.keyringPinMissing.title"
+msgstr "El llavero ha perdido el PIN del Almacén"
 
-msgid "errors.situations.folderUnwritable.body"
-msgstr ""
-"La firma salió bien, pero el fichero no se ha podido escribir en la carpeta "
-"de destino. Elige otra en Preferencias y vuelve a firmar."
-
-msgid "errors.situations.noFreeName.title"
-msgstr "Ya hay demasiados documentos con ese nombre"
-
-msgid "errors.situations.noFreeName.body"
-msgstr ""
-"Para no machacar ninguno, hemos parado. Mueve o renombra los anteriores y "
-"vuelve a firmar."
-
-msgid "errors.situations.settingNotSaved.title"
-msgstr "No hemos podido guardar el ajuste"
-
-msgid "errors.situations.settingNotSaved.body"
-msgstr ""
-"Hemos vuelto al valor anterior, que es el que sigue guardado. Vuelve a "
-"intentarlo y, si sigue ocurriendo, adjunta el detalle técnico al informe del "
-"fallo."
-
-msgid "errors.situations.activityNotForgotten.title"
-msgstr "No hemos podido vaciar la lista"
-
-msgid "errors.situations.activityNotForgotten.body"
-msgstr ""
-"Los documentos recientes y el certificado siguen guardados. Vuelve a "
-"intentarlo y, si sigue ocurriendo, adjunta el detalle técnico al informe del "
-"fallo."
-
-msgid "errors.situations.noKeyring.title"
-msgstr "No hemos podido acceder al llavero del escritorio"
-
-msgid "errors.situations.noKeyring.body"
-msgstr ""
-"rFirma necesita el llavero para guardar el certificado de forma protegida. "
-"Comprueba que tu escritorio tiene uno disponible, desbloquéalo si te lo "
-"pide, y vuelve a intentarlo."
-
-msgid "errors.situations.keyringPinMissing.title"
-msgstr "El llavero ha perdido el PIN del Almacén de rFirma"
-
-msgid "errors.situations.keyringPinMissing.body"
-msgstr ""
-"Sin ese PIN no podemos abrir el almacén que ya tenías. Ve a Preferencias → "
-"Certificados y vacíalo para volver a instalar tus certificados desde cero."
+msgid "errors.messages.keyringPinMissing.body"
+msgstr "Vacía el Almacén en Preferencias → Certificados y vuelve a instalar tus certificados."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"

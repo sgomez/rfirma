@@ -118,8 +118,8 @@ describe("App, al soltar ficheros en la ventana", () => {
     });
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("No hemos podido leer el fichero que has soltado");
-    expect(alert).toHaveTextContent("Ábrelo con el botón de abrir");
+    expect(alert).toHaveTextContent("No se ha podido leer el documento");
+    expect(alert).toHaveTextContent("Ábrelo de nuevo con «Abrir PDF…»");
     // Y el detalle crudo sigue ahí, sin traducir, para el informe de fallo.
     expect(alert).toHaveTextContent("os error 2");
   });
