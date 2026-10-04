@@ -4,7 +4,7 @@ import { renderWithCatalog } from "../testing/render";
 import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
 import { certificate, previousSignatureOf, reportOf } from "./SigningPanel.testSupport";
 
-const CLOSED = "El documento está cerrado y no admite más firmas.";
+const CLOSED = "El documento no admite más firmas.";
 
 describe("PreviousSignaturesNotice, con un documento cerrado", () => {
   it("says so in the panel", () => {

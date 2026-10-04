@@ -237,7 +237,7 @@ describe("App, firmando, firmado y error", () => {
     await user.click(sign);
 
     await user.click(await screen.findByRole("button", { name: "Vaciar el almacén" }));
-    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
 
     expect(emptyStore).toHaveBeenCalledOnce();
   });

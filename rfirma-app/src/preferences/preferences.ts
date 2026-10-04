@@ -23,7 +23,7 @@ export interface Preferences {
    */
   destination: string;
   /**
-   * Si Preferencias puede ofrecer «Junto al documento original». La
+   * Si Preferencias puede ofrecer «Junto al original». La
    * contesta el entorno —si sabe devolver la ruta real del documento—, no el
    * usuario: se lee, **no se guarda** al escribir, igual que `destination`.
    */
@@ -35,7 +35,7 @@ export interface Preferences {
    */
   destinationMode: DestinationMode;
   /**
-   * «Recordar la última configuración de firma visible». Apagado significa
+   * «Recordar la firma visible». Apagado significa
    * **no guardarla**, no guardarla y no aplicarla.
    */
   rememberVisibleSignature: boolean;
@@ -46,7 +46,7 @@ export interface Preferences {
    */
   rememberActivity: boolean;
   /**
-   * «Avisarme cuando haya una versión nueva». **Siempre visible y
+   * «Avisar de versiones nuevas». **Siempre visible y
    * sin condición**: no se detecta si alguien gestiona la instalación. No
    * apaga la comprobación —esa la sigue haciendo el backend en cada
    * arranque—, solo si la ventana enseña la franja con lo que contestó.

@@ -16,7 +16,6 @@ export function SignFlowPrompts({ flow, locale }: { flow: SignFlow; locale: stri
       {flow.sealLossPrompt !== null && (
         <UnsealedPagesDialog
           fallen={flow.sealLossPrompt.fallen}
-          chosen={flow.sealLossPrompt.chosen}
           onConfirm={() => void flow.signAnyway()}
           onCancel={() => flow.setSealLossPrompt(null)}
         />

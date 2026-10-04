@@ -44,11 +44,7 @@ interface SignedPanelProps {
   onOpenHelp?: () => void;
 }
 
-const FORMAT_BADGES = {
-  pades: "panel.signed.formatPades",
-  cades: "panel.signed.formatCades",
-  xades: "panel.signed.formatXades",
-} as const;
+const FORMAT_BADGES = { pades: "PAdES", cades: "CAdES", xades: "XAdES" } as const;
 
 /** La columna derecha cuando la firma ya está escrita: todas las firmas del documento. */
 export function SignedPanel({
@@ -106,9 +102,6 @@ export function SignedPanel({
               <FileIcon size={18} />
               <span className="rf-title">{t("panel.signed.none.title")}</span>
             </div>
-            <p className="rf-body rf-text-muted panel__notice-body">
-              {t("panel.signed.none.body")}
-            </p>
           </div>
         ) : (
           <section className="panel__section" aria-label={t("panel.signed.title")}>
@@ -119,7 +112,7 @@ export function SignedPanel({
             {!reading && (
               <div className="rf-row rf-gap-xs">
                 {format !== "unrecognized" && (
-                  <span className="rf-badge">{t(FORMAT_BADGES[format])}</span>
+                  <span className="rf-badge">{FORMAT_BADGES[format]}</span>
                 )}
                 <span className="rf-badge">{countBadge(signatures, t)}</span>
               </div>

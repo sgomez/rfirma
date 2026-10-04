@@ -102,7 +102,7 @@ export function GeneralSection({
               className="rf-btn rf-btn--secondary preferences__clear"
               onClick={onForgetClick}
             >
-              {t("preferences.rememberActivity.clear")}
+              {t("recents.clear")}
             </button>
             {forgetFailure !== null && (
               <ErrorNotice situation="activityNotForgotten" technicalDetail={forgetFailure} />
@@ -246,14 +246,12 @@ export function SigningSection({
         <Switch
           checked={preferences.consentCountdown}
           label={t("preferences.consentCountdown.label")}
-          hint={t("preferences.consentCountdown.hint")}
           wide
           onChange={onConsentCountdownChange}
         />
         <Switch
           checked={preferences.honourAutomaticSelection}
           label={t("preferences.honourAutomaticSelection.label")}
-          hint={t("preferences.honourAutomaticSelection.hint")}
           wide
           onChange={onHonourAutomaticSelectionChange}
         />

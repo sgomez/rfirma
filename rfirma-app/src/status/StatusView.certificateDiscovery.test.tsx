@@ -24,7 +24,7 @@ describe("StatusView", () => {
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
-    expect(within(row).getByText("Certificados de firma electrónica")).toBeInTheDocument();
+    expect(within(row).getByText("Tus certificados")).toBeInTheDocument();
     expect(within(row).getByText("Ninguno")).toBeInTheDocument();
     expect(within(row).getByText("Atención")).toBeInTheDocument();
     expect(within(row).getByRole("button", { name: "Cómo instalar" })).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe("StatusView", () => {
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
-    expect(within(row).getByText("Certificados de firma electrónica")).toBeInTheDocument();
+    expect(within(row).getByText("Tus certificados")).toBeInTheDocument();
     expect(within(row).getByText("3 certificados")).toBeInTheDocument();
     expect(within(row).getByText("Correcto")).toBeInTheDocument();
     expect(within(row).queryByRole("button")).not.toBeInTheDocument();

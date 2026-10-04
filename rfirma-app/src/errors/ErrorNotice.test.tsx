@@ -235,7 +235,7 @@ describe("el aviso de error", () => {
     renderIn("es", <ErrorNotice situation="keyringPinMissing" onEmptyStore={onEmptyStore} />);
 
     await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
-    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
 
     expect(onEmptyStore).toHaveBeenCalledOnce();
   });
@@ -249,6 +249,7 @@ describe("el aviso de error", () => {
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
 
     expect(onEmptyStore).not.toHaveBeenCalled();
+    expect(screen.queryByText(/¿Seguro\? Se perderán/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Vaciar el almacén" })).toBeInTheDocument();
   });
 
@@ -266,7 +267,7 @@ describe("el aviso de error", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
-    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
 
     expect(onEmptyStore).toHaveBeenCalledOnce();
   });

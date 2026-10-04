@@ -69,7 +69,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
             disabled={placement === null || rangeError !== null || handing}
             onClick={() => void accept()}
           >
-            {t("sede.marking.accept")}
+            {t("actions.continue")}
           </button>
         </>
       }

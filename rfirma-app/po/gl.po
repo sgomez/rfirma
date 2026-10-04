@@ -55,9 +55,6 @@ msgstr "English"
 msgid "errors.technicalDetail"
 msgstr "Detalle técnico"
 
-msgid "errors.help"
-msgstr "Comentarios e axuda"
-
 msgid "errors.reload"
 msgstr "Recargar a fiestra"
 
@@ -67,9 +64,6 @@ msgstr "Baleirar o almacén"
 
 msgid "errors.emptyStore.confirmQuestion"
 msgstr "Seguro? Perderanse os certificados instalados, e non se pode desfacer."
-
-msgid "errors.emptyStore.confirmButton"
-msgstr "Si, baleiralo"
 
 #. El botón que copia el detalle técnico crudo del error de firma.
 msgid "errors.copyDetail"
@@ -415,19 +409,6 @@ msgstr ""
 "Sen ese PIN non podemos abrir o almacén que xa tiñas. Vai a Preferencias → "
 "Certificados e báleiro para volver instalar os teus certificados desde cero."
 
-#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
-msgid "errors.startup.homeUnknown"
-msgstr "rFirma non sabe cal é o teu cartafol persoal e non pode arrincar."
-
-#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
-msgid "errors.startup.scratchFolderUnusable"
-msgstr ""
-"rFirma non puido crear o cartafol de paso que necesita e non pode arrincar."
-
-#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
-msgid "errors.startup.windowUnavailable"
-msgstr "rFirma non puido abrir a xanela e non pode arrincar."
-
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
 msgstr "Visor do documento"
@@ -435,10 +416,6 @@ msgstr "Visor do documento"
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.panel"
 msgstr "Panel de sinatura"
-
-#. {{version}} es la versión publicada, p. ej. 0.4.1.
-msgid "notifications.newVersion.message"
-msgstr "Hai unha versión nova de rFirma: {{version}}"
 
 #. Lleva a «Acerca de», donde están las órdenes de alta del repositorio.
 msgid "notifications.newVersion.action"
@@ -450,14 +427,12 @@ msgstr "Actualizar agora"
 msgid "updates.install.confirmTitle"
 msgstr "Actualizar á versión {{version}}?"
 
+#. El botón de al lado, «Instalar y cerrar», ya avisa de que rFirma se cierra.
 msgid "updates.install.confirmBody"
-msgstr "rFirma pecharase para instalar a versión {{version}}. Remata o que estás a facer antes de continuar."
+msgstr "Remata antes o que esteas a facer."
 
 msgid "updates.install.confirm"
 msgstr "Instalar e pechar"
-
-msgid "updates.install.postpone"
-msgstr "Máis tarde"
 
 msgid "updates.install.installing"
 msgstr "Instalando a actualización…"
@@ -466,16 +441,16 @@ msgid "updates.install.failedTitle"
 msgstr "Non se puido actualizar"
 
 msgid "updates.install.failed.noUpdate"
-msgstr "Xa non hai ningunha versión nova que instalar."
+msgstr "Xa non hai versión nova."
 
 msgid "updates.install.failed.networkFailure"
-msgstr "Non se puido descargar a actualización. Comproba a túa conexión e téntao de novo."
+msgstr "Comproba a túa conexión e téntao de novo."
 
 msgid "updates.install.failed.invalidSignature"
-msgstr "A actualización descargada non ten unha sinatura válida, polo que non se instalou."
+msgstr "A descarga non ten unha sinatura válida."
 
 msgid "updates.install.failed.notAvailable"
-msgstr "Esta instalación non se pode actualizar desde a aplicación."
+msgstr "Esta instalación non se actualiza desde rFirma."
 
 msgid "header.menu"
 msgstr "Menú"
@@ -483,9 +458,6 @@ msgstr "Menú"
 #. Nombre accesible y tooltip del botón de aviso de la cabecera.
 msgid "header.attention"
 msgstr "Estado de rFirma: require atención"
-
-msgid "header.status"
-msgstr "Estado de rFirma"
 
 msgid "header.preferences"
 msgstr "Preferencias…"
@@ -512,7 +484,7 @@ msgstr "Pechar {{name}}"
 
 #. Título de la pestaña de otro documento mientras una firma está en curso.
 msgid "tabs.lockedWhileSigning"
-msgstr "Non se pode cambiar de documento mentres se asina."
+msgstr "Agarda a que remate a sinatura."
 
 #. Texto del segmento principal del botón partido de abrir.
 msgid "tabs.openPdf"
@@ -522,10 +494,7 @@ msgstr "Abrir PDF…"
 msgid "tabs.openPdfShortcut"
 msgstr "Ctrl+O"
 
-#. Nombre accesible de la flecha del botón partido, que despliega los recientes.
-msgid "tabs.recentlyOpened"
-msgstr "Abertos recentemente"
-
+#. Encabezado de la lista de recientes y nombre accesible de la flecha del botón partido que la despliega.
 msgid "recents.heading"
 msgstr "Abertos recentemente"
 
@@ -604,10 +573,7 @@ msgid "viewer.dragHandle"
 msgstr "Arrastra para colocar"
 
 msgid "viewer.outOfPage"
-msgstr "O cadro quedou fóra da páxina, así que segue onde estaba."
-
-msgid "viewer.stamp.frozen"
-msgstr "Sinatura visible conxelada mentres moves o cadro"
+msgstr "O cadro non pode saír da páxina."
 
 msgid "viewer.stamp.onDemand"
 msgstr "Documento grande: a sinatura visible non se recalcula soa"
@@ -616,13 +582,10 @@ msgid "viewer.stamp.show"
 msgstr "Ver como queda"
 
 msgid "viewer.stamp.composing"
-msgstr "Compoñendo a sinatura visible co certificado escollido"
+msgstr "Compoñendo a sinatura visible…"
 
 msgid "viewer.stamp.failed"
 msgstr "Non se puido debuxar a sinatura visible"
-
-msgid "viewer.stamp.retry"
-msgstr "Tentar de novo"
 
 msgid "panel.document.pages"
 msgid_plural "panel.document.pages"
@@ -663,7 +626,7 @@ msgstr "Ver sinaturas →"
 
 #. Franja al pie del aviso de firmas previas y título de «Firmar» desactivado: la firma local rechaza el PDF por certificado.
 msgid "panel.previousSignatures.closed"
-msgstr "O documento está pechado e non admite máis sinaturas."
+msgstr "O documento non admite máis sinaturas."
 
 #. Franja al pie del aviso de firmas previas: ya firmaste con el certificado elegido.
 msgid "panel.previousSignatures.sameCertificate"
@@ -759,12 +722,7 @@ msgstr "A título persoal · {{idNumber}}"
 msgid "panel.certificate.personalKeyword"
 msgstr "persoal"
 
-msgid "panel.certificate.stores.card"
-msgstr "Tarxeta"
-
-msgid "panel.certificate.stores.firefox"
-msgstr "Firefox"
-
+#. Nombre propio del navegador: no se traduce.
 msgid "panel.certificate.stores.chrome"
 msgstr "Chrome"
 
@@ -775,10 +733,7 @@ msgstr "Almacén NSS"
 msgid "panel.certificate.stores.installed"
 msgstr "Instalado en rFirma"
 
-msgid "panel.certificate.stores.windows"
-msgstr "Almacén de Windows"
-
-msgid "panel.certificate.retry"
+msgid "actions.lookAgain"
 msgstr "Volver buscar"
 
 #. {{date}} es «mes/año» de caducidad, ya formateado, para la segunda línea de
@@ -789,14 +744,8 @@ msgstr "Caduca en {{date}}"
 msgid "panel.certificate.empty.title"
 msgstr "Sen certificados"
 
-msgid "panel.certificate.empty.body"
-msgstr "Non hai ningún certificado co que asinar."
-
 msgid "panel.certificate.failed.title"
 msgstr "Non puidemos buscar os certificados"
-
-msgid "panel.certificate.failed.body"
-msgstr "A busca fallou antes de rematar, así que non sabemos se hai algún."
 
 #. Frase corta, en negrita, para la tercera línea de una fila no utilizable
 #. del botón partido. {{date}} es la fecha de caducidad, ya formateada.
@@ -840,7 +789,7 @@ msgstr "Sinatura visible"
 
 #. Aviso bajo «Firma visible» mientras no hay certificado elegido; el interruptor está desactivado.
 msgid "panel.visibleSignature.needsCertificate"
-msgstr "Escolle un certificado para engadir unha sinatura visible."
+msgstr "Escolle antes un certificado."
 
 #. Título del interruptor de «Firma visible» cuando está apagado.
 msgid "panel.visibleSignature.turnOn"
@@ -879,15 +828,6 @@ msgstr "Visto e prace de "
 msgid "panel.visibleSignature.phrase.seedJoin"
 msgstr ", "
 
-msgid "panel.visibleSignature.datum.signer"
-msgstr "Asinante"
-
-msgid "panel.visibleSignature.datum.issuer"
-msgstr "Emisor"
-
-msgid "panel.visibleSignature.datum.signedAt"
-msgstr "Data"
-
 msgid "panel.visibleSignature.rubric.toggle"
 msgstr "Con rúbrica"
 
@@ -903,8 +843,9 @@ msgstr "Cargar…"
 msgid "panel.visibleSignature.rubric.change"
 msgstr "Cambiar…"
 
+#. Texto alternativo de la miniatura de la rúbrica cargada.
 msgid "panel.visibleSignature.rubric.thumbnail"
-msgstr "A túa rúbrica, tal como se estampará"
+msgstr "A túa rúbrica"
 
 msgid "panel.footer.savedIn"
 msgstr "Gardar en"
@@ -913,35 +854,17 @@ msgstr "Gardar en"
 msgid "panel.footer.unwritable"
 msgstr "Non se pode escribir en {{folder}}"
 
-msgid "panel.footer.retrySigning"
+msgid "actions.retry"
 msgstr "Reintentar"
-
-msgid "panel.footer.sign"
-msgstr "Asinar"
 
 msgid "panel.footer.signing"
 msgstr "Asinando…"
-
-msgid "panel.footer.signWith"
-msgstr "Asinar co certificado de {{holder}}"
 
 msgid "panel.footer.addCertificate"
 msgstr "Engadir un certificado…"
 
 msgid "panel.signed.title"
 msgstr "Sinaturas do documento"
-
-#. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
-msgid "panel.signed.formatPades"
-msgstr "PAdES"
-
-#. Término del dominio: CAdES es la sigla del formato de firma; no se traduce.
-msgid "panel.signed.formatCades"
-msgstr "CAdES"
-
-#. Término del dominio: XAdES es la sigla del formato de firma; no se traduce.
-msgid "panel.signed.formatXades"
-msgstr "XAdES"
 
 #. Recuento de firmas del documento, en la insignia del resumen.
 msgid "panel.signed.count"
@@ -978,7 +901,7 @@ msgstr "En nome de"
 msgid "panel.signed.field.issuer"
 msgstr "Emisor"
 
-#. El rótulo de la fecha que declara quien firma, en la ficha de una firma.
+#. Rótulo de la fecha de la firma: en la ficha de una firma y como dato de la frase de la firma visible.
 msgid "panel.signed.field.date"
 msgstr "Data"
 
@@ -1010,9 +933,6 @@ msgstr "Documento"
 
 msgid "panel.signed.none.title"
 msgstr "Sen sinaturas"
-
-msgid "panel.signed.none.body"
-msgstr "O documento non ten sinaturas."
 
 msgid "panel.signed.unrecognized.title"
 msgstr "Formato non recoñecido"
@@ -1046,28 +966,11 @@ msgstr "Asinando o documento…"
 msgid "progress.stages.presign"
 msgstr "Preparando a sinatura"
 
-#. Término del dominio: la etapa de la firma trifásica en la que se generan los hashes a firmar.
-msgid "progress.stages.presignTerm"
-msgstr "presinatura"
-
 msgid "progress.stages.sign"
 msgstr "Asinando na tarxeta"
 
 msgid "progress.stages.postsign"
 msgstr "Ensamblando o PDF"
-
-#. Término del dominio: la etapa en la que se ensambla el PDF ya firmado.
-msgid "progress.stages.postsignTerm"
-msgstr "postsinatura"
-
-msgid "progress.states.done"
-msgstr "Feita"
-
-msgid "progress.states.running"
-msgstr "En curso"
-
-msgid "progress.states.pending"
-msgstr "Pendente"
 
 msgid "progress.keepTheCard"
 msgstr "Non retires a tarxeta ata que remate."
@@ -1079,23 +982,14 @@ msgstr[0] "Unha páxina quedará sen sinatura visible"
 msgstr[1] "{{count}} páxinas quedarán sen sinatura visible"
 msgstr[2] "{{count}} páxinas quedarán sen sinatura visible"
 
-#. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
+#. Cuerpo del diálogo de páginas sin firma visible; el título, en plural, dice cuántas páginas son.
 msgid "sealLoss.body"
-msgstr ""
-"O cadro non cabe en {{fallen}} das {{chosen}} páxinas que escolliches, máis "
-"pequenas ca aquela sobre a que o colocaches. O documento asinarase igual e a "
-"sinatura será válida en todo el, pero nesas páxinas non aparecerá a sinatura "
-"visible."
+msgstr "O cadro non cabe en páxinas máis pequenas ca aquela onde o colocaches. A sinatura será válida en todo o documento."
 
-#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán la firma visible.
-msgid "sealLoss.remaining"
-msgstr ""
-"A sinatura visible aparecerá en {{sealed}} das {{chosen}} páxinas escollidas."
-
-msgid "sealLoss.confirm"
+msgid "actions.signAnyway"
 msgstr "Asinar de todos os xeitos"
 
-#. El titular del diálogo «¿Firmar de todos modos?», con alguna firma previa no válida.
+#. Titular de los diálogos «¿Firmar de todos modos?»: con alguna firma previa no válida y cuando la sede pide confirmar.
 msgid "signAnyway.title"
 msgstr "Asinar de todos os xeitos?"
 
@@ -1106,9 +1000,6 @@ msgstr "Sinatura {{number}} · {{name}}"
 #. Cierre del diálogo «¿Firmar de todos modos?»: el receptor puede rechazar el documento.
 msgid "signAnyway.warning"
 msgstr "O receptor podería rexeitalo."
-
-msgid "signAnyway.confirm"
-msgstr "Asinar igualmente"
 
 #. Hallazgo del documento: cambió después de la última firma.
 msgid "documentFinding.modifiedAfterLastSignature"
@@ -1152,7 +1043,7 @@ msgstr "rFirma non coñece este tipo de sinatura"
 
 #. Motivo de una firma no válida: resume con MD5 o MD2.
 msgid "signatureReason.unsupportedAlgorithm"
-msgstr "A sinatura usa un algoritmo de resumo non admitido (MD5 ou MD2)"
+msgstr "Usa un algoritmo de resumo non admitido (MD5 ou MD2)"
 
 #. Motivo de una firma no válida. {{name}}: quien cerró el documento a más firmas.
 msgid "signatureReason.cosignNotAdmitted"
@@ -1200,18 +1091,6 @@ msgstr "Estado de rFirma"
 msgid "status.recheck"
 msgstr "Volver comprobar"
 
-msgid "status.columns.signal"
-msgstr "Sinal"
-
-msgid "status.columns.value"
-msgstr "Valor"
-
-msgid "status.columns.verdict"
-msgstr "Veredicto"
-
-msgid "status.columns.action"
-msgstr "Acción"
-
 msgid "status.signals.version"
 msgstr "Versión"
 
@@ -1219,7 +1098,7 @@ msgid "status.signals.siteSignature"
 msgstr "Sinatura nas sedes"
 
 msgid "status.signals.userCertificates"
-msgstr "Certificados de sinatura electrónica"
+msgstr "Os teus certificados"
 
 msgid "status.signals.localCaCertificate"
 msgstr "Certificado de rFirma"
@@ -1292,6 +1171,7 @@ msgstr "Instalado"
 msgid "status.detail.notInstalled"
 msgstr "Non instalado"
 
+#. Nombre propio del navegador: no se traduce.
 msgid "status.storeBrands.firefox"
 msgstr "Firefox"
 
@@ -1326,13 +1206,13 @@ msgid "status.withdrawal.title.partial"
 msgstr "Retirado a medias"
 
 msgid "status.withdrawal.body.certificate"
-msgstr "O certificado de rFirma, dos navegadores onde estea"
+msgstr "O certificado de rFirma, dos teus navegadores"
 
 msgid "status.withdrawal.body.handler"
 msgstr "Que as sedes abran rFirma"
 
 msgid "status.withdrawal.hint"
-msgstr "Pódese volver instalar desde este panel."
+msgstr "Poderás volver instalalo aquí."
 
 msgid "status.withdrawal.confirm"
 msgstr "Retirar"
@@ -1343,12 +1223,8 @@ msgstr "Agardando"
 msgid "status.withdrawal.outcome.withdrawn"
 msgstr "Retirado"
 
-msgid "status.withdrawal.retry"
-msgstr "Tentar de novo"
-
 msgid "status.withdrawal.restartBrowserNotice"
-msgstr ""
-"Reinicia o navegador para que deixe de confiar no certificado retirado."
+msgstr "Reinicia o navegador para que teña efecto."
 
 msgid "preferences.title"
 msgstr "Preferencias"
@@ -1372,48 +1248,38 @@ msgid "preferences.sections.appearance"
 msgstr "Aparencia"
 
 msgid "preferences.rememberVisibleSignature.label"
-msgstr "Lembrar a última configuración de sinatura visible"
+msgstr "Lembrar a sinatura visible"
 
 msgid "preferences.consentCountdown.label"
-msgstr "Protección contra sinaturas accidentais"
-
-msgid "preferences.consentCountdown.hint"
-msgstr "Engádese unha pausa de 3 segundos antes de permitir asinar."
+msgstr "Agardar 3 segundos antes de asinar"
 
 msgid "preferences.honourAutomaticSelection.label"
-msgstr "Usar o certificado que elixa a sede"
-
-msgid "preferences.honourAutomaticSelection.hint"
-msgstr "Se só serve un dos teus certificados, úsase sen preguntarche."
+msgstr "Se só serve un certificado e a sede o permite, usalo sen preguntar"
 
 msgid "preferences.rememberActivity.label"
 msgstr "Lembrar a miña actividade"
 
 msgid "preferences.rememberActivity.hint"
-msgstr "Cobre os documentos recentes e o certificado usado a última vez."
+msgstr "Documentos recentes e último certificado usado."
 
-msgid "preferences.rememberActivity.clear"
-msgstr "Baleirar a lista"
-
+#. Único texto del diálogo de confirmación, y su nombre accesible; el botón es «Borrar y apagar».
 msgid "preferences.rememberActivity.confirm.body"
-msgstr ""
-"Ao apagalo bórrase o xa lembrado: os documentos recentes e o certificado "
-"usado a última vez."
+msgstr "Borraranse os documentos recentes e o último certificado usado."
 
 msgid "preferences.rememberActivity.confirm.accept"
 msgstr "Borrar e apagar"
 
 msgid "preferences.notifyNewVersion.label"
-msgstr "Avisarme cando haxa unha versión nova"
+msgstr "Avisar de versións novas"
 
 msgid "preferences.destination.label"
-msgstr "Onde se garda o documento asinado"
+msgstr "Onde gardar"
 
 msgid "preferences.destination.change"
 msgstr "Cambiar cartafol…"
 
 msgid "preferences.destination.nextToOriginal"
-msgstr "Xunto ao documento orixinal"
+msgstr "Xunto ao orixinal"
 
 msgid "preferences.destination.inThisFolder"
 msgstr "Neste cartafol"
@@ -1456,22 +1322,20 @@ msgstr "Idioma"
 msgid "about.version"
 msgstr "Versión {{version}}"
 
-msgid "about.whatItDoes"
-msgstr "Asina e cosina documentos PDF co teu certificado."
-
-msgid "about.update.newVersion"
+#. Aviso de versión nueva, en Acerca de y en la franja de la ventana. {{version}} es la versión publicada, p. ej. 0.4.1.
+msgid "updates.newVersion"
 msgstr "Hai unha versión nova: {{version}}"
 
 msgid "about.update.upToDate"
 msgstr "Estás na última versión"
 
+#. Cuerpo del aviso de independencia, bajo about.independenceLead.
 msgid "about.independence"
-msgstr ""
-"Proxecto independente. rFirma non está relacionada con AutoFirma nin coa "
-"Administración Xeral do Estado, que publican o cliente oficial, nin conta co "
-"seu apoio. Se necesitas a aplicación oficial, descárgaa da súa web. Se "
-"detectas algún problema con rFirma, comunícao no noso repositorio e non ao "
-"equipo de AutoFirma."
+msgstr "rFirma non está relacionada con AutoFirma nin coa Administración Xeral do Estado, nin conta co seu apoio. Avisa dos seus fallos no noso repositorio, non ao equipo de AutoFirma."
+
+#. Título del aviso de independencia, en Acerca de y en la bienvenida del asistente; le sigue about.independence.
+msgid "about.independenceLead"
+msgstr "Proxecto independente"
 
 #. No se traduce: es una URL.
 msgid "about.repository"
@@ -1491,7 +1355,7 @@ msgid "about.licenses.rfirma"
 msgstr "EUPL-1.2"
 
 msgid "about.licenses.afirma"
-msgstr "Bibliotecas do proxecto Cliente @firma"
+msgstr "Cliente @firma"
 
 #. No se traduce: es el nombre de las licencias.
 msgid "about.licenses.afirmaTerms"
@@ -1501,40 +1365,25 @@ msgid "setup.welcome.title"
 msgstr "Configurar rFirma"
 
 msgid "setup.welcome.body"
-msgstr ""
-"rFirma é unha aplicación compatible con AutoFirma {{version}}. Para podela "
-"usar con sedes electrónicas necesitamos configurar o teu equipo."
-
-msgid "setup.language.body"
-msgstr ""
-"Escolle o idioma de rFirma. Podes cambialo máis adiante en Preferencias."
+msgstr "rFirma é compatible con AutoFirma {{version}}. Para usala en sedes, hai que preparar o teu equipo."
 
 msgid "setup.step"
 msgstr "Paso {{current}} de {{total}}"
 
-msgid "setup.actions.continue"
+msgid "actions.continue"
 msgstr "Continuar"
-
-msgid "setup.actions.back"
-msgstr "Atrás"
 
 msgid "setup.actions.finish"
 msgstr "Rematar"
 
-msgid "setup.actions.notNow"
+msgid "actions.notNow"
 msgstr "Agora non"
 
 msgid "setup.actions.skip"
 msgstr "Omitir a configuración"
 
-msgid "setup.actions.useRfirma"
-msgstr "Que abran rFirma"
-
-msgid "setup.certificate.title"
-msgstr "O certificado de rFirma"
-
 msgid "setup.certificate.body"
-msgstr "Para que o teu navegador se conecte con rFirma de forma segura."
+msgstr "Conexión segura entre o navegador e rFirma."
 
 msgid "setup.certificate.installing"
 msgstr "Instalando…"
@@ -1542,20 +1391,14 @@ msgstr "Instalando…"
 msgid "setup.certificate.installedTitle"
 msgstr "Instalado nos teus navegadores."
 
-msgid "setup.certificate.installedRestartNotice"
-msgstr "Se tes algún aberto, reinícia o para que o recoñeza."
-
 msgid "setup.certificate.failedTitle"
-msgstr "Non se puido instalar en todas partes."
+msgstr "Non se instalou en todas partes."
 
 msgid "setup.handler.title"
 msgstr "Usar rFirma por defecto"
 
 msgid "setup.handler.body"
-msgstr "Agora mesmo as sedes electrónicas abren AutoFirma."
-
-msgid "setup.handler.bodyNoAutofirma"
-msgstr "Agora mesmo as sedes non teñen ningún programa asignado."
+msgstr "Agora as sedes abren AutoFirma."
 
 msgid "setup.handler.done"
 msgstr "Agora abren rFirma."
@@ -1574,17 +1417,6 @@ msgstr "Adoita faltar o permiso do navegador."
 
 msgid "sede.repair.caMissing"
 msgstr "Falta a CA local de rFirma."
-
-msgid "sede.repair.installCa"
-msgstr "Instalar…"
-
-#. Nombre propio del navegador: no se traduce.
-msgid "sede.repair.chrome"
-msgstr "Chrome"
-
-#. Nombre propio del navegador: no se traduce.
-msgid "sede.repair.firefox"
-msgstr "Firefox"
 
 msgid "sede.repair.chromeAllow"
 msgstr "Preme Permitir na franxa baixo a barra de enderezos."
@@ -1697,7 +1529,7 @@ msgstr "contrasinatura de todas as sinaturas"
 msgid "sede.consent.localBatchRoundCounterLeafs"
 msgstr "contrasinatura das últimas sinaturas"
 
-msgid "sede.consent.sign"
+msgid "actions.sign"
 msgstr "Asinar"
 
 msgid "sede.consent.identify"
@@ -1707,32 +1539,17 @@ msgstr "Enviar os meus datos"
 msgid "sede.consent.countdown"
 msgstr "{{action}} ({{seconds}})"
 
-msgid "sede.confirm.title"
-msgstr "Hai que confirmar antes de asinar"
-
 msgid "sede.confirm.messages.pdfShadowAttackSuspect"
-msgstr ""
-"Parece que o PDF se modificou despois da última sinatura. Queres asinalo de "
-"todos os xeitos?"
+msgstr "Parece que o PDF se modificou despois da última sinatura."
 
 msgid "sede.confirm.messages.signingCertifiedPdf"
-msgstr ""
-"O PDF que queres asinar está certificado e non admite novas sinaturas. "
-"Engadir a túa invalidará a sinatura anterior. Queres asinalo de todos os "
-"xeitos?"
+msgstr "O PDF que queres asinar está certificado e non admite novas sinaturas. Engadir a túa invalidará a sinatura anterior."
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
-msgstr ""
-"O PDF ten un formulario cuxos campos se cambiaron despois de asinalo. Queres "
-"asinalo de todos os xeitos?"
+msgstr "O PDF ten un formulario cuxos campos se cambiaron despois de asinalo."
 
 msgid "sede.confirm.messages.unknown"
-msgstr ""
-"O validador de sinaturas atopou algo que debes confirmar antes de seguir "
-"({{code}}). Queres asinalo de todos os xeitos?"
-
-msgid "sede.confirm.continue"
-msgstr "Continuar"
+msgstr "O validador de sinaturas atopou algo que debes confirmar antes de seguir ({{code}})."
 
 msgid "sede.marking.title"
 msgstr "Marca onde vai a túa sinatura"
@@ -1742,14 +1559,8 @@ msgstr ""
 "A páxina pide que a túa sinatura se vexa no documento. Traza o cadro sobre a "
 "páxina co rato."
 
-msgid "sede.marking.accept"
-msgstr "Continuar"
-
 msgid "sede.marking.unreadable"
 msgstr "Non se puido abrir o documento para marcar onde vai a sinatura."
-
-msgid "sede.signing.title"
-msgstr "Asinando"
 
 msgid "sede.signing.with"
 msgstr "Con {{holder}} · {{idNumber}}."
@@ -1826,9 +1637,6 @@ msgstr[0] "Enviouse 1 ficheiro."
 msgstr[1] "Enviáronse {{count}} ficheiros."
 msgstr[2] "Enviáronse {{count}} ficheiros."
 
-msgid "sede.outcome.batchTitle"
-msgstr "Lote asinado e enviado"
-
 msgid "sede.outcome.batchBody"
 msgid_plural "sede.outcome.batchBody"
 msgstr[0] "A sinatura do lote xa está en {{origin}}."
@@ -1853,9 +1661,6 @@ msgstr "rFirma non puido abrir a canle coa páxina"
 msgid "sede.outcome.refusedNote"
 msgstr "Para quen mantén a sede:"
 
-msgid "sede.outcome.detail"
-msgstr "Detalle"
-
 msgid "sede.outcome.reportHint"
 msgstr "Parécheche un fallo de rFirma?"
 
@@ -1866,13 +1671,7 @@ msgid "sede.oldWebClient.title"
 msgstr "Esta páxina está desactualizada"
 
 msgid "sede.oldWebClient.body"
-msgstr ""
-"A páxina usa unha versión antiga da peza que fala con rFirma, e pode ter "
-"erros ou non ser segura. Preme Entendido para continuar; se algo falla, "
-"avisa a quen mantén a páxina."
-
-msgid "sede.oldWebClient.dismiss"
-msgstr "Entendido"
+msgstr "A páxina usa unha versión antiga da peza que fala con rFirma, e pode ter erros ou non ser segura. Preme Continuar para seguir; se algo falla, avisa a quen mantén a páxina."
 
 msgid "sede.refusals.appendedSignaturePage"
 msgstr ""
@@ -2056,9 +1855,6 @@ msgstr "Consígueo na FNMT ou na túa comunidade autónoma."
 
 msgid "sede.noCertificate.install"
 msgstr "Instalar un certificado…"
-
-msgid "sede.noCertificate.lookAgain"
-msgstr "Volver buscar"
 
 #. La sede excluyó todos los certificados de la persona. Se dice cuántos tiene
 #. —estado de su almacén— y nunca cuáles descartó la sede ni por qué.

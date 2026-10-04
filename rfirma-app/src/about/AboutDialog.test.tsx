@@ -27,11 +27,11 @@ describe("AboutDialog", () => {
   it("declares that rFirma is not the official client", () => {
     renderAbout();
 
-    const notice = screen.getByText(/Proyecto independiente/);
-    expect(notice).toHaveTextContent(/no está relacionada con AutoFirma/);
+    expect(screen.getByText("Proyecto independiente")).toBeInTheDocument();
+    const notice = screen.getByText(/no está relacionada con AutoFirma/);
     expect(notice).toHaveTextContent(/ni cuenta con su respaldo/);
     expect(notice).toHaveTextContent(
-      "Si detectas algún problema con rFirma, comunícalo en nuestro repositorio y no al equipo de AutoFirma.",
+      /Avisa de sus fallos en nuestro repositorio, no al equipo de AutoFirma\./,
     );
   });
 
@@ -55,7 +55,7 @@ describe("AboutDialog", () => {
     renderAbout();
 
     expect(screen.getByText("EUPL-1.2")).toBeInTheDocument();
-    expect(screen.getByText("Bibliotecas del proyecto Cliente @firma")).toBeInTheDocument();
+    expect(screen.getByText("Cliente @firma")).toBeInTheDocument();
     expect(screen.getByText("GPL-2.0+ / EUPL-1.1")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ver las licencias" })).not.toBeInTheDocument();
   });

@@ -2,14 +2,12 @@
 
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertIcon, SealIcon } from "../design-system/icons";
+import { AlertIcon } from "../design-system/icons";
 import "./UnsealedPagesDialog.css";
 
 interface UnsealedPagesDialogProps {
   /** Cuántas páginas del conjunto elegido se quedan sin sello. */
   fallen: number;
-  /** Cuántas páginas eligió la persona, **no** las que tiene el documento. */
-  chosen: number;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -26,22 +24,13 @@ interface UnsealedPagesDialogProps {
  * - **«Sin firma visible», nunca «recortadas»**: la firma criptográfica cubre
  *   el documento entero pase lo que pase; lo que falta en esas páginas es la
  *   marca visible, no un trozo de la firma.
- * - **El denominador es el conjunto elegido, no el documento**: con
- *   27 páginas, 13 elegidas y 3 que se caen, dice «3 de las 13», nunca
- *   «3 de las 27».
  *
  * Las páginas que se caen no se nombran una a una: con doce, una
  * lista de números es una pared que no ayuda a decidir. Solo el recuento.
  */
-export function UnsealedPagesDialog({
-  fallen,
-  chosen,
-  onConfirm,
-  onCancel,
-}: UnsealedPagesDialogProps) {
+export function UnsealedPagesDialog({ fallen, onConfirm, onCancel }: UnsealedPagesDialogProps) {
   const { t } = useTranslation();
   const titleId = useId();
-  const sealed = chosen - fallen;
 
   return (
     <div className="rf-scrim">
@@ -60,14 +49,7 @@ export function UnsealedPagesDialog({
           </p>
         </div>
 
-        <p className="rf-prose">{t("sealLoss.body", { fallen, chosen })}</p>
-
-        <div className="unsealed-pages-dialog__remaining">
-          <span className="unsealed-pages-dialog__seal" aria-hidden="true">
-            <SealIcon size={20} />
-          </span>
-          <p className="rf-prose">{t("sealLoss.remaining", { sealed, chosen })}</p>
-        </div>
+        <p className="rf-prose">{t("sealLoss.body")}</p>
 
         <hr className="rf-divider" />
 
@@ -76,7 +58,7 @@ export function UnsealedPagesDialog({
             {t("actions.cancel")}
           </button>
           <button type="button" className="rf-btn rf-btn--primary" onClick={onConfirm}>
-            {t("sealLoss.confirm")}
+            {t("actions.signAnyway")}
           </button>
         </div>
       </div>

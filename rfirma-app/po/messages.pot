@@ -55,9 +55,6 @@ msgstr ""
 msgid "errors.technicalDetail"
 msgstr ""
 
-msgid "errors.help"
-msgstr ""
-
 msgid "errors.reload"
 msgstr ""
 
@@ -66,9 +63,6 @@ msgid "errors.emptyStore.button"
 msgstr ""
 
 msgid "errors.emptyStore.confirmQuestion"
-msgstr ""
-
-msgid "errors.emptyStore.confirmButton"
 msgstr ""
 
 #. El botón que copia el detalle técnico crudo del error de firma.
@@ -358,28 +352,12 @@ msgstr ""
 msgid "errors.situations.keyringPinMissing.body"
 msgstr ""
 
-#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
-msgid "errors.startup.homeUnknown"
-msgstr ""
-
-#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
-msgid "errors.startup.scratchFolderUnusable"
-msgstr ""
-
-#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
-msgid "errors.startup.windowUnavailable"
-msgstr ""
-
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
 msgstr ""
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.panel"
-msgstr ""
-
-#. {{version}} es la versión publicada, p. ej. 0.4.1.
-msgid "notifications.newVersion.message"
 msgstr ""
 
 #. Lleva a «Acerca de», donde están las órdenes de alta del repositorio.
@@ -392,13 +370,11 @@ msgstr ""
 msgid "updates.install.confirmTitle"
 msgstr ""
 
+#. El botón de al lado, «Instalar y cerrar», ya avisa de que rFirma se cierra.
 msgid "updates.install.confirmBody"
 msgstr ""
 
 msgid "updates.install.confirm"
-msgstr ""
-
-msgid "updates.install.postpone"
 msgstr ""
 
 msgid "updates.install.installing"
@@ -424,9 +400,6 @@ msgstr ""
 
 #. Nombre accesible y tooltip del botón de aviso de la cabecera.
 msgid "header.attention"
-msgstr ""
-
-msgid "header.status"
 msgstr ""
 
 msgid "header.preferences"
@@ -464,10 +437,7 @@ msgstr ""
 msgid "tabs.openPdfShortcut"
 msgstr ""
 
-#. Nombre accesible de la flecha del botón partido, que despliega los recientes.
-msgid "tabs.recentlyOpened"
-msgstr ""
-
+#. Encabezado de la lista de recientes y nombre accesible de la flecha del botón partido que la despliega.
 msgid "recents.heading"
 msgstr ""
 
@@ -548,9 +518,6 @@ msgstr ""
 msgid "viewer.outOfPage"
 msgstr ""
 
-msgid "viewer.stamp.frozen"
-msgstr ""
-
 msgid "viewer.stamp.onDemand"
 msgstr ""
 
@@ -561,9 +528,6 @@ msgid "viewer.stamp.composing"
 msgstr ""
 
 msgid "viewer.stamp.failed"
-msgstr ""
-
-msgid "viewer.stamp.retry"
 msgstr ""
 
 msgid "panel.document.pages"
@@ -701,12 +665,7 @@ msgstr ""
 msgid "panel.certificate.personalKeyword"
 msgstr ""
 
-msgid "panel.certificate.stores.card"
-msgstr ""
-
-msgid "panel.certificate.stores.firefox"
-msgstr ""
-
+#. Nombre propio del navegador: no se traduce.
 msgid "panel.certificate.stores.chrome"
 msgstr ""
 
@@ -717,10 +676,7 @@ msgstr ""
 msgid "panel.certificate.stores.installed"
 msgstr ""
 
-msgid "panel.certificate.stores.windows"
-msgstr ""
-
-msgid "panel.certificate.retry"
+msgid "actions.lookAgain"
 msgstr ""
 
 
@@ -732,13 +688,7 @@ msgstr ""
 msgid "panel.certificate.empty.title"
 msgstr ""
 
-msgid "panel.certificate.empty.body"
-msgstr ""
-
 msgid "panel.certificate.failed.title"
-msgstr ""
-
-msgid "panel.certificate.failed.body"
 msgstr ""
 
 #. Frase corta, en negrita, para la tercera línea de una fila no utilizable
@@ -822,15 +772,6 @@ msgstr ""
 msgid "panel.visibleSignature.phrase.seedJoin"
 msgstr ""
 
-msgid "panel.visibleSignature.datum.signer"
-msgstr ""
-
-msgid "panel.visibleSignature.datum.issuer"
-msgstr ""
-
-msgid "panel.visibleSignature.datum.signedAt"
-msgstr ""
-
 msgid "panel.visibleSignature.rubric.toggle"
 msgstr ""
 
@@ -846,6 +787,7 @@ msgstr ""
 msgid "panel.visibleSignature.rubric.change"
 msgstr ""
 
+#. Texto alternativo de la miniatura de la rúbrica cargada.
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr ""
 
@@ -856,34 +798,16 @@ msgstr ""
 msgid "panel.footer.unwritable"
 msgstr ""
 
-msgid "panel.footer.retrySigning"
-msgstr ""
-
-msgid "panel.footer.sign"
+msgid "actions.retry"
 msgstr ""
 
 msgid "panel.footer.signing"
-msgstr ""
-
-msgid "panel.footer.signWith"
 msgstr ""
 
 msgid "panel.footer.addCertificate"
 msgstr ""
 
 msgid "panel.signed.title"
-msgstr ""
-
-#. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
-msgid "panel.signed.formatPades"
-msgstr ""
-
-#. Término del dominio: CAdES es la sigla del formato de firma; no se traduce.
-msgid "panel.signed.formatCades"
-msgstr ""
-
-#. Término del dominio: XAdES es la sigla del formato de firma; no se traduce.
-msgid "panel.signed.formatXades"
 msgstr ""
 
 #. Recuento de firmas del documento, en la insignia del resumen.
@@ -921,7 +845,7 @@ msgstr ""
 msgid "panel.signed.field.issuer"
 msgstr ""
 
-#. El rótulo de la fecha que declara quien firma, en la ficha de una firma.
+#. Rótulo de la fecha de la firma: en la ficha de una firma y como dato de la frase de la firma visible.
 msgid "panel.signed.field.date"
 msgstr ""
 
@@ -952,9 +876,6 @@ msgid "panel.signed.document"
 msgstr ""
 
 msgid "panel.signed.none.title"
-msgstr ""
-
-msgid "panel.signed.none.body"
 msgstr ""
 
 msgid "panel.signed.unrecognized.title"
@@ -989,27 +910,10 @@ msgstr ""
 msgid "progress.stages.presign"
 msgstr ""
 
-#. Término del dominio: la etapa de la firma trifásica en la que se generan los hashes a firmar.
-msgid "progress.stages.presignTerm"
-msgstr ""
-
 msgid "progress.stages.sign"
 msgstr ""
 
 msgid "progress.stages.postsign"
-msgstr ""
-
-#. Término del dominio: la etapa en la que se ensambla el PDF ya firmado.
-msgid "progress.stages.postsignTerm"
-msgstr ""
-
-msgid "progress.states.done"
-msgstr ""
-
-msgid "progress.states.running"
-msgstr ""
-
-msgid "progress.states.pending"
 msgstr ""
 
 msgid "progress.keepTheCard"
@@ -1022,18 +926,14 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-#. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
+#. Cuerpo del diálogo de páginas sin firma visible; el título, en plural, dice cuántas páginas son.
 msgid "sealLoss.body"
 msgstr ""
 
-#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán la firma visible.
-msgid "sealLoss.remaining"
+msgid "actions.signAnyway"
 msgstr ""
 
-msgid "sealLoss.confirm"
-msgstr ""
-
-#. El titular del diálogo «¿Firmar de todos modos?», con alguna firma previa no válida.
+#. Titular de los diálogos «¿Firmar de todos modos?»: con alguna firma previa no válida y cuando la sede pide confirmar.
 msgid "signAnyway.title"
 msgstr ""
 
@@ -1043,9 +943,6 @@ msgstr ""
 
 #. Cierre del diálogo «¿Firmar de todos modos?»: el receptor puede rechazar el documento.
 msgid "signAnyway.warning"
-msgstr ""
-
-msgid "signAnyway.confirm"
 msgstr ""
 
 #. Hallazgo del documento: cambió después de la última firma.
@@ -1138,18 +1035,6 @@ msgstr ""
 msgid "status.recheck"
 msgstr ""
 
-msgid "status.columns.signal"
-msgstr ""
-
-msgid "status.columns.value"
-msgstr ""
-
-msgid "status.columns.verdict"
-msgstr ""
-
-msgid "status.columns.action"
-msgstr ""
-
 msgid "status.signals.version"
 msgstr ""
 
@@ -1230,6 +1115,7 @@ msgstr ""
 msgid "status.detail.notInstalled"
 msgstr ""
 
+#. Nombre propio del navegador: no se traduce.
 msgid "status.storeBrands.firefox"
 msgstr ""
 
@@ -1281,9 +1167,6 @@ msgstr ""
 msgid "status.withdrawal.outcome.withdrawn"
 msgstr ""
 
-msgid "status.withdrawal.retry"
-msgstr ""
-
 msgid "status.withdrawal.restartBrowserNotice"
 msgstr ""
 
@@ -1314,13 +1197,7 @@ msgstr ""
 msgid "preferences.consentCountdown.label"
 msgstr ""
 
-msgid "preferences.consentCountdown.hint"
-msgstr ""
-
 msgid "preferences.honourAutomaticSelection.label"
-msgstr ""
-
-msgid "preferences.honourAutomaticSelection.hint"
 msgstr ""
 
 msgid "preferences.rememberActivity.label"
@@ -1329,9 +1206,7 @@ msgstr ""
 msgid "preferences.rememberActivity.hint"
 msgstr ""
 
-msgid "preferences.rememberActivity.clear"
-msgstr ""
-
+#. Único texto del diálogo de confirmación, y su nombre accesible; el botón es «Borrar y apagar».
 msgid "preferences.rememberActivity.confirm.body"
 msgstr ""
 
@@ -1391,16 +1266,19 @@ msgstr ""
 msgid "about.version"
 msgstr ""
 
-msgid "about.whatItDoes"
-msgstr ""
-
-msgid "about.update.newVersion"
+#. Aviso de versión nueva, en Acerca de y en la franja de la ventana. {{version}} es la versión publicada, p. ej. 0.4.1.
+msgid "updates.newVersion"
 msgstr ""
 
 msgid "about.update.upToDate"
 msgstr ""
 
+#. Cuerpo del aviso de independencia, bajo about.independenceLead.
 msgid "about.independence"
+msgstr ""
+
+#. Título del aviso de independencia, en Acerca de y en la bienvenida del asistente; le sigue about.independence.
+msgid "about.independenceLead"
 msgstr ""
 
 #. No se traduce: es una URL.
@@ -1433,31 +1311,19 @@ msgstr ""
 msgid "setup.welcome.body"
 msgstr ""
 
-msgid "setup.language.body"
-msgstr ""
-
 msgid "setup.step"
 msgstr ""
 
-msgid "setup.actions.continue"
-msgstr ""
-
-msgid "setup.actions.back"
+msgid "actions.continue"
 msgstr ""
 
 msgid "setup.actions.finish"
 msgstr ""
 
-msgid "setup.actions.notNow"
+msgid "actions.notNow"
 msgstr ""
 
 msgid "setup.actions.skip"
-msgstr ""
-
-msgid "setup.actions.useRfirma"
-msgstr ""
-
-msgid "setup.certificate.title"
 msgstr ""
 
 msgid "setup.certificate.body"
@@ -1469,9 +1335,6 @@ msgstr ""
 msgid "setup.certificate.installedTitle"
 msgstr ""
 
-msgid "setup.certificate.installedRestartNotice"
-msgstr ""
-
 msgid "setup.certificate.failedTitle"
 msgstr ""
 
@@ -1479,9 +1342,6 @@ msgid "setup.handler.title"
 msgstr ""
 
 msgid "setup.handler.body"
-msgstr ""
-
-msgid "setup.handler.bodyNoAutofirma"
 msgstr ""
 
 msgid "setup.handler.done"
@@ -1501,17 +1361,6 @@ msgid "sede.unreachable.lead"
 msgstr ""
 
 msgid "sede.repair.caMissing"
-msgstr ""
-
-msgid "sede.repair.installCa"
-msgstr ""
-
-#. Nombre propio del navegador: no se traduce.
-msgid "sede.repair.chrome"
-msgstr ""
-
-#. Nombre propio del navegador: no se traduce.
-msgid "sede.repair.firefox"
 msgstr ""
 
 msgid "sede.repair.chromeAllow"
@@ -1617,7 +1466,7 @@ msgstr ""
 msgid "sede.consent.localBatchRoundCounterLeafs"
 msgstr ""
 
-msgid "sede.consent.sign"
+msgid "actions.sign"
 msgstr ""
 
 msgid "sede.consent.identify"
@@ -1625,9 +1474,6 @@ msgstr ""
 
 #. {{action}} es el texto del botón («Firmar»); {{seconds}}, los segundos que faltan para activarlo.
 msgid "sede.consent.countdown"
-msgstr ""
-
-msgid "sede.confirm.title"
 msgstr ""
 
 msgid "sede.confirm.messages.pdfShadowAttackSuspect"
@@ -1642,22 +1488,13 @@ msgstr ""
 msgid "sede.confirm.messages.unknown"
 msgstr ""
 
-msgid "sede.confirm.continue"
-msgstr ""
-
 msgid "sede.marking.title"
 msgstr ""
 
 msgid "sede.marking.hint"
 msgstr ""
 
-msgid "sede.marking.accept"
-msgstr ""
-
 msgid "sede.marking.unreadable"
-msgstr ""
-
-msgid "sede.signing.title"
 msgstr ""
 
 msgid "sede.signing.with"
@@ -1733,9 +1570,6 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-msgid "sede.outcome.batchTitle"
-msgstr ""
-
 msgid "sede.outcome.batchBody"
 msgid_plural "sede.outcome.batchBody"
 msgstr[0] ""
@@ -1760,9 +1594,6 @@ msgstr ""
 msgid "sede.outcome.refusedNote"
 msgstr ""
 
-msgid "sede.outcome.detail"
-msgstr ""
-
 msgid "sede.outcome.reportHint"
 msgstr ""
 
@@ -1773,9 +1604,6 @@ msgid "sede.oldWebClient.title"
 msgstr ""
 
 msgid "sede.oldWebClient.body"
-msgstr ""
-
-msgid "sede.oldWebClient.dismiss"
 msgstr ""
 
 msgid "sede.refusals.appendedSignaturePage"
@@ -1911,9 +1739,6 @@ msgid "sede.noCertificate.noneHint"
 msgstr ""
 
 msgid "sede.noCertificate.install"
-msgstr ""
-
-msgid "sede.noCertificate.lookAgain"
 msgstr ""
 
 #. La sede excluyó todos los certificados de la persona. Se dice cuántos tiene

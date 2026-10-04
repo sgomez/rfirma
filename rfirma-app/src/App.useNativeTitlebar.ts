@@ -42,7 +42,7 @@ export function useNativeTitlebar(
         openTooltip: t("tabs.openPdfShortcut"),
         warning: t("header.attention"),
         menu: t("header.menu"),
-        status: t("header.status"),
+        status: t("status.title"),
         preferences: t("header.preferences"),
         feedback: t("header.help"),
         about: t("header.about"),

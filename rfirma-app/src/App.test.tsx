@@ -81,9 +81,7 @@ describe("App", () => {
     // rúbrica que ya se adoptó.
     await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
 
-    expect(
-      await within(panel).findByRole("img", { name: "Tu rúbrica, tal como se estampará" }),
-    ).toBeInTheDocument();
+    expect(await within(panel).findByRole("img", { name: "Tu rúbrica" })).toBeInTheDocument();
   });
 
   // Encender el interruptor enseña el modelo y la rúbrica recordados; no los siembra.
@@ -168,7 +166,7 @@ describe("App", () => {
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
     await user.click(await screen.findByRole("tab", { name: "Firma" }));
     const remember = await screen.findByRole("switch", {
-      name: /Recordar la última configuración de firma visible/,
+      name: /Recordar la firma visible/,
     });
     await user.click(remember);
 

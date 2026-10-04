@@ -35,46 +35,6 @@
   padding: 0 var(--rf-space-md) var(--rf-space-sm);
 }
 
-.status-view__table-header {
-  display: flex;
-  align-items: center;
-  gap: var(--rf-space-sm);
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--rf-border-strong);
-}
-
-.status-view__col-signal {
-  width: 260px;
-  flex: none;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  margin: 0;
-}
-
-.status-view__col-value {
-  flex: 1;
-  min-width: 0;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  margin: 0;
-}
-
-.status-view__col-verdict {
-  width: 130px;
-  flex: none;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  margin: 0;
-}
-
-.status-view__col-action {
-  width: 160px;
-  flex: none;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  margin: 0;
-}
-
 .status-view__row {
   display: flex;
   flex-direction: column;

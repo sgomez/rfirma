@@ -23,7 +23,7 @@ export interface StampPreviewState {
    * original. `null` cuando no hay ninguno que enseñar.
    */
   pdf: PdfDocument | null;
-  /** «Ver cómo queda», y también «Volver a intentarlo». */
+  /** «Ver cómo queda», y también «Reintentar». */
   compose: () => void;
 }
 
@@ -103,7 +103,7 @@ export function useStampPreview({
   const compose = useCallback(() => {
     if (key === null) return;
     setAsked(key);
-    // Volver a intentarlo es olvidar el fallo: mientras esté apuntado contra
+    // Reintentar es olvidar el fallo: mientras esté apuntado contra
     // esta orden, la vista previa la da por resuelta y no vuelve a pedirla.
     setFailed((current) => (current?.key === key ? null : current));
   }, [key]);

@@ -31,7 +31,7 @@ interface ConfigurationView {
   theme: Theme;
   /**
    * **La única pregunta al entorno**: si Preferencias puede ofrecer
-   * «Junto al documento original». La contesta el backend; escribirla no
+   * «Junto al original». La contesta el backend; escribirla no
    * sirve de nada, así que no cruza al revés.
    */
   offersTheOriginalFolder: boolean;

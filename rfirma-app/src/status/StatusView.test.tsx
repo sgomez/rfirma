@@ -56,13 +56,11 @@ describe("StatusView", () => {
     expect(footer?.parentElement).toBe(body?.parentElement);
   });
 
-  it("renders the status table columns: Señal, Valor, Veredicto, Acción", () => {
+  it("renders the rows without a column header", () => {
     renderWithCatalog(<StatusView onClose={() => {}} />);
 
-    expect(screen.getByText("Señal")).toBeInTheDocument();
-    expect(screen.getByText("Valor")).toBeInTheDocument();
-    expect(screen.getByText("Veredicto")).toBeInTheDocument();
-    expect(screen.getByText("Acción")).toBeInTheDocument();
+    expect(screen.queryByText("Señal")).not.toBeInTheDocument();
+    expect(screen.queryByText("Veredicto")).not.toBeInTheDocument();
   });
 
   it("renders a row with role status showing Correcto when up to date", async () => {

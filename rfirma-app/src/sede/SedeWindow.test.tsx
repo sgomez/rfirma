@@ -23,30 +23,30 @@ describe("SedeWindow", () => {
   });
 
   describe("the old web client warning", () => {
-    it("says the page is out of date and that Got it lets it continue", () => {
+    it("says the page is out of date and that Continue lets it continue", () => {
       const { port } = scriptedErrand({ kind: "oldWebClient" });
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(screen.getByText("Esta página está desactualizada")).toBeInTheDocument();
-      expect(screen.getByText(/pulsa entendido para continuar/i)).toBeInTheDocument();
+      expect(screen.getByText(/pulsa continuar para seguir/i)).toBeInTheDocument();
     });
 
     it("is dismissed with its only button, without cancelling or closing the errand", () => {
       const { port, calls } = scriptedErrand({ kind: "oldWebClient" });
       renderWithCatalog(<SedeWindow errands={port} />);
 
-      fireEvent.click(screen.getByRole("button", { name: "Entendido" }));
+      fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
       expect(calls.dismissWarning).toHaveBeenCalledOnce();
       expect(calls.cancel).not.toHaveBeenCalled();
       expect(calls.close).not.toHaveBeenCalled();
     });
 
-    it("focuses Entendido, so Enter dismisses it", () => {
+    it("focuses Continue, so Enter dismisses it", () => {
       const { port } = scriptedErrand({ kind: "oldWebClient" });
       renderWithCatalog(<SedeWindow errands={port} />);
 
-      expect(screen.getByRole("button", { name: "Entendido" })).toHaveFocus();
+      expect(screen.getByRole("button", { name: "Continuar" })).toHaveFocus();
     });
   });
 
@@ -86,7 +86,7 @@ describe("SedeWindow", () => {
       const { port, calls } = scriptedErrand({ kind: "unreachable" });
       renderWithCatalog(<SedeWindow errands={port} />);
 
-      const install = screen.getByRole("button", { name: "Instalar…" });
+      const install = screen.getByRole("button", { name: "Instalar" });
       expect(install).toHaveClass("rf-btn--primary");
       fireEvent.click(install);
       expect(calls.installLocalCa).toHaveBeenCalledOnce();

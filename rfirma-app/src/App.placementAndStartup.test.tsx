@@ -299,7 +299,7 @@ describe("App, invocada con un documento", () => {
       withVersionCheck(inMemoryVersionCheck({ version: "0.4.1", installable: false }));
 
       const strip = await screen.findByRole("status");
-      expect(strip).toHaveTextContent("Hay una versión nueva de rFirma: 0.4.1");
+      expect(strip).toHaveTextContent("Hay una versión nueva: 0.4.1");
       // Nada modal: ni diálogo encima ni ventana atenuada.
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.getByRole("navigation", { name: "Documentos abiertos" })).toBeInTheDocument();
@@ -313,10 +313,10 @@ describe("App, invocada con un documento", () => {
     });
 
     /**
-     * «Avisarme cuando haya una versión nueva» apagado (ID-180): la
+     * «Avisar de versiones nuevas» apagado (ID-180): la
      * comprobación sigue corriendo, pero la franja no se monta.
      */
-    it("says nothing when Avisarme cuando haya una versión nueva is turned off", async () => {
+    it("says nothing when Avisar de versiones nuevas is turned off", async () => {
       renderApp(
         inMemoryRecents(),
         [],
@@ -377,13 +377,13 @@ describe("App, invocada con un documento", () => {
       withVersionCheck(versions);
 
       const strip = await screen.findByRole("status");
-      expect(strip).toHaveTextContent("Hay una versión nueva de rFirma: 0.4.1");
+      expect(strip).toHaveTextContent("Hay una versión nueva: 0.4.1");
 
       await user.click(screen.getByRole("button", { name: "Cómo actualizar" }));
 
       expect(await screen.findByText("Hay una versión nueva: 0.5.0")).toBeInTheDocument();
       // La franja del arranque no se toca: sigue con lo que supo entonces.
-      expect(strip).toHaveTextContent("Hay una versión nueva de rFirma: 0.4.1");
+      expect(strip).toHaveTextContent("Hay una versión nueva: 0.4.1");
     });
 
     describe("when the new version is installable", () => {
@@ -420,17 +420,17 @@ describe("App, invocada con un documento", () => {
 
         await screen.findByRole("status");
         await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
-        await user.click(await screen.findByRole("button", { name: "Más tarde" }));
+        await user.click(await screen.findByRole("button", { name: "Ahora no" }));
 
         expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
         expect(versions.installCalls).toBe(0);
       });
 
       it.each([
-        ["noUpdate", "Ya no hay ninguna versión nueva que instalar."],
-        ["networkFailure", "No se pudo descargar la actualización."],
+        ["noUpdate", "Ya no hay versión nueva."],
+        ["networkFailure", "Comprueba tu conexión e inténtalo de nuevo."],
         ["invalidSignature", "no tiene una firma válida"],
-        ["notAvailable", "no se puede actualizar desde la aplicación"],
+        ["notAvailable", "no se actualiza desde rFirma"],
       ] as const)("explains the %s failure and stays open", async (installation, message) => {
         const user = userEvent.setup();
         withVersionCheck(inMemoryVersionCheck(installable, installation));

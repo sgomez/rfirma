@@ -166,7 +166,7 @@ describe("el recuadro de la firma", () => {
     fireEvent.pointerUp(box(), { pointerId: 1 });
 
     expect(onPlace).not.toHaveBeenCalled();
-    expect(await screen.findByRole("alert")).toHaveTextContent(/fuera de la página/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/no puede salir de la página/);
   });
 
   it("moves with the arrow keys, for whoever is not using a mouse", async () => {

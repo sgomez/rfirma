@@ -76,7 +76,7 @@ describe("4 · outcome", () => {
     });
     renderWithCatalog(<SedeWindow errands={port} />);
 
-    expect(screen.getByText("Lote firmado y enviado")).toBeInTheDocument();
+    expect(screen.getByText("Firmado y enviado")).toBeInTheDocument();
     expect(
       screen.getByText("Las 3 firmas del lote ya están en sede.ejemplo.gob.es."),
     ).toBeInTheDocument();

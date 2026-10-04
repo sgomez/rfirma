@@ -52,7 +52,7 @@ export function InstallUpdateDialog({ newVersion, versions, onClose }: InstallUp
             <p className="rf-prose">{t("updates.install.confirmBody", { version })}</p>
             <div className="rf-row install-update-dialog__actions">
               <button type="button" className="rf-btn rf-btn--ghost" onClick={onClose}>
-                {t("updates.install.postpone")}
+                {t("actions.notNow")}
               </button>
               <button
                 type="button"

@@ -62,8 +62,6 @@ export default defineConfig({
       "errors.situations.*",
       // El motivo del fallo de instalación es un tipo importado (`Installation`).
       "updates.install.failed.*",
-      // Del diálogo nativo GTK de arranque: no hay ventana donde `t()` las lea.
-      "errors.startup.*",
       // De `rfirma verify -v`: las imprime la terminal, no la ventana.
       "commandLine.verify.*",
       "languages.*",

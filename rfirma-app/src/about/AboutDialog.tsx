@@ -59,7 +59,6 @@ export function AboutDialog({
             </p>
             <span className="rf-badge about__version">{t("about.version", { version })}</span>
           </div>
-          <p className="rf-prose rf-text-muted">{t("about.whatItDoes")}</p>
           <UpdateStatus
             newVersion={currentVersion}
             offerUpdate={offerUpdate}
@@ -95,7 +94,10 @@ export function AboutDialog({
           <span className="about__independenceIcon">
             <InfoIcon size={16} />
           </span>
-          <p className="rf-prose">{t("about.independence")}</p>
+          <div className="rf-stack about__independenceText">
+            <p className="rf-title">{t("about.independenceLead")}</p>
+            <p className="rf-prose">{t("about.independence")}</p>
+          </div>
         </div>
 
         <div className="rf-row about__footer">
@@ -130,7 +132,7 @@ function UpdateStatus({
     return (
       <div className="rf-row about__updateStatus about__updateStatus--new">
         <NewVersionIcon />
-        <span>{t("about.update.newVersion", { version: newVersion.version })}</span>
+        <span>{t("updates.newVersion", { version: newVersion.version })}</span>
         {offerUpdate && newVersion.installable && (
           <button type="button" className="rf-btn rf-btn--primary" onClick={onUpdate}>
             {t("updates.install.action")}

@@ -203,7 +203,7 @@ export function WithdrawCertificateDialog({
                 className="rf-btn rf-btn--primary"
                 onClick={success ? onClose : withdraw}
               >
-                {success ? t("actions.close") : t("status.withdrawal.retry")}
+                {success ? t("actions.close") : t("actions.retry")}
               </button>
             </>
           )}

@@ -59,7 +59,7 @@ export function SedeSigning({ origin, certificate, phase, onCancel }: SedeSignin
             ? origin === null
               ? t("sede.returning.titleUnknownOrigin")
               : t("sede.returning.title", { origin })
-            : t("sede.signing.title")}
+            : t("panel.footer.signing")}
         </p>
         <p className="rf-prose rf-text-muted">
           {returning
@@ -75,7 +75,7 @@ export function SedeSigning({ origin, certificate, phase, onCancel }: SedeSignin
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={PROGRESS[phase]}
-          aria-label={t("sede.signing.title")}
+          aria-label={t("panel.footer.signing")}
         >
           <div className="sede-signing__bar" style={{ width: `${PROGRESS[phase]}%` }} />
         </div>

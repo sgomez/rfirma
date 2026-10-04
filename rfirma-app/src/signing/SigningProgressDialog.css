@@ -62,10 +62,6 @@
   color: var(--rf-text-muted);
 }
 
-.progress-dialog__term {
-  font-weight: 400;
-}
-
 .progress-dialog__bar {
   height: 4px;
   border-radius: var(--rf-radius-pill);

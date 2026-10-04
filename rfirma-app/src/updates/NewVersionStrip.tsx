@@ -23,7 +23,7 @@ export function NewVersionStrip({ newVersion, onOpen, onDismiss }: NewVersionStr
   if (newVersion === null) return null;
   return (
     <NotificationStrip
-      message={t("notifications.newVersion.message", { version: newVersion.version })}
+      message={t("updates.newVersion", { version: newVersion.version })}
       action={
         newVersion.installable
           ? { label: t("updates.install.action"), onSelect: () => onOpen("installUpdate") }

@@ -62,16 +62,14 @@ describe("SetupWizard", () => {
     );
 
     expect(screen.getByText("Configurar rFirma")).toBeInTheDocument();
-    expect(screen.getByText(/aplicación compatible con AutoFirma 1\.9\.2/)).toBeInTheDocument();
+    expect(screen.getByText(/compatible con AutoFirma 1\.9\.2/)).toBeInTheDocument();
     expect(screen.getByText("Proyecto independiente")).toBeInTheDocument();
     expect(screen.getByText("Paso 1 de 2")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
-    expect(screen.getByText("El certificado de rFirma")).toBeInTheDocument();
-    expect(
-      screen.getByText("Para que tu navegador se conecte a rFirma de forma segura."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Certificado de rFirma")).toBeInTheDocument();
+    expect(screen.getByText("Conexión segura entre el navegador y rFirma.")).toBeInTheDocument();
     expect(screen.getByText("Usar rFirma por defecto")).toBeInTheDocument();
     expect(screen.getByText("Paso 2 de 2")).toBeInTheDocument();
   });
@@ -135,10 +133,10 @@ describe("SetupWizard", () => {
     );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
-    await user.click(screen.getByRole("button", { name: "Que abran rFirma" }));
+    await user.click(screen.getByRole("button", { name: "Usar rFirma" }));
 
     expect(screen.queryByText("2")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Que abran rFirma" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Usar rFirma" })).not.toBeInTheDocument();
 
     resolveChoice([{ ...handlerNotOurs, verdict: "correct", action: null }]);
     await waitFor(() => {
@@ -152,9 +150,7 @@ describe("SetupWizard", () => {
       "gl",
     );
 
-    expect(
-      screen.getByText(/rFirma é unha aplicación compatible con AutoFirma 1\.9\.2/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/rFirma é compatible con AutoFirma 1\.9\.2/)).toBeInTheDocument();
     expect(screen.getByText("Paso 1 de 2")).toBeInTheDocument();
   });
 
@@ -175,14 +171,12 @@ describe("SetupWizard", () => {
     await user.click(screen.getByRole("option", { name: "English" }));
 
     expect(screen.getByText("Set up rFirma")).toBeInTheDocument();
-    expect(
-      screen.getByText(/rFirma is an application compatible with AutoFirma 1\.9\.2/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/rFirma is compatible with AutoFirma 1\.9\.2/)).toBeInTheDocument();
     expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(screen.getByText("The rFirma certificate")).toBeInTheDocument();
+    expect(screen.getByText("rFirma certificate")).toBeInTheDocument();
   });
 
   it("can be skipped from the welcome screen without touching the computer", async () => {
@@ -234,9 +228,7 @@ describe("SetupWizard", () => {
     await waitFor(() => {
       expect(screen.getByText("Instalado en tus navegadores.")).toBeInTheDocument();
     });
-    expect(
-      screen.getByText("Si tienes alguno abierto, reinícialo para que lo reconozca."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Reinicia Firefox para que surta efecto.")).toBeInTheDocument();
   });
 
   it("offers no button while the certificate card is working (docs/design/primer-arranque.md)", async () => {
@@ -317,7 +309,7 @@ describe("SetupWizard", () => {
     await user.click(screen.getByRole("button", { name: "Instalar" }));
 
     await waitFor(() => {
-      expect(screen.getByText("No se ha podido instalar en todas partes.")).toBeInTheDocument();
+      expect(screen.getByText("No se ha instalado en todas partes.")).toBeInTheDocument();
     });
     expect(screen.getByText("Firefox")).toBeInTheDocument();
     expect(screen.getByText("Otros navegadores")).toBeInTheDocument();
@@ -361,7 +353,7 @@ describe("SetupWizard", () => {
     );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
-    await user.click(screen.getByRole("button", { name: "Que abran rFirma" }));
+    await user.click(screen.getByRole("button", { name: "Usar rFirma" }));
 
     await waitFor(() => {
       expect(screen.getByText("Ahora abren rFirma.")).toBeInTheDocument();
@@ -391,7 +383,7 @@ describe("SetupWizard", () => {
     expect(screen.queryByRole("button", { name: "Instalar" })).not.toBeInTheDocument();
   });
 
-  it("uses the alternate copy when AutoFirma does not appear among the candidates", async () => {
+  it("shows no hint on the handler step when AutoFirma does not appear among the candidates", async () => {
     const user = userEvent.setup();
     const handlerAlone: SignalRow = {
       ...handlerNotOurs,
@@ -409,9 +401,8 @@ describe("SetupWizard", () => {
     );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
-    expect(
-      screen.getByText("Ahora mismo las sedes no tienen ningún programa asignado."),
-    ).toBeInTheDocument();
+    const handlerTitle = screen.getByText("Usar rFirma por defecto");
+    expect(handlerTitle.parentElement?.querySelector(".rf-hint")).toBeNull();
   });
 
   it("marks setupWizardSeen on Terminar after both cards succeed", async () => {
@@ -437,7 +428,7 @@ describe("SetupWizard", () => {
       />,
     );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await user.click(screen.getByRole("button", { name: "Que abran rFirma" }));
+    await user.click(screen.getByRole("button", { name: "Usar rFirma" }));
     await waitFor(() => {
       expect(screen.getByText("Ahora abren rFirma.")).toBeInTheDocument();
     });
@@ -469,7 +460,7 @@ describe("SetupWizard", () => {
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     await user.click(screen.getByRole("button", { name: "Instalar" }));
     await waitFor(() => {
-      expect(screen.getByText("No se ha podido instalar en todas partes.")).toBeInTheDocument();
+      expect(screen.getByText("No se ha instalado en todas partes.")).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole("button", { name: "Terminar" }));
@@ -564,11 +555,8 @@ describe("SetupWizard", () => {
 
     expect(screen.getByRole("separator")).toBeInTheDocument();
     const protection = screen.getByRole("switch", {
-      name: "Protección contra firmas accidentales",
+      name: "Esperar 3 segundos antes de firmar",
     });
-    expect(protection).toHaveAccessibleDescription(
-      "Se añade una pausa de 3 segundos antes de permitir firmar.",
-    );
     await waitFor(() => expect(protection).toHaveAttribute("aria-checked", "true"));
 
     await user.click(protection);
@@ -605,7 +593,7 @@ describe("SetupWizard", () => {
 
     expect(await screen.findByText("Instalado en tus navegadores.")).toBeInTheDocument();
     expect(screen.getByText("Ahora abren rFirma.")).toBeInTheDocument();
-    for (const name of ["Instalar", "Que abran rFirma", "Ahora no"]) {
+    for (const name of ["Instalar", "Usar rFirma", "Ahora no"]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
   });
@@ -630,14 +618,14 @@ describe("SetupWizard", () => {
     );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
-    for (const name of ["Instalar", "Que abran rFirma", "Ahora no"]) {
+    for (const name of ["Instalar", "Usar rFirma", "Ahora no"]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
 
     resolveRead([aVersionRow, certificateNotInstalled, handlerNotOurs]);
 
     expect(await screen.findByRole("button", { name: "Instalar" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Que abran rFirma" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Usar rFirma" })).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
   });

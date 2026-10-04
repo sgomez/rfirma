@@ -131,7 +131,7 @@ describe("SigningPanel · Modelo y rúbrica", () => {
   it("shows the rubric already normalized, over white, before signing", () => {
     renderPanel({ rubric });
 
-    const thumbnail = screen.getByAltText("Tu rúbrica, tal como se estampará");
+    const thumbnail = screen.getByAltText("Tu rúbrica");
     expect(thumbnail).toHaveAttribute("src", rubric.dataUrl);
   });
 
