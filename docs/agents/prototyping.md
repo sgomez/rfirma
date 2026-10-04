@@ -15,7 +15,7 @@ Claude Design es **solo** la superficie de prototipado: es desechable, sirve
 para que el usuario mire y decida. La referencia duradera vive siempre en el
 repo, en Markdown.
 
-La decisión y lo que se descartó están en el ADR-0033.
+La decisión y lo que se descartó están en el ADR-0045, que sustituye al ADR-0033.
 
 La rama **lógica** (`LOGIC.md`: máquinas de estado, flujo trifásico, errores de
 PKCS#11) **no** cambia: sigue siendo el fichero HTML único y local que describe

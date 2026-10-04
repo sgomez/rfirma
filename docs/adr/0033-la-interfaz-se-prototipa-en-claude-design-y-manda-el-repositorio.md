@@ -1,3 +1,5 @@
+> Sustituido por el [ADR-0045](0045-la-verdad-de-una-pantalla-es-su-codigo-y-sus-historias-de-storybook.md).
+
 # La interfaz se prototipa en Claude Design, y lo que manda vive en el repositorio
 
 Las pantallas de rFirma se dibujan, comparan y validan en **Claude Design**: un proyecto con un

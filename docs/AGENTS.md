@@ -37,7 +37,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0029 | La envoltura XAdES la declara la sede; el nombre del formato solo la suple |
 | 0030 | Una firma que pide sello de tiempo y no se puede sellar no sale: `SAF_09`, nunca una firma sin sello |
 | 0032 | La selección automática que pide la sede (`headless`, `mandatoryCertSelection=false`) se respeta solo si la persona lo permite en sus preferencias |
-| 0033 | La interfaz se prototipa en Claude Design, y lo que manda vive en el repositorio: fichas, bundle y copia de los artboards |
+| 0033 | La interfaz se prototipa en Claude Design, y lo que manda vive en el repositorio: fichas, bundle y copia de los artboards (sustituido por el 0045) |
 | 0034 | El Almacén de rFirma: una base NSS cifrada con un PIN que solo guarda el llavero del escritorio |
 | 0035 | Windows como segunda plataforma: dependencias por target y adaptadores no disponibles |
 | 0036 | El saludo TLS del canal local fuera de Linux (Windows y macOS) es de rustls |
@@ -48,6 +48,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0041 | La línea de órdenes sigue a la de AutoFirma, sin la contraseña en argv |
 | 0042 | La lista de `-certtui` habla por `/dev/tty` y la pinta ratatui |
 | 0043 | La validez de una firma: tres valores, gana el peor problema y el sello de tiempo prueba la fecha |
+| 0045 | La verdad de una pantalla implementada es su código y sus historias de Storybook; Claude Design solo explora (sustituye al 0033) |
 
 Los ADR que solo afectan a la suite de conformidad viven en `rfirma-conformance/docs/adr/` y
 comparten la numeración: el siguiente ADR, esté donde esté, toma el número libre más alto.
