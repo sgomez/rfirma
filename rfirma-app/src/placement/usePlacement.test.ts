@@ -294,3 +294,106 @@ describe("unsealing a page", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
+
+describe("the page button", () => {
+  function renderPlaced(placement: Placement | null, onChange?: (p: Placement | null) => void) {
+    return renderPlacement(onChange, aDocument(placement));
+  }
+
+  it("puts the box at the standard position of the page in view when nothing is placed", async () => {
+    const { result } = renderPlaced(null);
+    act(() => result.current.viewPage(3));
+
+    act(() => result.current.sealViewedPage());
+
+    await waitFor(() =>
+      expect(result.current.placement).toEqual({ rect: standardOn(3), pages: { only: [3] } }),
+    );
+  });
+
+  it("moves the page under «one page» and keeps the box where it was", async () => {
+    const { result } = renderPlaced({ rect: SAVED_RECT, pages: { only: [1] } });
+    act(() => result.current.viewPage(4));
+
+    act(() => result.current.sealViewedPage());
+
+    await waitFor(() =>
+      expect(result.current.placement).toEqual({ rect: SAVED_RECT, pages: { only: [4] } }),
+    );
+  });
+
+  it("adds the page in view under «these pages»", async () => {
+    const { result } = renderPlaced({ rect: SAVED_RECT, pages: { only: [1, 4] } });
+    act(() => result.current.viewPage(2));
+
+    act(() => result.current.sealViewedPage());
+
+    await waitFor(() =>
+      expect(result.current.placement).toEqual({ rect: SAVED_RECT, pages: { only: [1, 2, 4] } }),
+    );
+  });
+
+  it("starts «these pages» with no range yet from the page in view, at the standard position", async () => {
+    const { result } = renderPlaced(null);
+    act(() => result.current.changePageMode("these"));
+    act(() => result.current.viewPage(5));
+
+    act(() => result.current.sealViewedPage());
+
+    await waitFor(() =>
+      expect(result.current.placement).toEqual({ rect: standardOn(5), pages: { only: [5] } }),
+    );
+  });
+
+  it("takes the page in view out of «these pages»", () => {
+    const { result } = renderPlaced({ rect: SAVED_RECT, pages: { only: [1, 3] } });
+    act(() => result.current.viewPage(3));
+
+    act(() => result.current.unsealViewedPage());
+
+    expect(result.current.placement).toEqual({ rect: SAVED_RECT, pages: { only: [1] } });
+  });
+
+  it("names the rest one by one when the whole document was sealed", () => {
+    const { result } = renderPlaced({ rect: SAVED_RECT, pages: "all" });
+    act(() => result.current.changePageMode("these"));
+    act(() => result.current.viewPage(2));
+
+    act(() => result.current.unsealViewedPage());
+
+    expect(result.current.placement).toEqual({ rect: SAVED_RECT, pages: { only: [1, 3, 4, 5] } });
+  });
+
+  it("takes the whole placement away with the last page of the set", () => {
+    const onChange = vi.fn();
+    const { result } = renderPlaced({ rect: SAVED_RECT, pages: { only: [2] } }, onChange);
+    act(() => result.current.viewPage(2));
+
+    act(() => result.current.unsealViewedPage());
+
+    expect(result.current.placement).toBeNull();
+    expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it("unseals nothing, and tells nobody, when nothing is placed", () => {
+    const onChange = vi.fn();
+    const { result } = renderPlaced(null, onChange);
+
+    act(() => result.current.unsealViewedPage());
+
+    expect(result.current.placement).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("places nothing while there is no document to measure", async () => {
+    const onChange = vi.fn();
+    const { result } = renderHook(() =>
+      usePlacement({ document: aDocument(), standardRectOn: null, onChange }),
+    );
+
+    await act(async () => result.current.sealViewedPage());
+
+    expect(result.current.placement).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});

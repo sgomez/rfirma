@@ -104,6 +104,15 @@ export function usePlacement({ document, standardRectOn, onChange }: PlacementOp
     [apply, placing, pageCount],
   );
 
+  /** El botón «Ponerla aquí»: sin recuadro a la vista, nace en la posición estándar de la página. */
+  const sealViewedPage = useCallback(() => {
+    if (placement !== null) return sealPage(placement.rect, viewedPage);
+    if (standardRectOn === null) return;
+    void standardRectOn(viewedPage).then((rect) => sealPage(rect, viewedPage));
+  }, [placement, standardRectOn, viewedPage, sealPage]);
+
+  const unsealViewedPage = useCallback(() => unsealPage(viewedPage), [unsealPage, viewedPage]);
+
   const choosePages = useCallback(
     (pages: PageSet | null) => {
       void placeStandard({
@@ -145,6 +154,8 @@ export function usePlacement({ document, standardRectOn, onChange }: PlacementOp
     moveBox,
     sealPage,
     unsealPage,
+    sealViewedPage,
+    unsealViewedPage,
     choosePages,
     changePageMode,
     placeOnViewedPage,

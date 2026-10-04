@@ -70,6 +70,11 @@ export function useViewerPage({ pdf, placement, stamped }: UseViewerPageArgs) {
   const [pagePoints, setPagePoints] = useState<PageSize | null>(null);
   const [visible, setVisible] = useState<ObservedSize | null>(null);
   const [outOfPage, setOutOfPage] = useState(false);
+  const [placementSeen, setPlacementSeen] = useState(placement);
+  if (placement !== placementSeen) {
+    setPlacementSeen(placement);
+    setOutOfPage(false);
+  }
   // Lo tecleado en el porcentaje mientras se teclea. `null` = no se está
   // tecleando, y entonces el campo muestra el zoom de verdad.
   const [typing, setTyping] = useState<string | null>(null);

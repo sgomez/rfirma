@@ -540,34 +540,6 @@ function latest(renders: Recorder["renders"]) {
  * recuadro seguía pintado sobre la hoja.
  */
 describe("el visor cuando no se puede colocar la firma visible", () => {
-  it("ignores a seal request, since the panel should not have offered the button either", async () => {
-    const onSeal = vi.fn();
-    const { document, renders } = recordingDocument();
-    const { rerender } = renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        canPlace={false}
-        onSeal={onSeal}
-        onOpen={noop}
-      />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        canPlace={false}
-        onSeal={onSeal}
-        onOpen={noop}
-        placementRequest={{ action: "seal" }}
-      />,
-    );
-
-    expect(onSeal).not.toHaveBeenCalled();
-  });
-
   // La colocación **no se borra** al apagar (así lo hace ya el panel): lo que
   // desaparece es el recuadro, y vuelve intacto al reencender.
   it("paints no box over the sheet, and paints it again when switched back on", async () => {

@@ -95,13 +95,7 @@ interface SigningPanelProps {
    * sellar: si la lleva, ofrece quitarla.
    */
   viewedPage: number;
-  /**
-   * Sellar la página que se está mirando, o quitarle el sello si ya lo lleva.
-   *
-   * El botón vive aquí, pero la acción la ejecuta el visor: es quien sabe
-   * dónde cae el recuadro cuando no había ninguno todavía —su posición
-   * estándar se mide sobre el `viewport` de `pdf.js`, que el panel no tiene—.
-   */
+  /** Sellar la página que se está mirando, o quitarle el sello si ya lo lleva. */
   onSeal: () => void;
   onUnseal: () => void;
   rubric: Rubric | null;

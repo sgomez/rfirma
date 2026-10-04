@@ -75,9 +75,9 @@ export function recordingDocument(pageCount = 3): Recorder {
 
 export const noop = () => {};
 
-/** Los cuatro avisos de gesto del visor, todos a un mismo espía. */
+/** Los dos avisos de gesto del visor, a un mismo espía. */
 export function reportingTo(spy: (...args: unknown[]) => unknown) {
-  return { onMove: spy, onTrace: spy, onSeal: spy, onUnseal: spy };
+  return { onMove: spy, onTrace: spy };
 }
 
 /**
