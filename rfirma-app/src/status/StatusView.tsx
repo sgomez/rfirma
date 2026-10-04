@@ -34,7 +34,7 @@ import {
 } from "./status";
 import { WithdrawCertificateDialog } from "./WithdrawCertificateDialog";
 
-interface StatusViewProps {
+export interface StatusViewProps {
   onClose: () => void;
   statusPort?: StatusPort;
   externalDestinations?: ExternalDestinationOpener;
@@ -44,6 +44,8 @@ interface StatusViewProps {
    * necesite saberlas (el triángulo del menú).
    */
   onRowsChange?: (rows: SignalRow[]) => void;
+  /** Las señales cuyo detalle empieza desplegado. */
+  initiallyExpanded?: Signal[];
 }
 
 export function StatusView({
@@ -51,11 +53,14 @@ export function StatusView({
   statusPort = memoryStatus(),
   externalDestinations = unavailableExternalDestinationOpener(),
   onRowsChange,
+  initiallyExpanded = [],
 }: StatusViewProps) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<SignalRow[]>([]);
   const [isRechecking, setIsRechecking] = useState(false);
-  const [expandedDetail, setExpandedDetail] = useState<Set<Signal>>(new Set());
+  const [expandedDetail, setExpandedDetail] = useState<Set<Signal>>(
+    () => new Set(initiallyExpanded),
+  );
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   // Cada remedición propia —al abrirse, tras una acción, con «Volver a
