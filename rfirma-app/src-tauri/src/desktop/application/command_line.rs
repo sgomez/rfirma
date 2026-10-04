@@ -2,8 +2,6 @@
 
 use std::path::Path;
 
-use base64::Engine as _;
-
 use crate::desktop::application::store_scope::{within_the_scope, ScopeFailure};
 use crate::desktop::domain::command_line::{
     command_of, handover_to_the_window, is_a_help_flag, normalised, parameter_left_out,
@@ -31,9 +29,11 @@ mod certtui;
 mod config;
 mod json_output;
 mod response;
+mod signing;
 mod verify;
-use json_output::ListedAliases;
-use response::{Document, Field, Response};
+use json_output::{ListedAliases, SignedDocument};
+use response::{Field, Response};
+use signing::{in_the_xml_response, sign};
 pub use verify::{format_to_verify, UNKNOWN_FORMAT};
 
 /// El código de salida de una orden que termina bien.
@@ -207,29 +207,37 @@ fn carried_out(
 }
 
 fn list_aliases(arguments: &[String], stores: &dyn CertificateStores) -> Outcome {
-    let document = document_asked_by(arguments);
-    match (aliases_listed(arguments, stores), document) {
-        (Ok(certificates), Some(Document::Json)) => Outcome {
+    match (
+        aliases_listed(arguments, stores),
+        document_asked_by(arguments),
+    ) {
+        (Ok(certificates), Some(Asked::Json)) => Outcome {
             stdout: json_output::compact(&ListedAliases::of(&certificates)),
             ..Outcome::aliases_of(&certificates)
         },
-        (Err(failed), Some(Document::Json)) => failed,
-        (Ok(certificates), Some(document)) => Outcome {
-            stdout: aliases_response(&certificates).render(document),
+        (Ok(certificates), Some(Asked::Xml)) => Outcome {
+            stdout: aliases_response(&certificates).to_xml(),
             ..Outcome::aliases_of(&certificates)
         },
         (Ok(certificates), None) => Outcome::aliases_of(&certificates),
-        (Err(failed), Some(document)) => in_the_response(document, failed, None),
-        (Err(failed), None) => failed,
+        (Err(failed), Some(Asked::Xml)) => in_the_xml_response(failed, None),
+        (Err(failed), _) => failed,
     }
 }
 
-fn document_asked_by(arguments: &[String]) -> Option<Document> {
+/// El documento que pide la orden en stdout, en lugar del texto.
+#[derive(Clone, Copy)]
+enum Asked {
+    Xml,
+    Json,
+}
+
+fn document_asked_by(arguments: &[String]) -> Option<Asked> {
     let asks = |parameter: &str| arguments.iter().any(|argument| argument == parameter);
     if asks(XML) {
-        Some(Document::Xml)
+        Some(Asked::Xml)
     } else if asks(JSON) {
-        Some(Document::Json)
+        Some(Asked::Json)
     } else {
         None
     }
@@ -245,131 +253,6 @@ fn aliases_listed(
     let scope = scope_named_by(arguments)
         .map_err(|refusal| Outcome::refused(&Refusal::InvalidStore(refusal)))?;
     within_the_scope(&scope, stores).map_err(|failure| failure_of_the_scope(&failure))
-}
-
-fn sign(
-    arguments: &[String],
-    parsed: &SignArguments,
-    operation: SignatureOperation,
-    ports: &CommandLinePorts,
-) -> Outcome {
-    let Signed(outcome, document) = signed(arguments, parsed, operation, ports);
-    match document_asked_by(arguments) {
-        Some(asked) => in_the_response(asked, outcome, document.as_deref()),
-        None => outcome,
-    }
-}
-
-/// El desenlace de firmar y, si no se escribió en `-o`, el documento firmado para la respuesta XML.
-struct Signed(Outcome, Option<Vec<u8>>);
-
-fn signed(
-    arguments: &[String],
-    parsed: &SignArguments,
-    operation: SignatureOperation,
-    ports: &CommandLinePorts,
-) -> Signed {
-    let outcome = |outcome: Outcome| Signed(outcome, None);
-    let Some(selection) = &parsed.selection else {
-        return outcome(Outcome::not_yet_available(
-            "elegir el certificado sin --alias",
-        ));
-    };
-    let parameters = match config::parameters_of(parsed.config.as_deref()) {
-        Ok(parameters) => parameters,
-        Err(reason) => {
-            return outcome(Outcome::failed(format!(
-                "rfirma: --config no se acepta ({reason})"
-            )))
-        }
-    };
-    let input = Path::new(&parsed.input);
-    let (certificate, typed_in_the_window) =
-        match the_certificate_chosen_by(selection, input, arguments, ports) {
-            Ok(chosen) => chosen,
-            Err(failed) => return outcome(failed),
-        };
-    let bytes = match ports.files.read(input) {
-        Ok(bytes) => bytes,
-        Err(reason) => {
-            return outcome(Outcome::failed(format!(
-                "rfirma: no se puede leer «{}» ({reason})",
-                parsed.input
-            )))
-        }
-    };
-    let format = signature_format_of(parsed.format, &bytes);
-    let document = match ports.signer.sign(&CommandLineSigning {
-        input,
-        certificate: &certificate,
-        format,
-        operation,
-        algorithm: parsed.algorithm,
-        terminal: ports.terminal,
-        parameters: &parameters,
-        document_length: bytes.len(),
-        password_fd: parsed.password_fd,
-        descriptor: ports.descriptor,
-        typed_in_the_window: typed_in_the_window.as_ref(),
-    }) {
-        Ok(document) => document,
-        Err(reason) => {
-            return outcome(Outcome::failed(format!(
-                "rfirma: no se ha podido firmar ({reason})"
-            )))
-        }
-    };
-    let Some(output) = &parsed.output else {
-        ports.signer.remember(&certificate);
-        return Signed(
-            Outcome {
-                exit_code: SUCCEEDED,
-                stdout: Vec::new(),
-                stderr: vec!["rfirma: firma generada".to_owned()],
-            },
-            Some(document),
-        );
-    };
-    if let Err(reason) = ports.files.write(Path::new(output), &document) {
-        return outcome(Outcome::failed(format!(
-            "rfirma: no se puede escribir «{output}» ({reason})"
-        )));
-    }
-    ports.signer.remember(&certificate);
-    outcome(Outcome {
-        exit_code: SUCCEEDED,
-        stdout: Vec::new(),
-        stderr: vec![format!("rfirma: firma guardada en «{output}»")],
-    })
-}
-
-fn in_the_response(document: Document, outcome: Outcome, signature: Option<&[u8]>) -> Outcome {
-    Outcome {
-        stdout: response_of(&outcome, signature).render(document),
-        ..outcome
-    }
-}
-
-fn response_of(outcome: &Outcome, signature: Option<&[u8]>) -> Response {
-    let message = outcome
-        .stderr
-        .iter()
-        .map(|line| line.strip_prefix("rfirma: ").unwrap_or(line))
-        .collect::<Vec<_>>()
-        .join(" ");
-    let mut fields = vec![Field::One("msg", message)];
-    if let Some(bytes) = signature {
-        fields.push(Field::One(
-            "sign",
-            base64::engine::general_purpose::STANDARD.encode(bytes),
-        ));
-    }
-    let result = if outcome.exit_code == SUCCEEDED {
-        "true"
-    } else {
-        "false"
-    };
-    Response::new(result, fields)
 }
 
 fn aliases_response(certificates: &[TokenCertificate]) -> Response {
@@ -404,21 +287,6 @@ fn the_certificate_chosen_by(
             arguments,
             ports,
         ),
-    }
-}
-
-fn signature_format_of(asked: Format, bytes: &[u8]) -> SignatureFormat {
-    match asked {
-        Format::Pades => SignatureFormat::Pades,
-        Format::Cades => SignatureFormat::Cades,
-        Format::Xades => SignatureFormat::Xades(XadesVariant::Enveloping),
-        Format::Auto => match shape_of(bytes) {
-            DetectedShape::Pdf => SignatureFormat::Pades,
-            DetectedShape::Xml | DetectedShape::Invoice => {
-                SignatureFormat::Xades(XadesVariant::Enveloping)
-            }
-            DetectedShape::Binary => SignatureFormat::Cades,
-        },
     }
 }
 

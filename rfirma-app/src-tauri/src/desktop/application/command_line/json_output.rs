@@ -1,13 +1,16 @@
 //! Los tipos del `--json` de cada orden, propios de la línea de órdenes y construidos desde el dominio, que no se serializa (ADR-0041).
 
+use std::path::Path;
 use std::time::SystemTime;
 
+use base64::Engine as _;
 use chrono::{DateTime, SecondsFormat, Utc};
 use openssl::bn::BigNum;
 use serde::Serialize;
 
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::StoreClass;
+use crate::signing::domain::bridge::Format;
 
 /// Lo que saca `listaliases --json`.
 #[derive(Serialize)]
@@ -19,6 +22,24 @@ pub(super) struct ListedAliases {
 struct ListedAlias {
     alias: String,
     store: String,
+    #[serde(flatten)]
+    certificate: CertificateOutput,
+}
+
+/// Lo que saca `sign --json` y `cosign --json`.
+#[derive(Serialize)]
+pub(super) struct SignedDocument {
+    format: &'static str,
+    certificate: SigningCertificate,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    output: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    signature: Option<String>,
+}
+
+#[derive(Serialize)]
+struct SigningCertificate {
+    alias: String,
     #[serde(flatten)]
     certificate: CertificateOutput,
 }
@@ -54,6 +75,43 @@ impl ListedAliases {
     }
 }
 
+impl SignedDocument {
+    pub(super) fn written_to(
+        certificate: &TokenCertificate,
+        format: Format,
+        output: &Path,
+    ) -> Self {
+        let absolute = std::path::absolute(output).unwrap_or_else(|_| output.to_path_buf());
+        Self {
+            output: Some(absolute.to_string_lossy().into_owned()),
+            ..Self::without_destination(certificate, format)
+        }
+    }
+
+    pub(super) fn returned(
+        certificate: &TokenCertificate,
+        format: Format,
+        document: &[u8],
+    ) -> Self {
+        Self {
+            signature: Some(base64::engine::general_purpose::STANDARD.encode(document)),
+            ..Self::without_destination(certificate, format)
+        }
+    }
+
+    fn without_destination(certificate: &TokenCertificate, format: Format) -> Self {
+        Self {
+            format: official_name_of(format),
+            certificate: SigningCertificate {
+                alias: certificate.reference().label().to_owned(),
+                certificate: CertificateOutput::of(certificate),
+            },
+            output: None,
+            signature: None,
+        }
+    }
+}
+
 impl CertificateOutput {
     pub(super) fn of(certificate: &TokenCertificate) -> Self {
         let validity = certificate.validity();
@@ -75,6 +133,15 @@ pub(super) fn compact(output: &impl Serialize) -> Vec<u8> {
     let mut bytes = serde_json::to_vec(output).unwrap_or_default();
     bytes.push(b'\n');
     bytes
+}
+
+fn official_name_of(format: Format) -> &'static str {
+    match format {
+        Format::Pades => "PAdES",
+        Format::Cades => "CAdES",
+        Format::Xades(_) => "XAdES",
+        other => other.name(),
+    }
 }
 
 fn store_name_of(certificate: &TokenCertificate) -> String {

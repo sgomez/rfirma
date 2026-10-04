@@ -177,6 +177,25 @@ fn certgui_signs_with_the_certificate_and_the_pin_chosen_in_the_window() {
 }
 
 #[test]
+fn certgui_json_names_the_chosen_certificate_by_alias_with_its_common_fields() {
+    let mut words = CERTGUI.to_vec();
+    words.push("-json");
+
+    let outcome = chosen_with(
+        &words,
+        vec![a_usable_certificate("uno"), a_usable_certificate("dos")],
+        &Untouched,
+        &ScriptedWindow::choosing(1, Some("1234")),
+        &RecordingSigner::default(),
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{}", said(&outcome));
+    let signed = super::schema::conforming_json("sign", &outcome.stdout);
+    assert_eq!(signed["certificate"]["alias"], "dos");
+    assert!(signed["certificate"]["notAfter"].is_string());
+}
+
+#[test]
 fn certgui_with_a_store_that_needs_no_pin_signs_without_a_secret_from_the_window() {
     let window = ScriptedWindow::choosing(0, None);
     let signer = RecordingSigner::default();

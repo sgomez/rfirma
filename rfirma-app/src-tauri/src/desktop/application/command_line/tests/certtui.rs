@@ -157,6 +157,29 @@ fn certtui_lists_only_the_usable_certificates_with_headline_capacity_issuer_expi
 }
 
 #[test]
+fn certtui_json_names_the_chosen_certificate_by_alias_with_its_common_fields() {
+    let stores = StoresHolding::these(vec![
+        a_usable_certificate("uno"),
+        a_usable_certificate("dos"),
+    ]);
+    let mut words = CERTTUI.to_vec();
+    words.push("-json");
+
+    let outcome = chosen_with(
+        &words,
+        &stores,
+        &ChoosingTerminal::taking(Some(1)),
+        &Untouched,
+        &RecordingSigner::default(),
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{}", said(&outcome));
+    let signed = super::schema::conforming_json("sign", &outcome.stdout);
+    assert_eq!(signed["certificate"]["alias"], "dos");
+    assert!(signed["certificate"]["notAfter"].is_string());
+}
+
+#[test]
 fn certtui_preselects_the_remembered_certificate() {
     let second = a_usable_certificate("dos");
     let stores = StoresHolding::these(vec![a_usable_certificate("uno"), second.clone()]);
