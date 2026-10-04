@@ -133,3 +133,49 @@ fn the_catalog_holds_spanish_and_only_the_complete_languages() {
         );
     }
 }
+
+#[test]
+fn the_plural_forms_are_those_of_intl_plural_rules() {
+    let with_many = [
+        (0, "other"),
+        (1, "one"),
+        (2, "other"),
+        (5, "other"),
+        (1_000_000, "many"),
+        (2_000_000, "many"),
+        (1_000_001, "other"),
+    ];
+    for language in Language::ALL {
+        let has_many = matches!(language, Language::Spanish | Language::Catalan);
+        for (count, form) in with_many {
+            let expected = if form == "many" && !has_many {
+                "other"
+            } else {
+                form
+            };
+            assert_eq!(
+                plural_form(language, count),
+                expected,
+                "{language:?} {count}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_count_reads_the_msgstr_of_its_plural_form_with_the_count_in_it() {
+    let key = "panel.signed.count";
+
+    assert_eq!(
+        counted(Language::Spanish, key, 1),
+        msgstr_of(SPANISH_PO, "panel.signed.count_one").replace("{{count}}", "1")
+    );
+    assert_eq!(
+        counted(Language::Spanish, key, 3_000_000),
+        msgstr_of(SPANISH_PO, "panel.signed.count_many").replace("{{count}}", "3000000")
+    );
+    assert_eq!(
+        counted(Language::English, key, 2),
+        msgstr_of(ENGLISH_PO, "panel.signed.count_other").replace("{{count}}", "2")
+    );
+}

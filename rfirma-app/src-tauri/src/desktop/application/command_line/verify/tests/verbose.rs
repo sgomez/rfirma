@@ -109,17 +109,58 @@ fn the_document_findings_come_above_the_signatures_and_count_as_problems() {
 
     let outcome = verified_reading_with(&["verify", "-v", "-i", "firmado.pdf"], &reader);
 
+    let finding = |key: &str| translated(Language::Spanish, key, &[]);
     assert_eq!(
         printed(&outcome),
-        "\
+        format!(
+            "\
 PAdES · 1 firma · 3 problemas
-⚠ Se ha modificado después de la última firma
-⚠ Se ha rellenado el formulario después de firmar
-⚠ Se ha añadido contenido encima de lo firmado
+⚠ {}
+⚠ {}
+⚠ {}
 
 ✓ UNA
-"
+",
+            finding("documentFinding.modifiedAfterLastSignature"),
+            finding("documentFinding.formFilledAfterSigning"),
+            finding("documentFinding.contentAddedOnTop"),
+        )
     );
+}
+
+fn one_of_each_finding() -> Vec<(DocumentFinding, &'static str)> {
+    let findings = vec![
+        (
+            DocumentFinding::ModifiedAfterLastSignature,
+            "documentFinding.modifiedAfterLastSignature",
+        ),
+        (
+            DocumentFinding::FormFilledAfterSigning,
+            "documentFinding.formFilledAfterSigning",
+        ),
+        (
+            DocumentFinding::ContentAddedOnTop,
+            "documentFinding.contentAddedOnTop",
+        ),
+    ];
+    for (finding, _) in &findings {
+        match finding {
+            DocumentFinding::ModifiedAfterLastSignature
+            | DocumentFinding::FormFilledAfterSigning
+            | DocumentFinding::ContentAddedOnTop => {}
+        }
+    }
+    findings
+}
+
+#[test]
+fn every_document_finding_has_its_key_in_every_language_of_the_catalog() {
+    for (finding, key) in one_of_each_finding() {
+        assert_eq!(finding_key(finding), key);
+        for language in Language::ALL {
+            assert_ne!(translated(language, key, &[]), key, "{key}");
+        }
+    }
 }
 
 #[test]

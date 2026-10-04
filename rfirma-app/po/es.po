@@ -1166,6 +1166,38 @@ msgstr "{{name}} no admitía más firmas"
 msgid "signatureReason.cosignNotAdmittedUnnamed"
 msgstr "El documento no admitía más firmas"
 
+#. La cabecera de «rfirma verify -v» de un documento sin firmas, tras el formato: «PAdES · sin firmas».
+msgid "commandLine.verify.noSignatures"
+msgstr "sin firmas"
+
+#. En la línea de una firma de «rfirma verify -v», la entidad en cuyo nombre firma. {{entity}}: la entidad.
+msgid "commandLine.verify.onBehalfOf"
+msgstr "por {{entity}}"
+
+#. Rótulo de la ficha de «rfirma verify -vvv»: el número de serie del certificado.
+msgid "commandLine.verify.field.serialNumber"
+msgstr "Número de serie"
+
+#. Rótulo de la ficha de «rfirma verify -vvv»: el periodo de vigencia del certificado.
+msgid "commandLine.verify.field.validity"
+msgstr "Vigencia"
+
+#. Rótulo de la ficha de «rfirma verify -vvv»: el algoritmo de la firma.
+msgid "commandLine.verify.field.algorithm"
+msgstr "Algoritmo"
+
+#. Rótulo de la ficha de «rfirma verify -vvv»: el perfil de la firma.
+msgid "commandLine.verify.field.profile"
+msgstr "Perfil"
+
+#. Vigencia de un certificado que solo dice cuándo empieza. {{date}}: el inicio.
+msgid "commandLine.verify.validFrom"
+msgstr "desde {{date}}"
+
+#. Vigencia de un certificado que solo dice cuándo acaba. {{date}}: el final.
+msgid "commandLine.verify.validUntil"
+msgstr "hasta {{date}}"
+
 msgid "status.title"
 msgstr "Estado de rFirma"
 
