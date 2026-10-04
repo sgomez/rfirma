@@ -3,7 +3,11 @@
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./AboutDialog.css";
+import { Badge } from "../design-system/Badge";
+import { Button } from "../design-system/Button";
 import { ExternalLinkIcon, InfoIcon, NewVersionIcon, UpToDateIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
+import { Stack } from "../design-system/Stack";
 import { InstallUpdateDialog } from "../updates/InstallUpdateDialog";
 import type { NewVersion, VersionCheck } from "../updates/newVersion";
 
@@ -57,7 +61,7 @@ export function AboutDialog({
             <p className="rf-heading about__name" id={titleId}>
               {t("app.name")}
             </p>
-            <span className="rf-badge about__version">{t("about.version", { version })}</span>
+            <Badge className="about__version">{t("about.version", { version })}</Badge>
           </div>
           <UpdateStatus
             newVersion={currentVersion}
@@ -90,21 +94,21 @@ export function AboutDialog({
           </dd>
         </dl>
 
-        <div className="rf-row about__independence">
+        <Row className="about__independence">
           <span className="about__independenceIcon">
             <InfoIcon size={16} />
           </span>
-          <div className="rf-stack about__independenceText">
+          <Stack className="about__independenceText">
             <p className="rf-title">{t("about.independenceLead")}</p>
             <p className="rf-prose">{t("about.independence")}</p>
-          </div>
-        </div>
+          </Stack>
+        </Row>
 
-        <div className="rf-row about__footer">
-          <button type="button" className="rf-btn rf-btn--primary about__close" onClick={onClose}>
+        <Row className="about__footer">
+          <Button variant="primary" className="about__close" onClick={onClose}>
             {t("actions.close")}
-          </button>
-        </div>
+          </Button>
+        </Row>
       </div>
       {updating && currentVersion !== null && (
         <InstallUpdateDialog
@@ -130,23 +134,23 @@ function UpdateStatus({
 
   if (newVersion !== null) {
     return (
-      <div className="rf-row about__updateStatus about__updateStatus--new">
+      <Row className="about__updateStatus about__updateStatus--new">
         <NewVersionIcon />
         <span>{t("updates.newVersion", { version: newVersion.version })}</span>
         {offerUpdate && newVersion.installable && (
-          <button type="button" className="rf-btn rf-btn--primary" onClick={onUpdate}>
+          <Button variant="primary" onClick={onUpdate}>
             {t("updates.install.action")}
-          </button>
+          </Button>
         )}
-      </div>
+      </Row>
     );
   }
   return (
-    <div className="rf-row about__updateStatus">
+    <Row className="about__updateStatus">
       <span className="about__upToDateIcon">
         <UpToDateIcon />
       </span>
       <span>{t("about.update.upToDate")}</span>
-    </div>
+    </Row>
   );
 }
