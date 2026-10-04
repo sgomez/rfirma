@@ -2,6 +2,7 @@
 
 import { type RefObject, useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import {
   ChevronDownIcon,
   CloseIcon,
@@ -129,14 +130,10 @@ function HiddenTabsMenu({ hidden, onActivate }: HiddenTabsMenuProps) {
 
   return (
     <div className="document-tabs__more-menu" ref={container}>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
         ref={trigger}
-        className={
-          open
-            ? "rf-btn rf-btn--ghost document-tabs__more document-tabs__more--open"
-            : "rf-btn rf-btn--ghost document-tabs__more"
-        }
+        className={open ? "document-tabs__more document-tabs__more--open" : "document-tabs__more"}
         title={t("tabs.more")}
         aria-label={t("tabs.more")}
         aria-haspopup="menu"
@@ -146,7 +143,7 @@ function HiddenTabsMenu({ hidden, onActivate }: HiddenTabsMenuProps) {
       >
         +{hidden.length}
         <ChevronDownIcon size={14} strokeWidth={2} />
-      </button>
+      </Button>
       <Popover
         open={open}
         onClose={close}

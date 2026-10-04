@@ -3,7 +3,9 @@
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Badge } from "../design-system/Badge";
 import { AlertIcon, CheckCircleIcon, CrossCircleIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
 import type {
   DocumentFinding,
   PreviousSignature,
@@ -80,16 +82,16 @@ function CardHead({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="rf-row signature-cards__head">
+    <Row className="signature-cards__head">
       <span className="rf-label signature-cards__label">{label}</span>
-      {isNew && <span className="rf-badge rf-badge--primary">{t("panel.signed.new")}</span>}
+      {isNew && <Badge variant="primary">{t("panel.signed.new")}</Badge>}
       <span
         className={`signature-cards__validity signature-cards__validity--${signature.validity}`}
       >
         {validityIcon(signature.validity)}
         <span className="rf-body">{validityLabel(t, signature.validity)}</span>
       </span>
-    </div>
+    </Row>
   );
 }
 
@@ -160,28 +162,36 @@ function SignatureRows({ signature, locale }: { signature: PreviousSignature; lo
       {rows
         .filter(([, value]) => value !== "")
         .map(([label, value, strong]) => (
-          <Row key={label} label={label} value={value} strong={strong} />
+          <SignatureField key={label} label={label} value={value} strong={strong} />
         ))}
       {signature.closesDocument && (
         <span className="rf-body signature-cards__closes">{t("panel.signed.closesDocument")}</span>
       )}
       {reason !== "" && (
-        <Row label={t("panel.signed.field.reason")} value={reason} strong={false} />
+        <SignatureField label={t("panel.signed.field.reason")} value={reason} strong={false} />
       )}
     </>
   );
 }
 
-function Row({ label, value, strong }: { label: string; value: string; strong: boolean }) {
+function SignatureField({
+  label,
+  value,
+  strong,
+}: {
+  label: string;
+  value: string;
+  strong: boolean;
+}) {
   return (
-    <div className="rf-row signature-cards__field">
+    <Row className="signature-cards__field">
       <span className="rf-body rf-text-muted signature-cards__field-label">{label}</span>
       <span
         className={`rf-body signature-cards__field-value${strong ? " signature-cards__field-value--signer" : ""}`}
       >
         {value}
       </span>
-    </div>
+    </Row>
   );
 }
 

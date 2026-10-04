@@ -37,12 +37,12 @@ Componentes `*Icon` con prop `size` en px: `CheckCircleIcon`, `CrossCircleIcon`,
 
 ### Pantallas
 
-`SedeWindow` es la ventana que abre una sede electrónica (520 × 420). Recibe un puerto `errands` que la app conecta a Tauri, así que úsala como referencia de cómo se ve una ventana de rFirma, no como pieza para componer. Las pantallas nuevas se construyen con las clases de arriba y los iconos.
+`SedeView` es la ventana que abre una sede electrónica (520 × 420), con el momento del trámite en la prop `errand` y sus órdenes como props: no recibe ningún puerto. Úsala entera cuando el diseño sea esa ventana, con el `errand` del momento que toque; sus textos salen del catálogo. Las pantallas nuevas se construyen con las clases de arriba y los iconos.
 
 ### Dónde mirar
 
 - `styles.css` e `_ds_bundle.css`: todas las clases y tokens.
-- `components/sede/SedeWindow/SedeWindow.prompt.md`: los estados de la ventana de sede.
+- `components/sede/SedeView/SedeView.prompt.md`: los estados de la ventana de sede.
 
 ### Ejemplo
 
