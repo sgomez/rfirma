@@ -3,7 +3,10 @@
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { AlertIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
+import { Stack } from "../design-system/Stack";
 import { SedeBody, useDefaultButton } from "./SedeFrame";
 
 interface SedeConfirmProps {
@@ -41,30 +44,29 @@ export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmPro
       footer={
         <>
           <div className="sede-window__spacer" />
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
+          <Button variant="ghost" onClick={onCancel}>
             {t("actions.cancel")}
-          </button>
-          <button
+          </Button>
+          <Button
             ref={continueButton}
-            type="button"
-            className="rf-btn rf-btn--primary"
+            variant="primary"
             disabled={handing}
             onClick={() => void confirm()}
           >
             {t("actions.continue")}
-          </button>
+          </Button>
         </>
       }
     >
-      <div className="rf-stack sede-confirm">
-        <div className="rf-row rf-gap-xs sede-confirm__heading">
+      <Stack className="sede-confirm">
+        <Row gap="xs" className="sede-confirm__heading">
           <span className="sede-confirm__icon">
             <AlertIcon size={18} />
           </span>
           <p className="rf-title">{t("signAnyway.title")}</p>
-        </div>
+        </Row>
         <p className="rf-prose">{confirmationMessage(t, messageCode)}</p>
-      </div>
+      </Stack>
     </SedeBody>
   );
 }
