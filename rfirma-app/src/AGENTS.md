@@ -48,7 +48,7 @@ sus comentarios a las formas que admite la regla 6 de `CLAUDE.md`.
 
 | Carpeta | Qué es |
 |---|---|
-| raíz: `main.tsx`, `tauri*.ts` | El cableado de la ventana principal y los adaptadores de Tauri de cada puerto; `tauri.ts` es su punto de import (ver «La regla del puerto»). |
+| raíz: `main.tsx`, `tauri*.ts` | El cableado de la ventana principal y los adaptadores de Tauri, en el fichero del dominio de su puerto (`tauriPreferences.ts`: ajustes, idioma y tema; `tauriSigning.ts`: también el destino y la apertura del firmado; `tauriDesktop.ts`: destinos externos, versión y versión nueva); `tauri.ts` es su punto de import (ver «La regla del puerto»). |
 | raíz: `App.*` | El árbol de la ventana principal, `App.tsx`, y sus ganchos y piezas, uno por fichero `App.<pieza>`. |
 | `shell/` | La ventana y su cabecera (ADR-0007). |
 | `documents/` | Los documentos abiertos y los recientes. |

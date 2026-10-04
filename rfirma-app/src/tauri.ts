@@ -2,7 +2,7 @@
 /**
  * Los puertos que hablan con Tauri, reunidos aquí para que la ventana y
  * `main.tsx` sigan importando un solo módulo: cada familia vive en su propio
- * `tauri*.ts` —firma, documento, configuración, sede y estado—, y estos son
+ * `tauri*.ts` —firma, documento, configuración, escritorio, sede y estado—, y estos son
  * los únicos ficheros del frontal que saben que debajo hay Tauri.
  *
  * La ventana y sus pruebas siguen hablando con `CertificateStore`,
@@ -20,26 +20,20 @@
  * es `errors/classify.ts`, que no es de Tauri sino de `NamedFailure`.
  */
 
+export { tauriAppVersion, tauriExternalDestinationOpener, tauriVersionCheck } from "./tauriDesktop";
 export {
   tauriDocumentDrops,
   tauriDocumentPicker,
   tauriPdfSource,
   tauriRecents,
 } from "./tauriDocuments";
-export {
-  tauriAppVersion,
-  tauriDestinations,
-  tauriExternalDestinationOpener,
-  tauriLanguagePreference,
-  tauriPreferences,
-  tauriSignedDocumentOpener,
-  tauriVersionCheck,
-  tauriWindowTheme,
-} from "./tauriPreferences";
+export { tauriLanguagePreference, tauriPreferences, tauriWindowTheme } from "./tauriPreferences";
 export { tauriSiteErrands } from "./tauriSede";
 export {
   tauriCertificateStore,
+  tauriDestinations,
   tauriRubricPicker,
+  tauriSignedDocumentOpener,
   tauriSigningBackend,
   tauriStampComposer,
   tauriVisibleSignatureMemory,

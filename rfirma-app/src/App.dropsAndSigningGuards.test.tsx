@@ -35,7 +35,11 @@ describe("App, al soltar ficheros en la ventana", () => {
   }
 
   it("opens a dropped PDF exactly like the dialog does", async () => {
-    const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 7 }));
+    const { drops } = renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: pdfsOf({ "factura.pdf": 7 }),
+    });
 
     drops.drop(anOpened("factura.pdf"));
 
@@ -58,7 +62,11 @@ describe("App, al soltar ficheros en la ventana", () => {
   });
 
   it("opens a tab for each of several dropped PDFs, with the first one in front", async () => {
-    const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 2 }));
+    const { drops } = renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+    });
 
     drops.drop(anOpened("factura.pdf", [document("contrato.pdf")]));
 
@@ -74,7 +82,11 @@ describe("App, al soltar ficheros en la ventana", () => {
    * casos por separado.
    */
   it("opens N tabs for N dropped files and counts the discarded ones in the same gesture", async () => {
-    const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 2 }));
+    const { drops } = renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+    });
 
     drops.drop(anOpened("factura.pdf", [document("contrato.pdf"), document("anexo.pdf")], 2));
 
@@ -88,7 +100,11 @@ describe("App, al soltar ficheros en la ventana", () => {
 
   /** ID-306: lo que no era un PDF sí se cuenta, y por qué. */
   it("says how many were discarded when some of what was dropped was not a PDF", async () => {
-    const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 2 }));
+    const { drops } = renderApp({
+      recents: inMemoryRecents(),
+      documents: [],
+      pdfs: pdfsOf({ "factura.pdf": 2 }),
+    });
 
     drops.drop(anOpened("factura.pdf", [], 2));
 
@@ -127,11 +143,11 @@ describe("App, al soltar ficheros en la ventana", () => {
   /** El aviso habla del documento que hay delante, así que se va con él. */
   it("drops the notice once another document is in front", async () => {
     const user = userEvent.setup();
-    const { drops } = renderApp(
-      inMemoryRecents(),
-      [document("otro.pdf")],
-      pdfsOf({ "factura.pdf": 2, "otro.pdf": 3 }),
-    );
+    const { drops } = renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("otro.pdf")],
+      pdfs: pdfsOf({ "factura.pdf": 2, "otro.pdf": 3 }),
+    });
     drops.drop(anOpened("factura.pdf", [], 2));
     await screen.findByRole("alert");
 
@@ -184,15 +200,15 @@ describe("App, con páginas donde el recuadro no cabe", () => {
       signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
-    renderApp(
-      inMemoryRecents(),
-      [documentWithPlacement("factura.pdf", { only: [1, 2, 3] })],
-      pdfsWithViews("factura.pdf", [A4, SMALL, A4]),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [documentWithPlacement("factura.pdf", { only: [1, 2, 3] })],
+      pdfs: pdfsWithViews("factura.pdf", [A4, SMALL, A4]),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+      rubrics: emptyRubricPicker(),
       signer,
-    );
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -243,15 +259,15 @@ describe("App, con páginas donde el recuadro no cabe", () => {
       signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
-    renderApp(
-      inMemoryRecents(),
-      [documentWithPlacement("factura.pdf", { only: [1, 2, 3] })],
-      pdfsWithViews("factura.pdf", [A4, SMALL, A4]),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [documentWithPlacement("factura.pdf", { only: [1, 2, 3] })],
+      pdfs: pdfsWithViews("factura.pdf", [A4, SMALL, A4]),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+      rubrics: emptyRubricPicker(),
       signer,
-    );
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -293,15 +309,15 @@ describe("App, con páginas donde el recuadro no cabe", () => {
       signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
-    renderApp(
-      inMemoryRecents(),
-      [documentWithPlacement("factura.pdf", { only: [1, 3] })],
-      pdfsWithViews("factura.pdf", [A4, SMALL, A4]),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [documentWithPlacement("factura.pdf", { only: [1, 3] })],
+      pdfs: pdfsWithViews("factura.pdf", [A4, SMALL, A4]),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+      rubrics: emptyRubricPicker(),
       signer,
-    );
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -339,7 +355,7 @@ describe("App, con un documento que no se recuerda", () => {
   it("paints it in the viewer without leaving it among the recents", async () => {
     const user = userEvent.setup();
     const recents = inMemoryRecents();
-    renderApp(recents, [fromTheSede()], pdfsOf({ "de-la-sede.pdf": 4 }));
+    renderApp({ recents, documents: [fromTheSede()], pdfs: pdfsOf({ "de-la-sede.pdf": 4 }) });
 
     await openPdf(user);
 
@@ -351,13 +367,13 @@ describe("App, con un documento que no se recuerda", () => {
   it("leaves no placement behind when the box is put on it", async () => {
     const user = userEvent.setup();
     const recents = inMemoryRecents();
-    renderApp(
+    renderApp({
       recents,
-      [fromTheSede()],
-      pdfsOf({ "de-la-sede.pdf": 4 }),
-      {},
-      { list: async () => [remembered] },
-    );
+      documents: [fromTheSede()],
+      pdfs: pdfsOf({ "de-la-sede.pdf": 4 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+    });
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
@@ -398,15 +414,15 @@ describe("App, con un documento que no se recuerda", () => {
       signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
       discard: async () => {},
     };
-    renderApp(
+    renderApp({
       recents,
-      [document("de-la-sede.pdf", { remembered: false, placement: aPlacement })],
-      pdfsOf({ "de-la-sede.pdf": 4 }),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
+      documents: [document("de-la-sede.pdf", { remembered: false, placement: aPlacement })],
+      pdfs: pdfsOf({ "de-la-sede.pdf": 4 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+      rubrics: emptyRubricPicker(),
       signer,
-    );
+    });
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -487,15 +503,15 @@ describe("App · ¿Firmar de todos modos?", () => {
 
   async function readyToSign(signer: SigningBackend) {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("cofirmado.pdf", { placement: aPlacement })],
-      pdfsOf({ "cofirmado.pdf": 4 }),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("cofirmado.pdf", { placement: aPlacement })],
+      pdfs: pdfsOf({ "cofirmado.pdf": 4 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+      rubrics: emptyRubricPicker(),
       signer,
-    );
+    });
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const sign = await within(panel).findByRole("button", { name: "Firmar" });
@@ -649,18 +665,18 @@ describe("App · ¿Firmar de todos modos?", () => {
       closesDocument: true,
     });
     const presigned: SigningOrder[] = [];
-    renderApp(
-      inMemoryRecents(),
-      [document("cofirmado.pdf", { placement: aPlacement })],
-      pdfsOf({ "cofirmado.pdf": 4 }),
-      {},
-      { list: async () => [remembered] },
-      emptyRubricPicker(),
-      signerOver(
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("cofirmado.pdf", { placement: aPlacement })],
+      pdfs: pdfsOf({ "cofirmado.pdf": 4 }),
+      settings: {},
+      certificates: { list: async () => [remembered] },
+      rubrics: emptyRubricPicker(),
+      signer: signerOver(
         { signatures: [closingSignature], tone: "information", closed: true },
         recordingPresign(presigned),
       ),
-    );
+    });
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await within(panel).findByText("El documento no admite más firmas.");
