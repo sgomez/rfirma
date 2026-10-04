@@ -3,6 +3,7 @@
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Badge } from "../design-system/Badge";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -12,6 +13,7 @@ import {
   SpinnerIcon,
 } from "../design-system/icons";
 import { Popover } from "../design-system/Popover";
+import { Stack } from "../design-system/Stack";
 import type { Certificate } from "./certificate";
 import {
   certificateCompactSubtitle,
@@ -144,9 +146,9 @@ export function CertificateSelect({
           </span>
           <span className="certificate-select__meta">
             {stores.map((store) => (
-              <span key={store} className="rf-badge certificate-select__store">
+              <Badge key={store} className="certificate-select__store">
                 {storeLabel(store, t)}
-              </span>
+              </Badge>
             ))}
             {certificate.status.kind === "valid" && (
               <span className="rf-body rf-text-muted certificate-select__expiry">
@@ -190,7 +192,7 @@ export function CertificateSelect({
   };
 
   return (
-    <div className="rf-stack certificate-select">
+    <Stack className="certificate-select">
       <span className="rf-label" id={labelId}>
         {t("panel.certificate.title")}
       </span>
@@ -297,7 +299,7 @@ export function CertificateSelect({
           )}
         </div>
       </Popover>
-    </div>
+    </Stack>
   );
 }
 

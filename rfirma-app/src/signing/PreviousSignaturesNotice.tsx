@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
 import { AlertIcon, CrossCircleIcon, InfoIcon, PersonIcon } from "../design-system/icons";
 import type { Certificate } from "./certificate";
 import type { PreviousSignaturesReport } from "./previousSignatures";
@@ -79,13 +80,13 @@ export function PreviousSignaturesNotice({
             </>
           )}
         </span>
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost panel__co-signature-view"
+        <Button
+          variant="ghost"
+          className="panel__co-signature-view"
           onClick={() => setDialogOpen(true)}
         >
           {t("panel.previousSignatures.view")}
-        </button>
+        </Button>
       </div>
       {closed && (
         <div className="panel__co-signature-footer">
