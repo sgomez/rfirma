@@ -86,6 +86,22 @@ describe("Dialog", () => {
     expect(onOuter).not.toHaveBeenCalled();
   });
 
+  it("answers Escape before a listener of the view behind it", async () => {
+    const onView = vi.fn();
+    const onClose = vi.fn();
+    const listener = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) onView();
+    };
+    window.addEventListener("keydown", listener);
+    render(<Dialog label="Acerca de" onClose={onClose} />);
+
+    await userEvent.keyboard("{Escape}");
+    window.removeEventListener("keydown", listener);
+
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(onView).not.toHaveBeenCalled();
+  });
+
   it("gives the focus back to what had it before opening", () => {
     const { rerender } = render(<button type="button">Abrir</button>);
     screen.getByRole("button", { name: "Abrir" }).focus();

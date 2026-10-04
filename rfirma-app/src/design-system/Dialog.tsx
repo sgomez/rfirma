@@ -81,11 +81,12 @@ export function Dialog({
         keepTabInside(event, element);
       } else if (event.key === "Escape" && onClose !== undefined) {
         event.preventDefault();
+        event.stopPropagation();
         onClose();
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [onClose]);
 
   return (
