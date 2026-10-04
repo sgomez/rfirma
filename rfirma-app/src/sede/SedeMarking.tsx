@@ -2,10 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PlacementBlock } from "../placement/PlacementBlock";
 import { firstSealedPage, type Placement } from "../placement/pageSets";
 import { usePlacement } from "../placement/usePlacement";
-import { PlacementFieldset } from "../signing/PlacementFieldset";
-import { usePlacementField } from "../signing/usePlacementField";
 import { DocumentViewer } from "../viewer/DocumentViewer";
 import type { PdfDocument } from "../viewer/pdf";
 import { standardRectOnPageOf } from "../viewer/signatureBox";
@@ -32,29 +31,8 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
     () => (pdf === null ? null : { placement: null, pageCount: pdf.pageCount }),
     [pdf],
   );
-  const {
-    placing,
-    pageMode,
-    placement,
-    viewedPage,
-    viewPage,
-    moveBox,
-    sealPage,
-    sealViewedPage,
-    unsealViewedPage,
-    choosePages,
-    changePageMode,
-  } = usePlacement({ document, standardRectOn });
-  const { pagesText, rangeError, pageButton, typePages } = usePlacementField({
-    documentPages: pdf?.pageCount ?? 0,
-    pageSets: placing.sets,
-    pageMode,
-    placement,
-    viewedPage,
-    onChoosePages: choosePages,
-    onSeal: sealViewedPage,
-    onUnseal: unsealViewedPage,
-  });
+  const placementState = usePlacement({ document, standardRectOn });
+  const { placement, rangeError, viewPage, moveBox, sealPage } = placementState;
   const [handing, setHanding] = useState(false);
 
   const accept = async () => {
@@ -109,15 +87,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
               <p className="rf-prose rf-text-muted">{t("sede.marking.hint")}</p>
               <section className="panel__placement" aria-label={t("panel.placement.title")}>
                 <p className="rf-label panel__heading">{t("panel.placement.title")}</p>
-                <PlacementFieldset
-                  pageSets={placing.sets}
-                  pageMode={pageMode}
-                  onChangePageMode={changePageMode}
-                  pagesText={pagesText}
-                  onTypePages={typePages}
-                  rangeError={rangeError}
-                  pageButton={pageButton}
-                />
+                <PlacementBlock state={placementState} />
               </section>
             </>
           )}

@@ -2,17 +2,8 @@
 
 import type { RenderResult } from "@testing-library/react";
 import { screen } from "@testing-library/react";
-import { useState } from "react";
 import { expect } from "vitest";
-import {
-  activating,
-  type PageMode,
-  type PageSet,
-  type PageSets,
-  pagesOf,
-  placementOf,
-  storing,
-} from "../placement/pageSets";
+import { placementStateOf } from "../placement/placementFixtures";
 import { renderWithCatalog } from "../testing/render";
 import type { Certificate } from "./certificate";
 import type { PreviousSignature, PreviousSignaturesReport } from "./previousSignatures";
@@ -79,15 +70,14 @@ export const rubric: Rubric = {
 
 const noop = () => {};
 
-/** El recuadro, en espacio de usuario: aquí solo importa que exista. */
-export const rect = { x0: 100, y0: 100, x1: 300, y1: 180 };
+const rect = { x0: 100, y0: 100, x1: 300, y1: 180 };
 
 export type PanelProps = Partial<Parameters<typeof SigningPanel>[0]>;
 
 function panelWith(props: PanelProps) {
   return (
     <SigningPanel
-      document={{ id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 }}
+      document={{ id: "doc-1", name: "contrato.pdf", sizeBytes: 2_400_000 }}
       previousSignatures={reportOf([])}
       certificate={{ kind: "chosen", certificate, certificates: [certificate] }}
       onChooseCertificate={noop}
@@ -95,14 +85,12 @@ function panelWith(props: PanelProps) {
       onChooseModule={noop}
       signature={{ ...DEFAULT_VISIBLE_SIGNATURE, enabled: true }}
       onChangeSignature={noop}
-      placement={{ rect, pages: { only: [3] } }}
-      pageSets={{ single: 3, these: null }}
-      onChoosePages={noop}
-      pageMode="single"
-      onChangePageMode={noop}
-      viewedPage={3}
-      onSeal={noop}
-      onUnseal={noop}
+      placementState={placementStateOf({
+        rect,
+        sets: { single: 3, these: null },
+        viewedPage: 3,
+        pageCount: 27,
+      })}
       rubric={null}
       rubricFailure={null}
       onChooseRubric={noop}
@@ -123,47 +111,6 @@ export function renderPanel(
 ): RenderResult & { show: (next: PanelProps) => void } {
   const result = renderWithCatalog(panelWith(props));
   return { ...result, show: (next: PanelProps) => result.rerender(panelWith(next)) };
-}
-
-/**
- * El panel con **los tres modos de verdad** detrás, que es como vive en
- * `App.tsx`.
- *
- * Teclear en el campo son varias pulsaciones seguidas y cada una emite el
- * conjunto: con un espía que no lo aplica, la segunda pulsación escribiría
- * sobre un panel que sigue viendo el conjunto viejo, y lo que se probaría sería
- * el espía. El recuadro es fijo porque el panel ya no lo compone: solo nombra
- * páginas, y quién las convierte en rectángulo es cosa de `App.tsx`.
- */
-export function renderLivePanel(props: PanelProps = {}) {
-  const chosen: (PageSet | null)[] = [];
-  function Live() {
-    const mode = props.pageMode ?? "single";
-    const [sets, setSets] = useState<PageSets>({
-      single: 3,
-      these: mode === "these" ? { only: [3] } : null,
-    });
-    // El modo elegido también vive fuera del panel, como en `App.tsx`: sin
-    // eso, volver a pulsar «Solo 1 página» no dispara nada —el radio sigue
-    // marcado— y el viaje de ida y vuelta no se podría probar.
-    const [pageMode, setPageMode] = useState<PageMode>(mode);
-    return panelWith({
-      ...props,
-      placement: placementOf(rect, sets, pageMode),
-      pageSets: sets,
-      onChoosePages: (next) => {
-        chosen.push(next);
-        setSets(storing(sets, pageMode, next, 27));
-      },
-      pageMode,
-      onChangePageMode: (next) => {
-        setSets(activating(sets, next, pagesOf(sets, pageMode), 27, 3));
-        setPageMode(next);
-      },
-    });
-  }
-  renderWithCatalog(<Live />);
-  return { chosen };
 }
 
 /** La línea del aviso de firmas previas: el texto entero y la coletilla en negrita aparte. */

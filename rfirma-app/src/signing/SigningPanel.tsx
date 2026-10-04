@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Switch } from "../design-system/Switch";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
-import type { PageMode, PageSet, PageSets, Placement } from "../placement/pageSets";
+import { PlacementBlock, type PlacementBlockState } from "../placement/PlacementBlock";
 import { CertificateNotice } from "./CertificateNotice";
 import { CertificateSelect } from "./CertificateSelect";
 import type { Certificate } from "./certificate";
@@ -12,12 +12,10 @@ import type { Destination } from "./destination";
 import type { SigningFailure } from "./failure";
 import { ModelFieldset } from "./ModelFieldset";
 import { PanelFooter } from "./PanelFooter";
-import { PlacementFieldset } from "./PlacementFieldset";
 import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
 import type { PreviousSignaturesReport } from "./previousSignatures";
 import type { Rubric, RubricFailure } from "./rubric";
 import "./SigningPanel.css";
-import { usePlacementField } from "./usePlacementField";
 import type { VisibleSignature } from "./visibleSignature";
 
 export { formatSize } from "./panelFormat";
@@ -27,7 +25,6 @@ interface SigningDocument {
   /** Identifica el documento entre pestañas, para que un aviso no herede el estado del anterior. */
   id: string;
   name: string;
-  pages: number;
   /** El tamaño, o `null` mientras nadie lo sepa: no se inventa un cero. */
   sizeBytes: number | null;
 }
@@ -69,35 +66,8 @@ interface SigningPanelProps {
   onChooseModule: () => void;
   signature: VisibleSignature;
   onChangeSignature: (signature: VisibleSignature) => void;
-  /**
-   * Dónde va la firma visible y en qué páginas, o `null` si aún no se ha
-   * colocado. `null` es el PDF recién abierto y también haber quitado la última
-   * página del conjunto: **colocado es tener páginas**.
-   */
-  placement: Placement | null;
-  /**
-   * El conjunto que guarda **cada opción**, que es lo que el bloque pinta
-   * incluso cuando no manda: el pie de `Solo 1 página` dice su página aunque
-   * esté activa `Todas`, y el campo trae el rango que se tecleó allí.
-   */
-  pageSets: PageSets;
-  /**
-   * El conjunto de la **opción activa** ha cambiado desde el bloque
-   * «Colocación». El panel no compone `Placement`: no sabe dónde cae el
-   * recuadro y no tiene por qué saberlo.
-   */
-  onChoosePages: (pages: PageSet | null) => void;
-  /** Cuál de las tres modos manda sobre el conjunto. */
-  pageMode: PageMode;
-  onChangePageMode: (mode: PageMode) => void;
-  /**
-   * La página que se está mirando en el visor. Decide la cara del botón de
-   * sellar: si la lleva, ofrece quitarla.
-   */
-  viewedPage: number;
-  /** Sellar la página que se está mirando, o quitarle el sello si ya lo lleva. */
-  onSeal: () => void;
-  onUnseal: () => void;
+  /** La colocación de la firma visible, tal y como la entrega su estado. */
+  placementState: PlacementBlockState;
   rubric: Rubric | null;
   /** El último fallo al elegir la rúbrica, que se cuenta aquí y no al firmar. */
   rubricFailure: RubricFailure | null;
@@ -140,14 +110,7 @@ export function SigningPanel({
   onChooseModule,
   signature,
   onChangeSignature,
-  placement,
-  pageSets,
-  onChoosePages,
-  pageMode,
-  onChangePageMode,
-  viewedPage,
-  onSeal,
-  onUnseal,
+  placementState,
   rubric,
   rubricFailure,
   onChooseRubric,
@@ -163,19 +126,8 @@ export function SigningPanel({
   const { t } = useTranslation();
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
 
-  const { pagesText, rangeError, pageButton, typePages } = usePlacementField({
-    documentPages: document.pages,
-    pageSets,
-    pageMode,
-    placement,
-    viewedPage,
-    onChoosePages,
-    onSeal,
-    onUnseal,
-  });
-
   const visible = signature.enabled && chosen !== null;
-  const blocked = visible && rangeError !== null;
+  const blocked = visible && placementState.rangeError !== null;
 
   return (
     <div className="panel">
@@ -245,15 +197,7 @@ export function SigningPanel({
                 <div
                   className={signing ? "panel__placement panel__controls--dim" : "panel__placement"}
                 >
-                  <PlacementFieldset
-                    pageSets={pageSets}
-                    pageMode={pageMode}
-                    onChangePageMode={onChangePageMode}
-                    pagesText={pagesText}
-                    onTypePages={typePages}
-                    rangeError={rangeError}
-                    pageButton={pageButton}
-                  />
+                  <PlacementBlock state={placementState} />
                 </div>
               )}
             </section>
