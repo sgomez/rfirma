@@ -34,12 +34,12 @@ if [ ${#malos[@]} -ne 0 ]; then
     exit 1
 fi
 
-con_fondo_de_main=(EstadoAcercaDe)
+con_fondo_de_main=()
 # La barra de la ventana principal la llevan tambien las vistas sin pestanas.
-solo_cabecera=(PreferenciasPantalla PrimerArranque)
+solo_cabecera=()
 # El aviso de firmas previas lo lleva el fondo de la ventana principal, y las
 # fichas de las firmas, ningun artboard.
-con_aviso_firmas=(EstadoAcercaDe)
+con_aviso_firmas=()
 con_fichas_firmas=()
 
 for part in _*.part; do

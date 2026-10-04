@@ -1,445 +1,220 @@
 # Preferencias
 
 Los ajustes de la aplicación. Se abre desde el menú de la
-[cabecera](cabecera.md) y ocupa la ventana entera bajo ella.
+[cabecera](cabecera.md) y ocupa la ventana entera bajo ella. Esta ficha cuenta
+el flujo entre secciones y el porqué de cada decisión; lo que se ve lo dicen las
+historias.
+
+Componentes: `rfirma-app/src/preferences/PreferencesView.tsx` (la vista, con el
+estado y el modal de confirmación), `PreferencesSections.tsx` (una pieza por
+sección), `Select.tsx` y `Switch.tsx`. La lista de certificados pinta cada fila
+con `CertificateCard` (`signing/CertificateCard.tsx`), la misma pieza del selector de
+certificado. Historias: `PreferencesView.stories.tsx`, en «Preferencias/Pantalla»,
+con los ajustes y los certificados de ejemplo de `preferencesFixtures.ts`.
 
 ## Casos de uso que la usan
 
 - Firmar un PDF en local — fuera del recorrido, en cualquier momento.
 
+## Historias
+
+Una por sección y por variante de lo que enseña:
+
+- `General` y `GeneralWithActivityOff`: Privacidad con los dos interruptores
+  encendidos y apagados.
+- `SigningWithoutOriginalFolder`: solo la carpeta de destino, que es lo que ve
+  quien corre bajo el sandbox.
+- `SigningNextToTheOriginal` y `SigningInTheDestinationFolder`: los dos radios
+  del destino, con cada uno elegido.
+- `NoCertificates` y `CertificatesInstalled`: la lista vacía, y con un
+  certificado personal, uno de representación y uno caducado.
+- `Appearance`: tema e idioma.
+
+Cuatro estados **no tienen historia** porque se llegan por un gesto y las
+historias no llevan interacción: el diálogo de confirmar el borrado, el aviso de
+ajuste no guardado, el de la lista que no se vacía y el de un certificado que no
+se ha podido instalar o quitar. Los cubren las pruebas de comportamiento de
+`PreferencesView.test.tsx` y `PreferencesView.certificates.test.tsx`.
+
 ## Estructura
 
-**Un visor de pestañas en vertical**, y **no un diálogo**: es una **vista del
-cuerpo** de la ventana, que sustituye lo que hubiera bajo la
-[cabecera](cabecera.md) y ocupa todo ese hueco; la cabecera pasa a su **variante sin documentos**, sin
-botón de abrir ni pestañas: las pestañas son de documentos, y Preferencias no es
-de ninguno. La cabecera se queda **viva, con su menú alcanzable**, porque nada se pinta encima de ella: con Preferencias delante el menú de la cabecera se abre y funciona
-igual, por clic o por teclado, y desde ahí se llega a *Estado de rFirma* sin
-pasar por cerrar Preferencias antes.
+**Un visor de pestañas en vertical, no un diálogo.** Es una **vista del
+cuerpo**: sustituye lo que hubiera bajo la cabecera y ocupa ese hueco. La
+cabecera pasa a su variante sin documentos —las pestañas son de documentos, y
+Preferencias no es de ninguno— y se queda **viva, con su menú alcanzable**,
+porque nada se pinta encima de ella.
 
-Tres regiones, de izquierda a derecha y de arriba abajo:
+Tres regiones:
 
-1. **Índice de secciones**, columna fija a la izquierda, **permanente y siempre
-   visible**. Encabezado «Preferencias» y una fila por sección —*General*,
-   *Firma*, *Certificados*, *Apariencia*—. La sección activa lleva fondo y
-   borde; las demás van en `--rf-text-muted` sin borde. El índice **es** la
-   pestaña: pulsar una fila no navega a ningún sitio, cambia el panel de la
-   derecha.
-2. **Panel de la sección activa**, centrado, y **solo esa**: a la derecha se
-   pinta una sección y nada más. Abre con el rótulo de la sección en versalitas
-   y un `.rf-divider` debajo, que es el **título de la página** que se está
-   viendo. Ahí «Certificados» recupera su nombre completo, *Certificados en
-   fichero*, que en la fila del índice no cabe.
-3. **Pie fijo** con `Cerrar` abajo a la derecha, sobre `--rf-surface`.
+1. **Índice de secciones**, permanente a la izquierda: *General*, *Firma*,
+   *Certificados* y *Apariencia*. Es el patrón ARIA de pestañas (`tablist`,
+   `tab`, `tabpanel`); pulsar una fila cambia el panel, no navega.
+2. **Panel de la sección activa**, centrado y **solo ese**, con el título de la
+   página arriba y su divisoria. Se entra siempre por *General*; no se recuerda
+   la última sección, porque lo que una pantalla de ajustes tiene que recordar
+   es el ajuste y no el sitio desde el que se miró.
+3. **Pie fijo** con `Cerrar`.
 
-**No hay vuelta atrás, ni botón ni migas**, porque no se navega: el índice
-nunca desaparece, así que desde cualquier panel se ve dónde se está y se llega
-a los otros tres de un gesto. Las dos salidas son `Cerrar` y `Escape`, y
-**`Escape` cierra Preferencias entera** desde cualquier sección y sin
-excepción: nunca «vuelve» al índice ni al primer panel.
+**No hay vuelta atrás.** Las salidas son `Cerrar` y `Escape`, y `Escape` cierra
+Preferencias entera desde cualquier sección. Las flechas arriba y abajo mueven la
+sección con vuelta en los extremos. **El foco no se atrapa aquí dentro**: el
+menú de la cabecera se alcanza por teclado con Preferencias delante.
 
-**Se entra siempre por *General***, el primer elemento del índice. No se
-recuerda la última sección visitada: lo que una pantalla de ajustes tiene que
-recordar es el ajuste, no el sitio desde el que se miró.
-
-**El índice no colapsa ni cambia de forma con el ancho.** Un solo
-comportamiento a cualquier tamaño de ventana: ni versión estrecha, ni icono de
-hamburguesa, ni panel que se retrae.
-
-**El desplazamiento es del panel, no de la pantalla.** El índice y el pie no se
-mueven nunca; que una sección se desplace es un detalle interno suyo, y con el
-reparto de hoy solo se espera en *Certificados en fichero*.
+**El índice no colapsa con el ancho** y **el desplazamiento es del panel**, no
+de la pantalla: el índice y el pie no se mueven nunca.
 
 Los cambios se aplican al hacerlos: **no hay «Guardar» ni «Cancelar»**, y
-cambiar de panel no lo enturbia, porque no hay ninguna transacción que
-confirmar al salir de una sección.
-
-### Geometría
-
-- Índice de **220 px**, con `--rf-space-sm` de relleno y 2 px entre filas. Cada
-  fila mide 36 px de alto, con `--rf-radius-md` y `--rf-space-xs` de relleno
-  lateral.
-- Panel con **720 px** de ancho máximo, centrado, y `--rf-space-md` de relleno
-  lateral. El aire sobrante queda a los lados: a ancho completo un interruptor
-  y su ayuda acaban separados por medio metro de nada.
-- Pie fijo con `--rf-space-sm` de relleno y borde superior de 1 px en
-  `--rf-border-subtle`, sobre `--rf-surface`.
-- **Dos niveles de encabezado dentro de un panel**, y ninguno estrena estilo:
-  el **título de página** es `.rf-label` —12 px, peso 600, `--rf-text-muted`—
-  en versalitas, con 0,6 px de espaciado entre letras y su divisoria debajo; el
-  **encabezado de grupo** es `.rf-title` a 14 px, peso 700, color de texto
-  pleno, en caja baja y **sin divisoria**; y la etiqueta de un control sigue
-  siendo `.rf-label` a 12 px en caja baja y apagada. Los tres se separan por
-  tamaño, peso y color a la vez, que es lo que impide confundir un grupo con la
-  etiqueta del control de al lado. Van `--rf-space-md` entre el título de
-  página y el primer grupo y entre grupos, con `--rf-space-xs` de respiro extra
-  sobre «Privacidad», contra los `--rf-space-sm` que separan un encabezado de
-  su primer control. **Solo *General* tiene grupos**; los otros tres paneles
-  llevan únicamente título de página.
-- Cada interruptor es una fila con la pastilla de **40×24 px** (pomo de 16 px)
-  **delante** del texto, 16 px de separación, y el texto en `.rf-prose` con su
-  ayuda en `.rf-hint` 4 px debajo. La ayuda se sangra hasta la columna del
-  texto: 40 px de pastilla más los 16 de separación.
-  Esos 16 px son **de esta pantalla**: el panel de firma usa el mismo
-  interruptor a 8 px (`panel-de-firma.md`), así que aquí se piden aparte con
-  `switch--wide`. La sangría de la ayuda se calcula con esa misma separación y
-  no con un número escrito a mano, que es lo que la mantiene en la misma
-  columna que «Vaciar la lista».
-  La ayuda queda **fuera** del botón —dentro se sumaría al nombre accesible y
-  el lector de pantalla leería el párrafo entero al llegar al interruptor—.
-  El botón mide lo que su contenido, y los 44 px de área de pulsación
-  (sección 8 del [sistema de diseño](design-system.md)) se extienden por fuera
-  de su caja, así que entre el rótulo y la ayuda quedan los 4 px del artboard.
-- **Lo que es de una opción va junto, y las opciones se separan por aire, sin
-  líneas.** Dentro de una opción —el interruptor, su ayuda y el botón que
-  cuelga de ella— van `--rf-space-xs`; entre una opción y la siguiente,
-  `--rf-space-md`.
-- «Vaciar la lista» y «Cambiar carpeta…» cuelgan del ajuste que los explica y
-  siguen esa misma sangría. Son botones secundarios de 32 px de alto, 8 px de
-  relleno lateral y 12 px de cuerpo — el mismo tamaño menor que el `Cambiar`
-  del pie del panel.
-- Los dos desplegables son `.rf-field` con `.rf-label` y un cierre que
-  reutiliza `.rf-input`, con el chevrón a la derecha y la lista flotando 4 px
-  por debajo.
-
-**El desplegable no es un `<select>` nativo.** Se intentó, y no vale: el cierre
-se estila con CSS, pero la lista que se abre la pinta el sistema de ventanas
-—GTK, bajo WebKitGTK— y no la hoja de estilos, así que las opciones salían con
-los colores del escritorio en medio de una pantalla hecha con los tokens del
-sistema de diseño. No es una limitación que se pueda rodear con más CSS: ese
-trozo de interfaz no es nuestro. A cambio hay que reponer a mano lo que el
-elemento nativo daba gratis —`combobox` + `listbox` con
-`aria-activedescendant`, flechas, Inicio, Fin, Intro, Escape, cierre al pulsar
-fuera y foco de vuelta—, y eso es lo que hace `Select`. Un `<div>` con un
-`onClick` no es un desplegable, es un dibujo de uno.
+cambiar de panel no enturbia nada porque no hay transacción que confirmar.
 
 ## Los ajustes
 
-Son **nueve**, repartidos en cuatro paneles.
+Nueve, en cuatro paneles. Los textos están en `preferences.*` de `po/es.po` y no
+se copian aquí.
 
 ### General
 
-Es la entrada, y lleva un solo grupo: **Privacidad**.
+Un solo grupo, **Privacidad** (`preferences.sections.privacy`):
 
-#### Privacidad
-
-1. **Recordar mi actividad** (interruptor, activo por omisión), con un botón
-   **«Vaciar la lista»** al lado. Su ayuda es una línea: «Los documentos
-   recientes y el certificado que usaste la última vez». Que apagarlo borre lo ya
-   guardado se ve al apagarlo, en el diálogo de confirmación, así que no se
-   anuncia también aquí. Cubre los documentos recientes y el certificado usado la
-   última vez: es la misma promesa a quien firma en un ordenador compartido.
-   Apagarlo **borra** lo ya guardado, previa confirmación; vaciar sin apagar es
-   «hoy no, mañana sí».
-
-2. **Avisarme cuando haya una versión nueva** (interruptor, activo por omisión),
-   sin ayuda debajo. Está bajo «Privacidad» porque la comprobación de versión es
-   **la única conexión saliente que abre rFirma**, y ese es el encabezado donde
-   alguien va a buscar si la aplicación habla con fuera.
-
-   **Está siempre, y se avisa siempre.** El spec pedía que el ajuste existiera
-   *sólo* si nadie gestionaba la instalación, detectándolo por la URL del
-   repositorio dentro de `sources.list.d` / `yum.repos.d` (ID-179). Se descartó:
-   esa señal **no es fiable**. Un `.deb` se instala a mano tanto como desde un
-   repositorio, el repositorio puede estar dado de alta y no traer rFirma, en el
-   flatpak no hay ninguno de esos dos ficheros que leer, y aun leyéndolos habría
-   que hurgar en la configuración del gestor de paquetes del anfitrión para
-   decidir si se pinta un interruptor. Avisar siempre y dejar apagarlo cuesta
-   menos y no miente. Con eso **el ID-179 se queda sin consumidor y no se
-   implementa**, y el ID-180 pierde su condición.
-
-   Dónde sale el aviso lo decide
-   [ventana-principal.md](ventana-principal.md): la franja bajo la cabecera. A
-   dónde lleva, [acerca-de.md](acerca-de.md).
+- **Recordar mi actividad** (`preferences.rememberActivity.*`), con «Vaciar la
+  lista» (`recents.clear`) al lado. Cubre los documentos recientes y el
+  certificado usado: es la misma promesa a quien firma en un ordenador
+  compartido. Apagarlo **borra** lo guardado, previa confirmación; vaciar sin
+  apagar es «hoy no, mañana sí».
+- **Avisar de versiones nuevas** (`preferences.notifyNewVersion.label`), sin
+  ayuda. Vive bajo Privacidad porque la comprobación de versión es la única
+  conexión saliente de rFirma.
 
 ### Firma
 
-3. **Recordar la última configuración de firma visible** (interruptor, activo
-   por omisión), **sin texto de ayuda debajo**. El interruptor, el modelo
-   —con los datos de la personalizada—, «Con rúbrica» y el tamaño del recuadro se
-   reutilizan en el siguiente documento. Apagado significa **no guardarla**: el recuadro arranca en el valor
-   por omisión en cada documento. Eso es lo que hace, y es lo que la ficha tiene
-   que saber; la pantalla no lo explica, porque explicarlo no cambia lo que la
-   persona puede hacer con el interruptor.
+- **Recordar la firma visible** (`preferences.rememberVisibleSignature.label`),
+  sin ayuda. Apagado significa no guardarla: el recuadro arranca en el valor por
+  omisión en cada documento. La posición no se recuerda aquí sino por documento,
+  en su fila de recientes.
+- **Dónde guardar** (`preferences.destination.*`). Con `offersOriginalFolder`,
+  dos radios: junto al original y en la carpeta elegida, con el **nombre** de la
+  carpeta —no su ruta— y «Cambiar carpeta…», que abre el selector de directorio
+  del sistema. Sin él, solo la carpeta y su botón.
+- **Esperar antes de firmar** (`preferences.consentCountdown.label`): la pausa
+  de tres segundos de la ventana de sede, y de nada más
+  ([ventana-de-sede.md](ventana-de-sede.md)). Es el mismo ajuste que ofrece el
+  [primer arranque](primer-arranque.md).
+- **Usar el certificado que elija la sede**
+  (`preferences.honourAutomaticSelection.label`), apagado por omisión: si solo
+  sirve uno, la sede lo elige sin preguntar.
 
-   **La posición no se recuerda aquí.** Va por documento, en su fila de
-   recientes, porque reponer sobre otro documento una posición elegida para uno
-   distinto es lo que rechaza el ID-22: el recuadro acaba fuera de página o
-   encima del texto. Este ajuste gobierna lo global; la posición la gobiernan
-   los [recientes](pestanas-de-documentos.md).
+### Certificados
 
-4. **Dónde se guarda el documento firmado**. Un encabezado en `.rf-prose` a
-   600 y, debajo, **dos radios**: **«Junto al documento original»**, solo el
-   título, y **«En esta carpeta»**, con el **nombre** de la carpeta —no su
-   ruta— y un botón **«Cambiar carpeta…»** en una fila sangrada al texto de la
-   opción, que abre el selector de directorio del sistema. Cada opción lleva el
-   estilo de título de un interruptor y **ninguna descripción**. Por omisión, la
-   carpeta de documentos del usuario.
+La lista de los `.p12` instalados en rFirma, con **dos gestos y nada más**:
+`preferences.certificates.add` y, en cada fila, `actions.remove`
+(`preferences.certificates.remove` es su nombre accesible).
 
-   **El destino es un modo que se elige.** Hasta ahora no lo era: había una
-   carpeta y «junto al original» se decidía por documento. Con los radios la
-   persona elige, y aun eligiendo «junto al original», **un documento que llega
-   por el portal de documentos** —ruta bajo `/run/user/*/doc/…`— cae en la
-   carpeta elegida, porque esa ruta no es la del original.
-
-   **Bajo el sandbox no hay radios.** Donde el entorno no sabe devolver la ruta
-   real del documento —el flatpak, que entrega el fichero por un portal— el
-   bloque es el encabezado y la fila de la carpeta con su `Cambiar carpeta…`,
-   sin más. El motivo **no es privacidad**: enseñar la ruta de un documento que
-   el usuario acaba de abrir no revela nada que su gestor de ficheros no enseñe
-   todo el día. El motivo es **corrección**: devolver una ruta que no se conoce
-   es devolver una mentira, y una opción atenuada le contaría al usuario
-   nuestros problemas de empaquetado.
-
-   Se comprueba **antes de firmar**: si la carpeta no está o no se puede
-   escribir, se avisa en el pie del panel y ahí mismo se ofrece `Cambiar`; ni
-   se degrada a otro sitio ni se apaga el botón de firmar. **No hay línea de
-   ayuda**: «La carpeta no se crea nunca» se retiró, y lo que cuenta cuándo se
-   comprueba y qué pasa si falla ya lo dice el pie del panel en el momento en
-   que ocurre.
-
-   Los **dos estados miden lo mismo**: el bloque lleva `min-height` de 132 px,
-   medido en Chrome sobre el artboard —con radios el contenido ocupa 131;
-   bajo sandbox, 70—, para que los interruptores de debajo no salten según el
-   canal.
-
-5. **Protección contra firmas accidentales** (interruptor, activo por omisión),
-   con la ayuda «Se añade una pausa de 3 segundos antes de permitir firmar.».
-   Encendido, `Firmar` nace desactivado con una cuenta atrás de tres segundos.
-   Gobierna la ventana de sede y nada más
-   ([ventana-de-sede.md](ventana-de-sede.md)): apagado, `Firmar` nace activo y
-   con el foco, y un Intro firma con el certificado preseleccionado. Apagarlo no
-   pide confirmación: no borra nada. Es el mismo ajuste, con los mismos textos,
-   que el [primer arranque](primer-arranque.md) ofrece en su segunda pantalla.
-
-6. **Usar el certificado que elija la sede** (interruptor, apagado por
-   omisión), con la ayuda «Si solo sirve uno de tus certificados, se usa sin
-   preguntarte.». Encendido, cuando la sede pide la selección automática y un
-   solo certificado cumple su filtro, la ventana de sede se salta la pantalla de
-   consentimiento si no tiene ningún aviso que enseñar
-   ([ventana-de-sede.md](ventana-de-sede.md), invariante 1).
-
-### Certificados en fichero
-
-7. **La lista de certificados instalados en rFirma**, con **dos gestos y nada
-   más**: **«Añadir…»**, arriba a la derecha del panel, que abre el selector
-   de ficheros del sistema, y **«Quitar»** al final de cada fila (ID-198).
-
-   **Lo que identifica cada fila es el certificado, no el fichero.** Titular en
-   negrita y, debajo, `DNI · emisor · caduca el …`. **Del fichero no se recuerda
-   nada, ni la ruta** (ID-196): instalar copia lo que hace falta al almacén de
-   rFirma, y el `.p12` de origen deja de importar en cuanto se cierra el
-   selector. Por eso aquí no se pinta ninguna ruta, y no hay «volver a
-   localizar»: un fichero que se mueve o se borra no rompe nada.
-
-   Un certificado caducado **se queda en la lista**, con su insignia
-   `Caducado`, por lo mismo que se queda en el desplegable del
-   [panel de firma](panel-de-firma.md): que desaparezca no le explica nada a
-   quien lo instaló.
-
-   **Sin ninguno instalado**, un recuadro punteado con «Todavía no has instalado
-   ninguno». Sin instrucciones dentro: el botón «Añadir…» ya está encima.
-
-   **No se copia el registro de almacenes de AutoFirma**, con sus seis casillas
-   y sus diálogos anidados. Allí hace falta porque la aplicación **elige** un
-   almacén y sólo enseña ese; rFirma los barre todos y concatena el resultado,
-   así que aquí no hay nada que elegir: sólo una lista de lo que se ha añadido a
-   mano.
-
-   **Una clave que no es RSA ni de curva elíptica se rechaza al instalar, no al
-   firmar**, con un `ErrorNotice` en este mismo panel y un solo renglón: **«Ese
-   certificado no es compatible con rFirma»**. Sin explicación técnica debajo:
-   el tipo de clave y el mecanismo de firma no le sirven de nada a quien acaba
-   de elegir un fichero, y quien sí sabe lo que es una clave DSA no necesita
-   que se lo cuenten aquí. El sitio importa más que el texto: sin esta guarda,
-   la pantalla construiría el camino más corto al tropiezo, y el fallo
-   aparecería al firmar, con el documento delante.
-
-   Es el único panel del que se espera que se desplace, y por eso el
-   desplazamiento vive dentro de él y no en la pantalla.
+- **Cada fila es un `CertificateCard`**, como en el selector: titular o
+  representado, línea con el NIF, almacén, caducidad y motivo. Preferencias pasa
+  a verse como el selector y deja de pintar el certificado a su manera, que es un
+  cambio visible decidido.
+- **Lo que identifica la fila es el certificado, no el fichero.** Del fichero no
+  se recuerda nada, ni la ruta: instalar copia al almacén de rFirma lo que hace
+  falta.
+- **Un caducado se queda en la lista**, con el motivo por el que no puede
+  firmar: que desaparezca no le explica nada a quien lo instaló.
+- **Sin ninguno**, `preferences.certificates.empty` y nada más: el botón ya está
+  encima.
+- **No se copia el registro de almacenes de AutoFirma.** Allí hace falta porque
+  la aplicación elige un almacén; rFirma los barre todos.
+- **Una clave que no es RSA ni de curva elíptica se rechaza al instalar, no al
+  firmar**, con un aviso de una línea en este panel y sin detalle técnico.
 
 ### Apariencia
 
-8. **Tema** (desplegable): *El del sistema*, *Claro* u *Oscuro*. Por omisión,
-   el del sistema, que **no es «claro»**: es no forzar nada y dejar que mande
-   `prefers-color-scheme`. Los otros dos escriben `data-theme` en `<html>`, que
-   es lo que los tokens de color del bundle leen para redefinir los roles. El
-   cambio se aplica en caliente, como el resto de la pantalla.
-9. **Idioma** (desplegable). Español, català, euskara, galego e inglés: son
-   cinco desde el ID-124, que sacó el valencià porque sus reglas de plural no
-   son las del castellano. El cambio se aplica en caliente. Un idioma solo
-   aparece aquí si tiene **todas** las cadenas traducidas. En la primera
-   ejecución sale del locale del sistema cotejado contra esos cinco, con
-   español como recurso; no hay diálogo de bienvenida que pregunte lo que la
-   aplicación ya sabe.
+- **Tema** (`preferences.theme.*`): el del sistema, claro u oscuro. El del
+  sistema **no es «claro»**: es no forzar nada y dejar que mande
+  `prefers-color-scheme`.
+- **Idioma** (`preferences.language.label`, `languages.*`): los cinco, y solo
+  aparece el que tiene todas las cadenas traducidas (ADR-0009).
 
-Los valores posibles viven **dentro** de los desplegables. Nada de textos
-debajo enumerando lo que el propio control ya muestra al abrirse.
+Los valores posibles viven dentro de los desplegables; no hay textos debajo que
+los enumeren.
 
-## Estados
+## Estados y fallos
 
-- **Normal**: los ajustes tienen siempre valor, y se guardan al elegirlos. La
-  sección activa es la del índice, y al abrir es *General*.
-- **Confirmando el borrado**: apagar «Recordar mi actividad» abre un
-  `.rf-dialog` pequeño **encima** de la vista —índice incluido, que
-  es lo único que se ve desde cualquier sección—, con lo que se va a perder
-  —los documentos recientes y el certificado—, `Cancelar` como `--ghost` y
-  `Borrar y apagar` como primario. El interruptor **no se mueve** hasta que se
-  confirma.
+- **Confirmando el borrado**: apagar «Recordar mi actividad» abre un diálogo
+  pequeño **encima** de la vista, con `Cancelar` y `Borrar y apagar`
+  (`preferences.rememberActivity.confirm.*`). El interruptor **no se mueve**
+  hasta confirmar, y el diálogo es modal: el teclado no sale de él, y `Escape`
+  lo cancela sin cerrar Preferencias. Es un diálogo y no una confirmación en
+  línea porque el borrado es irreversible, y tampoco se borra ofreciendo
+  deshacer: un aviso temporal sobre algo ya borrado es el fallo silencioso otra
+  vez.
+- **Ajuste no guardado**: `ErrorNotice` (situación `settingNotSaved`) **dentro
+  del panel donde se pulsó**, con el detalle técnico del rechazo. El control ya
+  ha vuelto al valor anterior.
+- **Lista que no se vacía**: el aviso (`activityNotForgotten`) va siempre en
+  *General*, pegado a su botón.
+- **Certificado que no se instala o no se quita**: el aviso, en *Certificados*,
+  entre «Añadir…» y la lista, que no cambia. Si el llavero perdió el PIN del
+  almacén, el aviso ofrece vaciarlo, con confirmación (ADR-0034).
 
-  Un diálogo y no una confirmación en línea: el borrado es irreversible y no
-  admite «casi». Tampoco se hace al revés —borrar y ofrecer deshacer— porque un
-  aviso temporal sobre algo ya borrado es el fallo silencioso otra vez, y en un
-  ordenador compartido puede caducar sin que nadie lo lea.
-- **No se ha podido guardar el ajuste**: `ErrorNotice` **dentro del panel donde
-  se pulsó**, con el título en `.rf-title` a 14 px y el detalle en `.rf-hint`.
-  Dice que se ha vuelto al valor anterior.
-- **No se ha podido vaciar la lista**: el mismo `ErrorNotice`, siempre en
-  *General*, pegado a «Vaciar la lista». Dice que los recientes siguen
-  guardados.
-- **El certificado elegido no sirve**: el mismo `ErrorNotice`, siempre en
-  *Certificados en fichero*, entre «Añadir…» y la lista. Un solo renglón, «Ese
-  certificado no es compatible con rFirma», sin detalle debajo. La lista **no
-  cambia**: lo que no se ha podido instalar no aparece en ella.
-
-Los avisos se pintan donde se hizo el gesto, que con las pestañas es siempre el
-panel visible, y nunca en una franja común arriba: un aviso común obliga a leer
-el texto para saber qué se rompió. Antes esta ficha decía «## Estados — Uno.
-Los ajustes tienen siempre valor», y por eso los dos fallos de `App.tsx`
-—guardar la configuración y `forgetActivity`— no tenían dónde pintarse y se
-tragaban en silencio.
+Los avisos se pintan donde se hizo el gesto y nunca en una franja común: con
+cuatro paneles, un aviso común obliga a leer el texto para saber qué se rompió.
 
 ## Componentes y tokens
 
-`.rf-dialog`, `.rf-scrim`, `.rf-field`, `.rf-label`, `.rf-title`, `.rf-input`,
-`.rf-hint`, `.rf-divider`, `.rf-btn--primary|--secondary|--ghost`,
-`.rf-badge`, `--rf-surface`, `--rf-border-subtle`, `--rf-border-strong`. El
-interruptor, el desplegable y las filas del índice se maquetan con tokens;
-ninguno está en el sistema de diseño.
+Los primitivos `Button`, `Dialog`, `Row` y `Stack`; `CertificateCard` y
+`ErrorNotice`; `Select` y `Switch`, propios de la carpeta; `.rf-label`,
+`.rf-title`, `.rf-prose`, `.rf-hint`, `.rf-divider`; `--rf-surface` y
+`--rf-border-subtle`. La geometría (índice de 220 px, panel de 720 px como
+máximo) es de `PreferencesView.css`.
+
+Hay **tres niveles de texto dentro de un panel** y ninguno estrena estilo: el
+título de página es `.rf-label` en versalitas con su divisoria; el encabezado de
+grupo, `.rf-title` sin divisoria; la etiqueta de un control, `.rf-label` en caja
+baja y apagada. Se separan por tamaño, peso y color a la vez, que es lo que
+impide confundir un grupo con la etiqueta del control de al lado. Solo *General*
+tiene grupos.
 
 ## Decisiones
 
-**Por qué es un visor de pestañas y no una navegación de dos niveles.** El
-enunciado del [#657](https://github.com/sgomez/rfirma/issues/657) pedía resolver
-la vuelta atrás, el `Escape` ambiguo y qué hacer en ventana ancha. Con el índice
-permanente tres de esas preguntas dejan de existir en vez de contestarse: no hay
-camino de vuelta que recorrer porque no se navega, `Escape` no tiene dos
-significados que aprender, y no hay una interfaz que se comporte de dos maneras
-según el tamaño. Se descartó `AdwNavigationView` —el índice como página y cada
-sección como la siguiente—: es lo único que respaldaría una vuelta atrás de un
-nivel, y compra un gesto de más en cada cambio de sección a cambio de un
-retroceso que aquí nadie necesita.
+**Visor de pestañas y no navegación de dos niveles.** Con el índice permanente
+desaparecen la vuelta atrás, el `Escape` ambiguo y el comportamiento distinto por
+ancho, en vez de contestarse. Se descartó `AdwNavigationView`: compra un gesto de
+más en cada cambio de sección a cambio de un retroceso que aquí nadie necesita.
+Que `Escape` cierre el contenedor entero es lo que respalda la GNOME HIG, y sale
+barato porque no hay nada sin aplicar.
 
-**Que `Escape` cierre Preferencias entera es lo único que respalda la GNOME
-HIG**, que dice que `Escape` cierra el contenedor transitorio y **no dice nada
-de retroceder un nivel**. Sale barato porque no hay «Guardar»: cerrar de golpe
-desde cualquier panel no pierde nada, porque no hay nada sin aplicar.
+**Cuatro secciones y no cinco.** *Sedes* se fue: su desplegable se mudó a la fila
+*Firma en sedes* del [panel de estado](panel-de-estado.md), único sitio donde se
+elige el programa que atiende las sedes, y «Preguntarme al arrancar» se borró
+porque gobernaba un aviso que ya no existe. *Privacidad* pasó a ser el único
+grupo de *General*, para que sus dos interruptores se vean al abrir.
 
-**Por qué el reparto pasa de cinco secciones a cuatro.** Las cinco de antes
-salieron de tener que caber en una columna con desplazamiento continuo: el
-índice era el remedio al desplazamiento, no navegación. Al volverse páginas esa
-restricción desaparece y el fallo nuevo es el contrario, la página medio vacía.
-*Sedes* era el único huérfano claro —un desplegable y un interruptor, y bajo
-flatpak ningún control, solo una frase fija: una página entera para una
-disculpa—. *Privacidad* pasa a ser el único grupo de *General*, para que sus dos
-interruptores queden a la vista al abrir Preferencias, sin un clic. Se conserva
-la palabra «Privacidad» como encabezado de grupo, que era lo único que se perdía
-al dejar de ser sección.
+**No es un diálogo ni una ruta de un router.** Con guardado automático y `Cerrar`
+como única salida no hay estado al que navegar, así que `Escape` sigue valiendo
+y `Cmd+,` sigue prometiendo lo que abre.
 
-**Por qué *Sedes* no se funde en *General*, sino que desaparece**
-([#661](https://github.com/sgomez/rfirma/issues/661)). El
-[#657](https://github.com/sgomez/rfirma/issues/657) la mandaba dentro de
-*General*; se descartó al cerrar los avisos. Sus tres piezas se han quedado sin
-sitio aquí, una por una:
+**El desplegable no es un `<select>` nativo.** La lista que despliega el
+elemento nativo la pinta el sistema de ventanas, no la hoja de estilos, y salía
+con los colores del escritorio en una pantalla hecha con tokens. A cambio, `Select`
+repone a mano `combobox`, `listbox`, las flechas, Inicio, Fin, Intro, Escape, el
+cierre al pulsar fuera y el foco de vuelta.
 
-- **El desplegable «Quién atiende los enlaces de las sedes» se muda entero** a la
-  fila *Firma en sedes* del [panel de estado](panel-de-estado.md), que es donde
-  se dice el veredicto. Elegir y saber qué pasa son el mismo gesto, y partirlos
-  en dos pantallas obliga a ir a mirar a una para entender la otra. Ese
-  desplegable pasa a ser **el único sitio donde se elige el programa**: aquí no
-  queda ninguna copia, porque dos controles para un mismo ajuste son dos sitios
-  donde mirar.
-- **La pista de Firefox se va con él**, pegada al control que explica.
-- **«Preguntarme al arrancar» se borra.** No gobernaba más que el banner que
-  preguntaba quién atiende `afirma://` al abrir la aplicación, y ese banner ya no
-  existe: preguntar es configurar, y configurar se hace en el panel de estado.
-  Un interruptor que enciende algo que no se puede encender no es un ajuste.
+**El aviso de versiones se ofrece siempre.** Se descartó mostrarlo solo si nadie
+gestiona la instalación: leer `sources.list.d` no es fiable, y el flatpak no
+tiene esos ficheros. Avisar siempre y dejar apagarlo cuesta menos y no miente.
 
-Con eso el grupo *Sedes* deja de existir en Preferencias. **De los ajustes
-numerados no se ha movido ninguno**: lo que sale de aquí es el
-desplegable, que nunca estuvo en esa cuenta, y un interruptor que ya no tiene
-nada que gobernar.
+**El destino es un modo que se elige**, y bajo el sandbox no hay radios. El
+motivo **no es privacidad** sino corrección: devolver una ruta que no se conoce
+es devolver una mentira, y una opción atenuada contaría al usuario nuestros
+problemas de empaquetado. Un documento que llega por el portal cae en la carpeta
+elegida aunque se elija «junto al original», porque su ruta no es la del
+original. La comprobación previa de la carpeta está en el
+[ADR-0011](../adr/0011-destino-del-documento-firmado.md).
 
-**Por qué deja de ser un modal de 480 px.** Con cinco ajustes ya iba justo, y lo
-que traiga cada hito no cabe: la v0.4 sola le añadió una sección entera con una
-lista. Se descartó una ruta de un router: con guardado automático y `Cerrar`
-como única salida no hay ningún estado al que navegar ni nada que confirmar, así
-que lo que queda es la vista entera del cuerpo. Así `Escape` sigue valiendo y
-`Cmd+,` en macOS sigue prometiendo lo que abre.
+**Los ajustes se guardan al elegirlos**, por `PreferencesStore`, que pasa por
+`remember_configuration`: el único sitio donde el borrado al apagar «Recordar mi
+actividad» no se puede olvidar ([ADR-0010](../adr/0010-memoria-entre-sesiones.md)).
+El alcance de la traducción, en el
+[ADR-0009](../adr/0009-catalogo-de-cadenas-propio-y-cinco-idiomas.md).
 
 **La cabecera solo pierde lo de los documentos** mientras Preferencias está
-delante: `rFirma` y el menú siguen en su sitio, y el documento sigue cargado
-detrás, en su pestaña, que vuelve al cerrar Preferencias. El
-[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) sigue intacto: una
-sola barra, y `Preferencias…` sigue siendo una de sus entradas.
-
-**Los ajustes se guardan al elegirlos, en el disco.** La pantalla llama a
-`PreferencesStore`, y debajo son `read_configuration` y `write_configuration`,
-que pasan por `memory::Memory::remember_configuration`: el único sitio donde el
-borrado del estado al apagar «Recordar mi actividad» no se puede olvidar.
-
-**Dónde cae el documento firmado** está fijado en el
-[ADR-0011](../adr/0011-destino-del-documento-firmado.md): la carpeta por
-omisión, el nombre en vez de la ruta, la comprobación previa sin degradación y
-el `Cambiar` del pie que vale solo para una firma. **Hay que reescribirlo**:
-hoy dice que el destino no es un modo y que «junto al original» se decide por
-documento, y los radios lo convierten en un modo elegible, con el documento del
-portal cayendo en la carpeta aunque se elija «junto al original». Lo reescribe
-la implementación, no esta ficha.
-
-**Cadenas que cambian en `rfirma-app/po/`** con la sección *Firma*:
-`preferences.rememberVisibleSignature.hint` desaparece;
-`preferences.consentCountdown` pasa a «Protección contra firmas accidentales»
-y gana su ayuda; `preferences.honourAutomaticSelection` pasa a «Usar el
-certificado que elija la sede» y gana su ayuda; y el destino necesita las dos
-etiquetas de los radios.
-
-**Qué se recuerda entre sesiones y dónde vive** está fijado en el
-[ADR-0010](../adr/0010-memoria-entre-sesiones.md): los dos interruptores, el
-borrado que provoca apagar el segundo, y la comprobación previa de la carpeta
-salen de ahí. El tema entró después, por la enmienda de ese mismo ADR.
-
-El **alcance de la traducción** lo fija el
-[ADR-0009](../adr/0009-catalogo-de-cadenas-propio-y-cinco-idiomas.md): cinco
-idiomas y ninguna variante, cadenas propias escritas desde cero con el
-vocabulario de `CONTEXT.md`, mensajes de error que traducen situaciones nuestras
-y no el texto de PKCS#11 ni el del puente Java, y texto de la firma visible que
-sigue al idioma de la aplicación. En el desplegable sólo aparece el idioma que
-esté al 100 %: la completitud es una puerta de construcción, no un filtro que se
-aplique aquí.
-
-Preferencias existe desde el primer día en lugar de esperar a tener «algo que
-configurar»: el propio recorrido ya generó dos ajustes reales, y un menú que
-promete preferencias y abre un diálogo vacío es peor que no tenerlas.
-
-**La ficha 19 —el selector de módulo PKCS#11— ya no reserva sitio aquí.** Esta
-ficha guardaba dos huecos para él, en el índice de secciones y en el argumento
-del tamaño. Se retiran: la v0.4 no toca tarjetas ni DNIe y además **retira** la
-fontanería de tarjeta que hoy se compila sin que nadie la use (ID-201 a
-ID-204), así que la ficha 19 queda fuera de alcance y no hay nada que reservar.
-El artboard nunca llegó a dibujarlo.
-
-Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página
-**Recorrido de firma**, artboard «Preferencias · a pantalla completa»
-(`PreferenciasPantalla`), con la palanca **Sección visible** —las cuatro
-pestañas, con *General* por omisión— y las de contenido: **Destino**, que
-recorre los dos entornos, y **Certificados en fichero**, con cuatro instalados,
-ninguno y el rechazo de la clave elíptica. La sección *Firma* se cerró el
-**28/09/2026** al fundir el canvas con la app: el destino como radios, la
-retirada de «La carpeta no se crea nunca», los títulos y ayudas nuevos de la
-protección y de la selección automática, y el recordatorio de la firma visible
-sin ayuda. El contenedor y el reparto se
-decidieron en el [#657](https://github.com/sgomez/rfirma/issues/657); lo
-anterior, en el [#123](https://github.com/sgomez/rfirma/issues/123) y, lo de la
-v0.4, en el [#250](https://github.com/sgomez/rfirma/issues/250) (ID-180, ID-184,
-ID-196 a ID-198).
+delante; el documento sigue cargado detrás y vuelve al cerrar
+([ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md)).

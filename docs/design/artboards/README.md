@@ -50,18 +50,7 @@ Cuando llegue la v1.0 habrá que decidir de nuevo si sigue haciendo falta.
 `canvas.json` numera los estados y los reparte en **tres** páginas. El orden de
 la página «Recorrido de firma» es el de la ficha `ventana-principal.md`. La
 ventana de sede ya no tiene artboards: su verdad son sus historias de Storybook
-y su ficha, [`ventana-de-sede.md`](../ventana-de-sede.md):
-
-| # | Artboard | Estado |
-| - | -------- | ------ |
-| — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
-| — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4, sobre la ventana principal lista |
-| — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde y el idioma, y las dos acciones como pasos numerados —instalar el certificado propio y poner a rFirma por defecto— con la protección contra firmas accidentales aparte |
-
-`PrimerArranque` vive también en la página «Recorrido de firma», pero **no es
-un paso del recorrido**: es la pantalla del primer arranque, la misma ventana de
-1180 × 700 antes de que haya documento. Su ficha es
-[`primer-arranque.md`](../primer-arranque.md).
+y su ficha, [`ventana-de-sede.md`](../ventana-de-sede.md).
 
 No se ha importado `firmar-fichero-local.dc.html`: `canvas.json` lo aparta en
 la página «Otros» y lo marca como ajeno al recorrido.
@@ -96,16 +85,15 @@ Claude Design no ofrece forma de incluir un fichero en otro que se pueda
 comprobar desde aquí: `support.js` no está en el repositorio. Tras subir un
 `.part` cambiado, se suben los seis artboards.
 
-**La barra de arriba, `_cabecera.part`, llega a diez**: los seis de antes y
-las cuatro vistas sin documentos —`PreferenciasPantalla`, `PanelEstado`,
-`RetirarCertificado` y `PrimerArranque`—. Es **un solo fragmento para las dos
-variantes**: el botón partido, las pestañas y el desborde van dentro de un
-`<sc-if value="{{ hayTira }}">`, y las vistas sin documentos lo apagan. Sus
-valores los calcula un método `barra()` que es **el mismo, copiado igual, en
-los diez**: cada artboard le pasa lo suyo —`hayTira`, las pestañas, los
-recientes, qué menú está abierto— y lo extiende al principio de lo que
-devuelve `renderVals()`. `comprueba.sh` exige el fragmento en los diez. Tras
-cambiar `_cabecera.part`, se suben los diez.
+**La barra de arriba, `_cabecera.part`, la llevan tres**: `Main` y las dos
+vistas sin documentos que quedan, `PanelEstado` y `RetirarCertificado`. Es **un
+solo fragmento para las dos variantes**: el botón partido, las pestañas y el
+desborde van dentro de un `<sc-if value="{{ hayTira }}">`, y las vistas sin
+documentos lo apagan. Sus valores los calcula un método `barra()` que es **el
+mismo, copiado igual, en los tres**: cada artboard le pasa lo suyo —`hayTira`, las
+pestañas, los recientes, qué menú está abierto— y lo extiende al principio de lo
+que devuelve `renderVals()`. `comprueba.sh` exige el fragmento en los tres. Tras
+cambiar `_cabecera.part`, se suben los tres.
 
 ## La lista de certificados no viene del canvas original
 

@@ -1,85 +1,13 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { anInstalledCertificate, IN_2020, openTab, renderView } from "./testSupport";
+import { anInstalledCertificate, openTab, renderView } from "./testSupport";
 
 /**
  * Certificados en fichero (docs/design/preferencias.md): una lista y dos
  * gestos, y ni una casilla por almacén ni un diálogo anidado (ID-198).
  */
 describe("certificates in a file", () => {
-  it("lists an installed certificate by its holder and never by its file", async () => {
-    const user = userEvent.setup();
-    renderView({ installedCertificates: [anInstalledCertificate()] });
-    await openTab(user, "Certificados");
-
-    const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
-    expect(within(certificates).getByText("Ada Lovelace Byron")).toBeInTheDocument();
-    expect(within(certificates).getByText(/00000000T/)).toBeInTheDocument();
-    expect(certificates.textContent).not.toMatch(/[/\\][A-Za-z.]|\.p12/);
-  });
-
-  it("shows a certificate of representation by the entity, as the selector does", async () => {
-    const user = userEvent.setup();
-    renderView({
-      installedCertificates: [
-        anInstalledCertificate({
-          entityName: "Analytical Engines S.L.",
-          organizationIdentifier: "VATES-B00000000",
-        }),
-      ],
-    });
-    await openTab(user, "Certificados");
-
-    const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
-    expect(
-      within(certificates).getByText("Analytical Engines S.L. · B00000000"),
-    ).toBeInTheDocument();
-    expect(
-      within(certificates).getByText("Representante · Ada Lovelace Byron · 00000000T"),
-    ).toBeInTheDocument();
-  });
-
-  it("offers the two gestures and nothing else", async () => {
-    const user = userEvent.setup();
-    renderView({ installedCertificates: [anInstalledCertificate()] });
-    await openTab(user, "Certificados");
-
-    const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
-    expect(within(certificates).getByRole("button", { name: "Añadir…" })).toBeInTheDocument();
-    expect(
-      within(certificates).getByRole("button", {
-        name: "Quitar el certificado de Ada Lovelace Byron",
-      }),
-    ).toBeInTheDocument();
-    expect(within(certificates).queryAllByRole("checkbox")).toHaveLength(0);
-    expect(within(certificates).queryAllByRole("switch")).toHaveLength(0);
-  });
-
-  it("says nothing is installed yet, without instructions inside the box", async () => {
-    const user = userEvent.setup();
-    renderView({ installedCertificates: [] });
-    await openTab(user, "Certificados");
-
-    const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
-    expect(within(certificates).getByText("Todavía no has instalado ninguno")).toBeInTheDocument();
-  });
-
-  /** Un caducado se queda: que desaparezca no le explica nada a quien lo instaló. */
-  it("keeps an expired certificate in the list, with the reason it cannot sign", async () => {
-    const user = userEvent.setup();
-    renderView({
-      installedCertificates: [
-        anInstalledCertificate({ status: { kind: "expired", notAfter: IN_2020 } }),
-      ],
-    });
-    await openTab(user, "Certificados");
-
-    const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
-    expect(within(certificates).getByText("Ada Lovelace Byron")).toBeInTheDocument();
-    expect(within(certificates).getByText(/Caducó el /)).toBeInTheDocument();
-  });
-
   /**
    * El selector de ficheros y la contraseña son los dos del backend:
    * «Añadir…» no abre ningún diálogo propio.

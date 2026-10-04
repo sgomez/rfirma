@@ -44,6 +44,8 @@ interface SetupWizardProps {
   onOpenPreferences?: () => void;
   onOpenHelp?: () => void;
   onOpenAbout?: () => void;
+  /** El paso con el que se abre; por omisión, la bienvenida. */
+  initialStep?: 1 | 2;
 }
 
 type CertificateStatus =
@@ -81,9 +83,10 @@ export function SetupWizard({
   onOpenPreferences = () => {},
   onOpenHelp = () => {},
   onOpenAbout = () => {},
+  initialStep = 1,
 }: SetupWizardProps) {
   const { t } = useTranslation();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2>(initialStep);
   const [certificate, setCertificate] = useState<CertificateStatus>({ kind: "reading" });
   const [handler, setHandler] = useState<HandlerStatus>({ kind: "unavailable" });
   const [autoFirmaAppears, setAutoFirmaAppears] = useState(true);

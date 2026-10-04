@@ -24,42 +24,6 @@ function renderAbout(props: Partial<Parameters<typeof AboutDialog>[0]> = {}) {
 
 // Grada A. Lo que se comprueba es el **contenido** obligatorio, no la estética.
 describe("AboutDialog", () => {
-  it("declares that rFirma is not the official client", () => {
-    renderAbout();
-
-    expect(screen.getByText("Proyecto independiente")).toBeInTheDocument();
-    const notice = screen.getByText(/no está relacionada con AutoFirma/);
-    expect(notice).toHaveTextContent(/ni cuenta con su respaldo/);
-    expect(notice).toHaveTextContent(
-      /Avisa de sus fallos en nuestro repositorio, no al equipo de AutoFirma\./,
-    );
-  });
-
-  /**
-   * ID-211: la frase «el documento y la clave privada no salen de tu
-   * ordenador» tranquiliza sobre lo evidente y se retiró.
-   */
-  it("does not narrate that the document and the private key stay on the computer", () => {
-    renderAbout();
-
-    expect(screen.queryByText(/no salen de tu ordenador/)).not.toBeInTheDocument();
-  });
-
-  it("shows the version", () => {
-    renderAbout();
-
-    expect(screen.getByText("Versión 0.1.0")).toBeInTheDocument();
-  });
-
-  it("shows both licences without unfolding anything", () => {
-    renderAbout();
-
-    expect(screen.getByText("EUPL-1.2")).toBeInTheDocument();
-    expect(screen.getByText("Cliente @firma")).toBeInTheDocument();
-    expect(screen.getByText("GPL-2.0+ / EUPL-1.1")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Ver las licencias" })).not.toBeInTheDocument();
-  });
-
   it("opens the source code from its link", async () => {
     const user = userEvent.setup();
     const onOpenSourceCode = vi.fn();
@@ -81,48 +45,8 @@ describe("AboutDialog", () => {
   });
 
   describe("version status", () => {
-    it("shows there is a new version, with its number", () => {
-      const newVersion: NewVersion = { version: "0.4.1", installable: false };
-      renderAbout({ newVersion });
-
-      expect(screen.getByText("Hay una versión nueva: 0.4.1")).toBeInTheDocument();
-    });
-
-    it("shows being up to date when there is no new version", () => {
-      renderAbout({ newVersion: null });
-
-      expect(screen.getByText("Estás en la última versión")).toBeInTheDocument();
-    });
-
-    it("does not tell how to install what is already installed", () => {
-      renderAbout({ newVersion: { version: "0.4.1", installable: false } });
-
-      expect(screen.queryByText(/flatpak install/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/sudo apt install rfirma/)).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Copiar" })).not.toBeInTheDocument();
-    });
-
     describe("updating from the application", () => {
       const installable: NewVersion = { version: "0.4.1", installable: true };
-
-      it("offers Actualizar ahora only when the answer is installable", () => {
-        renderAbout({ newVersion: installable });
-
-        expect(screen.getByRole("button", { name: "Actualizar ahora" })).toBeInTheDocument();
-      });
-
-      it("offers nothing when it is not installable", () => {
-        renderAbout({ newVersion: { version: "0.4.1", installable: false } });
-
-        expect(screen.queryByRole("button", { name: "Actualizar ahora" })).not.toBeInTheDocument();
-      });
-
-      it("keeps showing the status but not the offer when notifications are off", () => {
-        renderAbout({ newVersion: installable, offerUpdate: false });
-
-        expect(screen.getByText("Hay una versión nueva: 0.4.1")).toBeInTheDocument();
-        expect(screen.queryByRole("button", { name: "Actualizar ahora" })).not.toBeInTheDocument();
-      });
 
       it("confirms with the version before installing", async () => {
         const user = userEvent.setup();

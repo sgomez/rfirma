@@ -59,6 +59,8 @@ interface PreferencesViewProps {
   /** Vacía el Almacén de rFirma entero, ya confirmado por la persona (ADR-0034). */
   onEmptyStore: () => Promise<void>;
   onClose: () => void;
+  /** La sección con la que se abre; por omisión, *General*. */
+  initialSection?: Section;
 }
 
 /**
@@ -126,6 +128,7 @@ export function PreferencesView({
   onRemoveCertificate,
   onEmptyStore,
   onClose,
+  initialSection = "general",
 }: PreferencesViewProps) {
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
@@ -133,7 +136,7 @@ export function PreferencesView({
   const [saveFailure, setSaveFailure] = useState<SaveFailure | null>(null);
   const [forgetFailure, setForgetFailure] = useState<string | null>(null);
   const [certificateFailure, setCertificateFailure] = useState<NamedFailure | null>(null);
-  const [current, setCurrent] = useState<Section>("general");
+  const [current, setCurrent] = useState<Section>(initialSection);
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const tabs = useRef(new Map<Section, HTMLElement | null>());

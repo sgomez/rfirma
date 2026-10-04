@@ -2,43 +2,11 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { inMemoryPreferences } from "../preferences/preferences";
-import { defaults } from "../preferences/testSupport";
+import { defaults } from "../preferences/preferencesFixtures";
 import { memoryStatus, type SignalRow } from "../status/status";
 import { renderWithCatalog } from "../testing/render";
 import { SetupWizard } from "./SetupWizard";
-
-const aVersionRow: SignalRow = {
-  signal: "version",
-  value: "0.4.1",
-  verdict: "correct",
-  action: null,
-  detail: null,
-  candidates: null,
-  restartFirefoxNotice: false,
-};
-
-const certificateNotInstalled: SignalRow = {
-  signal: "localCaCertificate",
-  value: "",
-  verdict: "attention",
-  action: { kind: "repair", target: "" },
-  detail: null,
-  candidates: null,
-  restartFirefoxNotice: false,
-};
-
-const handlerNotOurs: SignalRow = {
-  signal: "siteSignature",
-  value: "AutoFirma",
-  verdict: "attention",
-  action: { kind: "choice", target: "rfirma.desktop" },
-  detail: null,
-  candidates: [
-    { id: "autofirma.desktop", name: "AutoFirma", selected: true },
-    { id: "rfirma.desktop", name: "rFirma", selected: false },
-  ],
-  restartFirefoxNotice: false,
-};
+import { aVersionRow, certificateNotInstalled, handlerNotOurs } from "./setupStoryFixtures";
 
 // Grada A: el asistente solo habla con `StatusPort`, sin puerto propio.
 describe("SetupWizard", () => {
@@ -48,30 +16,6 @@ describe("SetupWizard", () => {
     );
 
     expect(screen.queryByText("Configurar rFirma")).not.toBeInTheDocument();
-  });
-
-  it("welcomes with the independence disclaimer and moves to the two actions on Continuar", async () => {
-    const user = userEvent.setup();
-    renderWithCatalog(
-      <SetupWizard
-        preferences={inMemoryPreferences(defaults)}
-        seen={false}
-        statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
-        onFinish={() => {}}
-      />,
-    );
-
-    expect(screen.getByText("Configurar rFirma")).toBeInTheDocument();
-    expect(screen.getByText(/compatible con AutoFirma 1\.9\.2/)).toBeInTheDocument();
-    expect(screen.getByText("Proyecto independiente")).toBeInTheDocument();
-    expect(screen.getByText("Paso 1 de 2")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-
-    expect(screen.getByText("Certificado de rFirma")).toBeInTheDocument();
-    expect(screen.getByText("Conexión segura entre el navegador y rFirma.")).toBeInTheDocument();
-    expect(screen.getByText("Usar rFirma por defecto")).toBeInTheDocument();
-    expect(screen.getByText("Paso 2 de 2")).toBeInTheDocument();
   });
 
   it("exposes the certificate step's pending, working and done states through its status text, with numbered markers instead of cards", async () => {
@@ -142,16 +86,6 @@ describe("SetupWizard", () => {
     await waitFor(() => {
       expect(screen.getByText("Ahora abren rFirma.")).toBeInTheDocument();
     });
-  });
-
-  it("welcomes in the language it starts with", () => {
-    renderWithCatalog(
-      <SetupWizard preferences={inMemoryPreferences(defaults)} seen={false} onFinish={() => {}} />,
-      "gl",
-    );
-
-    expect(screen.getByText(/rFirma é compatible con AutoFirma 1\.9\.2/)).toBeInTheDocument();
-    expect(screen.getByText("Paso 1 de 2")).toBeInTheDocument();
   });
 
   it("offers the language on the welcome screen and translates the whole wizard in place", async () => {
@@ -383,28 +317,6 @@ describe("SetupWizard", () => {
     expect(screen.queryByRole("button", { name: "Instalar" })).not.toBeInTheDocument();
   });
 
-  it("shows no hint on the handler step when AutoFirma does not appear among the candidates", async () => {
-    const user = userEvent.setup();
-    const handlerAlone: SignalRow = {
-      ...handlerNotOurs,
-      value: "",
-      action: { kind: "choice", target: "rfirma.desktop" },
-      candidates: [{ id: "rfirma.desktop", name: "rFirma", selected: false }],
-    };
-    renderWithCatalog(
-      <SetupWizard
-        preferences={inMemoryPreferences(defaults)}
-        seen={false}
-        statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerAlone])}
-        onFinish={() => {}}
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-
-    const handlerTitle = screen.getByText("Usar rFirma por defecto");
-    expect(handlerTitle.parentElement?.querySelector(".rf-hint")).toBeNull();
-  });
-
   it("marks setupWizardSeen on Terminar after both cards succeed", async () => {
     const user = userEvent.setup();
     const onFinish = vi.fn();
@@ -489,21 +401,6 @@ describe("SetupWizard", () => {
     expect(onFinish).toHaveBeenCalledOnce();
   });
 
-  it("leaves the header to the gtk titlebar on linux", () => {
-    renderWithCatalog(
-      <SetupWizard
-        preferences={inMemoryPreferences(defaults)}
-        seen={false}
-        menuAnchor="titlebar"
-        onFinish={() => {}}
-      />,
-    );
-
-    expect(screen.getByText("Configurar rFirma")).toBeInTheDocument();
-    expect(screen.queryByText("rFirma")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Menú" })).toBeNull();
-  });
-
   // La cabecera es la del ADR-0007, con su menú completo (docs/design/primer-arranque.md).
   it("carries the ADR-0007 menu, without the app name, reusing the shared Header", async () => {
     const user = userEvent.setup();
@@ -566,36 +463,6 @@ describe("SetupWizard", () => {
       expect((await preferences.read()).consentCountdown).toBe(false);
     });
     expect(onFinish).not.toHaveBeenCalled();
-  });
-
-  it("starts both steps done and without buttons when the CA is installed and rFirma already opens the sites", async () => {
-    const user = userEvent.setup();
-    const certificateInstalled: SignalRow = {
-      ...certificateNotInstalled,
-      verdict: "correct",
-      action: null,
-    };
-    const handlerOurs: SignalRow = {
-      ...handlerNotOurs,
-      value: "rFirma",
-      verdict: "correct",
-      action: null,
-    };
-    renderWithCatalog(
-      <SetupWizard
-        preferences={inMemoryPreferences(defaults)}
-        seen={false}
-        statusPort={memoryStatus([aVersionRow, certificateInstalled, handlerOurs])}
-        onFinish={() => {}}
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-
-    expect(await screen.findByText("Instalado en tus navegadores.")).toBeInTheDocument();
-    expect(screen.getByText("Ahora abren rFirma.")).toBeInTheDocument();
-    for (const name of ["Instalar", "Usar rFirma", "Ahora no"]) {
-      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
-    }
   });
 
   it("offers no step buttons while it reads the computer's state, and starts pending when nothing is done", async () => {
