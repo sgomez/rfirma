@@ -4,6 +4,7 @@ import { destinationOfferingSingleChoice } from "./App.testSupport";
 import { useDestination, usePreferencesState } from "./App.usePreferencesState";
 import { inMemoryPreferences } from "./preferences/preferences";
 import { defaults } from "./preferences/testSupport";
+import { absentWindowTheme } from "./preferences/theme";
 import { emptyRubricPicker } from "./signing/rubric";
 import type { SigningState } from "./signing/useSigning";
 
@@ -46,8 +47,9 @@ describe("usePreferencesState", () => {
   it("reads the settings again once the setup wizard stops covering the window", async () => {
     const preferences = inMemoryPreferences({ ...defaults, consentCountdown: true });
     const rubrics = emptyRubricPicker();
+    const windowTheme = absentWindowTheme();
     const { result, rerender } = renderHook(
-      ({ covered }) => usePreferencesState(preferences, rubrics, covered),
+      ({ covered }) => usePreferencesState(preferences, rubrics, covered, windowTheme),
       { initialProps: { covered: true } },
     );
     await waitFor(() => expect(result.current.settings?.consentCountdown).toBe(true));

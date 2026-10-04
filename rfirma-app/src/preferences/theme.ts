@@ -23,8 +23,10 @@ export function isTheme(value: string): value is Theme {
 /** Quien fija el tema de la ventana nativa; `null` la devuelve al escritorio. */
 export type WindowTheme = (theme: "light" | "dark" | null) => void;
 
-/** El puerto que no hace nada: lo que queda sin ventana nativa, como en las pruebas. */
-export const noWindowTheme: WindowTheme = () => {};
+/** El adaptador ausente: lo que queda sin ventana nativa, como en las pruebas. */
+export function absentWindowTheme(): WindowTheme {
+  return () => {};
+}
 
 /**
  * Pone el tema en el documento.

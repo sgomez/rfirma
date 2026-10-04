@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { forgetActivity } from "./App.forgetActivity";
+import type { MainWindowPorts } from "./App.ports";
 import { SignFlowPrompts, signFlowPromptOpen } from "./App.SignFlowPrompts";
 import { formatSignedAt, placingFrom } from "./App.signingOrder";
 import { useCertificateSearch } from "./App.useCertificateSearch";
@@ -20,87 +21,45 @@ import { useStartupNotices } from "./App.useStartupNotices";
 import { useViewedSignatures } from "./App.useViewedSignatures";
 import { useVisibleSignature } from "./App.useVisibleSignature";
 import { AboutDialog } from "./about/AboutDialog";
-import type { ExternalDestinationOpener } from "./desktop/externalDestination";
-import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
 import { DocumentTabs } from "./documents/DocumentTabs";
 import { isAPdf } from "./documents/document";
-import type { DocumentDrops } from "./documents/drops";
-import type { DocumentPicker } from "./documents/picker";
 import { RecentsSection } from "./documents/RecentRows";
-import type { RecentDocument, RecentsStore } from "./documents/recents";
+import type { RecentDocument } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
 import { classify } from "./errors/classify";
 import { PreferencesView } from "./preferences/PreferencesView";
-import type { PreferencesStore } from "./preferences/preferences";
-import type { WindowTheme } from "./preferences/theme";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
-import { absentNativeTitlebar, type NativeTitlebar } from "./shell/nativeTitlebar";
-import type { CertificateStore } from "./signing/certificate";
-import type { DestinationSource, SignedDocumentOpener } from "./signing/destination";
-import type { SigningBackend } from "./signing/flow";
-import type { RubricPicker } from "./signing/rubric";
 import { SignedPanel } from "./signing/SignedPanel";
 import { SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
-import type { StampComposer } from "./signing/stampPreview";
 import { useSigning } from "./signing/useSigning";
 import type { VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
-import { memoryStatus, type StatusPort } from "./status/status";
 import { InstallUpdateDialog } from "./updates/InstallUpdateDialog";
 import { NewVersionStrip } from "./updates/NewVersionStrip";
-import type { VersionCheck } from "./updates/newVersion";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
 import { firstSealedPage, NO_PAGE_SETS } from "./viewer/signatureBox";
-import type { DocumentFailure, PdfSource } from "./viewer/source";
+import type { DocumentFailure } from "./viewer/source";
 
 type OpenDialog = "about" | "installUpdate" | null;
 type ActiveView = "status" | "preferences" | null;
 
 const NO_RECENTS: readonly RecentDocument[] = [];
-const NO_TITLEBAR = absentNativeTitlebar();
 
 interface AppProps {
-  recents: RecentsStore;
-  picker: DocumentPicker;
-  /** Por dónde entra un PDF arrastrado a la ventana. Ver [`DocumentDrops`]. */
-  drops: DocumentDrops;
-  preferences: PreferencesStore;
-  /** De dónde salen los bytes del PDF que se pinta. Ver [`PdfSource`]. */
-  pdfs: PdfSource;
-  /** Dónde caerá el documento que hay delante. Ver [`DestinationSource`]. */
-  destinations: DestinationSource;
-  /** Los certificados de los tokens conectados. Ver [`CertificateStore`]. */
-  certificates: CertificateStore;
-  /** Por dónde entra la rúbrica, ya normalizada. Ver [`RubricPicker`]. */
-  rubrics: RubricPicker;
-  /** Quien compone el sello que se ve dentro del recuadro. Ver [`StampComposer`]. */
-  stamps: StampComposer;
-  /** Quien ejecuta las tres etapas de la firma. Ver [`SigningBackend`]. */
-  signer: SigningBackend;
-  /** Quien lleva al usuario hasta el fichero firmado. Ver [`SignedDocumentOpener`]. */
-  opener: SignedDocumentOpener;
+  /** Los puertos de la ventana. Ver [`MainWindowPorts`]. */
+  ports: MainWindowPorts;
   initialSignature: VisibleSignature;
-  /** Si hay una versión nueva publicada. Ver [`VersionCheck`]. */
-  versions: VersionCheck;
   /** La versión del binario que enseña «Acerca de». */
   version: string;
   /** Dónde va el menú. Por omisión, lo que diga la plataforma. */
   menuAnchor?: MenuAnchor;
-  /** Quien abre destinos externos fuera de la aplicación. Ver [`ExternalDestinationOpener`]. */
-  externalDestinations?: ExternalDestinationOpener;
-  /** Quien lee y reevalúa las señales del panel de estado. Ver [`StatusPort`]. */
-  status?: StatusPort;
   /** Recibe, una vez montada, el asa con la que `main.tsx` abre sus vistas desde fuera. */
   onReady?: (handle: AppHandle) => void;
   /** Otra pantalla tapa la ventana, como el asistente del primer arranque. */
   covered?: boolean;
-  /** La barra de título GTK de Linux. Ver [`NativeTitlebar`]. */
-  titlebar?: NativeTitlebar;
-  /** Quien fija el tema de la ventana nativa. Ver [`WindowTheme`]. */
-  windowTheme?: WindowTheme;
 }
 
 /** El asa que `onReady` entrega: lo único de `App` que se abre desde fuera. */
@@ -121,28 +80,31 @@ export interface AppHandle {
  * navegación, y los documentos abiertos siguen vivos debajo.
  */
 export function App({
-  recents,
-  picker,
-  drops,
-  preferences,
-  pdfs,
-  destinations,
-  certificates,
-  rubrics,
-  stamps,
-  signer,
-  opener,
+  ports,
   initialSignature,
-  versions,
   version,
   menuAnchor,
-  externalDestinations = unavailableExternalDestinationOpener(),
-  status = memoryStatus(),
   onReady,
   covered = false,
-  titlebar = NO_TITLEBAR,
-  windowTheme,
 }: AppProps) {
+  const {
+    recents,
+    picker,
+    drops,
+    preferences,
+    pdfs,
+    destinations,
+    certificates,
+    rubrics,
+    stamps,
+    signer,
+    opener,
+    versions,
+    externalDestinations,
+    status,
+    titlebar,
+    windowTheme,
+  } = ports;
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [view, setView] = useState<ActiveView>(null);
 

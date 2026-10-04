@@ -27,11 +27,9 @@ export function useStartupNotices(status: StatusPort, versions: VersionCheck) {
   // esta ventana dispare ninguna por su cuenta.
   const [statusRows, setStatusRows] = useState<SignalRow[]>([]);
   const hasAttention = useMemo(() => hasMenuAttention(statusRows), [statusRows]);
-  // El puerto **por omisión** de `status` es un objeto nuevo en cada pintada
-  // (`= memoryStatus()`), así que el efecto de más abajo lo lee de una `ref` y
-  // no de la lista de dependencias: si `status` fuera su dependencia, cada
-  // remedición cambiaría de identidad y volvería a disparar la lectura del
-  // arranque sin parar.
+  // El efecto de más abajo lee `status` de una `ref` y no de la lista de
+  // dependencias: la lectura es la del arranque, y un puerto con otra identidad
+  // no debe volver a dispararla.
   const statusAtStartup = useRef(status);
 
   // Si hay versión nueva se pregunta **una vez, al arrancar**, y lo que se
