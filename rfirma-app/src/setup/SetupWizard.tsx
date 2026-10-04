@@ -9,12 +9,12 @@ import { AlertIcon, CheckIcon, SpinnerIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Select } from "../design-system/Select";
 import { Stack } from "../design-system/Stack";
+import { Switch } from "../design-system/Switch";
 import { classify } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { LANGUAGES, type LanguageTag } from "../i18n/languages";
 import type { PreferencesStore } from "../preferences/preferences";
-import "../preferences/Switch.css";
 import { Header } from "../shell/Header";
 import { type MenuAnchor, menuAnchorFor } from "../shell/menuAnchor";
 import "./SetupWizard.css";
@@ -481,18 +481,12 @@ function ProtectionSetting({ t, preferences }: { t: TFunction; preferences: Pref
             {t("preferences.consentCountdown.label")}
           </p>
         </Stack>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={enabled}
-          aria-labelledby={titleId}
-          className="switch__control setup-wizard__protection-switch"
-          onClick={() => void change(!enabled)}
-        >
-          <span className="switch__track" aria-hidden="true">
-            <span className="switch__knob" />
-          </span>
-        </button>
+        <Switch
+          labelledBy={titleId}
+          checked={enabled}
+          className="setup-wizard__protection-switch"
+          onChange={(next) => void change(next)}
+        />
       </Row>
     </>
   );

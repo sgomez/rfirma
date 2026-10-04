@@ -1,6 +1,5 @@
 /*
- * El interruptor de Preferencias. No está en el sistema de diseño a propósito
- * (docs/design/preferencias.md): se maqueta con tokens, aquí.
+ * El interruptor del sistema de diseño. Ver [`Switch`].
  *
  * El estado no se cuenta solo con el color —la paleta es monocroma—: el pomo
  * cambia de lado, que es lo que se ve en cualquier tema y con cualquier vista.
@@ -46,15 +45,30 @@
 
 /* Los 44 px de pulsación se dan por fuera de la caja, para no dejar aire entre
    el rótulo y su ayuda. */
-.switch--wide .switch__control {
+.switch--wide .switch__control,
+.switch--bare .switch__control {
   position: relative;
   min-height: 24px;
 }
 
-.switch--wide .switch__control::before {
+.switch--wide .switch__control::before,
+.switch--bare .switch__control::before {
   content: "";
   position: absolute;
   inset: -10px 0;
+}
+
+/* Desnudo: solo la pastilla, que ocupa lo que mide y no se estira en su fila. */
+.switch--bare {
+  flex: none;
+}
+
+.switch--bare .switch__control {
+  width: auto;
+}
+
+.switch--bare .switch__control::before {
+  inset: -10px;
 }
 
 .switch__control:disabled {

@@ -7,7 +7,7 @@ historias.
 
 Componentes: `rfirma-app/src/preferences/PreferencesView.tsx` (la vista, con el
 estado y el modal de confirmación), `PreferencesSections.tsx` (una pieza por
-sección) y `Switch.tsx` (el desplegable es `design-system/Select.tsx`). La lista de certificados pinta cada fila
+sección) y los primitivos `design-system/Select.tsx` y `design-system/Switch.tsx`. La lista de certificados pinta cada fila
 con `CertificateCard` (`signing/CertificateCard.tsx`), la misma pieza del selector de
 certificado. Historias: `PreferencesView.stories.tsx`, en «Preferencias/Pantalla»,
 con los ajustes y los certificados de ejemplo de `preferencesFixtures.ts`.
@@ -160,7 +160,7 @@ cuatro paneles, un aviso común obliga a leer el texto para saber qué se rompi�
 ## Componentes y tokens
 
 Los primitivos `Button`, `Dialog`, `Row` y `Stack`; `CertificateCard` y
-`ErrorNotice`; `Select`, del sistema de diseño, y `Switch`, propio de la carpeta; `.rf-label`,
+`ErrorNotice`; `Select` y `Switch`, del sistema de diseño; `.rf-label`,
 `.rf-title`, `.rf-prose`, `.rf-hint`, `.rf-divider`; `--rf-surface` y
 `--rf-border-subtle`. La geometría (índice de 220 px, panel de 720 px como
 máximo) es de `PreferencesView.css`.
