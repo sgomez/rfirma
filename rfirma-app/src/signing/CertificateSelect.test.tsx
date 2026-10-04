@@ -240,7 +240,7 @@ describe("CertificateSelect", () => {
       expect(expiredRow).toHaveAttribute("aria-disabled", "true");
       expect(expiredRow).toHaveTextContent("Caducó el 3 de marzo de 2025");
       expect(expiredRow).toHaveAttribute("title", "Caducó el 3 de marzo de 2025");
-      expect(expiredRow.querySelector(".certificate-select__reason svg")).not.toBeNull();
+      expect(expiredRow.querySelector(".certificate-card__reason svg")).not.toBeNull();
       expect(row(3)).toHaveTextContent("Revocado (keyCompromise)");
 
       fireEvent.pointerDown(expiredRow);

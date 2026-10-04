@@ -1,0 +1,51 @@
+.certificate-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.certificate-card__headline {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.certificate-card__line {
+  line-height: 1.35;
+}
+
+.certificate-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.certificate-card__store {
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.certificate-card__expiry {
+  margin-left: 4px;
+  line-height: 1.35;
+}
+
+/* Atenuada por color y no por opacidad: el motivo en negrita tiene que leerse entero. */
+.certificate-card--unusable .certificate-card__headline {
+  color: var(--rf-text-muted);
+}
+
+.certificate-card__reason {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.certificate-card__reason .rf-body {
+  font-weight: 700;
+  line-height: 1.3;
+}

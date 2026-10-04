@@ -3,29 +3,18 @@
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge } from "../design-system/Badge";
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  ClockIcon,
-  RevokedIcon,
-  SearchIcon,
-  SpinnerIcon,
-} from "../design-system/icons";
+import { CheckIcon, ChevronDownIcon, SearchIcon, SpinnerIcon } from "../design-system/icons";
 import { Popover } from "../design-system/Popover";
 import { Stack } from "../design-system/Stack";
+import { CertificateCard, shortStatusWarning, storeLabel } from "./CertificateCard";
 import type { Certificate } from "./certificate";
 import {
   certificateCompactSubtitle,
   certificateHeadline,
-  certificateSubtitle,
-  expiryMonthYear,
   groupCertificates,
   isUsable,
 } from "./certificate";
 import "./CertificateSelect.css";
-
-type Store = Certificate["stores"][number];
 
 interface CertificateSelectProps {
   certificates: readonly Certificate[];
@@ -110,7 +99,6 @@ export function CertificateSelect({
   const renderOption = (certificate: Certificate, index: number) => {
     const usable = isUsable(certificate.status);
     const selected = certificate.id === chosen?.id;
-    const stores = certificate.stores;
     return (
       <div
         key={certificate.id}
@@ -139,34 +127,7 @@ export function CertificateSelect({
         }}
         onPointerEnter={() => setActive(index)}
       >
-        <span className="certificate-select__text">
-          <span className="certificate-select__headline">{certificateHeadline(certificate)}</span>
-          <span className="rf-body certificate-select__line">
-            {certificateSubtitle(certificate, t)}
-          </span>
-          <span className="certificate-select__meta">
-            {stores.map((store) => (
-              <Badge key={store} className="certificate-select__store">
-                {storeLabel(store, t)}
-              </Badge>
-            ))}
-            {certificate.status.kind === "valid" && (
-              <span className="rf-body rf-text-muted certificate-select__expiry">
-                {t("panel.certificate.expiresIn", {
-                  date: expiryMonthYear(certificate.status.notAfter),
-                })}
-              </span>
-            )}
-          </span>
-          {!usable && (
-            <span className="certificate-select__reason">
-              <StatusIcon status={certificate.status} />
-              <span className="rf-body">
-                {shortStatusWarning(certificate.status, i18n.language, t)}
-              </span>
-            </span>
-          )}
-        </span>
+        <CertificateCard certificate={certificate} />
         {selected && (
           <span className="certificate-select__check">
             <CheckIcon size={16} strokeWidth={2} />
@@ -303,23 +264,6 @@ export function CertificateSelect({
   );
 }
 
-function storeLabel(store: Store, t: TFunction): string {
-  switch (store) {
-    case "card":
-      return t("status.storeBrands.card");
-    case "firefox":
-      return t("status.storeBrands.firefox");
-    case "chrome":
-      return t("panel.certificate.stores.chrome");
-    case "nssdb":
-      return t("panel.certificate.stores.nssdb");
-    case "installed":
-      return t("panel.certificate.stores.installed");
-    case "windows":
-      return t("status.storeBrands.windows");
-  }
-}
-
 function fold(text: string): string {
   return text
     .normalize("NFD")
@@ -350,32 +294,4 @@ function rowTooltip(certificate: Certificate, locale: string, t: TFunction): str
     stores.map((store) => storeLabel(store, t)),
   );
   return `${issuer} · ${t("panel.certificate.sameCertificateIn", { stores: names })}`;
-}
-
-function StatusIcon({ status }: { status: Certificate["status"] }) {
-  switch (status.kind) {
-    case "expired":
-    case "notYetValid":
-      return <ClockIcon />;
-    case "revoked":
-      return <RevokedIcon />;
-    default:
-      return null;
-  }
-}
-
-/** Por qué no se puede firmar con este certificado, en la frase corta de su fila. */
-function shortStatusWarning(status: Certificate["status"], locale: string, t: TFunction): string {
-  switch (status.kind) {
-    case "expired":
-      return t("panel.certificate.expiredShort", {
-        date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(status.notAfter * 1000),
-      });
-    case "notYetValid":
-      return t("panel.certificate.notYetValidShort");
-    case "revoked":
-      return t("panel.certificate.revokedShort", { reason: status.reason });
-    default:
-      return t("panel.certificate.unreadableShort");
-  }
 }

@@ -4,13 +4,13 @@ import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge } from "../design-system/Badge";
 import { Button } from "../design-system/Button";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { LANGUAGES, type LanguageTag } from "../i18n/languages";
+import { CertificateCard } from "../signing/CertificateCard";
 import type { Certificate } from "../signing/certificate";
 import type { DestinationMode } from "./destinationMode";
 import type { SaveFailure, Section } from "./PreferencesView";
@@ -261,28 +261,6 @@ export function SigningSection({
   );
 }
 
-/**
- * Lo que identifica cada fila **es el certificado, no el fichero**: del
- * `.p12` no se recuerda nada, ni la ruta, así que aquí no hay ni
- * ruta ni «volver a localizar». La fecha de caducidad va en la misma línea
- * que el DNI y el emisor; un caducado la cambia por su insignia.
- */
-function certificateLine(certificate: Certificate, t: TFunction, locale: string) {
-  return [
-    certificate.idNumber,
-    t("panel.certificate.issuer", { issuer: certificate.issuer }),
-    certificate.status.kind === "valid"
-      ? t("preferences.certificates.expires", {
-          date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
-            certificate.status.notAfter * 1000,
-          ),
-        })
-      : null,
-  ]
-    .filter((piece) => piece !== null && piece !== "")
-    .join(" · ");
-}
-
 interface CertificatesSectionProps {
   titleId: string;
   certificateFailure: NamedFailure | null;
@@ -300,7 +278,7 @@ export function CertificatesSection({
   onRemoveClick,
   onEmptyStoreClick,
 }: CertificatesSectionProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   return (
     <>
       <Heading
@@ -332,17 +310,7 @@ export function CertificatesSection({
         <ul className="preferences__certificates">
           {installedCertificates.map((certificate) => (
             <li className="rf-row preferences__certificate" key={certificate.id}>
-              <span className="preferences__certificate-text">
-                <span className="rf-title preferences__certificate-holder">
-                  {certificate.holderName}
-                  {certificate.status.kind === "expired" && (
-                    <Badge>{t("preferences.certificates.expired")}</Badge>
-                  )}
-                </span>
-                <span className="rf-body rf-text-muted">
-                  {certificateLine(certificate, t, i18n.language)}
-                </span>
-              </span>
+              <CertificateCard certificate={certificate} />
               <Button
                 variant="ghost"
                 className="preferences__remove-certificate"
