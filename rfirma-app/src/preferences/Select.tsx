@@ -1,7 +1,8 @@
 //! Un desplegable de la aplicación, no el `<select>` del sistema, con su teclado y su accesibilidad repuestos a mano.
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { ChevronDownIcon } from "../design-system/icons";
+import { Popover } from "../design-system/Popover";
 import "./Select.css";
 
 /** Una opción del desplegable: el valor que se guarda y el texto que se ve. */
@@ -52,7 +53,6 @@ export function Select<T extends string>({
   const [active, setActive] = useState(0);
   const container = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
-  const list = useRef<HTMLDivElement>(null);
   const labelId = useId();
   const listId = useId();
   const optionId = useId();
@@ -60,10 +60,7 @@ export function Select<T extends string>({
   const chosen = options.findIndex((option) => option.value === value);
   const shown = options[chosen === -1 ? 0 : chosen];
 
-  const close = useCallback((giveBackFocus: boolean) => {
-    setOpen(false);
-    if (giveBackFocus) button.current?.focus();
-  }, []);
+  const close = useCallback(() => setOpen(false), []);
 
   // Al abrir, el cursor arranca en lo que ya está elegido y no en la primera
   // opción: abrir el desplegable no es empezar de cero.
@@ -72,27 +69,10 @@ export function Select<T extends string>({
     setOpen(true);
   };
 
-  // El foco se va a la lista para que el lector de pantalla la anuncie y para
-  // que las flechas no muevan la página de debajo.
-  useEffect(() => {
-    if (open) list.current?.focus();
-  }, [open]);
-
-  // Pulsar fuera cierra, igual que el menú de la cabecera. Sin esto la lista
-  // se queda flotando sobre el diálogo mientras se toca otra cosa.
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!container.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
-
   const choose = (index: number) => {
     const option = options[index];
     if (option) onChange(option.value);
-    close(true);
+    close();
   };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
@@ -119,15 +99,6 @@ export function Select<T extends string>({
         event.preventDefault();
         choose(active);
         return;
-      case "Escape":
-        event.preventDefault();
-        close(true);
-        return;
-      case "Tab":
-        // Tabular sale del control, así que la lista se va con él, pero el
-        // foco sigue su camino: devolverlo al botón lo dejaría atrapado.
-        close(false);
-        return;
       default:
     }
   };
@@ -146,7 +117,7 @@ export function Select<T extends string>({
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         aria-haspopup="listbox"
-        onClick={() => (open ? close(false) : show())}
+        onClick={() => (open ? close() : show())}
         onKeyDown={(event) => {
           if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
             event.preventDefault();
@@ -157,46 +128,49 @@ export function Select<T extends string>({
         <span className="select__value">{shown?.label ?? ""}</span>
         <ChevronDownIcon />
       </button>
-      {open && (
-        <div
-          className={`select__list rf-card rf-card--elevated${opens === "up" ? " select__list--up" : ""}`}
-          ref={list}
-          id={listId}
-          role="listbox"
-          tabIndex={-1}
-          aria-labelledby={labelId}
-          aria-activedescendant={`${optionId}-${active}`}
-          onKeyDown={onKeyDown}
-        >
-          {options.map((option, index) => (
-            <div
-              key={option.value}
-              id={`${optionId}-${index}`}
-              role="option"
-              // El foco lo guarda la lista y el cursor lo lleva
-              // `aria-activedescendant`, que es el patrón de `combobox` con
-              // `listbox`: la opción **no** entra en el orden de tabulación.
-              // El `-1` está para que sea enfocable por programa y para que el
-              // analizador no la lea como un adorno con un `onClick` encima.
-              tabIndex={-1}
-              aria-selected={option.value === value}
-              className={
-                index === active ? "select__option select__option--active" : "select__option"
-              }
-              // `onPointerDown` y no `onClick`: el oyente que cierra al pulsar
-              // fuera también es de `pointerdown`, y con `click` la lista se
-              // desmontaría antes de que llegara el clic.
-              onPointerDown={(event) => {
-                event.preventDefault();
-                choose(index);
-              }}
-              onPointerEnter={() => setActive(index)}
-            >
-              {option.label}
-            </div>
-          ))}
-        </div>
-      )}
+      <Popover
+        open={open}
+        onClose={close}
+        anchorRef={container}
+        initialFocus="panel"
+        returnFocusRef={button}
+        restoreFocus="always"
+        className={`select__list rf-card rf-card--elevated${opens === "up" ? " select__list--up" : ""}`}
+        id={listId}
+        role="listbox"
+        tabIndex={-1}
+        aria-labelledby={labelId}
+        aria-activedescendant={`${optionId}-${active}`}
+        onKeyDown={onKeyDown}
+      >
+        {options.map((option, index) => (
+          <div
+            key={option.value}
+            id={`${optionId}-${index}`}
+            role="option"
+            // El foco lo guarda la lista y el cursor lo lleva
+            // `aria-activedescendant`, que es el patrón de `combobox` con
+            // `listbox`: la opción **no** entra en el orden de tabulación.
+            // El `-1` está para que sea enfocable por programa y para que el
+            // analizador no la lea como un adorno con un `onClick` encima.
+            tabIndex={-1}
+            aria-selected={option.value === value}
+            className={
+              index === active ? "select__option select__option--active" : "select__option"
+            }
+            // `onPointerDown` y no `onClick`: el oyente que cierra al pulsar
+            // fuera también es de `pointerdown`, y con `click` la lista se
+            // desmontaría antes de que llegara el clic.
+            onPointerDown={(event) => {
+              event.preventDefault();
+              choose(index);
+            }}
+            onPointerEnter={() => setActive(index)}
+          >
+            {option.label}
+          </div>
+        ))}
+      </Popover>
     </div>
   );
 }
