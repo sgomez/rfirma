@@ -270,6 +270,7 @@ fn attended_in(
             reader: &EngineReading::over(engine),
             time_zone,
             language,
+            platform: crate::desktop::domain::platform::Platform::Linux,
             signer: &Untouched,
             window: &Untouched,
         },

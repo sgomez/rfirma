@@ -91,6 +91,7 @@ fn attended(words: &[&str]) -> Outcome {
             reader: &EngineReading::over(&NativeEngine),
             time_zone: &SummerInMadrid,
             language: rfirma_lib::signing::domain::Language::Spanish,
+            platform: rfirma_lib::desktop::adapters::paths::Platform::Linux,
             signer: &NeverSigns,
             window: &NeverSigns,
         },

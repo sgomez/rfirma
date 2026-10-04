@@ -1,5 +1,6 @@
 //! Lo que este proceso sabe de sí mismo: su línea de órdenes, su carpeta, su relanzamiento y el proceso de sede de cada URL que macOS entrega por Apple Event; no decide el rol.
 
+use crate::desktop::adapters::paths::Platform;
 use crate::desktop::application::invocation::{
     arguments_before_the_single_instance, delivered_urls, informative_text, Arguments, Invocation,
 };
@@ -77,6 +78,6 @@ fn launch_a_site_process(url: &str) {
 
 /// Imprime la ayuda o la versión si la línea de órdenes las pide, y dice si lo hizo.
 pub fn printed_the_informative_text(command_line: &[String]) -> bool {
-    let text = informative_text(command_line, env!("CARGO_PKG_VERSION"));
+    let text = informative_text(command_line, env!("CARGO_PKG_VERSION"), Platform::CURRENT);
     text.inspect(|text| println!("{text}")).is_some()
 }

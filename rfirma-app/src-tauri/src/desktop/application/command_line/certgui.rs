@@ -50,7 +50,7 @@ fn the_offered_certificates(
     ports: &CommandLinePorts,
 ) -> Result<Result<Vec<TokenCertificate>, NoCertificateToOffer>, Outcome> {
     let filter = filter.map(the_site_filter_of).transpose()?;
-    let listed = listed_within_the_store(arguments, ports.stores)?;
+    let listed = listed_within_the_store(arguments, ports)?;
     let owned = listed.len();
     if owned == 0 {
         return Ok(Err(NoCertificateToOffer::None));

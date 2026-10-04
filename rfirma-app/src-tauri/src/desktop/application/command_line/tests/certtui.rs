@@ -1,5 +1,6 @@
 use super::super::certtui::store_of;
 use super::*;
+use crate::desktop::domain::platform::Platform;
 use crate::identity::application::tests::{a_usable_certificate, an_expired_certificate};
 use crate::identity::domain::store::StoreClass;
 
@@ -103,6 +104,17 @@ fn chosen_with(
     filter: &dyn CertificateFilter,
     signer: &RecordingSigner,
 ) -> Outcome {
+    chosen_on(Platform::Linux, words, stores, terminal, filter, signer)
+}
+
+fn chosen_on(
+    platform: Platform,
+    words: &[&str],
+    stores: &StoresHolding,
+    terminal: &ChoosingTerminal,
+    filter: &dyn CertificateFilter,
+    signer: &RecordingSigner,
+) -> Outcome {
     let ports = CommandLinePorts {
         stores,
         terminal,
@@ -114,6 +126,7 @@ fn chosen_with(
         reader: &Untouched,
         time_zone: &Untouched,
         language: crate::signing::domain::Language::Spanish,
+        platform,
         signer,
         window: &Untouched,
     };
@@ -209,6 +222,25 @@ fn certtui_without_a_tty_fails_before_opening_any_store() {
     assert!(!stores.opened.get());
     assert!(terminal.shown.borrow().is_empty());
     assert!(signer.asked.borrow().is_empty());
+}
+
+#[test]
+fn certtui_without_a_tty_on_windows_fails_as_on_linux() {
+    let stores = StoresHolding::these(vec![a_usable_certificate("uno")]);
+    let terminal = ChoosingTerminal::without_a_tty();
+
+    let outcome = chosen_on(
+        Platform::Windows,
+        &CERTTUI,
+        &stores,
+        &terminal,
+        &Untouched,
+        &RecordingSigner::default(),
+    );
+
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(said(&outcome).contains("-certtui"), "{}", said(&outcome));
+    assert!(!stores.opened.get());
 }
 
 #[test]

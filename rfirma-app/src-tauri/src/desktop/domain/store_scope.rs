@@ -2,12 +2,16 @@
 
 use std::fmt;
 
+use crate::desktop::domain::platform::Platform;
+
 use super::command_line::{documented, STORE};
 
 const AUTO: &str = "auto";
 const MOZILLA: &str = "mozilla";
 const PKCS11: &str = "pkcs11";
-const NOT_SUPPORTED: [&str; 5] = ["pkcs12", "dni", "dnie", "windows", "mac"];
+const WINDOWS: &str = "windows";
+const NOT_SUPPORTED: [&str; 5] = ["pkcs12", "dni", "dnie", WINDOWS, "mac"];
+const NOT_SUPPORTED_ON_WINDOWS: [&str; 4] = ["pkcs12", "dni", "dnie", "mac"];
 
 /// Dónde se buscan los certificados.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -17,6 +21,8 @@ pub enum StoreScope {
     Everywhere,
     /// Solo en la familia NSS: los navegadores, el del sistema y el Almacén de rFirma.
     Nss,
+    /// Solo en el almacén de Windows.
+    Windows,
     /// Solo en este módulo PKCS#11, si es uno ya descubierto.
     Module(String),
 }
@@ -57,26 +63,36 @@ impl fmt::Display for StoreRefusal {
 }
 
 /// El ámbito que pide el valor de `-store`, o todos los almacenes si la orden no lo lleva.
-pub fn scope_named_by(arguments: &[String]) -> Result<StoreScope, StoreRefusal> {
+pub fn scope_named_by(
+    arguments: &[String],
+    platform: Platform,
+) -> Result<StoreScope, StoreRefusal> {
     let Some(position) = arguments.iter().position(|argument| argument == STORE) else {
         return Ok(StoreScope::Everywhere);
     };
     let value = arguments.get(position + 1).ok_or(StoreRefusal::Missing)?;
-    scope_of(value)
+    scope_of(value, platform)
 }
 
-fn scope_of(value: &str) -> Result<StoreScope, StoreRefusal> {
+fn scope_of(value: &str, platform: Platform) -> Result<StoreScope, StoreRefusal> {
     let (name, library) = match value.split_once(':') {
         Some((name, library)) => (name, Some(library.trim())),
         None => (value, None),
     };
     let lowered = name.trim().to_ascii_lowercase();
+    let on_windows = platform == Platform::Windows;
     match (lowered.as_str(), library) {
-        (AUTO | MOZILLA, None) => Ok(StoreScope::Nss),
+        (AUTO | WINDOWS, None) if on_windows => Ok(StoreScope::Windows),
+        (AUTO | MOZILLA, None) if !on_windows => Ok(StoreScope::Nss),
         (PKCS11, Some(library)) if !library.is_empty() => {
             Ok(StoreScope::Module(library.to_owned()))
         }
         (PKCS11, _) => Err(StoreRefusal::ModuleWithoutPath),
+        (name, _)
+            if on_windows && (name == MOZILLA || NOT_SUPPORTED_ON_WINDOWS.contains(&name)) =>
+        {
+            Err(StoreRefusal::NotSupported(value.to_owned()))
+        }
         (name, _) if name == AUTO || name == MOZILLA || NOT_SUPPORTED.contains(&name) => {
             Err(StoreRefusal::NotSupported(value.to_owned()))
         }

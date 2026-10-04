@@ -24,6 +24,10 @@ pub fn within_the_scope(
             .into_iter()
             .filter(|certificate| certificate.reference().store().class() != StoreClass::Card)
             .collect(),
+        (StoreScope::Windows, _) => certificates
+            .into_iter()
+            .filter(|certificate| certificate.reference().store().class() == StoreClass::Windows)
+            .collect(),
         (_, Some(module)) => certificates
             .into_iter()
             .filter(|certificate| certificate.reference().module() == module)

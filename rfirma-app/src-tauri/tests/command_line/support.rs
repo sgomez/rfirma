@@ -251,6 +251,7 @@ pub fn attended_with_the_window(
         reader: &EngineReading::over(&NativeEngine),
         time_zone: &SystemTimeZone,
         language: rfirma_lib::signing::domain::Language::Spanish,
+        platform: rfirma_lib::desktop::adapters::paths::Platform::Linux,
         signer: &RootsSigner::of(roots),
         window,
     };

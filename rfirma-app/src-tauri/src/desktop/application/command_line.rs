@@ -7,6 +7,7 @@ use crate::desktop::domain::command_line::{
     command_of, handover_to_the_window, is_a_help_flag, normalised, parameter_left_out,
     verbose_outside_verify, Command, Refusal, WindowHandover, JSON, PASSWORD_FD, XML,
 };
+use crate::desktop::domain::platform::Platform;
 use crate::desktop::domain::sign_arguments::{
     parse_sign_arguments, Format, Selection, SignArguments,
 };
@@ -67,6 +68,8 @@ pub struct CommandLinePorts<'a> {
     pub time_zone: &'a dyn LocalTimeZone,
     /// El idioma del sistema, en el que se escriben los textos del catálogo.
     pub language: Language,
+    /// El sistema en el que corre, del que dependen `-store` y los textos.
+    pub platform: Platform,
     /// Quien firma por el camino de la sede.
     pub signer: &'a dyn DocumentSigner,
     /// La ventana de sede en la que se elige con `-certgui`.
@@ -141,7 +144,7 @@ impl Outcome {
 /// Atiende los argumentos que siguen al ejecutable, empezando por la orden.
 pub fn attend(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
     let arguments = &normalised(arguments);
-    let command = match command_of(arguments) {
+    let command = match command_of(arguments, ports.platform) {
         Ok(command) => command,
         Err(refusal) => return Outcome::refused(&refusal),
     };
@@ -152,7 +155,11 @@ pub fn attend(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
     {
         return Outcome {
             exit_code: SUCCEEDED,
-            stdout: command.syntax().unwrap_or_default().as_bytes().to_vec(),
+            stdout: command
+                .syntax(ports.platform)
+                .unwrap_or_default()
+                .as_bytes()
+                .to_vec(),
             stderr: Vec::new(),
         };
     }
@@ -196,7 +203,7 @@ fn carried_out(
     ports: &CommandLinePorts,
 ) -> Outcome {
     match (command, signing) {
-        (Command::ListAliases, _) => list_aliases(arguments, ports.stores),
+        (Command::ListAliases, _) => list_aliases(arguments, ports),
         (Command::Verify, _) => verify::verify(arguments, ports),
         (Command::Sign, Some(parsed)) => sign(arguments, parsed, SignatureOperation::Sign, ports),
         (Command::Cosign, Some(parsed)) => {
@@ -206,9 +213,9 @@ fn carried_out(
     }
 }
 
-fn list_aliases(arguments: &[String], stores: &dyn CertificateStores) -> Outcome {
+fn list_aliases(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
     match (
-        aliases_listed(arguments, stores),
+        aliases_listed(arguments, ports),
         document_asked_by(arguments),
     ) {
         (Ok(certificates), Some(Asked::Json)) => Outcome {
@@ -245,14 +252,14 @@ fn document_asked_by(arguments: &[String]) -> Option<Asked> {
 
 fn aliases_listed(
     arguments: &[String],
-    stores: &dyn CertificateStores,
+    ports: &CommandLinePorts,
 ) -> Result<Vec<TokenCertificate>, Outcome> {
     if arguments.iter().any(|argument| argument == PASSWORD_FD) {
         return Err(Outcome::refused(&Refusal::PasswordForListing));
     }
-    let scope = scope_named_by(arguments)
+    let scope = scope_named_by(arguments, ports.platform)
         .map_err(|refusal| Outcome::refused(&Refusal::InvalidStore(refusal)))?;
-    within_the_scope(&scope, stores).map_err(|failure| failure_of_the_scope(&failure))
+    within_the_scope(&scope, ports.stores).map_err(|failure| failure_of_the_scope(&failure))
 }
 
 fn aliases_response(certificates: &[TokenCertificate]) -> Response {
@@ -272,7 +279,7 @@ fn the_certificate_chosen_by(
     let without_a_secret = |certificate| (certificate, None);
     match selection {
         Selection::Alias(alias) => {
-            the_certificate_named(alias, arguments, ports.stores).map(without_a_secret)
+            the_certificate_named(alias, arguments, ports).map(without_a_secret)
         }
         Selection::Filter(expression) => {
             the_only_certificate_accepted_by(expression, arguments, ports).map(without_a_secret)
@@ -293,9 +300,9 @@ fn the_certificate_chosen_by(
 fn the_certificate_named(
     alias: &str,
     arguments: &[String],
-    stores: &dyn CertificateStores,
+    ports: &CommandLinePorts,
 ) -> Result<TokenCertificate, Outcome> {
-    let named: Vec<TokenCertificate> = listed_within_the_store(arguments, stores)?
+    let named: Vec<TokenCertificate> = listed_within_the_store(arguments, ports)?
         .into_iter()
         .filter(|certificate| certificate.reference().label() == alias)
         .collect();
@@ -331,7 +338,7 @@ fn the_only_certificate_accepted_by(
     ports: &CommandLinePorts,
 ) -> Result<TokenCertificate, Outcome> {
     let filter = the_site_filter_of(expression)?;
-    let listed = listed_within_the_store(arguments, ports.stores)?;
+    let listed = listed_within_the_store(arguments, ports)?;
     let accepted = accepted_by(&filter, listed, ports)?;
     let Some(first) = accepted.first() else {
         return Err(Outcome::failed(format!(
@@ -358,11 +365,11 @@ fn the_site_filter_of(expression: &str) -> Result<SiteFilter, Outcome> {
 
 fn listed_within_the_store(
     arguments: &[String],
-    stores: &dyn CertificateStores,
+    ports: &CommandLinePorts,
 ) -> Result<Vec<TokenCertificate>, Outcome> {
-    let scope = scope_named_by(arguments)
+    let scope = scope_named_by(arguments, ports.platform)
         .map_err(|refusal| Outcome::refused(&Refusal::InvalidStore(refusal)))?;
-    within_the_scope(&scope, stores).map_err(|failure| failure_of_the_scope(&failure))
+    within_the_scope(&scope, ports.stores).map_err(|failure| failure_of_the_scope(&failure))
 }
 
 fn accepted_by(

@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::*;
 use crate::crossing::Failure;
+use crate::desktop::domain::platform::Platform;
 use crate::documents::adapters::files::RealFiles;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::documents::application::documents::{
@@ -274,7 +275,10 @@ fn the_help_names_every_autofirma_command_and_parameter() {
         "verify",
         "batchsign",
     ] {
-        assert!(HELP.contains(command), "falta la orden {command}");
+        assert!(
+            help(Platform::Linux).contains(command),
+            "falta la orden {command}"
+        );
     }
     for parameter in [
         "-i",
@@ -296,14 +300,17 @@ fn the_help_names_every_autofirma_command_and_parameter() {
         "-r",
         "-xml",
     ] {
-        assert!(HELP.contains(parameter), "falta el parámetro {parameter}");
+        assert!(
+            help(Platform::Linux).contains(parameter),
+            "falta el parámetro {parameter}"
+        );
     }
 }
 
 #[test]
 fn the_help_names_the_three_ways_of_asking_for_it() {
     for flag in HELP_FLAGS {
-        assert!(HELP.contains(flag), "falta {flag}");
+        assert!(help(Platform::Linux).contains(flag), "falta {flag}");
     }
 }
 
@@ -504,7 +511,7 @@ fn a_command_that_is_not_the_first_argument_gives_no_terminal_role() {
 
 #[test]
 fn the_help_no_longer_promises_that_there_is_no_unattended_mode() {
-    assert!(!HELP.contains("desatendido"));
+    assert!(!help(Platform::Linux).contains("desatendido"));
     for line in [
         "rfirma <orden> [parámetros…]",
         "rfirma <orden> --help",
@@ -514,7 +521,7 @@ fn the_help_no_longer_promises_that_there_is_no_unattended_mode() {
         "--file-forwarding",
         "Desviaciones",
     ] {
-        assert!(HELP.contains(line), "falta {line}");
+        assert!(help(Platform::Linux).contains(line), "falta {line}");
     }
 }
 
@@ -533,4 +540,31 @@ fn the_version_is_asked_for_in_either_form() {
 #[test]
 fn the_version_text_names_rfirma_and_then_the_autofirma_it_comes_from() {
     assert_eq!(version_text("1.2.3"), "rfirma 1.2.3\nAutoFirma 1.9.2");
+}
+
+#[test]
+fn the_windows_help_offers_neither_password_fd_nor_certtui_nor_the_keyring_example() {
+    let help = help(Platform::Windows);
+
+    for absent in ["--password-fd", "--certtui", "secret-tool"] {
+        assert!(!help.contains(absent), "sobra {absent}");
+    }
+    for present in [
+        "--certgui",
+        "--store",
+        "--password ",
+        "PIN del almacén de Windows",
+    ] {
+        assert!(help.contains(present), "falta {present}");
+    }
+}
+
+#[test]
+fn the_windows_help_is_what_the_process_prints_on_windows() {
+    let arguments = ["rfirma".to_owned(), "--help".to_owned()];
+
+    assert_eq!(
+        informative_text(&arguments, "1.0.0", Platform::Windows),
+        Some(help(Platform::Windows))
+    );
 }
