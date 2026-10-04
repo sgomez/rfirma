@@ -1,9 +1,12 @@
 //! El velo que confirma, ejecuta y cuenta la retirada del certificado de rFirma (docs/design/retirar-certificado.md).
 
 import type { ReactNode } from "react";
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../design-system/Button";
+import { Dialog } from "../design-system/Dialog";
 import { CheckCircleIcon, CheckingIcon, CrossCircleIcon } from "../design-system/icons";
+import { Row } from "../design-system/Row";
 import "./WithdrawCertificateDialog.css";
 import {
   type StoreBrand,
@@ -28,28 +31,6 @@ interface WithdrawCertificateDialogProps {
 
 type Moment = "question" | "working" | "result";
 
-/** Lo que puede recibir el foco dentro del velo. */
-const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-/** El tabulador da la vuelta dentro del velo en vez de salirse a la ventana de detrás. */
-function trapTabWithinCurrentTarget(event: KeyboardEvent<HTMLDivElement>) {
-  if (event.key !== "Tab") return;
-  const modal = event.currentTarget;
-  const focusable = [...modal.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-    (element) => !element.hasAttribute("disabled") && element.tabIndex !== -1,
-  );
-  const first = focusable.at(0);
-  const last = focusable.at(-1);
-  if (first === undefined || last === undefined) return;
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
-
 /**
  * El velo que confirma, ejecuta y cuenta la retirada del certificado de
  * rFirma (docs/design/retirar-certificado.md, ADR-0005).
@@ -68,24 +49,8 @@ export function WithdrawCertificateDialog({
   onClose,
 }: WithdrawCertificateDialogProps) {
   const { t } = useTranslation();
-  const titleId = useId();
   const [moment, setMoment] = useState<Moment>("question");
   const [report, setReport] = useState<WithdrawalReport | null>(null);
-  const dialog = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    dialog.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented || moment === "working") return;
-      event.preventDefault();
-      onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, moment]);
 
   const withdraw = () => {
     setMoment("working");
@@ -101,115 +66,109 @@ export function WithdrawCertificateDialog({
     !failed(report.handler) &&
     !report.stores.some((store) => failed(store.outcome));
 
+  const title =
+    moment === "question"
+      ? t("status.withdrawal.title.question")
+      : moment === "working"
+        ? t("status.withdrawal.title.working")
+        : t(success ? "status.withdrawal.title.done" : "status.withdrawal.title.partial");
+
   return (
-    <div className="rf-scrim withdraw-certificate-dialog__scrim">
-      <div
-        className="rf-dialog withdraw-certificate-dialog"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        ref={dialog}
-        onKeyDown={trapTabWithinCurrentTarget}
-      >
-        <p className="rf-title" id={titleId}>
-          {moment === "question" && t("status.withdrawal.title.question")}
-          {moment === "working" && t("status.withdrawal.title.working")}
-          {moment === "result" &&
-            t(success ? "status.withdrawal.title.done" : "status.withdrawal.title.partial")}
-        </p>
+    <Dialog
+      role="alertdialog"
+      label={title}
+      onClose={moment === "working" ? undefined : onClose}
+      className="withdraw-certificate-dialog"
+      scrimClassName="withdraw-certificate-dialog__scrim"
+    >
+      <p className="rf-title">{title}</p>
 
-        {moment === "question" && (
-          <div className="rf-stack rf-gap-xs">
-            <p className="rf-prose">{t("status.withdrawal.body.certificate")}</p>
-            <p className="rf-prose">{t("status.withdrawal.body.handler")}</p>
-            <p className="rf-hint">{t("status.withdrawal.hint")}</p>
-          </div>
-        )}
+      {moment === "question" && (
+        <div className="rf-stack rf-gap-xs">
+          <p className="rf-prose">{t("status.withdrawal.body.certificate")}</p>
+          <p className="rf-prose">{t("status.withdrawal.body.handler")}</p>
+          <p className="rf-hint">{t("status.withdrawal.hint")}</p>
+        </div>
+      )}
 
-        {moment === "working" && (
+      {moment === "working" && (
+        <ul className="rf-stack rf-gap-xs withdraw-certificate-dialog__list">
+          {stores.map((store) => (
+            <StoreLine key={store.brand} brand={store.brand} icon={<CheckingIcon size={14} />}>
+              {t("status.withdrawal.waiting")}
+            </StoreLine>
+          ))}
+        </ul>
+      )}
+
+      {moment === "result" && report && (
+        <>
           <ul className="rf-stack rf-gap-xs withdraw-certificate-dialog__list">
-            {stores.map((store) => (
-              <StoreLine key={store.brand} brand={store.brand} icon={<CheckingIcon size={14} />}>
-                {t("status.withdrawal.waiting")}
+            {report.stores.map((store) => (
+              <StoreLine
+                key={store.brand}
+                brand={store.brand}
+                icon={
+                  failed(store.outcome) ? (
+                    <CrossCircleIcon size={14} />
+                  ) : (
+                    <CheckCircleIcon size={14} />
+                  )
+                }
+              >
+                {store.outcome.kind === "failed"
+                  ? store.outcome.reason
+                  : t("status.withdrawal.outcome.withdrawn")}
               </StoreLine>
             ))}
+            <li className="rf-row rf-gap-xs">
+              {failed(report.handler) ? (
+                <CrossCircleIcon size={14} />
+              ) : (
+                <CheckCircleIcon size={14} />
+              )}
+              <span className="rf-prose">{t("status.signals.siteSignature")}</span>
+              <span className="rf-body rf-text-muted">
+                {report.handler.kind === "failed"
+                  ? report.handler.reason
+                  : t("status.withdrawal.outcome.withdrawn")}
+              </span>
+            </li>
           </ul>
-        )}
+          <p className="rf-body">{t("status.withdrawal.restartBrowserNotice")}</p>
+        </>
+      )}
 
-        {moment === "result" && report && (
+      <Row className="withdraw-certificate-dialog__actions">
+        {moment === "question" && (
           <>
-            <ul className="rf-stack rf-gap-xs withdraw-certificate-dialog__list">
-              {report.stores.map((store) => (
-                <StoreLine
-                  key={store.brand}
-                  brand={store.brand}
-                  icon={
-                    failed(store.outcome) ? (
-                      <CrossCircleIcon size={14} />
-                    ) : (
-                      <CheckCircleIcon size={14} />
-                    )
-                  }
-                >
-                  {store.outcome.kind === "failed"
-                    ? store.outcome.reason
-                    : t("status.withdrawal.outcome.withdrawn")}
-                </StoreLine>
-              ))}
-              <li className="rf-row rf-gap-xs">
-                {failed(report.handler) ? (
-                  <CrossCircleIcon size={14} />
-                ) : (
-                  <CheckCircleIcon size={14} />
-                )}
-                <span className="rf-prose">{t("status.signals.siteSignature")}</span>
-                <span className="rf-body rf-text-muted">
-                  {report.handler.kind === "failed"
-                    ? report.handler.reason
-                    : t("status.withdrawal.outcome.withdrawn")}
-                </span>
-              </li>
-            </ul>
-            <p className="rf-body">{t("status.withdrawal.restartBrowserNotice")}</p>
+            <Button variant="ghost" onClick={onClose}>
+              {t("actions.cancel")}
+            </Button>
+            <Button variant="primary" onClick={withdraw}>
+              {t("status.withdrawal.confirm")}
+            </Button>
           </>
         )}
-
-        <div className="rf-row withdraw-certificate-dialog__actions">
-          {moment === "question" && (
-            <>
-              <button type="button" className="rf-btn rf-btn--ghost" onClick={onClose}>
-                {t("actions.cancel")}
-              </button>
-              <button type="button" className="rf-btn rf-btn--primary" onClick={withdraw}>
-                {t("status.withdrawal.confirm")}
-              </button>
-            </>
-          )}
-          {moment === "working" && (
-            <button type="button" className="rf-btn rf-btn--ghost" disabled>
-              {t("actions.close")}
-            </button>
-          )}
-          {moment === "result" && (
-            <>
-              {!success && (
-                <button type="button" className="rf-btn rf-btn--ghost" onClick={onClose}>
-                  {t("actions.close")}
-                </button>
-              )}
-              <button
-                type="button"
-                className="rf-btn rf-btn--primary"
-                onClick={success ? onClose : withdraw}
-              >
-                {success ? t("actions.close") : t("actions.retry")}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+        {moment === "working" && (
+          <Button variant="ghost" disabled>
+            {t("actions.close")}
+          </Button>
+        )}
+        {moment === "result" && (
+          <>
+            {!success && (
+              <Button variant="ghost" onClick={onClose}>
+                {t("actions.close")}
+              </Button>
+            )}
+            <Button variant="primary" onClick={success ? onClose : withdraw}>
+              {success ? t("actions.close") : t("actions.retry")}
+            </Button>
+          </>
+        )}
+      </Row>
+    </Dialog>
   );
 }
 
