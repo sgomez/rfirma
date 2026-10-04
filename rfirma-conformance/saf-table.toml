@@ -233,6 +233,7 @@ point = "before_certificate"
 covered = [
   "check_signatures_stops_a_multisignature_it_cannot_validate",
   "check_signatures_stops_a_cosign_over_a_tampered_cades",
+  "check_signatures_stops_a_cosign_over_a_cades_with_an_expired_certificate",
   "check_signatures_stops_a_cosign_over_a_xades_whose_key_is_not_its_certificate_key",
   "check_signatures_stops_a_cosign_over_a_pdf_whose_byte_range_leaves_bytes_out",
 ]

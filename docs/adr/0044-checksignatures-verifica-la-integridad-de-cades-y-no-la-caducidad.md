@@ -1,11 +1,14 @@
 # `checkSignatures` verifica la integridad de una CAdES y no mira la caducidad del certificado
 
 Con `checkSignatures=true`, la sede valida las firmas previas antes de cofirmar
-o contrafirmar. AutoFirma 1.9.2 llama a `ValidateBinarySignature.verifySign`
-con `checkCertificates=false` para eso, y con `false` no verifica ni el valor
-de firma ni el `messageDigest`: una CAdES con un byte del contenido cambiado
-salía válida. Este ADR fija qué comprueba rFirma en ese punto y completa la
-regla del ADR-0023 para el protocolo afirma.
+o contrafirmar. AutoFirma 1.9.2 llama a `ValidateBinarySignature.validate(byte[],
+Properties)`, que ignora los parámetros y pasa `checkCertificates=true` a
+`verifySign` (`ValidateBinarySignature.java:65-67`): verifica el valor de firma
+y el `messageDigest`, y también la vigencia del certificado. El puente de
+rFirma le pasaba `checkCertificates=false`, y con `false` `verifySign` no
+verifica nada: una CAdES con un byte del contenido cambiado salía válida. Este
+ADR fija qué comprueba rFirma en ese punto y completa la regla del ADR-0023
+para el protocolo afirma.
 
 ## La regla
 
@@ -21,8 +24,8 @@ regla del ADR-0023 para el protocolo afirma.
    documento antiguo cuyo firmante ya tiene el certificado caducado es el caso
    más común, eIDAS lo clasifica como `INDETERMINATE` y la sede valida en su
    servidor. rFirma se aparta a propósito de AutoFirma, que solo lo rechaza en
-   CAdES y XAdES con `SAF_39`, y lo hace como efecto de pasar `checkCertificates=true`
-   a esos validadores, no como criterio propio.
+   CAdES y XAdES con `SAF_39`, y lo hace como efecto de que esos validadores
+   comprueban la vigencia con `checkCertificates=true`, no como criterio propio.
 4. **Cómo se verifica una CAdES con el certificado caducado.** La integridad se
    comprueba con la clave pública del certificado, no con el certificado: el
    `signing-time` puede caer fuera de su vigencia y SpongyCastle rechazaría la
@@ -35,9 +38,10 @@ regla del ADR-0023 para el protocolo afirma.
 - Las comprobaciones de la suite de conformidad
   `check_signatures_stops_a_cosign_over_a_tampered_cades` (AutoFirma y rFirma
   coinciden en `SAF_39`) y
-  `check_signatures_cosigns_over_a_cades_with_an_expired_certificate` miden
-  esta regla; la segunda lleva la etiqueta `rfirma:adr-0044`, porque
-  AutoFirma responde `SAF_39` y rFirma continúa.
+  `check_signatures_stops_a_cosign_over_a_cades_with_an_expired_certificate`
+  miden esta regla. La segunda exige el `SAF_39` de AutoFirma (ADR-0026) y
+  lleva la etiqueta `rfirma:adr-0044`: rFirma continúa y sale NO CONFORME,
+  explicado.
 - PAdES no cambia: respeta `checkCertificates`, por defecto `false`, y acepta
   el certificado caducado como antes.
 
