@@ -44,7 +44,7 @@ const exceptions: Record<string, { classes: string[]; reason: string }> = {
   "sede/SedeConsent.tsx": { classes: ["rf-stack"], reason: NOT_A_DIV },
   "sede/SedeWaiting.tsx": { classes: ["rf-stack", "rf-row", "rf-gap-xs"], reason: NOT_A_DIV },
   "preferences/PreferencesSections.tsx": {
-    classes: ["rf-row", "rf-gap-xs", "rf-badge"],
+    classes: ["rf-row", "rf-gap-xs"],
     reason: NOT_A_DIV,
   },
   "status/WithdrawCertificateDialog.tsx": {
