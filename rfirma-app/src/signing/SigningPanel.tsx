@@ -1,9 +1,9 @@
 //! La columna derecha antes de firmar: la zona que se desliza con todo lo que se decide y el pie fijo con el botón de firmar.
 
 import { useTranslation } from "react-i18next";
+import { Switch } from "../design-system/Switch";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
-import { Switch } from "../preferences/Switch";
 import type { PageChoice, PageSet, PageSets, Placement } from "../viewer/signatureBox";
 import { CertificateNotice } from "./CertificateNotice";
 import { CertificateSelect } from "./CertificateSelect";
