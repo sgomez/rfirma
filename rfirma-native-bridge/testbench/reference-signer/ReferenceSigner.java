@@ -149,9 +149,6 @@ public final class ReferenceSigner {
         Files.write(Path.of(args[5]), result);
     }
 
-    // Una XAdES firmada con la clave del p12, con su KeyValue delante del KeyInfo y el certificado
-    // de <cert.pem> en X509Data: el KeyValueKeySelector del original comprueba con el KeyValue y da
-    // la firma por buena, pero enseña como firmante al titular de <cert.pem>.
     private static void xadesForeignKey(String[] args) throws Exception {
         Properties extraParams = new Properties();
         extraParams.setProperty("format", AOSignConstants.SIGN_FORMAT_XADES_ENVELOPING);

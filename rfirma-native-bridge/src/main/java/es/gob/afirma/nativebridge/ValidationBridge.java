@@ -129,15 +129,12 @@ final class ValidationBridge {
         };
     }
 
-    /**
-     * El veredicto del validador del original mas la ligadura de la clave: una firma
-     * que no se sostiene con la clave del certificado que se enseña como firmante no vale.
-     */
     private static List<SignValidity> xmlValidities(final ValidateXMLSignature xml,
             final byte[] document, final boolean checkCertificates) {
         final List<SignValidity> validities =
                 new ArrayList<>(xml.validate(document, checkCertificates));
         if (!signaturesBindToTheirSigners(document)) {
+            validities.removeIf(validity -> validity.getValidity() == SIGN_DETAIL_TYPE.OK);
             validities.add(new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.NO_MATCH_DATA));
         }
         return validities;

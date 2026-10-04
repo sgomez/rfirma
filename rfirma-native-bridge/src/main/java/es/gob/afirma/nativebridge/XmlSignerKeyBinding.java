@@ -15,18 +15,7 @@ import org.w3c.dom.Node;
 import es.gob.afirma.signers.xml.Utils;
 import es.gob.afirma.signers.xml.XMLConstants;
 
-/**
- * El validador del original elige la clave con la que comprueba de un
- * {@code KeyValueKeySelector}: el primer {@code KeyValue}, o el primer
- * certificado de {@code X509Data}, segun cual aparezca antes en el
- * {@code KeyInfo}. Esa clave no tiene por que ser la del certificado que
- * {@code PreviousSignaturesBridge} y {@code ValidationBridge} enseñan como
- * firmante, que es siempre el primer {@code X509Certificate}.
- *
- * <p>Esto comprueba lo que falta: que el {@code SignatureValue} se sostiene con
- * la clave publica de ese certificado. Cuando no se sostiene, la firma no es de
- * quien se enseña y no vale.
- */
+/** Comprueba que el {@code SignatureValue} se sostiene con la clave del certificado que se enseña. */
 final class XmlSignerKeyBinding {
 
     private XmlSignerKeyBinding() { }
