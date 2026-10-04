@@ -3,6 +3,8 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./InstallUpdateDialog.css";
+import { Button } from "../design-system/Button";
+import { Row } from "../design-system/Row";
 import type { Installation, NewVersion, VersionCheck } from "./newVersion";
 
 interface InstallUpdateDialogProps {
@@ -50,18 +52,14 @@ export function InstallUpdateDialog({ newVersion, versions, onClose }: InstallUp
               {t("updates.install.confirmTitle", { version })}
             </p>
             <p className="rf-prose">{t("updates.install.confirmBody", { version })}</p>
-            <div className="rf-row install-update-dialog__actions">
-              <button type="button" className="rf-btn rf-btn--ghost" onClick={onClose}>
+            <Row className="install-update-dialog__actions">
+              <Button variant="ghost" onClick={onClose}>
                 {t("actions.notNow")}
-              </button>
-              <button
-                type="button"
-                className="rf-btn rf-btn--primary"
-                onClick={() => void install()}
-              >
+              </Button>
+              <Button variant="primary" onClick={() => void install()}>
                 {t("updates.install.confirm")}
-              </button>
-            </div>
+              </Button>
+            </Row>
           </>
         )}
         {phase.kind === "installing" && (
@@ -77,11 +75,11 @@ export function InstallUpdateDialog({ newVersion, versions, onClose }: InstallUp
             <p className="rf-prose" role="alert">
               {t(`updates.install.failed.${phase.reason}`)}
             </p>
-            <div className="rf-row install-update-dialog__actions">
-              <button type="button" className="rf-btn rf-btn--primary" onClick={onClose}>
+            <Row className="install-update-dialog__actions">
+              <Button variant="primary" onClick={onClose}>
                 {t("actions.close")}
-              </button>
-            </div>
+              </Button>
+            </Row>
           </>
         )}
       </div>
