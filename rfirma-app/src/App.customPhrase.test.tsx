@@ -36,15 +36,15 @@ function recordingSigner(presigned: SigningOrder[]): SigningBackend {
 /** El panel con la firma visible encendida y *Personalizada* elegida. */
 async function withCustomModel(presigned: SigningOrder[] = []) {
   const user = userEvent.setup();
-  renderApp(
-    inMemoryRecents(),
-    [document("factura.pdf")],
-    pdfsOf({ "factura.pdf": 3 }),
-    {},
-    { list: async () => [{ ...aCertificate, remembered: true }] },
-    emptyRubricPicker(),
-    recordingSigner(presigned),
-  );
+  renderApp({
+    recents: inMemoryRecents(),
+    documents: [document("factura.pdf")],
+    pdfs: pdfsOf({ "factura.pdf": 3 }),
+    settings: {},
+    certificates: { list: async () => [{ ...aCertificate, remembered: true }] },
+    rubrics: emptyRubricPicker(),
+    signer: recordingSigner(presigned),
+  });
   await openPdf(user);
   const panel = await screen.findByRole("region", { name: "Panel de firma" });
   await within(panel).findByRole("button", { name: "Firmar" });

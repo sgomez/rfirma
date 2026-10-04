@@ -3,15 +3,11 @@
 import { screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { App } from "./App";
-import {
-  type ExternalDestinationOpener,
-  unavailableExternalDestinationOpener,
-} from "./desktop/externalDestination";
 import type { DocumentInHand } from "./documents/document";
-import type { Drop, FakeDocumentDrops } from "./documents/drops";
+import type { Drop } from "./documents/drops";
 import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentPicker } from "./documents/picker";
-import { inMemoryRecents, type RecentDocument } from "./documents/recents";
+import type { RecentDocument } from "./documents/recents";
 import type { Preferences } from "./preferences/preferences";
 import { inMemoryPreferences } from "./preferences/preferences";
 import type { NativeTitlebar } from "./shell/nativeTitlebar";
@@ -21,19 +17,14 @@ import {
   type Destination,
   type DestinationSource,
   inMemoryDestination,
-  type SignedDocumentOpener,
   type SingleDestination,
-  unavailableOpener,
 } from "./signing/destination";
-import { type SigningBackend, unavailableSigningBackend } from "./signing/flow";
-import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { unavailableStampComposer } from "./signing/stampPreview";
 import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
-import type { StatusPort } from "./status/status";
+import { aMainWindowDoubles, type MainWindowDoubleOverrides } from "./testing/mainWindowDoubles";
 import { renderWithCatalog } from "./testing/render";
-import { inMemoryVersionCheck, type VersionCheck } from "./updates/newVersion";
 import type { PdfDocument, PdfPage, Viewport } from "./viewer/pdf";
-import { type PdfSource, unavailablePdfSource } from "./viewer/source";
+import type { PdfSource } from "./viewer/source";
 
 /** El destino que contesta el backend mientras la prueba no diga otra cosa. */
 export const aDestination = () =>
@@ -199,24 +190,28 @@ export function failingCertificateStore(failures: number, then: readonly Certifi
   return store;
 }
 
-export function renderApp(
-  recents = inMemoryRecents(),
-  documents: DocumentInHand[] = [],
-  pdfs: PdfSource = unavailablePdfSource(),
-  settings: Partial<Preferences> = {},
-  certificates: Partial<CertificateStore> = {},
-  rubrics: RubricPicker = emptyRubricPicker(),
-  signer: SigningBackend = unavailableSigningBackend(),
-  invoked: Drop | null = null,
-  drops: FakeDocumentDrops = inMemoryDocumentDrops(invoked),
-  versions: VersionCheck = inMemoryVersionCheck(),
-  externalDestinations: ExternalDestinationOpener = unavailableExternalDestinationOpener(),
-  status?: StatusPort,
-  destinations: DestinationSource = aDestination(),
-  initialSignature: VisibleSignature = DEFAULT_VISIBLE_SIGNATURE,
-  titlebar: NativeTitlebar | null = null,
-  opener: SignedDocumentOpener = unavailableOpener(),
-) {
+interface RenderAppOptions extends MainWindowDoubleOverrides {
+  documents?: DocumentInHand[];
+  settings?: Partial<Preferences>;
+  invoked?: Drop | null;
+  initialSignature?: VisibleSignature;
+  titlebar?: NativeTitlebar | null;
+}
+
+export function renderApp({
+  documents = [],
+  settings = {},
+  invoked = null,
+  initialSignature = DEFAULT_VISIBLE_SIGNATURE,
+  titlebar = null,
+  ...overrides
+}: RenderAppOptions = {}) {
+  const doubles = aMainWindowDoubles({
+    drops: inMemoryDocumentDrops(invoked),
+    destinations: aDestination(),
+    ...overrides,
+  });
+  const { recents, drops } = doubles;
   const preferences = inMemoryPreferences(
     {
       theme: "system",
@@ -238,20 +233,20 @@ export function renderApp(
       recents={recents}
       picker={inMemoryDocumentPicker(documents)}
       drops={drops}
-      pdfs={pdfs}
+      pdfs={doubles.pdfs}
       preferences={preferences}
-      destinations={destinations}
-      certificates={{ ...emptyCertificateStore(), ...certificates }}
-      rubrics={rubrics}
+      destinations={doubles.destinations}
+      certificates={doubles.certificates}
+      rubrics={doubles.rubrics}
       stamps={unavailableStampComposer()}
-      signer={signer}
-      opener={opener}
+      signer={doubles.signer}
+      opener={doubles.opener}
       initialSignature={initialSignature}
-      versions={versions}
+      versions={doubles.versions}
       version="0.1.0"
       menuAnchor={titlebar === null ? "header" : "titlebar"}
-      externalDestinations={externalDestinations}
-      status={status}
+      externalDestinations={doubles.externalDestinations}
+      status={doubles.status}
       titlebar={titlebar ?? undefined}
     />,
   );
