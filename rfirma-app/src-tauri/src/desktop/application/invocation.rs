@@ -216,13 +216,15 @@ const HELP_CLOSING: &str = "\
 Ejemplo en el flatpak, con un fichero fuera de la carpeta de documentos:
   flatpak run --file-forwarding me.sgomez.rfirma sign -i @@ <fichero> @@ -o <salida>
 
-Lo que rFirma atiende de una sede (protocolo 4, sobre wss:// en 127.0.0.1):
-  websocket           Abre el canal en uno de los puertos que sortea la sede.
+Lo que rFirma atiende de una sede (canal local en 127.0.0.1 o servidor intermedio):
+  websocket, service  Abren el canal local con la sede.
   echo                Comprobación de vida.
   selectcert          Elegir certificado, consentido por la persona.
-  sign                Firma PAdES de un PDF.
-  cosign              Cofirma PAdES de un PDF.
-  countersign, save y signandsave se rechazan con su código del catálogo.
+  sign, cosign        Firma y cofirma, en los formatos que AutoFirma firma en tres fases.
+  countersign         Contrafirma CAdES o XAdES.
+  signandsave         Firma y guarda la firma en disco.
+  save, load          Guardar o abrir un fichero, con el diálogo del sistema.
+  batch               Firma por lotes, remota o local.
 ";
 
 /// Texto informativo mostrado en la ayuda por consola de esta plataforma.
