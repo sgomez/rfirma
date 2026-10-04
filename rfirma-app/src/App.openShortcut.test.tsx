@@ -4,18 +4,12 @@ import { describe, expect, it } from "vitest";
 import { App } from "./App";
 import { aDestination, document, pdfsOf, renderApp } from "./App.testSupport";
 import { isOpenShortcut } from "./App.useOpenShortcut";
-import { inMemoryDocumentDrops } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
 import { inMemoryRecents } from "./documents/recents";
 import { inMemoryPreferences, type Preferences } from "./preferences/preferences";
-import { emptyCertificateStore } from "./signing/certificate";
-import { unavailableOpener } from "./signing/destination";
-import { unavailableSigningBackend } from "./signing/flow";
-import { emptyRubricPicker } from "./signing/rubric";
-import { unavailableStampComposer } from "./signing/stampPreview";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./signing/visibleSignature";
+import { aMainWindowDoubles } from "./testing/mainWindowDoubles";
 import { renderWithCatalog } from "./testing/render";
-import { inMemoryVersionCheck } from "./updates/newVersion";
 
 const LINUX = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15";
 const MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15";
@@ -136,19 +130,13 @@ describe("App, el atajo Ctrl+O", () => {
     };
     renderWithCatalog(
       <App
-        recents={inMemoryRecents()}
-        picker={picker}
-        drops={inMemoryDocumentDrops()}
-        pdfs={pdfsOf({ "factura.pdf": 2 })}
-        preferences={inMemoryPreferences(aPreferences)}
-        destinations={aDestination()}
-        certificates={emptyCertificateStore()}
-        rubrics={emptyRubricPicker()}
-        stamps={unavailableStampComposer()}
-        signer={unavailableSigningBackend()}
-        opener={unavailableOpener()}
+        ports={aMainWindowDoubles({
+          picker,
+          pdfs: pdfsOf({ "factura.pdf": 2 }),
+          preferences: inMemoryPreferences(aPreferences),
+          destinations: aDestination(),
+        })}
         initialSignature={DEFAULT_VISIBLE_SIGNATURE}
-        versions={inMemoryVersionCheck()}
         version="0.1.0"
         menuAnchor="header"
         covered

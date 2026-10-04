@@ -114,25 +114,27 @@ function RootView() {
         onOpenAbout={() => appHandle.current?.openAbout()}
       />
       <App
-        recents={recents}
-        picker={tauriDocumentPicker()}
-        drops={tauriDocumentDrops()}
-        pdfs={tauriPdfSource()}
-        preferences={preferences}
-        windowTheme={windowTheme}
-        destinations={tauriDestinations()}
-        certificates={tauriCertificateStore()}
-        rubrics={tauriRubricPicker()}
-        stamps={tauriStampComposer()}
-        signer={tauriSigningBackend()}
-        opener={tauriSignedDocumentOpener()}
+        ports={{
+          recents,
+          picker: tauriDocumentPicker(),
+          drops: tauriDocumentDrops(),
+          pdfs: tauriPdfSource(),
+          preferences,
+          windowTheme,
+          destinations: tauriDestinations(),
+          certificates: tauriCertificateStore(),
+          rubrics: tauriRubricPicker(),
+          stamps: tauriStampComposer(),
+          signer: tauriSigningBackend(),
+          opener: tauriSignedDocumentOpener(),
+          versions: tauriVersionCheck(),
+          externalDestinations,
+          status: statusPort,
+          titlebar,
+        }}
         initialSignature={initialSignature}
-        versions={tauriVersionCheck()}
         version={appVersion}
-        externalDestinations={externalDestinations}
-        status={statusPort}
         covered={!setupWizardSeen}
-        titlebar={titlebar}
         onReady={(handle) => {
           appHandle.current = handle;
         }}
