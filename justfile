@@ -142,8 +142,15 @@ check-ts: check-po lint-ts lint-i18n knip build-ts test-ts test-site-driver
 
 # lint-rust + machete + crap, sin `cargo build --release` ni `cargo test` sueltos; la instantanea del
 # contrato la compara `tests/contract_discovers_adapters.rs` dentro de la pasada instrumentada.
+[linux]
 [group('ci')]
 check-rust: lint-rust machete crap
+
+# Sin SoftHSM no hay pasada instrumentada: el CRAP lo juzga el CI de Linux (#1526).
+[windows]
+[macos]
+[group('ci')]
+check-rust: lint-rust machete
 
 # Comprueba las herramientas, y falla nombrando la que falte o no este en su version fijada.
 [group('dev')]
