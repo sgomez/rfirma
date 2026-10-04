@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rfirma.sgomez.me/schemas/command-line/sign.schema.json",
+  "title": "rfirma sign --json",
+  "description": "La firma hecha: el formato resuelto, el certificado usado y, según haya -o o no, la ruta del fichero firmado o la firma.",
+  "type": "object",
+  "properties": {
+    "format": {
+      "description": "El formato de la firma, también cuando se pidió auto.",
+      "enum": ["PAdES", "CAdES", "XAdES"]
+    },
+    "certificate": {
+      "type": "object",
+      "$ref": "certificate.schema.json",
+      "properties": {
+        "alias": {
+          "description": "El alias que acepta --alias.",
+          "type": "string"
+        }
+      },
+      "required": ["alias"],
+      "unevaluatedProperties": false
+    },
+    "output": {
+      "description": "La ruta absoluta del fichero firmado. Solo con -o.",
+      "type": "string"
+    },
+    "signature": {
+      "description": "La firma en Base64 estándar (RFC 4648). Solo sin -o.",
+      "type": "string",
+      "pattern": "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+    }
+  },
+  "required": ["format", "certificate"],
+  "oneOf": [{ "required": ["output"] }, { "required": ["signature"] }],
+  "unevaluatedProperties": false
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rfirma.sgomez.me/schemas/command-line/cosign.schema.json",
+  "title": "rfirma cosign --json",
+  "description": "La cofirma hecha, con la misma forma que la de sign.",
+  "$ref": "sign.schema.json"
+}

@@ -308,6 +308,7 @@ mod listaliases_json;
 mod schema;
 mod sign_config;
 mod sign_formats;
+mod sign_json;
 
 fn attended(words: &[&str]) -> Outcome {
     attended_with(words, &StoresWith::labels(&[]))

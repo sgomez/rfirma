@@ -1,3 +1,5 @@
+use base64::Engine as _;
+
 use super::*;
 
 /// El motor de filtros que deja pasar solo los certificados de esas etiquetas.
@@ -54,6 +56,18 @@ fn sign_with_a_filter_that_leaves_one_certificate_signs_with_it() {
 
     assert_eq!(outcome.exit_code, SUCCEEDED, "{}", said(&outcome));
     assert_eq!(signer.asked.borrow()[0].1, "yo");
+}
+
+#[test]
+fn sign_json_with_a_filter_names_the_certificate_it_left_by_alias() {
+    let mut words = FILTERED.to_vec();
+    words.push("-json");
+
+    let outcome = filtered_with(&["yo"], &words, &RecordingSigner::default());
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{}", said(&outcome));
+    let signed = super::schema::conforming_json("sign", &outcome.stdout);
+    assert_eq!(signed["certificate"]["alias"], "yo");
 }
 
 #[test]
