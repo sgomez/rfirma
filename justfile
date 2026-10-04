@@ -621,6 +621,11 @@ seal-ds-bundle:
     echo
     echo "resellado. Versiona rfirma-app/src/design-system/bundle.lock."
 
+# Arranca Storybook con las historias de la interfaz, en los cinco idiomas y los dos temas.
+[group('dev')]
+storybook: po-import
+    cd {{ app }} && pnpm exec storybook dev --no-open -p 6006
+
 # Abre la ventana con recarga en caliente; los argumentos van a la aplicacion.
 [group('dev')]
 dev *args: check-native po-import
