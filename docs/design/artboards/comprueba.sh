@@ -34,13 +34,13 @@ if [ ${#malos[@]} -ne 0 ]; then
     exit 1
 fi
 
-con_fondo_de_main=(Main EstadoAcercaDe EstadoFirmarDeTodosModos EstadoPaginasSinFirmaVisible EstadoVerFirmas)
+con_fondo_de_main=(Main EstadoAcercaDe)
 # La barra de la ventana principal la llevan tambien las vistas sin pestanas.
 solo_cabecera=(PreferenciasPantalla PanelEstado RetirarCertificado PrimerArranque)
 # El aviso de firmas previas lo lleva todo el fondo de Main salvo 5b, y las
 # fichas de las firmas, solo el resumen de Main y el dialogo «Ver firmas».
-con_aviso_firmas=(Main EstadoAcercaDe EstadoFirmarDeTodosModos EstadoVerFirmas)
-con_fichas_firmas=(Main EstadoVerFirmas)
+con_aviso_firmas=(Main EstadoAcercaDe)
+con_fichas_firmas=(Main)
 
 for part in _*.part; do
     [ "$part" = _helmet.part ] && continue

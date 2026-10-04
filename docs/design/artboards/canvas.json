@@ -52,36 +52,6 @@
       "page": "recorrido"
     },
     {
-      "file": "EstadoPaginasSinFirmaVisible.dc.html",
-      "title": "5b · Antes de firmar · páginas sin firma visible",
-      "x": 3780,
-      "y": 0,
-      "w": 1180,
-      "h": 700,
-      "page": "recorrido",
-      "is_interactive": false
-    },
-    {
-      "file": "EstadoFirmarDeTodosModos.dc.html",
-      "title": "5c · Antes de firmar · ¿Firmar de todos modos?",
-      "x": 5040,
-      "y": 0,
-      "w": 1180,
-      "h": 700,
-      "page": "recorrido",
-      "is_interactive": true
-    },
-    {
-      "file": "EstadoVerFirmas.dc.html",
-      "title": "5d · Ver firmas · las firmas del documento",
-      "x": 7560,
-      "y": 0,
-      "w": 1180,
-      "h": 700,
-      "page": "recorrido",
-      "is_interactive": true
-    },
-    {
       "file": "PrimerArranque.dc.html",
       "title": "Primer arranque · el asistente",
       "x": 2520,
@@ -231,28 +201,12 @@
       "text": "EL RECUADRO DE LA FIRMA VISIBLE, EN EL VISOR. Vale para cualquier posición de «Firma visible» encendida en Main.\n\nUN SOLO CAMPO DE FIRMA CON EL WIDGET REPLICADO en cada página elegida (docs/research/recuadro-replicado-pdfsig.md, validado por VALIDe como PAdES B-Level con un firmante). Por eso el /Rect es el mismo en todas, la página donde se arrastró no se dibuja distinta de las demás y con varias páginas se pide UNA SOLA prefirma. Fuera del conjunto la página se ve en blanco: un recuadro a trazos insinuaría que ahí hay algo.\n\nPOSICIÓN ESTÁNDAR: al encenderla, la firma visible cae en la página a la vista, abajo a la derecha, a un margen del borde. Al cambiar de modo sobrevive la página donde se colocó.\n\nEL CAMPO DE «VARIAS» usa el formato de impresión de toda la vida, 1,2-3,10-20: una tira de miniaturas se rompe a las 200 páginas. Lo prohibido de AutoFirma es su sintaxis (1-3,-3--1) y la degradación silenciosa, no teclear: la palanca «Error del rango» recorre los tres errores y los tres apagan firmar (ID-22).\n\nTIRADORES: cuatro, y son CROMO, NO PAPEL — 10 px en pantalla al 50 %, al 100 % y al 300 %. Sin medidas escritas en el panel: se mueve arrastrando, se redimensiona por los tiradores y la ayuda va en tooltip. Por debajo del tamaño mínimo queda la rúbrica sola, que es donde se paran los tiradores.\n\nLO QUE HAY DENTRO ES LA FIRMA DE VERDAD, NO UNA MAQUETA: un ciclo trifásico EN SECO con un PK1 inventado da bytes visibles idénticos a los del firmado real (sondeo #115), y pdf.js de fábrica los pinta. O es la firma de verdad, o el recuadro va vacío: sin certificado conserva marco y tiradores, se puede colocar y no lleva nada dentro. La rúbrica va encima del texto, centrada y de fondo: es como funciona setImageScale(-1) en iText y lo que hace AutoFirma.\n\nMOVIENDO O REDIMENSIONANDO se congela la vista anterior ATENUADA: recalcular por fotograma cuesta 1,9 s y 507 MB de RSS en un escaneado de 37 MB. RECALCULANDO va sola al soltar. NO SE HA PODIDO DIBUJAR no es una puerta: se dice y se firma igual; sobre si se puede firmar manda el botón. Los tres fallos (contraseña, PDF/A, el puente) siguen sin medir.\n\nUN DOCUMENTO NUEVO ABRE EN «AJUSTAR A LA PÁGINA»; si se toca el zoom, manda quien lo toca. Y todos los artboards miden 700 de alto: la ventana abre a 1280×720 y no baja de 560, para que en un portátil de 1366×768 el pie del panel no quede fuera.\n\nPARA EL SPEC: hay que empaquetar standard_fonts de pdfjs-dist y pasarle standardFontDataUrl a getDocument, o aceptar por escrito que el corte de línea es aproximado; y la vista previa depende de que annotationMode siga en su valor por omisión, que hoy no vigila ninguna guardia.\n\nFichas: visor-de-documento, panel-de-firma."
     },
     {
-      "id": "nota-paginas-sin-firma-visible",
-      "x": 3780,
-      "y": 2280,
-      "w": 1100,
-      "page": "recorrido",
-      "text": "5b · PÁGINAS SIN FIRMA VISIBLE. correctPositionSignature recorta contra la PRIMERA página de la lista y descarta en silencio aquellas donde no cabe la esquina inferior izquierda (#150); con Varias o Todas y un documento que mezcla tamaños, eso sigue pasando aunque la firma visible nazca apagada. Por eso el diálogo existe.\n\nNo se nombran las páginas una a una: se dice el TOTAL, n de m, y todo se cuenta sobre el CONJUNTO ELEGIDO y no sobre el documento — si eliges 13 de 27 y se caen 3, la firma visible aparece en 10, no en 24. Modal antes de firmar, «Cancelar» / «Firmar de todos modos», y «sin firma visible» — nunca «recortadas».\n\nSe dibuja sobre Main en «listo» con la firma visible en «Varias», velo en z 20 para tapar la cabecera (10).\n\nFicha: dialogo-paginas-sin-firma-visible."
-    },
-    {
       "id": "nota-dialogos",
       "x": 2520,
       "y": 2280,
       "w": 1100,
       "page": "recorrido",
       "text": "6, 7 Y ACERCA DE · LOS DIÁLOGOS SOBRE LA VENTANA. Los tres se dibujan sobre Main (barra única de 44 px con las pestañas, visor, panel de 380 px y pie fijo con «Firmar»; el selector «Certificado» cerrado arriba del panel), con el velo en z 20 para tapar la cabecera (10). El fondo de EstadoPin y EstadoPinIncorrecto lo decide la palanca «Clase de almacén»: en las dos posiciones «antes de listar», Main buscando certificados (la caja del selector dice «Buscando certificados…» con un indicador de carga y «Firmar» va al 55 %); en la del «.p12» «al firmar», Main lista, con Lucía Martín Ortega en el selector. EstadoAcercaDe, sobre Main lista.\n\nEl sujeto del «.p12» es «MARTÍN ORTEGA LUCÍA · 00099990D», el titular del selector, con el DNI en claro como en el desplegable: el diálogo nombra el certificado con el que se va a firmar, y dos titulares en la misma pantalla contarían dos cosas distintas.\n\nFichas: dialogo-pin, acerca-de."
-    },
-    {
-      "id": "nota-firmar-de-todos-modos",
-      "x": 5040,
-      "y": 740,
-      "w": 1180,
-      "page": "recorrido",
-      "text": "5c · ¿FIRMAR DE TODOS MODOS? (tanda de la validez, VALIDADO 2026-10-03.) Se abre al pulsar «Firmar» con CUALQUIER ⚠ o ✗: una firma caducada, una no válida o un hallazgo del documento. Es un paso de confirmación, no un bloqueo. Se dibuja sobre Main lista, con el aviso compacto en el panel y el velo en z 20.\nQUÉ CUENTA: una fila por problema y nada más. Primero los hallazgos del documento (✗ y su texto, sin segunda línea), después cada firma caducada o no válida: el icono de su validez y «Firma N · firmante» en 13 px a peso 700 y, debajo, su motivo en --rf-text-muted, sangrado 23 px (icono de 15 + 8 de separación) para que caiga bajo el texto. Las válidas no salen. Desaparece el párrafo «Este documento lleva N firmas que no son válidas»: la lista ya lo cuenta.\nABSORBE EL DIÁLOGO DE LAS FIRMAS QUE NO ENTENDEMOS: la firma con formato desconocido es una fila más, «✗ Firma 2 · Notaría XYZ» / «rFirma no conoce este tipo de firma». Se ve con «formato desconocido (2)».\nCIERRA con «El receptor podría rechazarlo.» y los botones «Cancelar» (fantasma) y «Firmar igualmente» (principal).\nMUCHAS: la lista conserva el alto máximo de 264 px y su desplazamiento; el diálogo no crece más. Se ve con «extremo · todos los motivos y hallazgos (7)», que pinta los seis motivos y los tres hallazgos.\nPALANCAS, solo de estado: «Firmas previas» (los casos con algún problema) y el contenido."
     },
     {
       "id": "nota-verify-gui",

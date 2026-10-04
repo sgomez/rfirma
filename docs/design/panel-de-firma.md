@@ -317,8 +317,7 @@ certificados», «Firmas previas» y «Pie · destino»:
   en fichero de [Preferencias](preferencias.md)) y «Volver a buscar». No hay
   selector.
 - **Listo**: la caja con el certificado elegido y «Firmar». Con alguna firma
-  previa caducada o no válida, o un hallazgo, lo mismo; pulsarlo abre [«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md)
-  (artboard `EstadoFirmarDeTodosModos`).
+  previa caducada o no válida, o un hallazgo, lo mismo; pulsarlo abre [«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md).
 - **Certificados abiertos**: el buscador en lugar de la caja y la lista hacia
   abajo, sobre el resto del panel. La palanca «Lista de certificados» cambia
   cuántos hay, si se listan los que no se pueden usar y si se agrupan.

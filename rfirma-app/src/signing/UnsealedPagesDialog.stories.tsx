@@ -1,0 +1,20 @@
+//! Las historias del diálogo de páginas sin firma visible, según cuántas páginas se caen.
+
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { fn } from "storybook/test";
+import { UnsealedPagesDialog } from "./UnsealedPagesDialog";
+
+const meta = {
+  title: "Diálogos de firma/1 · Páginas sin firma visible",
+  component: UnsealedPagesDialog,
+  parameters: { layout: "fullscreen" },
+  args: { fallen: 3, onConfirm: fn(), onCancel: fn() },
+} satisfies Meta<typeof UnsealedPagesDialog>;
+
+export default meta;
+
+export const SeveralPages: StoryObj<typeof meta> = {};
+
+export const OnePage: StoryObj<typeof meta> = { args: { fallen: 1 } };
+
+export const ManyPages: StoryObj<typeof meta> = { args: { fallen: 12 } };
