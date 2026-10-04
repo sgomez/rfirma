@@ -98,3 +98,41 @@ argv**.
 - **`AttachConsole` en Windows** en lugar de un binario de consola aparte.
   Descartada para cuando llegue Windows: cmd no espera al proceso y el código
   de salida no es fiable. El original instala `AutofirmaCommandLine.exe`.
+
+## Enmienda: la línea de órdenes en Windows
+
+Un ejecutable de subsistema gráfico no puede servir a la terminal en Windows:
+cmd no lo espera y su código de salida no llega. Por eso hay **dos binarios en
+la carpeta de instalación**:
+
+- **`rfirma.exe`**, el de siempre, de subsistema gráfico: la ventana, el
+  protocolo `afirma://` y el proceso de escritorio.
+- **`rfirma.com`**, de subsistema de consola: atiende las órdenes de terminal,
+  la ayuda y la versión, y cualquier otra cosa se la pasa a `rfirma.exe` de la
+  misma carpeta sin esperarlo. Cargo no genera `.com`: es el binario
+  `rfirma-console`, con la bandera `console`, que la receta de empaquetado
+  renombra; va en el instalador como un recurso más, así que el desinstalador
+  lo borra y la firma del actualizador lo cubre.
+
+**`rfirma.com` gana a un nombre distinto** (`rfirma-cli.exe`, `rfirmac.exe`)
+porque se escribe `rfirma` igual que en Linux: `PATHEXT` pone `.COM` antes que
+`.EXE`, y cmd y PowerShell resuelven al de consola. Es el patrón de
+`devenv.com` en Visual Studio. El CI de Windows lo comprueba en cmd,
+PowerShell 5.1 y 7 y Git Bash (`just smoke-console`).
+
+**El PATH del usuario**, porque la instalación es por usuario: el instalador
+añade su carpeta al instalar y al actualizar si no está, sin duplicarla, y la
+quita solo en una desinstalación de verdad. Lo lee y lo escribe sin pasar por
+las cadenas de NSIS, que lo truncarían a 1024 caracteres, y avisa al sistema
+para que las consolas nuevas lo vean. "App Paths" se descarta: cmd no lo
+consulta.
+
+**`--store` en Windows**: `windows` y `auto` acotan al almacén de certificados
+de Windows, cuyo PIN pide Windows; `pkcs11:<módulo>` se comporta como en Linux,
+y los almacenes que rFirma no abre en Windows (`mozilla`, `pkcs12:`, `dni`,
+`mac`…) se rechazan sin abrir ninguno. `--password` se rechaza con un mensaje
+propio de Windows, y `--password-fd` y `--certtui` aún no existen ahí.
+
+**Git Bash**: en su ventana (mintty), bash encuentra `rfirma.exe`, que responde
+por las tuberías. Dentro de Windows Terminal hay que escribir `rfirma.com`; no
+se instala un script `rfirma` sin extensión.

@@ -121,6 +121,6 @@ PowerShell sí lo mide el CI de Windows (`just smoke-console`).
 Esta lista **no es permanente**. El día que exista un arnés de navegador sin cabeza capaz de
 **conceder el permiso de red local** y de **sembrar el `nssdb`** de forma reproducible, las filas
 1 y 2 bajan a una grada nueva. La 5 no espera a eso: baja al **banco de conformidad** en cuanto
-haya un trámite que cancelar. Este fichero se queda entonces con las que necesitan una sede o un instalador de
-verdad —la 3, la 4 y la 7—. Está escrito aquí y no en el ADR porque es estado de la lista, y lo lee
-quien la ejecuta.
+haya un trámite que cancelar. Este fichero se queda entonces con las que necesitan una sede o un
+instalador de verdad —la 3, la 4 y la 7—. Está escrito aquí y no en el ADR porque es estado de la
+lista, y lo lee quien la ejecuta.
