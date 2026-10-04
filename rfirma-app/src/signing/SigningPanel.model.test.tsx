@@ -174,7 +174,7 @@ describe("SigningPanel · Modelo y rúbrica", () => {
       rubricFailure: { situation: "notAnAcceptedImage", detail: "image/gif" },
     });
 
-    expect(screen.getByText("Esa imagen no vale como rúbrica")).toBeInTheDocument();
+    expect(screen.getByText("No se ha podido usar la imagen")).toBeInTheDocument();
     expect(screen.getByText("image/gif")).toBeInTheDocument();
   });
 });

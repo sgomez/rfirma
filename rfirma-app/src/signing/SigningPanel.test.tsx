@@ -325,7 +325,7 @@ describe("SigningPanel", () => {
     // El título es siempre el fijo; la situación clasificada baja a ser la
     // causa (docs/design/panel-de-firma.md § Estados → Error al firmar).
     expect(screen.getByText("No se ha podido firmar")).toBeInTheDocument();
-    expect(screen.getByText("No encontramos la tarjeta")).toBeInTheDocument();
+    expect(screen.getByText("Falta la tarjeta o el certificado")).toBeInTheDocument();
     // El código original, ni traducido ni recortado: está para pegarlo.
     expect(screen.getByText("CKR_DEVICE_REMOVED (C_Sign)")).toBeInTheDocument();
     expect(

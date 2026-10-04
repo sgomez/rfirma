@@ -187,7 +187,7 @@ describe("App, firmando, firmado y error", () => {
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(sign);
 
-    expect(await screen.findByText("No encontramos la tarjeta")).toBeInTheDocument();
+    expect(await screen.findByText("Falta la tarjeta o el certificado")).toBeInTheDocument();
     expect(
       screen.getByText("El documento sigue como estaba: no se ha guardado nada."),
     ).toBeInTheDocument();
@@ -201,7 +201,7 @@ describe("App, firmando, firmado y error", () => {
     await user.click(back);
 
     // «Volver» cierra el error y deja el panel como si nada hubiera pasado.
-    expect(screen.queryByText("No encontramos la tarjeta")).not.toBeInTheDocument();
+    expect(screen.queryByText("Falta la tarjeta o el certificado")).not.toBeInTheDocument();
     expect(await within(panel).findByText("Firma visible")).toBeInTheDocument();
   });
 
@@ -273,12 +273,12 @@ describe("App, firmando, firmado y error", () => {
     const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(sign);
-    await screen.findByText("No encontramos la tarjeta");
+    await screen.findByText("Falta la tarjeta o el certificado");
 
     await user.click(screen.getByRole("tab", { name: "otro.pdf" }));
 
     // El ciclo a medias se olvida en el backend, como pulsar «Volver» a mano.
     await waitFor(() => expect(discard).toHaveBeenCalled());
-    expect(screen.queryByText("No encontramos la tarjeta")).not.toBeInTheDocument();
+    expect(screen.queryByText("Falta la tarjeta o el certificado")).not.toBeInTheDocument();
   });
 });

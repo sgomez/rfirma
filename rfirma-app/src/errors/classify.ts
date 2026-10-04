@@ -1,6 +1,6 @@
 //! El fallo como situación, no como mensaje: `classify` convierte lo que rechace una orden en un `NamedFailure`. Sin React.
 
-import type { ErrorSituation } from "./ErrorNotice";
+import type { ErrorSituation } from "./errorMessage";
 
 /**
  * Un fallo: una **situación** nuestra, que el catálogo

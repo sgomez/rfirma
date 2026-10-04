@@ -3,9 +3,37 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inMemoryExternalDestinationOpener } from "../desktop/externalDestination";
 import es from "../i18n/locales/es";
 import { renderWithCatalog } from "../testing/render";
-import { NAMED_BY_THE_DESK, OUTCOME_CLOSE_MS, type RefusalSituation } from "./errand";
+import { type NAMED_BY_THE_DESK, OUTCOME_CLOSE_MS, type RefusalSituation } from "./errand";
 import { SedeWindow } from "./SedeWindow";
 import { elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
+
+const DESK_TITLE: Record<(typeof NAMED_BY_THE_DESK)[number], string> = {
+  incorrectPin: "El PIN no es correcto",
+  pinLocked: "La tarjeta está bloqueada",
+  tokenAbsent: "Falta la tarjeta o el certificado",
+  expiredSession: "Algo ha fallado",
+  moduleNotFound: "No se ha podido cargar el módulo de la tarjeta",
+  pkcs12Unreadable: "Ese fichero no sirve como certificado",
+  incorrectPkcs12Password: "La contraseña no es correcta",
+  pkcs12NoPrivateKey: "Ese fichero no sirve como certificado",
+  keyKindUnsupported: "Ese certificado no sirve para firmar",
+  mechanismNotOffered: "Ese certificado no sirve para firmar",
+  notAPdf: "Ese fichero no es un PDF",
+  documentEncrypted: "El PDF está protegido",
+  documentCertified: "Firmarlo invalidaría la certificación del autor",
+  documentUnreadable: "No se ha podido leer el documento",
+  boxOutOfPage: "La firma visible se sale del documento",
+  pageOutOfDocument: "La firma visible se sale del documento",
+  sealMismatch: "Algo ha fallado",
+  bridgeFailed: "Algo ha fallado",
+  notAFolder: "La carpeta de destino no está disponible",
+  folderUnreadable: "La carpeta de destino no está disponible",
+  folderUnwritable: "La carpeta de destino no está disponible",
+  noFreeName: "Hay demasiados documentos con ese nombre",
+  removalNotSupported: "No se puede quitar solo este certificado",
+  noKeyring: "El llavero del escritorio no responde",
+  keyringPinMissing: "El llavero ha perdido el PIN del Almacén",
+};
 
 /** Grada A: el momento 4, el desenlace, y su cierre a los quince segundos (TD-63). */
 
@@ -125,11 +153,11 @@ describe("4 · outcome", () => {
       situation: situation as RefusalSituation,
       text: phrase.replaceAll("{{origin}}", "sede.ejemplo.gob.es"),
     })),
-    ...NAMED_BY_THE_DESK.map((situation) => ({
-      situation,
-      text: es.errors.situations[situation].title,
+    ...Object.entries(DESK_TITLE).map(([situation, title]) => ({
+      situation: situation as RefusalSituation,
+      text: title,
     })),
-  ])("tells the $situation refusal with its own sentence", ({ situation, text }) => {
+  ])("tells the $situation refusal in its sentence", ({ situation, text }) => {
     const { port } = scriptedErrand({
       kind: "outcome",
       outcome: { kind: "refused", situation, detail: "CRUDO" },

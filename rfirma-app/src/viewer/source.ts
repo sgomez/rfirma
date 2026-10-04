@@ -2,7 +2,7 @@
 
 import type { DocumentInHand } from "../documents/document";
 import { classify } from "../errors/classify";
-import type { ErrorSituation } from "../errors/ErrorNotice";
+import type { ErrorSituation } from "../errors/errorMessage";
 import type { PdfDocument } from "./pdf";
 import { pdfjsLoader } from "./pdfjsLoader";
 

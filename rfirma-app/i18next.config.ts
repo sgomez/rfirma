@@ -48,18 +48,17 @@ export default defineConfig({
     // reescribirlos enteros. Quien informa de lo que sobra es
     // `status --unused`, que no escribe nada.
     removeUnusedKeys: false,
-    // Las claves que el código compone (`t(`errors.situations.${situation}.title`)`).
-    // La herramienta resuelve solas las uniones que declara un `as const` en el
-    // mismo módulo —`preferences.sections.*`, `progress.stages.*`—, pero no las
-    // que salen de un tipo importado; esas se nombran aquí o `status --unused`
-    // las daría por muertas.
+    // Las claves que el código compone. La herramienta resuelve solas las
+    // uniones que declara un `as const` en el mismo módulo
+    // —`preferences.sections.*`, `progress.stages.*`—, pero no las que salen de
+    // un tipo importado; esas se nombran aquí o `status --unused` las daría por
+    // muertas.
     // `actions.chooseCertificate` no es dinámica: no la usa nadie, y la encontró
     // `status --unused` al montar este circuito. Se queda anotada aquí porque
     // **la poda es del sub-issue siguiente** del #168, que borra la entrada del
     // .pot y esta línea a la vez. `status.ignoreKeys` no vale para esto: lo
     // probamos y `--unused` la sigue reportando.
     preservePatterns: [
-      "errors.situations.*",
       // El motivo del fallo de instalación es un tipo importado (`Installation`).
       "updates.install.failed.*",
       // De `rfirma verify -v`: las imprime la terminal, no la ventana.

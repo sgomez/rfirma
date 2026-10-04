@@ -4,62 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
-import type { Catalog } from "../i18n/catalog";
+import { type ErrorSituation, errorText, MESSAGE_OF } from "./errorMessage";
 import "./ErrorNotice.css";
 
-/**
- * Las situaciones que sabemos nombrar. Hoy solo la genérica: el mapeo de los
- * `CKR_*` de `cryptoki` y de las excepciones del puente es de otro sub-issue,
- * y cada situación que añada entra aquí y en `po/messages.pot`.
- */
-export type ErrorSituation = keyof Catalog["errors"]["situations"];
+/** Las situaciones sin detalle técnico ni acciones: el crudo sería jerga que no ayuda a nadie. */
+const WITHOUT_DETAIL: readonly ErrorSituation[] = ["keyKindUnsupported", "pkcs12NoPrivateKey"];
 
-/**
- * Las situaciones que se cuentan en **un solo renglón**: el título lo dice
- * todo, y lo que iría debajo sería jerga o el remedio obvio.
- *
- * Son las que no tienen `body` en el catálogo, así que la lista no es un gusto:
- * `tsc` la obliga a cuadrar con las claves que existen.
- */
-const ONE_LINE = ["keyKindUnsupported", "pkcs12NoPrivateKey"] as const;
-
-type OneLineSituation = (typeof ONE_LINE)[number];
-
-function isOneLine(situation: ErrorSituation): situation is OneLineSituation {
-  return (ONE_LINE as readonly string[]).includes(situation);
-}
-
-/**
- * Las situaciones de error de rFirma que llevan enlace a «Comentarios y ayuda».
- *
- * Es una lista cerrada: los fallos propios de rFirma o donde no sabe
- * qué ha pasado. Los fallos del entorno (PIN incorrecto, tarjeta ausente,
- * certificado caducado, etc.) no llevan enlace para no mandar a la persona al
- * sitio equivocado.
- */
-const ERROR_SITUATIONS_WITH_HELP = [
-  "bridgeFailed",
-  "sealMismatch",
-  "unknown",
-  "renderFailed",
-] as const;
-
+/** Los fallos propios de rFirma, o los que no sabe explicar, llevan enlace a «Comentarios y ayuda». */
 function hasHelpLink(situation: ErrorSituation): boolean {
-  return (ERROR_SITUATIONS_WITH_HELP as readonly string[]).includes(situation);
+  return MESSAGE_OF[situation] === "retry" || situation === "renderFailed";
 }
 
 interface ErrorNoticeProps {
-  /** Nuestra situación, que sí está traducida. */
+  /** La situación que mandó el backend; el mensaje sale de `errorText`. */
   situation: ErrorSituation;
-  /**
-   * El texto original tal cual llegó: el `CKR_*` de `cryptoki` o el mensaje
-   * incrustado de la excepción del puente. **No se traduce ni se recorta**:
-   * está para pegarlo en un informe de fallo.
-   *
-   * Sobra —y no se pone— en una situación de un solo renglón: el detalle crudo
-   * de una clave elíptica es la curva, que no le sirve a nadie que esté delante
-   * de esta pantalla.
-   */
+  /** El texto original tal cual llegó, sin traducir ni recortar, para pegarlo en un informe de fallo. */
   technicalDetail?: string;
   onOpenHelp?: () => void;
   externalDestinations?: ExternalDestinationOpener;
@@ -69,35 +28,13 @@ interface ErrorNoticeProps {
   onEmptyStore?: () => void;
   /** El error boundary de cada ventana quiere el foco encima al aparecer; nadie más lo pide. */
   focusOnMount?: boolean;
-  /**
-   * Añade la tranquilidad de que nada se ha guardado (docs/design/panel-de-firma.md
-   * § Error al firmar): un fallo a mitad de una operación que escribe disco dice
-   * además que el documento sigue como estaba.
-   */
+  /** La tarjeta del error de firma: título fijo, la situación como causa y la tranquilidad de que nada se ha guardado. */
   documentUnchanged?: boolean;
   /** Un título propio en lugar del de la situación, sin su cuerpo, con el detalle a la vista y «Copiar detalle». */
   title?: string;
 }
 
-/**
- * Un error: una **situación** nuestra traducida y, aparte,
- * el texto original crudo en un detalle plegado.
- *
- * Los errores no se traducen, se clasifican. `cryptoki` devuelve códigos y el
- * puente Java devuelve excepciones cuyo texto está incrustado en el código
- * —`afirma-crypto-pdf` no tiene ni un `.properties` localizado—, así que
- * ninguno de los dos se enseña como mensaje. Lo que no sepamos clasificar cae
- * en `unknown` más su detalle técnico crudo (ADR-0009).
- *
- * El artboard del error de firma dibuja el detalle **desplegado**. Eso es un
- * estado congelado, no el inicial: aquí sigue plegado, porque el
- * `CKR_*` crudo debajo del mensaje ocupa el pie entero y solo lo necesita quien
- * va a escribir un informe de fallo.
- *
- * Con `documentUnchanged` la tarjeta es la del error de firma
- * (docs/design/panel-de-firma.md § Estados → Error al firmar) y nada más: título
- * fijo, la situación como causa, la tranquilidad, el detalle y «Copiar detalle».
- */
+/** Un fallo clasificado (ADR-0009): su mensaje traducido y, plegado, el detalle técnico crudo. */
 export function ErrorNotice({
   situation,
   technicalDetail,
@@ -161,25 +98,25 @@ export function ErrorNotice({
     </button>
   );
 
+  const text = errorText(situation, t);
+  const showsDetail = !WITHOUT_DETAIL.includes(situation);
+
   return (
     <div className="error-notice" role="alert" ref={notice} tabIndex={-1}>
       <p className="error-notice__title">
         <AlertIcon />
         <span className="rf-title">
-          {title ??
-            (documentUnchanged
-              ? t("errors.signingFailedTitle")
-              : t(`errors.situations.${situation}.title`))}
+          {title ?? (documentUnchanged ? t("errors.signingFailedTitle") : text.title)}
         </span>
       </p>
-      {documentUnchanged && <p className="rf-prose">{t(`errors.situations.${situation}.title`)}</p>}
-      {!isOneLine(situation) && !documentUnchanged && title === undefined && (
-        <p className="rf-prose">
-          {t(`errors.situations.${situation as Exclude<ErrorSituation, OneLineSituation>}.body`)}
-        </p>
+      {documentUnchanged && MESSAGE_OF[situation] !== "retry" && (
+        <p className="rf-prose">{text.title}</p>
+      )}
+      {text.body !== undefined && !documentUnchanged && title === undefined && (
+        <p className="rf-prose">{text.body}</p>
       )}
       {documentUnchanged && <p className="rf-prose">{t("errors.documentUnchanged")}</p>}
-      {!isOneLine(situation) && (
+      {showsDetail && (
         <>
           <details className="error-notice__detail" open={title !== undefined || undefined}>
             <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>

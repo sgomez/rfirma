@@ -524,8 +524,8 @@ describe("PreferencesView", () => {
     await user.click(screen.getByRole("option", { name: "Oscuro" }));
 
     const notice = await screen.findByRole("alert");
-    expect(notice).toHaveTextContent("No hemos podido guardar el ajuste");
-    expect(notice).toHaveTextContent("Hemos vuelto al valor anterior");
+    expect(notice).toHaveTextContent("Algo ha fallado");
+    expect(notice).toHaveTextContent("Vuelve a intentarlo.");
     expect(screen.getByRole("tabpanel", { name: "Apariencia" })).toContainElement(notice);
   });
 
@@ -543,7 +543,7 @@ describe("PreferencesView", () => {
   });
 
   /** El otro fallo que se tragaba: siempre en Privacidad, pegado a su botón. */
-  it("says the recents are still saved when emptying the list fails", async () => {
+  it("tells the failure to empty the list inside the privacy section", async () => {
     const user = userEvent.setup();
     const onForgetActivity = vi.fn(async () => {
       throw new Error("no se deja borrar");
@@ -553,8 +553,8 @@ describe("PreferencesView", () => {
     await user.click(screen.getByRole("button", { name: "Vaciar la lista" }));
 
     const notice = await screen.findByRole("alert");
-    expect(notice).toHaveTextContent("No hemos podido vaciar la lista");
-    expect(notice).toHaveTextContent("siguen guardados");
+    expect(notice).toHaveTextContent("Algo ha fallado");
+    expect(notice).toHaveTextContent("Vuelve a intentarlo.");
     expect(screen.getByRole("group", { name: "Privacidad" })).toContainElement(notice);
   });
 

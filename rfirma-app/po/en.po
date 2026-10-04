@@ -80,332 +80,143 @@ msgstr "The document is unchanged: nothing has been saved."
 msgid "errors.signingFailedTitle"
 msgstr "Signing failed"
 
-msgid "errors.situations.unknown.title"
-msgstr "We couldn't complete the operation"
+#. Mensaje genérico: reintentar. Lo usan unknown, expiredSession, sealMismatch, bridgeFailed, settingNotSaved, activityNotForgotten, handlerListUnreadable y handlerListUnwritable.
+msgid "errors.messages.retry.title"
+msgstr "Something went wrong"
 
-msgid "errors.situations.unknown.body"
-msgstr ""
-"Try again. If it keeps happening, attach the technical detail to the bug "
-"report."
+#. «Comentarios y ayuda» es header.help, el botón que sale debajo.
+msgid "errors.messages.retry.body"
+msgstr "Try again. If it keeps happening, share the technical detail in “Feedback and help”."
 
-msgid "errors.situations.handlerNotAvailable.title"
+msgid "errors.messages.handlerNotAvailable.title"
 msgstr "We can't change who opens these links"
 
-msgid "errors.situations.handlerNotAvailable.body"
-msgstr ""
-"This build of rFirma can't write that choice: change it in your desktop "
-"settings."
+msgid "errors.messages.handlerNotAvailable.body"
+msgstr "This build of rFirma can't write that choice: change it in your desktop settings."
 
-msgid "errors.situations.handlerListUnreadable.title"
-msgstr "We couldn't read the desktop's choice"
+#. Mensaje genérico: elegir otra imagen de rúbrica. Lo usan notAnAcceptedImage, damagedImage, imageTooLarge, sourceUnreadable, storeUnwritable y storeUnreadable.
+msgid "errors.messages.otherImage.title"
+msgstr "The image couldn't be used"
 
-msgid "errors.situations.handlerListUnreadable.body"
-msgstr ""
-"We couldn't read the file where the desktop keeps it, so we left it as it "
-"was."
+msgid "errors.messages.otherImage.body"
+msgstr "Choose a PNG or JPEG that isn't too large."
 
-msgid "errors.situations.handlerListUnwritable.title"
-msgstr "We couldn't save who opens these links"
-
-msgid "errors.situations.handlerListUnwritable.body"
-msgstr "We couldn't write the file where the desktop keeps it."
-
-msgid "errors.situations.notAnAcceptedImage.title"
-msgstr "That image won't do as a rubric"
-
-msgid "errors.situations.notAnAcceptedImage.body"
-msgstr "The rubric has to be a PNG or a JPEG."
-
-msgid "errors.situations.damagedImage.title"
-msgstr "We couldn't open the image"
-
-msgid "errors.situations.damagedImage.body"
-msgstr "The file is a PNG or a JPEG, but it's damaged. Try another copy."
-
-msgid "errors.situations.imageTooLarge.title"
-msgstr "The image is too large"
-
-msgid "errors.situations.imageTooLarge.body"
-msgstr "Choose a smaller image, or save it at a lower resolution."
-
-msgid "errors.situations.sourceUnreadable.title"
-msgstr "We couldn't read the file you chose"
-
-msgid "errors.situations.sourceUnreadable.body"
-msgstr "Check that it's still where it was and choose it again."
-
-msgid "errors.situations.storeUnwritable.title"
-msgstr "We couldn't save your rubric"
-
-msgid "errors.situations.storeUnwritable.body"
-msgstr ""
-"Choose the image again. If it keeps happening, attach the technical detail "
-"to the bug report."
-
-msgid "errors.situations.storeUnreadable.title"
-msgstr "We couldn't read your saved rubric"
-
-msgid "errors.situations.storeUnreadable.body"
-msgstr "Choose the image again to replace it."
-
-msgid "errors.situations.incorrectPin.title"
+msgid "errors.messages.incorrectPin.title"
 msgstr "The PIN isn't correct"
 
-msgid "errors.situations.incorrectPin.body"
-msgstr "Type it again. The card locks after a few failed attempts."
+msgid "errors.messages.incorrectPin.body"
+msgstr "The card locks after a few failed attempts."
 
-msgid "errors.situations.pinLocked.title"
+msgid "errors.messages.pinLocked.title"
 msgstr "The card is locked"
 
-msgid "errors.situations.pinLocked.body"
-msgstr ""
-"It locked after too many failed PIN attempts. Unlock it with its PUK before "
-"signing again."
+msgid "errors.messages.pinLocked.body"
+msgstr "Unlock it with the PUK."
 
-msgid "errors.situations.tokenAbsent.title"
-msgstr "We can't find the card"
+#. Mensaje genérico: revisar la tarjeta y volver a buscar. Lo usan tokenAbsent y certificateNotFound.
+msgid "errors.messages.checkToken.title"
+msgstr "The card or certificate is missing"
 
-msgid "errors.situations.tokenAbsent.body"
-msgstr ""
-"Check that it's still inserted and that the reader is connected, then try "
-"again."
+msgid "errors.messages.checkToken.body"
+msgstr "Check the card and the reader, then search again."
 
-msgid "errors.situations.expiredSession.title"
-msgstr "The session with the card expired"
+msgid "errors.messages.moduleNotFound.title"
+msgstr "The card module couldn't be loaded"
 
-msgid "errors.situations.expiredSession.body"
-msgstr "Try again: we'll open a new session and ask you for the PIN once more."
+msgid "errors.messages.moduleNotFound.body"
+msgstr "Check its path or choose another module."
 
-msgid "errors.situations.moduleNotFound.title"
-msgstr "We couldn't load the card module"
+msgid "errors.messages.certificateExpired.title"
+msgstr "Your certificate has expired"
 
-msgid "errors.situations.moduleNotFound.body"
-msgstr ""
-"Check that the PKCS#11 module is where you said, or choose another one."
+msgid "errors.messages.certificateExpired.body"
+msgstr "Renew it with its issuer."
 
-msgid "errors.situations.certificateNotFound.title"
-msgstr "The certificate is no longer on the card"
+#. Mensaje genérico de un solo renglón, sin cuerpo: elegir otro certificado. Lo usan certificateRevoked, certificateNotYetValid, certificateUnreadable, keyKindUnsupported y mechanismNotOffered.
+msgid "errors.messages.otherCertificate.title"
+msgstr "That certificate can't be used to sign"
 
-msgid "errors.situations.certificateNotFound.body"
-msgstr "Look for the certificates again and choose one of those that turn up."
+#. Mensaje genérico: elegir otro fichero .p12 o .pfx. Lo usan pkcs12Unreadable y pkcs12NoPrivateKey.
+msgid "errors.messages.otherCertificateFile.title"
+msgstr "That file isn't usable as a certificate"
 
-msgid "errors.situations.certificateExpired.title"
-msgstr "The certificate has expired"
+msgid "errors.messages.otherCertificateFile.body"
+msgstr "Choose a .p12 or .pfx file with its private key."
 
-msgid "errors.situations.certificateExpired.body"
-msgstr ""
-"An expired certificate can't sign. Renew it with its issuer and try again."
-
-msgid "errors.situations.certificateNotYetValid.title"
-msgstr "The certificate isn't valid yet"
-
-msgid "errors.situations.certificateNotYetValid.body"
-msgstr "Its validity period hasn't started, so it can't sign."
-
-msgid "errors.situations.certificateRevoked.title"
-msgstr "The certificate is revoked"
-
-msgid "errors.situations.certificateRevoked.body"
-msgstr "Its issuer revoked it, so it can't sign. You need a new one."
-
-msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "We couldn't read the file"
-
-msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "That isn't a .p12 or .pfx certificate."
-
-msgid "errors.situations.incorrectPkcs12Password.title"
+#. Un solo renglón, sin cuerpo.
+msgid "errors.messages.incorrectPkcs12Password.title"
 msgstr "That password isn't right"
 
-msgid "errors.situations.incorrectPkcs12Password.body"
-msgstr "Check it and try again."
+msgid "errors.messages.removalNotSupported.title"
+msgstr "This certificate can't be removed on its own"
 
-#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
-#. msgid "errors.situations.pkcs12NoPrivateKey.body".
-msgid "errors.situations.pkcs12NoPrivateKey.title"
-msgstr "That file doesn't carry a private key"
+msgid "errors.messages.removalNotSupported.body"
+msgstr "Removing it would delete all certificates in the rFirma Store."
 
-#. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
-#. hay msgid "errors.situations.keyKindUnsupported.body".
-msgid "errors.situations.keyKindUnsupported.title"
-msgstr "That certificate doesn't work with rFirma"
-
-msgid "errors.situations.mechanismNotOffered.title"
-msgstr "The token doesn't support that signature algorithm"
-
-msgid "errors.situations.mechanismNotOffered.body"
-msgstr "Try another certificate, or ask the site to use SHA-256 with RSA."
-
-msgid "errors.situations.removalNotSupported.title"
-msgstr "That certificate can't be removed on its own"
-
-msgid "errors.situations.removalNotSupported.body"
-msgstr ""
-"The rFirma Store is a single shared database: removing it would take the "
-"other installed certificates with it. There's no way yet to delete just one."
-
-msgid "errors.situations.certificateUnreadable.title"
-msgstr "We couldn't read the certificate"
-
-msgid "errors.situations.certificateUnreadable.body"
-msgstr ""
-"What's on the card isn't a certificate we know how to read. Try another one."
-
-msgid "errors.situations.notAPdf.title"
+#. Un solo renglón, sin cuerpo.
+msgid "errors.messages.notAPdf.title"
 msgstr "That file isn't a PDF"
 
-msgid "errors.situations.notAPdf.body"
-msgstr "rFirma signs PDFs. Choose a PDF document and try again."
-
-msgid "errors.situations.documentEncrypted.title"
+msgid "errors.messages.documentEncrypted.title"
 msgstr "The PDF is protected"
 
-msgid "errors.situations.documentEncrypted.body"
-msgstr ""
-"It's encrypted or has restricted permissions, so it can't be signed. Open it "
-"with its password, save it without protection and try again."
+msgid "errors.messages.documentEncrypted.body"
+msgstr "Save it without protection and open it again."
 
-msgid "errors.situations.documentCertified.title"
-msgstr "The PDF is certified"
+#. Es el aviso de seguridad: en la tarjeta de error de firma y en la ventana de sede solo se ve el título.
+msgid "errors.messages.documentCertified.title"
+msgstr "Signing it would invalidate the author's certification"
 
-msgid "errors.situations.documentCertified.body"
-msgstr ""
-"Its author signed it forbidding changes, so adding a signature would "
-"invalidate theirs. Ask them for an uncertified copy."
+msgid "errors.messages.documentCertified.body"
+msgstr "Ask the author for an uncertified copy."
 
-msgid "errors.situations.documentUnreadable.title"
-msgstr "We couldn't read the document"
+#. Mensaje genérico: volver a abrir el documento. Lo usan documentUnreadable y droppedFileUnreadable.
+msgid "errors.messages.reopenDocument.title"
+msgstr "The document couldn't be read"
 
-msgid "errors.situations.documentUnreadable.body"
-msgstr "Check that it's still where it was and open it again."
+msgid "errors.messages.reopenDocument.body"
+msgstr "Open it again with “Open PDF…”."
 
-msgid "errors.situations.droppedFileUnreadable.title"
-msgstr "We couldn't read the file you dropped"
-
-msgid "errors.situations.droppedFileUnreadable.body"
-msgstr ""
-"Dropping a file doesn't give us permission to read from every folder. Open "
-"it with the open button, which does."
-
-msgid "errors.situations.droppedSomeDiscarded.title"
+msgid "errors.messages.droppedSomeDiscarded.title"
 msgstr "Some files weren't added"
 
-msgid "errors.situations.droppedSomeDiscarded.body"
-msgstr ""
-"The other PDFs you dropped have been opened in tabs. The ones that weren't "
-"PDFs weren't added."
+msgid "errors.messages.droppedSomeDiscarded.body"
+msgstr "Only PDFs are opened."
 
-msgid "errors.situations.boxOutOfPage.title"
-msgstr "The box falls outside the page"
+#. Mensaje genérico de un solo renglón, sin cuerpo: recolocar la firma visible. Lo usan boxOutOfPage y pageOutOfDocument.
+msgid "errors.messages.moveVisibleSignature.title"
+msgstr "The visible signature falls outside the document"
 
-msgid "errors.situations.boxOutOfPage.body"
-msgstr ""
-"Drag it inside the page and sign again. Left as it is, it would be clipped "
-"in the PDF without warning."
-
-msgid "errors.situations.pageOutOfDocument.title"
-msgstr "The document doesn't reach that page"
-
-msgid "errors.situations.pageOutOfDocument.body"
-msgstr ""
-"Choose a page the document actually has and sign again. Left as it is, the "
-"visible signature would end up on the last page without warning."
-
-msgid "errors.situations.sealMismatch.title"
-msgstr "Signing was interrupted halfway"
-
-msgid "errors.situations.sealMismatch.body"
-msgstr ""
-"What we prepared at the start and what came back at the end don't match, so "
-"we stopped before writing anything. Sign the document again."
-
-msgid "errors.situations.bridgeFailed.title"
-msgstr "We couldn't prepare the signature"
-
-msgid "errors.situations.bridgeFailed.body"
-msgstr ""
-"The component that assembles the signed PDF failed. Try again and, if it "
-"keeps happening, attach the technical detail to the bug report."
-
-msgid "errors.situations.renderFailed.title"
+msgid "errors.messages.renderFailed.title"
 msgstr "This screen stopped working"
 
-msgid "errors.situations.renderFailed.body"
-msgstr ""
-"Reload the window to continue. If it keeps happening, attach the technical "
-"detail to the bug report."
+msgid "errors.messages.renderFailed.body"
+msgstr "Reload the window to continue."
 
-msgid "errors.situations.folderMissing.title"
-msgstr "The destination folder is gone"
+#. Mensaje genérico: elegir otra carpeta de destino. Lo usan folderMissing, notAFolder, folderUnreadable y folderUnwritable.
+msgid "errors.messages.otherFolder.title"
+msgstr "The destination folder isn't available"
 
-msgid "errors.situations.folderMissing.body"
-msgstr ""
-"We don't create it for you: if we did, the document would look saved and "
-"wouldn't be there. Create it again or choose another one in Preferences."
+msgid "errors.messages.otherFolder.body"
+msgstr "Choose another one in Preferences and sign again."
 
-msgid "errors.situations.notAFolder.title"
-msgstr "The destination is not a folder"
+msgid "errors.messages.noFreeName.title"
+msgstr "There are too many documents with that name"
 
-msgid "errors.situations.notAFolder.body"
-msgstr ""
-"There is a file with that name where we expected a folder. Choose another "
-"destination in Preferences."
+msgid "errors.messages.noFreeName.body"
+msgstr "Move or rename the earlier ones and sign again."
 
-msgid "errors.situations.folderUnreadable.title"
-msgstr "We couldn't check the destination folder"
+msgid "errors.messages.noKeyring.title"
+msgstr "The desktop keyring isn't responding"
 
-msgid "errors.situations.folderUnreadable.body"
-msgstr ""
-"It may be a permissions problem or a drive that isn't responding. Choose "
-"another destination in Preferences."
+msgid "errors.messages.noKeyring.body"
+msgstr "Unlock it or check that your desktop has one, then try again."
 
-msgid "errors.situations.folderUnwritable.title"
-msgstr "We couldn't save the signed document"
+msgid "errors.messages.keyringPinMissing.title"
+msgstr "The keyring lost the Store PIN"
 
-msgid "errors.situations.folderUnwritable.body"
-msgstr ""
-"Signing worked, but we couldn't write the file to the destination folder. "
-"Choose another one in Preferences and sign again."
-
-msgid "errors.situations.noFreeName.title"
-msgstr "There are already too many documents with that name"
-
-msgid "errors.situations.noFreeName.body"
-msgstr ""
-"We stopped rather than overwrite one. Move or rename the earlier ones and "
-"sign again."
-
-msgid "errors.situations.settingNotSaved.title"
-msgstr "We couldn't save the setting"
-
-msgid "errors.situations.settingNotSaved.body"
-msgstr ""
-"We went back to the previous value, which is the one still saved. Try again "
-"and, if it keeps happening, attach the technical detail to the bug report."
-
-msgid "errors.situations.activityNotForgotten.title"
-msgstr "We couldn't empty the list"
-
-msgid "errors.situations.activityNotForgotten.body"
-msgstr ""
-"Your recent documents and your certificate are still saved. Try again and, "
-"if it keeps happening, attach the technical detail to the bug report."
-
-msgid "errors.situations.noKeyring.title"
-msgstr "We couldn't reach the desktop keyring"
-
-msgid "errors.situations.noKeyring.body"
-msgstr ""
-"rFirma needs the keyring to store the certificate protected. Check that your "
-"desktop has one available, unlock it if it asks you to, and try again."
-
-msgid "errors.situations.keyringPinMissing.title"
-msgstr "The keyring lost the PIN for the rFirma Store"
-
-msgid "errors.situations.keyringPinMissing.body"
-msgstr ""
-"Without that PIN we can't open the store you already had. Go to Preferences "
-"→ Certificates and empty it to install your certificates again from scratch."
+msgid "errors.messages.keyringPinMissing.body"
+msgstr "Empty the Store in Preferences → Certificates and install your certificates again."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"

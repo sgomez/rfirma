@@ -1,6 +1,6 @@
 //! El fallo del recorrido de firma, clasificado como situación con su texto crudo, y `refusalFor`, que rechaza un certificado no usable antes de pedir el PIN.
 
-import type { ErrorSituation } from "../errors/ErrorNotice";
+import type { ErrorSituation } from "../errors/errorMessage";
 import type { Certificate } from "./certificate";
 import { isUsable } from "./certificate";
 

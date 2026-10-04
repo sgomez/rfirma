@@ -78,349 +78,143 @@ msgstr "El document segueix igual: no s'ha desat res."
 msgid "errors.signingFailedTitle"
 msgstr "No s'ha pogut signar"
 
-msgid "errors.situations.unknown.title"
-msgstr "No s'ha pogut completar l'operació"
+#. Mensaje genérico: reintentar. Lo usan unknown, expiredSession, sealMismatch, bridgeFailed, settingNotSaved, activityNotForgotten, handlerListUnreadable y handlerListUnwritable.
+msgid "errors.messages.retry.title"
+msgstr "Alguna cosa ha fallat"
 
-msgid "errors.situations.unknown.body"
-msgstr ""
-"Torna-ho a intentar. Si continua passant, adjunta el detall tècnic a "
-"l'informe de l'error."
+#. «Comentarios y ayuda» es header.help, el botón que sale debajo.
+msgid "errors.messages.retry.body"
+msgstr "Torna-ho a intentar. Si es repeteix, comparteix el detall tècnic a «Comentaris i ajuda»."
 
-msgid "errors.situations.handlerNotAvailable.title"
+msgid "errors.messages.handlerNotAvailable.title"
 msgstr "No es pot canviar qui atén els enllaços"
 
-msgid "errors.situations.handlerNotAvailable.body"
-msgstr ""
-"Aquesta versió de rFirma no pot escriure aquesta elecció: es canvia als "
-"ajustos de l'escriptori."
+msgid "errors.messages.handlerNotAvailable.body"
+msgstr "Aquesta versió de rFirma no pot escriure aquesta elecció: es canvia als ajustos de l'escriptori."
 
-msgid "errors.situations.handlerListUnreadable.title"
-msgstr "No s'ha pogut llegir l'elecció de l'escriptori"
+#. Mensaje genérico: elegir otra imagen de rúbrica. Lo usan notAnAcceptedImage, damagedImage, imageTooLarge, sourceUnreadable, storeUnwritable y storeUnreadable.
+msgid "errors.messages.otherImage.title"
+msgstr "No s'ha pogut utilitzar la imatge"
 
-msgid "errors.situations.handlerListUnreadable.body"
-msgstr ""
-"El fitxer on l'escriptori la desa no s'ha pogut llegir, així que s'ha deixat "
-"com estava."
+msgid "errors.messages.otherImage.body"
+msgstr "Tria un PNG o un JPEG que no sigui gaire gran."
 
-msgid "errors.situations.handlerListUnwritable.title"
-msgstr "No s'ha pogut desar qui atén els enllaços"
-
-msgid "errors.situations.handlerListUnwritable.body"
-msgstr "El fitxer on l'escriptori la desa no s'ha pogut escriure."
-
-msgid "errors.situations.notAnAcceptedImage.title"
-msgstr "Aquesta imatge no serveix com a rúbrica"
-
-msgid "errors.situations.notAnAcceptedImage.body"
-msgstr "La rúbrica ha de ser un PNG o un JPEG."
-
-msgid "errors.situations.damagedImage.title"
-msgstr "No hem pogut obrir la imatge"
-
-msgid "errors.situations.damagedImage.body"
-msgstr ""
-"El fitxer és un PNG o un JPEG, però està malmès. Prova amb una altra còpia."
-
-msgid "errors.situations.imageTooLarge.title"
-msgstr "La imatge és massa gran"
-
-msgid "errors.situations.imageTooLarge.body"
-msgstr "Tria una imatge més petita o desa-la amb menys resolució."
-
-msgid "errors.situations.sourceUnreadable.title"
-msgstr "No hem pogut llegir el fitxer que has triat"
-
-msgid "errors.situations.sourceUnreadable.body"
-msgstr "Comprova que continua on era i torna a triar-lo."
-
-msgid "errors.situations.storeUnwritable.title"
-msgstr "No hem pogut desar la teva rúbrica"
-
-msgid "errors.situations.storeUnwritable.body"
-msgstr ""
-"Torna a triar la imatge. Si continua passant, adjunta el detall tècnic a "
-"l'informe de l'error."
-
-msgid "errors.situations.storeUnreadable.title"
-msgstr "No hem pogut llegir la teva rúbrica desada"
-
-msgid "errors.situations.storeUnreadable.body"
-msgstr "Torna a triar la imatge per substituir-la."
-
-msgid "errors.situations.incorrectPin.title"
+msgid "errors.messages.incorrectPin.title"
 msgstr "El PIN no és correcte"
 
-msgid "errors.situations.incorrectPin.body"
-msgstr ""
-"Torna a introduir-lo. La targeta es bloqueja després de diversos intents "
-"fallits."
+msgid "errors.messages.incorrectPin.body"
+msgstr "La targeta es bloqueja després de diversos intents fallits."
 
-msgid "errors.situations.pinLocked.title"
+msgid "errors.messages.pinLocked.title"
 msgstr "La targeta està bloquejada"
 
-msgid "errors.situations.pinLocked.body"
-msgstr ""
-"S'ha bloquejat després de massa intents fallits amb el PIN. Desbloqueja-la "
-"amb el seu PUK abans de tornar a signar."
+msgid "errors.messages.pinLocked.body"
+msgstr "Desbloqueja-la amb el PUK."
 
-msgid "errors.situations.tokenAbsent.title"
-msgstr "No trobem la targeta"
+#. Mensaje genérico: revisar la tarjeta y volver a buscar. Lo usan tokenAbsent y certificateNotFound.
+msgid "errors.messages.checkToken.title"
+msgstr "Falta la targeta o el certificat"
 
-msgid "errors.situations.tokenAbsent.body"
-msgstr ""
-"Comprova que continua inserida i que el lector està connectat, i torna-ho a "
-"intentar."
+msgid "errors.messages.checkToken.body"
+msgstr "Comprova la targeta i el lector, i torna a cercar."
 
-msgid "errors.situations.expiredSession.title"
-msgstr "La sessió amb la targeta ha caducat"
+msgid "errors.messages.moduleNotFound.title"
+msgstr "No s'ha pogut carregar el mòdul de la targeta"
 
-msgid "errors.situations.expiredSession.body"
-msgstr ""
-"Torna-ho a intentar: s'obrirà una sessió nova i et demanarem el PIN una "
-"altra vegada."
+msgid "errors.messages.moduleNotFound.body"
+msgstr "Comprova'n la ruta o tria un altre mòdul."
 
-msgid "errors.situations.moduleNotFound.title"
-msgstr "No hem pogut carregar el mòdul de la targeta"
+msgid "errors.messages.certificateExpired.title"
+msgstr "El teu certificat ha caducat"
 
-msgid "errors.situations.moduleNotFound.body"
-msgstr "Comprova que el mòdul PKCS#11 és on vas dir, o tria'n un altre."
+msgid "errors.messages.certificateExpired.body"
+msgstr "Renova'l amb la seva emissora."
 
-msgid "errors.situations.certificateNotFound.title"
-msgstr "El certificat ja no és a la targeta"
+#. Mensaje genérico de un solo renglón, sin cuerpo: elegir otro certificado. Lo usan certificateRevoked, certificateNotYetValid, certificateUnreadable, keyKindUnsupported y mechanismNotOffered.
+msgid "errors.messages.otherCertificate.title"
+msgstr "Aquest certificat no serveix per signar"
 
-msgid "errors.situations.certificateNotFound.body"
-msgstr "Torna a cercar els certificats i tria'n un dels que hi hagi."
+#. Mensaje genérico: elegir otro fichero .p12 o .pfx. Lo usan pkcs12Unreadable y pkcs12NoPrivateKey.
+msgid "errors.messages.otherCertificateFile.title"
+msgstr "Aquest fitxer no serveix com a certificat"
 
-msgid "errors.situations.certificateExpired.title"
-msgstr "El certificat ha caducat"
+msgid "errors.messages.otherCertificateFile.body"
+msgstr "Tria un .p12 o .pfx amb la seva clau privada."
 
-msgid "errors.situations.certificateExpired.body"
-msgstr ""
-"Un certificat caducat no serveix per signar. Renova'l amb la seva emissora i "
-"torna-ho a intentar."
-
-msgid "errors.situations.certificateNotYetValid.title"
-msgstr "El certificat encara no és vigent"
-
-msgid "errors.situations.certificateNotYetValid.body"
-msgstr ""
-"Encara no ha començat el seu període de validesa, així que no serveix per "
-"signar."
-
-msgid "errors.situations.certificateRevoked.title"
-msgstr "El certificat està revocat"
-
-msgid "errors.situations.certificateRevoked.body"
-msgstr ""
-"La seva emissora l'ha revocat, així que no serveix per signar. En necessites "
-"un de nou."
-
-msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "No hem pogut llegir el fitxer"
-
-msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "No és un certificat en format .p12 o .pfx."
-
-msgid "errors.situations.incorrectPkcs12Password.title"
+#. Un solo renglón, sin cuerpo.
+msgid "errors.messages.incorrectPkcs12Password.title"
 msgstr "La contrasenya no és correcta"
 
-msgid "errors.situations.incorrectPkcs12Password.body"
-msgstr "Comprova-la i torna-ho a provar."
+msgid "errors.messages.removalNotSupported.title"
+msgstr "No es pot treure només aquest certificat"
 
-#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
-#. msgid "errors.situations.pkcs12NoPrivateKey.body".
-msgid "errors.situations.pkcs12NoPrivateKey.title"
-msgstr "Aquest fitxer no porta cap clau privada"
+msgid "errors.messages.removalNotSupported.body"
+msgstr "Treure'l esborraria tots els de l'Emmagatzematge de rFirma."
 
-#. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
-#. hay msgid "errors.situations.keyKindUnsupported.body".
-msgid "errors.situations.keyKindUnsupported.title"
-msgstr "Aquest certificat no és compatible amb rFirma"
-
-msgid "errors.situations.mechanismNotOffered.title"
-msgstr "El token no admet aquest algorisme de signatura"
-
-msgid "errors.situations.mechanismNotOffered.body"
-msgstr ""
-"Prova amb un altre certificat o demana a la seu que faci servir SHA-256 amb "
-"RSA."
-
-msgid "errors.situations.removalNotSupported.title"
-msgstr "Aquest certificat no es pot treure per separat"
-
-msgid "errors.situations.removalNotSupported.body"
-msgstr ""
-"L'Emmagatzematge de rFirma és una única base compartida: treure'l s'enduria "
-"també els altres certificats instal·lats. Encara no hi ha manera d'esborrar-"
-"ne només un."
-
-msgid "errors.situations.certificateUnreadable.title"
-msgstr "No hem pogut llegir el certificat"
-
-msgid "errors.situations.certificateUnreadable.body"
-msgstr ""
-"El que hi ha a la targeta no és un certificat que sapiguem llegir. Prova amb "
-"un altre."
-
-msgid "errors.situations.notAPdf.title"
+#. Un solo renglón, sin cuerpo.
+msgid "errors.messages.notAPdf.title"
 msgstr "Aquest fitxer no és un PDF"
 
-msgid "errors.situations.notAPdf.body"
-msgstr "rFirma signa PDF. Tria un document PDF i torna-ho a intentar."
-
-msgid "errors.situations.documentEncrypted.title"
+msgid "errors.messages.documentEncrypted.title"
 msgstr "El PDF està protegit"
 
-msgid "errors.situations.documentEncrypted.body"
-msgstr ""
-"Està xifrat o té els permisos restringits, així que no es pot signar. Obre'l "
-"amb la seva contrasenya, desa'l sense protecció i torna-ho a intentar."
+msgid "errors.messages.documentEncrypted.body"
+msgstr "Desa'l sense protecció i torna a obrir-lo."
 
-msgid "errors.situations.documentCertified.title"
-msgstr "El PDF està certificat"
+#. Es el aviso de seguridad: en la tarjeta de error de firma y en la ventana de sede solo se ve el título.
+msgid "errors.messages.documentCertified.title"
+msgstr "Signar-lo invalidaria la certificació de l'autor"
 
-msgid "errors.situations.documentCertified.body"
-msgstr ""
-"El seu autor el va signar prohibint-ne els canvis, així que afegir-hi una "
-"signatura invalidaria la seva. Demana-li una còpia sense certificar."
+msgid "errors.messages.documentCertified.body"
+msgstr "Demana a l'autor una còpia sense certificar."
 
-msgid "errors.situations.documentUnreadable.title"
-msgstr "No hem pogut llegir el document"
+#. Mensaje genérico: volver a abrir el documento. Lo usan documentUnreadable y droppedFileUnreadable.
+msgid "errors.messages.reopenDocument.title"
+msgstr "No s'ha pogut llegir el document"
 
-msgid "errors.situations.documentUnreadable.body"
-msgstr "Comprova que continua on era i torna a obrir-lo."
+msgid "errors.messages.reopenDocument.body"
+msgstr "Torna a obrir-lo amb «Obre PDF…»."
 
-msgid "errors.situations.droppedFileUnreadable.title"
-msgstr "No hem pogut llegir el fitxer que has deixat anar"
-
-msgid "errors.situations.droppedFileUnreadable.body"
-msgstr ""
-"Arrossegar no ens dona permís per llegir de qualsevol carpeta. Obre'l amb el "
-"botó d'obrir, que sí que ens el dona."
-
-msgid "errors.situations.droppedSomeDiscarded.title"
+msgid "errors.messages.droppedSomeDiscarded.title"
 msgstr "Alguns fitxers no s'han afegit"
 
-msgid "errors.situations.droppedSomeDiscarded.body"
-msgstr ""
-"La resta de PDF que has deixat anar s'han obert en pestanyes. Els que no "
-"eren PDF no s'han afegit."
+msgid "errors.messages.droppedSomeDiscarded.body"
+msgstr "Només s'obren els PDF."
 
-msgid "errors.situations.boxOutOfPage.title"
-msgstr "El requadre surt de la pàgina"
+#. Mensaje genérico de un solo renglón, sin cuerpo: recolocar la firma visible. Lo usan boxOutOfPage y pageOutOfDocument.
+msgid "errors.messages.moveVisibleSignature.title"
+msgstr "La signatura visible surt del document"
 
-msgid "errors.situations.boxOutOfPage.body"
-msgstr ""
-"Arrossega'l dins de la pàgina i torna a signar. Si ho deixéssim així, "
-"quedaria retallat al PDF sense avisar."
-
-msgid "errors.situations.pageOutOfDocument.title"
-msgstr "El document no arriba a aquesta pàgina"
-
-msgid "errors.situations.pageOutOfDocument.body"
-msgstr ""
-"Tria una pàgina que existeixi al document i torna a signar. Si ho deixéssim "
-"així, la signatura visible acabaria a l'última pàgina sense avisar."
-
-msgid "errors.situations.sealMismatch.title"
-msgstr "La signatura s'ha interromput a mitges"
-
-msgid "errors.situations.sealMismatch.body"
-msgstr ""
-"El que vam preparar en començar i el que hem rebut en acabar no "
-"coincideixen, així que hem parat abans d'escriure res. Torna a signar el "
-"document."
-
-msgid "errors.situations.bridgeFailed.title"
-msgstr "No hem pogut preparar la signatura"
-
-msgid "errors.situations.bridgeFailed.body"
-msgstr ""
-"Ha fallat el component que munta el PDF signat. Torna-ho a intentar i, si "
-"continua passant, adjunta el detall tècnic a l'informe de l'error."
-
-msgid "errors.situations.renderFailed.title"
+msgid "errors.messages.renderFailed.title"
 msgstr "Aquesta pantalla ha deixat de funcionar"
 
-msgid "errors.situations.renderFailed.body"
-msgstr ""
-"Recarrega la finestra per continuar. Si continua passant, adjunta el detall "
-"tècnic a l'informe de l'error."
+msgid "errors.messages.renderFailed.body"
+msgstr "Recarrega la finestra per continuar."
 
-msgid "errors.situations.folderMissing.title"
-msgstr "La carpeta de destinació ja no hi és"
+#. Mensaje genérico: elegir otra carpeta de destino. Lo usan folderMissing, notAFolder, folderUnreadable y folderUnwritable.
+msgid "errors.messages.otherFolder.title"
+msgstr "La carpeta de destinació no està disponible"
 
-msgid "errors.situations.folderMissing.body"
-msgstr ""
-"No la creem per tu: si la creéssim, el document semblaria desat i no ho "
-"estaria. Torna a crear-la o tria'n una altra a Preferències."
+msgid "errors.messages.otherFolder.body"
+msgstr "Tria'n una altra a Preferències i torna a signar."
 
-msgid "errors.situations.notAFolder.title"
-msgstr "La destinació no és una carpeta"
+msgid "errors.messages.noFreeName.title"
+msgstr "Hi ha massa documents amb aquest nom"
 
-msgid "errors.situations.notAFolder.body"
-msgstr ""
-"Hi ha un fitxer amb aquest nom on esperàvem una carpeta. Tria una altra "
-"destinació a Preferències."
+msgid "errors.messages.noFreeName.body"
+msgstr "Mou o reanomena els anteriors i torna a signar."
 
-msgid "errors.situations.folderUnreadable.title"
-msgstr "No hem pogut consultar la carpeta de destinació"
+msgid "errors.messages.noKeyring.title"
+msgstr "El clauer de l'escriptori no respon"
 
-msgid "errors.situations.folderUnreadable.body"
-msgstr ""
-"Pot ser cosa dels permisos o d'una unitat que no respon. Tria una altra "
-"destinació a Preferències."
+msgid "errors.messages.noKeyring.body"
+msgstr "Desbloqueja'l o comprova que el teu escriptori en té un, i torna-ho a intentar."
 
-msgid "errors.situations.folderUnwritable.title"
-msgstr "No hem pogut desar el document signat"
+msgid "errors.messages.keyringPinMissing.title"
+msgstr "El clauer ha perdut el PIN de l'Emmagatzematge"
 
-msgid "errors.situations.folderUnwritable.body"
-msgstr ""
-"La signatura ha anat bé, però el fitxer no s'ha pogut escriure a la carpeta "
-"de destinació. Tria'n una altra a Preferències i torna a signar."
-
-msgid "errors.situations.noFreeName.title"
-msgstr "Ja hi ha massa documents amb aquest nom"
-
-msgid "errors.situations.noFreeName.body"
-msgstr ""
-"Per no sobreescriure'n cap, hem parat. Mou o reanomena els anteriors i torna "
-"a signar."
-
-msgid "errors.situations.settingNotSaved.title"
-msgstr "No hem pogut desar l'ajust"
-
-msgid "errors.situations.settingNotSaved.body"
-msgstr ""
-"Hem tornat al valor anterior, que és el que continua desat. Torna-ho a "
-"intentar i, si continua passant, adjunta el detall tècnic a l'informe de "
-"l'error."
-
-msgid "errors.situations.activityNotForgotten.title"
-msgstr "No hem pogut buidar la llista"
-
-msgid "errors.situations.activityNotForgotten.body"
-msgstr ""
-"Els documents recents i el certificat continuen desats. Torna-ho a intentar "
-"i, si continua passant, adjunta el detall tècnic a l'informe de l'error."
-
-msgid "errors.situations.noKeyring.title"
-msgstr "No hem pogut accedir al clauer de l'escriptori"
-
-msgid "errors.situations.noKeyring.body"
-msgstr ""
-"rFirma necessita el clauer per desar el certificat de manera protegida. "
-"Comprova que el teu escriptori en té un de disponible, desbloqueja'l si t'ho "
-"demana, i torna-ho a intentar."
-
-msgid "errors.situations.keyringPinMissing.title"
-msgstr "El clauer ha perdut el PIN de l'Emmagatzematge de rFirma"
-
-msgid "errors.situations.keyringPinMissing.body"
-msgstr ""
-"Sense aquest PIN no podem obrir l'emmagatzematge que ja tenies. Vés a "
-"Preferències → Certificats i buida'l per tornar a instal·lar els teus "
-"certificats des de zero."
+msgid "errors.messages.keyringPinMissing.body"
+msgstr "Buida l'Emmagatzematge a Preferències → Certificats i torna a instal·lar els teus certificats."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"

@@ -91,7 +91,7 @@ describe("certificates in a file", () => {
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
 
     const notice = await screen.findByRole("alert");
-    expect(notice).toHaveTextContent("Ese certificado no es compatible con rFirma");
+    expect(notice).toHaveTextContent("Ese certificado no sirve para firmar");
     expect(notice.textContent).not.toMatch(/RSA|elíptica|curva/);
     expect(within(notice).queryByText("Detalle técnico")).not.toBeInTheDocument();
     expect(screen.getByRole("tabpanel", { name: "Certificados" })).toHaveTextContent(
@@ -118,7 +118,6 @@ describe("certificates in a file", () => {
 
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("La contraseña no es correcta");
-    expect(notice).toHaveTextContent("Compruébala y vuelve a intentarlo.");
   });
 
   it("says a file it cannot read is not the same as a wrong password", async () => {
@@ -132,7 +131,7 @@ describe("certificates in a file", () => {
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
 
     const notice = await screen.findByRole("alert");
-    expect(notice).toHaveTextContent("No hemos podido leer el fichero");
+    expect(notice).toHaveTextContent("Ese fichero no sirve como certificado");
     expect(notice.textContent).not.toMatch(/contraseña/);
   });
 
@@ -151,7 +150,8 @@ describe("certificates in a file", () => {
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
 
     const notice = await screen.findByRole("alert");
-    expect(notice).toHaveTextContent("Ese fichero no trae ninguna clave privada");
+    expect(notice).toHaveTextContent("Ese fichero no sirve como certificado");
+    expect(notice).toHaveTextContent("Elige un .p12 o .pfx con su clave privada.");
     expect(within(notice).queryByText("Detalle técnico")).not.toBeInTheDocument();
   });
 

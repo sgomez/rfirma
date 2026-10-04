@@ -123,7 +123,7 @@ describe("5 · install failure", () => {
     await user.click(screen.getByRole("button", { name: "Instalar un certificado…" }));
 
     const notice = await screen.findByRole("alert");
-    expect(notice).toHaveTextContent("No hemos podido leer el fichero");
+    expect(notice).toHaveTextContent("Ese fichero no sirve como certificado");
     expect(calls.lookAgain).not.toHaveBeenCalled();
   });
 
