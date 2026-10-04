@@ -11,8 +11,10 @@ use crate::desktop::domain::command_line::{
 use crate::desktop::ports::LocalTimeZone;
 use crate::identity::domain::holder::without_semantics_prefix;
 use crate::signing::domain::bridge::{Format, XadesVariant};
+use crate::signing::domain::catalog::translated;
 use crate::signing::domain::{
-    DocumentFinding, DocumentSignature, DocumentSignatures, SigningDate, Validity, ValidityReason,
+    DocumentFinding, DocumentSignature, DocumentSignatures, Language, SigningDate, Validity,
+    ValidityReason,
 };
 use crate::site::domain::protocol::detection::{is_cms_signed_data, shape_of, DetectedShape};
 
@@ -85,7 +87,7 @@ fn with_the_signatures(
         if index == 0 || has_sheets(verbosity) {
             lines.push(String::new());
         }
-        lines.extend(tree_of(signature, 0, verbosity, ports.time_zone));
+        lines.extend(tree_of(signature, 0, verbosity, ports));
     }
     Outcome::printed(&lines)
 }
@@ -167,13 +169,13 @@ fn tree_of(
     signature: &DocumentSignature,
     depth: usize,
     verbosity: usize,
-    time_zone: &dyn LocalTimeZone,
+    ports: &CommandLinePorts,
 ) -> Vec<String> {
     let indent = " ".repeat(4 * depth);
-    let mut lines = vec![format!("{indent}{}", line_of(signature, time_zone))];
+    let mut lines = vec![format!("{indent}{}", line_of(signature, ports.time_zone))];
     if has_sheets(verbosity) {
         lines.extend(
-            sheet_of(signature, verbosity, time_zone)
+            sheet_of(signature, verbosity, ports)
                 .into_iter()
                 .map(|line| format!("{indent}{line}")),
         );
@@ -182,7 +184,7 @@ fn tree_of(
         if has_sheets(verbosity) {
             lines.push(String::new());
         }
-        lines.extend(tree_of(countersignature, depth + 1, verbosity, time_zone));
+        lines.extend(tree_of(countersignature, depth + 1, verbosity, ports));
     }
     lines
 }
@@ -217,8 +219,9 @@ fn signing_instant_of(signature: &DocumentSignature) -> Option<String> {
 fn sheet_of(
     signature: &DocumentSignature,
     verbosity: usize,
-    time_zone: &dyn LocalTimeZone,
+    ports: &CommandLinePorts,
 ) -> Vec<String> {
+    let time_zone = ports.time_zone;
     let (signer, on_behalf_of) = parties_of(signature);
     let issuer = Some(signature.issuer.clone()).filter(|issuer| !issuer.is_empty());
     let (date_label, date) = match &signature.signing_date {
@@ -238,7 +241,7 @@ fn sheet_of(
     let reason = signature
         .validity_reason
         .as_ref()
-        .map(|reason| reason_text(reason, time_zone));
+        .map(|reason| reason_text(reason, ports.language, time_zone));
     let at_third_level =
         |value: Option<String>| value.filter(|text| verbosity > 2 && !text.is_empty());
     let serial = at_third_level(Some(signature.certificate_serial_number.clone()));
@@ -282,25 +285,47 @@ fn certificate_validity_of(
     }
 }
 
-fn reason_text(reason: &ValidityReason, time_zone: &dyn LocalTimeZone) -> String {
+fn reason_text(
+    reason: &ValidityReason,
+    language: Language,
+    time_zone: &dyn LocalTimeZone,
+) -> String {
+    let (key, values) = reason_key(reason, time_zone);
+    let values: Vec<(&str, &str)> = values
+        .iter()
+        .map(|(name, value)| (*name, value.as_str()))
+        .collect();
+    translated(language, key, &values)
+}
+
+fn reason_key(
+    reason: &ValidityReason,
+    time_zone: &dyn LocalTimeZone,
+) -> (&'static str, Vec<(&'static str, String)>) {
     match reason {
         ValidityReason::CertificateExpired { date, holder } => {
-            let day = in_local_day(date, time_zone);
+            let date = ("date", in_local_day(date, time_zone));
             match holder {
-                Some(holder) => format!("El certificado de {holder} caducó el {day}"),
-                None => format!("El certificado caducó el {day}"),
+                Some(holder) => (
+                    "signatureReason.certificateExpiredHolder",
+                    vec![("holder", holder.clone()), date],
+                ),
+                None => ("signatureReason.certificateExpired", vec![date]),
             }
         }
-        ValidityReason::ModifiedAfterSigning => "Se ha modificado después de firmarse".to_owned(),
-        ValidityReason::Damaged => "La firma está dañada".to_owned(),
-        ValidityReason::CertificateNotYetValid { date } => format!(
-            "El certificado no se podía usar antes del {}",
-            in_local_day(date, time_zone)
+        ValidityReason::ModifiedAfterSigning => ("signatureReason.modifiedAfterSigning", vec![]),
+        ValidityReason::Damaged => ("signatureReason.damaged", vec![]),
+        ValidityReason::CertificateNotYetValid { date } => (
+            "signatureReason.certificateNotYetValid",
+            vec![("date", in_local_day(date, time_zone))],
         ),
-        ValidityReason::UnknownSignatureType => "rFirma no conoce este tipo de firma".to_owned(),
+        ValidityReason::UnknownSignatureType => ("signatureReason.unknownSignatureType", vec![]),
         ValidityReason::CosignNotAdmitted { closed_by } => match closed_by {
-            Some(closed_by) => format!("{closed_by} no admitía más firmas"),
-            None => "El documento no admitía más firmas".to_owned(),
+            Some(closed_by) => (
+                "signatureReason.cosignNotAdmitted",
+                vec![("name", closed_by.clone())],
+            ),
+            None => ("signatureReason.cosignNotAdmittedUnnamed", vec![]),
         },
     }
 }

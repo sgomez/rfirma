@@ -29,6 +29,7 @@ fn filtered_with(accepted: &[&'static str], words: &[&str], signer: &RecordingSi
         verifier: &Untouched,
         reader: &Untouched,
         time_zone: &Untouched,
+        language: crate::signing::domain::Language::Spanish,
         signer,
         window: &Untouched,
     };

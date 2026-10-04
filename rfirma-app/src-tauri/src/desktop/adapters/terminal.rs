@@ -336,6 +336,7 @@ pub fn run_the_command_line(argv: &[String], context: tauri::Context<tauri::Wry>
         verifier: &NativeVerifier,
         reader: &EngineReading::over(&NativeEngine),
         time_zone: &SystemTimeZone,
+        language: Language::first_of(sys_locale::get_locales()),
         signer: match &signer {
             Some(signer) => signer,
             None => &Homeless,
