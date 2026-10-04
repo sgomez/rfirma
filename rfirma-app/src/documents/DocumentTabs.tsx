@@ -10,7 +10,7 @@ import {
   FolderIcon,
   SignedMarkIcon,
 } from "../design-system/icons";
-import { Popover } from "../design-system/Popover";
+import { Menu, MenuItem } from "../design-system/Menu";
 import type { DocumentInHand } from "./document";
 import "./DocumentTabs.css";
 import { RecentRows } from "./RecentRows";
@@ -144,20 +144,17 @@ function HiddenTabsMenu({ hidden, onActivate }: HiddenTabsMenuProps) {
         +{hidden.length}
         <ChevronDownIcon size={14} strokeWidth={2} />
       </Button>
-      <Popover
+      <Menu
         open={open}
         onClose={close}
         anchorRef={container}
         returnFocusRef={trigger}
         id={menuId}
-        role="menu"
         className="open-menu open-menu--right"
       >
         {hidden.map((tab) => (
-          <button
+          <MenuItem
             key={tab.id}
-            type="button"
-            role="menuitem"
             className="hidden-tab-row"
             title={tab.name}
             onClick={() => {
@@ -171,9 +168,9 @@ function HiddenTabsMenu({ hidden, onActivate }: HiddenTabsMenuProps) {
                 <SignedMarkIcon />
               </span>
             )}
-          </button>
+          </MenuItem>
         ))}
-      </Popover>
+      </Menu>
     </div>
   );
 }
@@ -245,32 +242,26 @@ function SplitOpenButton({
           >
             <ChevronDownIcon size={14} strokeWidth={2} />
           </button>
-          <Popover
+          <Menu
             open={open}
             onClose={close}
             anchorRef={container}
             returnFocusRef={trigger}
             id={menuId}
-            role="menu"
             className={alignRight ? "open-menu open-menu--right" : "open-menu"}
           >
             <span className="rf-label open-menu__heading">{t("recents.heading")}</span>
             <RecentRows
               recents={recents}
               openIds={openIds}
-              role="menuitem"
+              inMenu
               onSelect={(row) => choose(() => onSelectRecent(row))}
             />
             <hr className="rf-divider open-menu__divider" />
-            <button
-              type="button"
-              role="menuitem"
-              className="open-menu__clear"
-              onClick={() => choose(onClearRecents)}
-            >
+            <MenuItem className="open-menu__clear" onClick={() => choose(onClearRecents)}>
               {t("recents.clear")}
-            </button>
-          </Popover>
+            </MenuItem>
+          </Menu>
         </>
       )}
     </div>

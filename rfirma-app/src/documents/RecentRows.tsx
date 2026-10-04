@@ -4,6 +4,7 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { SignedMarkIcon } from "../design-system/icons";
+import { MenuItem } from "../design-system/Menu";
 import "./DocumentTabs.css";
 import type { RecentDocument } from "./recents";
 
@@ -12,23 +13,23 @@ interface RecentRowsProps {
   /** Los identificadores de los documentos que ya tienen pestaña. */
   openIds: ReadonlySet<string>;
   onSelect: (row: RecentDocument) => void;
-  /** El rol de cada fila: `menuitem` dentro del menú de abiertos recientemente, botón suelto fuera de él. */
-  role?: "menuitem";
+  /** Dentro del menú de abiertos recientemente cada fila es una entrada; fuera, un botón suelto. */
+  inMenu?: boolean;
 }
 
 /** Las filas de los recientes, que comparten el menú de abiertos recientemente y el estado vacío del visor. */
-export function RecentRows({ recents, openIds, onSelect, role }: RecentRowsProps) {
+export function RecentRows({ recents, openIds, onSelect, inMenu = false }: RecentRowsProps) {
   const { t, i18n } = useTranslation();
   const now = new Date();
+  const Row = inMenu ? MenuItem : "button";
 
   return recents.map((row) => {
     const open = openIds.has(row.id);
     const missing = !row.available;
     return (
-      <button
+      <Row
         key={row.id}
         type="button"
-        role={role}
         className="recent-row"
         disabled={missing}
         title={
@@ -51,7 +52,7 @@ export function RecentRows({ recents, openIds, onSelect, role }: RecentRowsProps
         <span className={open ? "recent-row__when recent-row__when--open" : "recent-row__when"}>
           {open ? t("recents.open") : whenUsed(row.lastUsed, now, i18n.language, t)}
         </span>
-      </button>
+      </Row>
     );
   });
 }
