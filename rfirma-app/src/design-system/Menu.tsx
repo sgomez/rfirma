@@ -1,17 +1,18 @@
 //! El menú desplegable sobre `Popover`: `role="menu"`, foco en la primera entrada, flechas, Inicio y Fin, y el cierre y la vuelta del foco del panel; cada entrada lleva el contenido que quiera.
 
-import type { FocusEvent, KeyboardEvent } from "react";
-import { Button, type ButtonProps } from "./Button";
+import type { ComponentPropsWithRef, FocusEvent, KeyboardEvent } from "react";
+import { classNames } from "./classNames";
 import { Popover, type PopoverProps } from "./Popover";
+import "./Menu.css";
 
 export type MenuProps = Omit<PopoverProps, "role" | "initialFocus" | "tabIndex">;
 
-export type MenuItemProps = Omit<ButtonProps, "role" | "tabIndex">;
+export type MenuItemProps = Omit<ComponentPropsWithRef<"button">, "role" | "tabIndex">;
 
 const ITEMS = '[role="menuitem"]:not([disabled])';
 
 /** Un menú anclado a su botón; sus entradas son `MenuItem` y, entre grupos, un `<hr>`. */
-export function Menu({ onKeyDown, onFocus, ...rest }: MenuProps) {
+export function Menu({ onKeyDown, onFocus, className, ...rest }: MenuProps) {
   const focusFirstItem = (event: FocusEvent<HTMLDivElement>) => {
     onFocus?.(event);
     if (event.target === event.currentTarget) itemsOf(event.currentTarget).at(0)?.focus();
@@ -37,14 +38,23 @@ export function Menu({ onKeyDown, onFocus, ...rest }: MenuProps) {
       initialFocus="panel"
       onFocus={focusFirstItem}
       onKeyDown={moveFocus}
+      className={classNames("rf-menu", className)}
       {...rest}
     />
   );
 }
 
 /** Una entrada del menú, fuera del orden de tabulación como pide `role="menu"`. */
-export function MenuItem(props: MenuItemProps) {
-  return <Button role="menuitem" tabIndex={-1} {...props} />;
+export function MenuItem({ className, type = "button", ...rest }: MenuItemProps) {
+  return (
+    <button
+      type={type}
+      role="menuitem"
+      tabIndex={-1}
+      className={classNames("rf-menu__item", className)}
+      {...rest}
+    />
+  );
 }
 
 function itemsOf(menu: HTMLElement): HTMLElement[] {

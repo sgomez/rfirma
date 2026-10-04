@@ -257,7 +257,7 @@ function SplitOpenButton({
               inMenu
               onSelect={(row) => choose(() => onSelectRecent(row))}
             />
-            <hr className="rf-divider open-menu__divider" />
+            <hr className="rf-divider" />
             <MenuItem className="open-menu__clear" onClick={() => choose(onClearRecents)}>
               {t("recents.clear")}
             </MenuItem>

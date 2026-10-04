@@ -12,9 +12,10 @@ function MenuDemo({ startsOpen }: { startsOpen: boolean }) {
   const trigger = useRef<HTMLButtonElement>(null);
   const close = () => setOpen(false);
   return (
-    <div ref={anchor} style={{ display: "inline-block", minWidth: 220 }}>
+    <div ref={anchor} style={{ display: "inline-block", minWidth: 260 }}>
       <Button
         ref={trigger}
+        variant="secondary"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
@@ -29,10 +30,13 @@ function MenuDemo({ startsOpen }: { startsOpen: boolean }) {
         returnFocusRef={trigger}
         id={menuId}
         aria-label="Acciones"
-        className="rf-card rf-card--elevated"
       >
         <MenuItem onClick={close}>
-          <span>Abrir reciente</span> <small>informe.pdf</small>
+          <span style={{ display: "flex", flex: 1, flexDirection: "column", gap: 3 }}>
+            <span>Solicitud de subvención.pdf</span>
+            <small className="rf-text-muted">Documentos</small>
+          </span>
+          <small className="rf-text-muted">hoy</small>
         </MenuItem>
         <hr className="rf-divider" />
         <MenuItem onClick={close}>Preferencias…</MenuItem>

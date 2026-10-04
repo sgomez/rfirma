@@ -67,40 +67,8 @@
   top: 100%;
   right: 0;
   z-index: 6;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   width: 250px;
   margin-top: 4px;
-  padding: 6px;
-  border: 1px solid var(--rf-border-subtle);
-  border-radius: var(--rf-radius-lg);
-  background: var(--rf-bg);
-  box-shadow: var(--rf-shadow-elevated);
-}
-
-.panel__phrase-option {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  width: 100%;
-  min-height: 32px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: var(--rf-radius-md);
-  background: transparent;
-  color: var(--rf-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: none;
-}
-
-.panel__phrase-option:hover,
-.panel__phrase-option:focus-visible {
-  background: var(--rf-surface);
-  outline: none;
 }
 
 .panel__phrase-option-name {

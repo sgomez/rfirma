@@ -6,6 +6,13 @@ import { ProgressBar } from "./ProgressBar";
 const meta = {
   title: "Sistema de diseño/ProgressBar",
   component: ProgressBar,
+  decorators: [
+    (Story) => (
+      <div style={{ width: 320 }}>
+        <Story />
+      </div>
+    ),
+  ],
   args: { value: 50, "aria-label": "Progreso" },
   argTypes: { variant: { control: "select", options: [undefined, "framed"] } },
 } satisfies Meta<typeof ProgressBar>;

@@ -12,7 +12,7 @@ function PopoverDemo({ startsOpen, inPortal }: { startsOpen: boolean; inPortal: 
   const trigger = useRef<HTMLButtonElement>(null);
   return (
     <div ref={anchor} style={{ display: "inline-block", minWidth: 220 }}>
-      <Button ref={trigger} onClick={() => setOpen((was) => !was)}>
+      <Button ref={trigger} variant="secondary" onClick={() => setOpen((was) => !was)}>
         Abrir panel
       </Button>
       <Popover
@@ -23,7 +23,9 @@ function PopoverDemo({ startsOpen, inPortal }: { startsOpen: boolean; inPortal: 
         tabIndex={-1}
         portal={inPortal ? { maxHeight: 240 } : undefined}
       >
-        <Card elevated>Contenido del panel</Card>
+        <Card elevated className="rf-body" style={{ marginTop: 4, padding: "8px 10px" }}>
+          Contenido del panel
+        </Card>
       </Popover>
     </div>
   );
