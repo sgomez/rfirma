@@ -400,12 +400,6 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-msgid "panel.coSignature"
-msgid_plural "panel.coSignature"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
-
 #. Línea del aviso de firmas previas: con cuántas firmas se firma.
 msgid "panel.previousSignatures.alongside"
 msgid_plural "panel.previousSignatures.alongside"
@@ -1293,6 +1287,11 @@ msgid "sede.consent.counterSignatureTree"
 msgstr ""
 
 msgid "sede.consent.counterSignatureLeafs"
+msgstr ""
+
+#. Cofirma: se firma junto a las firmas que el documento ya trae, sin
+#. contarlas, porque las cuenta el aviso de firmas previas de debajo.
+msgid "sede.consent.coSignature"
 msgstr ""
 
 msgid "sede.consent.batchTitle"

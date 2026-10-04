@@ -107,7 +107,16 @@ const rows: [string, ComponentType, Expectation][] = [
       hides: [/criterio|descartad/i],
     },
   ],
-  ["2 · cosign", consent.Cosign, { shows: [/Firmarás junto a 1 firma anterior/] }],
+  [
+    "2 · cosign",
+    consent.Cosign,
+    { shows: ["Ya viene firmado: la tuya será una cofirma junto a las firmas que ya tiene."] },
+  ],
+  [
+    "2 · cosign over two previous signatures, counted only by the notice",
+    consent.PreviousSignaturesWithProblem,
+    { shows: [/Junto a 2 firmas/], hides: [/firmas? anteriores?/] },
+  ],
   [
     "2 · countersign over the tree",
     consent.CountersignTree,

@@ -408,12 +408,6 @@ msgstr[0] "1 página"
 msgstr[1] "{{count}} páginas"
 msgstr[2] "{{count}} páginas"
 
-msgid "panel.coSignature"
-msgid_plural "panel.coSignature"
-msgstr[0] "Firmarás junto a 1 firma anterior"
-msgstr[1] "Firmarás junto a {{count}} firmas anteriores"
-msgstr[2] "Firmarás junto a {{count}} firmas anteriores"
-
 #. Línea del aviso de firmas previas: con cuántas firmas se firma.
 msgid "panel.previousSignatures.alongside"
 msgid_plural "panel.previousSignatures.alongside"
@@ -1316,6 +1310,12 @@ msgid "sede.consent.counterSignatureLeafs"
 msgstr ""
 "Ya viene firmado: la tuya será una contrafirma sobre las últimas firmas que "
 "tiene."
+
+#. Cofirma: se firma junto a las firmas que el documento ya trae, sin
+#. contarlas, porque las cuenta el aviso de firmas previas de debajo.
+msgid "sede.consent.coSignature"
+msgstr ""
+"Ya viene firmado: la tuya será una cofirma junto a las firmas que ya tiene."
 
 msgid "sede.consent.batchTitle"
 msgid_plural "sede.consent.batchTitle"
