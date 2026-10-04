@@ -89,7 +89,7 @@ export function PanelFooter(props: PanelFooterProps) {
           {props.onChangeDestination !== undefined && (
             <Button
               variant="ghost"
-              className={"panel__destination-change" + (signing ? " panel__controls--dim" : "")}
+              className={`panel__destination-change${signing ? " panel__controls--dim" : ""}`}
               onClick={props.onChangeDestination}
             >
               {t("actions.change")}

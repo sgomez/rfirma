@@ -365,11 +365,6 @@ a:hover {
   border-bottom: 1px solid var(--rf-border-subtle);
 }
 
-.cmp-table tbody tr:last-child .cmp-label,
-.cmp-table tbody tr:last-child .cmp-value {
-  border-bottom: 0;
-}
-
 .cmp-head {
   width: 37%;
   background: #ffffff;
@@ -392,6 +387,11 @@ a:hover {
 
 .cmp-value {
   color: var(--rf-text-muted);
+}
+
+.cmp-table tbody tr:last-child .cmp-label,
+.cmp-table tbody tr:last-child .cmp-value {
+  border-bottom: 0;
 }
 
 .cmp-value--rfirma {
