@@ -633,6 +633,11 @@ seal-ds-bundle:
 storybook: po-import
     cd {{ app }} && pnpm exec storybook dev --no-open -p 6006
 
+# Construye Storybook estatico en rfirma-app/storybook-static; lo publica pages.yml.
+[group('ci')]
+build-storybook: po-import
+    cd {{ app }} && pnpm exec storybook build --quiet
+
 # Corre axe en navegador, con contraste, sobre todas las historias en claro y en oscuro; bajo demanda, no entra en el CI.
 [group('dev')]
 storybook-a11y: po-import

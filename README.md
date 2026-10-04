@@ -151,6 +151,13 @@ flatpak run --file-forwarding me.sgomez.rfirma sign -i @@ ~/Descargas/contrato.p
 
 ---
 
+## 🌐 Traducciones
+
+Quien traduce revisa sus textos en la pantalla real, sin montar el entorno, en el
+[Storybook publicado](https://sgomez.github.io/rfirma/): se reconstruye con cada
+push a `main`, y su barra de herramientas cambia el idioma y el tema. Los textos
+viven en `rfirma-app/po/`; en local, `just storybook`.
+
 ## 📦 Instalación
 
 Los canales son **tres** —flatpak, `.deb` y `.rpm`—, todos servidos desde
