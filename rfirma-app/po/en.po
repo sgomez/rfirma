@@ -1484,8 +1484,8 @@ msgstr "You cancelled the signature"
 msgid "sede.outcome.refusedTitle"
 msgstr "The request wasn't completed"
 
-msgid "sede.outcome.refusedNote"
-msgstr "For whoever maintains the site:"
+msgid "sede.outcome.technicalDetail"
+msgstr "Technical detail for the site"
 
 msgid "sede.outcome.reportHint"
 msgstr "Does this look like an rFirma bug?"

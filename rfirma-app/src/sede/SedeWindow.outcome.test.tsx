@@ -17,6 +17,13 @@ import { scriptedErrand, scriptedFrom } from "./sedeWindowFixtures";
 const RETRY = "Vuelve a la sede e inténtalo de nuevo.";
 const CONTACT_SITE = "Contacta con la sede para terminar el trámite.";
 const CLOSE_OTHER = "Cierra el otro trámite o la otra aplicación de firma y vuelve a intentarlo.";
+const SHA1_CAUSE = "La sede ha pedido una firma con SHA-1, que ya no es segura.";
+const EXPLICIT_XADES_CAUSE =
+  "La sede ha pedido un tipo de firma antiguo que podría hacerse pasar por la de otro documento.";
+const INVOICE_MULTISIGNATURE_CAUSE =
+  "La sede ha pedido añadir una segunda firma a una factura electrónica, que solo admite una.";
+const UNSUPPORTED_COUNTERSIGNATURE_CAUSE =
+  "La sede ha pedido firmar sobre la firma de otra persona en un tipo de documento que no lo permite.";
 const OTHER_CERTIFICATE = "No se puede firmar con ese certificado. Vuelve a la sede y elige otro.";
 
 const SITE_ACTION: Record<keyof typeof REFUSAL_ACTION_OF, string> = {
@@ -27,11 +34,11 @@ const SITE_ACTION: Record<keyof typeof REFUSAL_ACTION_OF, string> = {
   unsupportedKeyStore: CONTACT_SITE,
   errandInFlight: CLOSE_OTHER,
   portsTaken: CLOSE_OTHER,
-  sha1: CONTACT_SITE,
-  sha1InXml: CONTACT_SITE,
-  explicitXades: CONTACT_SITE,
-  invoiceMultisignature: CONTACT_SITE,
-  unsupportedCountersignature: CONTACT_SITE,
+  sha1: SHA1_CAUSE,
+  sha1InXml: SHA1_CAUSE,
+  explicitXades: EXPLICIT_XADES_CAUSE,
+  invoiceMultisignature: INVOICE_MULTISIGNATURE_CAUSE,
+  unsupportedCountersignature: UNSUPPORTED_COUNTERSIGNATURE_CAUSE,
   saveCancelled: RETRY,
   loadCancelled: RETRY,
   cannotSaveData: RETRY,
@@ -119,32 +126,29 @@ describe("4 · outcome", () => {
     {
       situation: "sha1",
       detail: "SAF_03: el algoritmo 'SHA1withRSA' es SHA-1: rFirma firma con SHA-2",
-      cause: "La sede ha pedido una firma con SHA-1, que ya no es segura.",
+      cause: SHA1_CAUSE,
       note: "Pedid SHA256withRSA o superior.",
     },
     {
       situation: "explicitXades",
       detail: "SAF_06: mode=explicit con XAdES (firma de la huella SHA-1)",
-      cause:
-        "La sede ha pedido un tipo de firma antiguo que podría hacerse pasar por la de otro documento.",
+      cause: EXPLICIT_XADES_CAUSE,
       note: "Quitad mode=explicit o usad CAdES explícita, que firma el documento sin incluirlo.",
     },
     {
       situation: "invoiceMultisignature",
       detail: "SAF_04: FacturaE no admite cofirma ni contrafirma",
-      cause:
-        "La sede ha pedido añadir una segunda firma a una factura electrónica, que solo admite una.",
+      cause: INVOICE_MULTISIGNATURE_CAUSE,
       note: "FacturaE no admite cofirma ni contrafirma; pedid una firma simple (sign).",
     },
     {
       situation: "unsupportedCountersignature",
       detail: "SAF_04: contrafirma fuera de CAdES, CMS y XAdES",
-      cause:
-        "La sede ha pedido firmar sobre la firma de otra persona en un tipo de documento que no lo permite.",
+      cause: UNSUPPORTED_COUNTERSIGNATURE_CAUSE,
       note: "La contrafirma solo existe en CAdES, CMS y XAdES; en otro formato, pedid una cofirma (cosign).",
     },
   ] as const)(
-    "says why rFirma refuses $situation before what to do, with a note for the site and the raw detail",
+    "says why rFirma refuses $situation instead of what to do, with a note for the site and the raw detail",
     ({ situation, detail, cause, note }) => {
       const { port } = scriptedErrand({
         kind: "outcome",
@@ -152,13 +156,44 @@ describe("4 · outcome", () => {
       });
       renderWithCatalog(<SedeWindow errands={port} />);
 
-      const causeLine = screen.getByText(cause);
-      const actionLine = screen.getByText(CONTACT_SITE);
-      expect(causeLine.compareDocumentPosition(actionLine)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(screen.getByText(cause)).toBeInTheDocument();
+      expect(screen.queryByText(CONTACT_SITE)).not.toBeInTheDocument();
       expect(screen.getByText(note)).toBeInTheDocument();
       expect(screen.getByText(detail)).toBeInTheDocument();
     },
   );
+
+  it("keeps the note for the site inside the technical detail, after the SHA-1 hint", () => {
+    const { port } = scriptedErrand({
+      kind: "outcome",
+      outcome: { kind: "refused", situation: "sha1", detail: "CRUDO" },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    const cause = screen.getByText(SHA1_CAUSE);
+    const hint = screen.getByText(/puedes permitir SHA-1 en Preferencias/);
+    const detailLabel = screen.getByText("Detalle técnico para la sede");
+    const note = screen.getByText("Pedid SHA256withRSA o superior.");
+    expect(cause.compareDocumentPosition(hint)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(hint.compareDocumentPosition(detailLabel)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(detailLabel.compareDocumentPosition(note)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.queryByText(/Para quien mantiene la sede/)).not.toBeInTheDocument();
+  });
+
+  it("copies the note for the site along with the raw detail", () => {
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    const { port } = scriptedErrand({
+      kind: "outcome",
+      outcome: { kind: "refused", situation: "sha1", detail: "CRUDO" },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Copiar/ }));
+
+    expect(writeText).toHaveBeenCalledWith("Pedid SHA256withRSA o superior.\n\nCRUDO");
+    vi.unstubAllGlobals();
+  });
 
   it("opens discussions outside from the help link of an unknown refusal", () => {
     const destinations = inMemoryExternalDestinationOpener();

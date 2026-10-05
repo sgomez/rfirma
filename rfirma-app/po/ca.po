@@ -1488,8 +1488,8 @@ msgstr "Has cancel·lat la signatura"
 msgid "sede.outcome.refusedTitle"
 msgstr "No s'ha completat la petició"
 
-msgid "sede.outcome.refusedNote"
-msgstr "Per a qui manté la seu:"
+msgid "sede.outcome.technicalDetail"
+msgstr "Detall tècnic per a la seu"
 
 msgid "sede.outcome.reportHint"
 msgstr "Et sembla un error de rFirma?"

@@ -329,7 +329,7 @@ const rows: [string, ComponentType, Expectation][] = [
   [
     "4 · refusal without origin",
     outcome.RefusedWithoutOrigin,
-    { shows: [CONTACT_SITE], hides: [/La petición/] },
+    { shows: [/La sede ha pedido una firma con SHA-1/], hides: [/La petición/, CONTACT_SITE] },
   ],
   [
     "4 · refusal that asks to close the other errand",
