@@ -82,6 +82,11 @@ export const SigningInTheDestinationFolder: Story = {
   },
 };
 
+export const SigningAllowingSha1: Story = {
+  name: "2 · Firma, con SHA-1 permitido",
+  args: { initialSection: "signing", preferences: { ...defaults, allowSha1: true } },
+};
+
 export const NoCertificates: Story = {
   name: "3 · Certificados, ninguno",
   args: { initialSection: "certificates" },

@@ -1069,7 +1069,10 @@ msgstr ""
 "Si solo sirve un certificado y la sede lo permite, usarlo sin preguntar"
 
 msgid "preferences.allowSha1.label"
-msgstr "Permitir SHA-1 en firmas que no son XML"
+msgstr "Permitir SHA-1"
+
+msgid "preferences.allowSha1.hint"
+msgstr "Algunas sedes todavía piden SHA-1, un algoritmo que ya no es seguro: con él se pueden fabricar dos documentos con la misma firma. Actívalo solo si una sede de tu confianza lo necesita. No vale para firmas XML."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar mi actividad"

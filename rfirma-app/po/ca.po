@@ -1070,7 +1070,10 @@ msgstr ""
 "preguntar"
 
 msgid "preferences.allowSha1.label"
-msgstr "Permetre SHA-1 en signatures que no són XML"
+msgstr "Permetre SHA-1"
+
+msgid "preferences.allowSha1.hint"
+msgstr "Algunes seus encara demanen SHA-1, un algorisme que ja no és segur: amb ell es poden fabricar dos documents amb la mateixa signatura. Activa'l només si una seu de la teva confiança el necessita. No val per a signatures XML."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar la meva activitat"
