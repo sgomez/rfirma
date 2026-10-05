@@ -124,7 +124,7 @@ export interface SiteCommands {
   describeDocument(id: string): Promise<DescribedDocument | null>;
   /** El PDF abierto para marcar sobre él el área de la firma visible, o `null` si no se ha podido abrir. */
   openDocument(id: string): Promise<PdfDocument | null>;
-  /** Las firmas que ya trae el documento, igual que pide `App.usePreviousSignatures.ts` en escritorio. */
+  /** Las firmas que ya trae el documento, igual que pide `journey/usePreviousSignatures.ts` en escritorio. */
   previousSignatures(id: string): Promise<PreviousSignaturesReport>;
 }
 

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { signingOrderFor } from "./App.signingOrder";
-import { aCertificate } from "./App.testSupport";
-import type { Placement } from "./placement/pageSets";
-import { base64Of } from "./signing/rubric";
-import { rubric } from "./signing/SigningPanel.testSupport";
-import { DEFAULT_VISIBLE_SIGNATURE } from "./signing/visibleSignature";
+import { aCertificate } from "../App.testSupport";
+import type { Placement } from "../placement/pageSets";
+import { base64Of } from "../signing/rubric";
+import { rubric } from "../signing/SigningPanel.testSupport";
+import { DEFAULT_VISIBLE_SIGNATURE } from "../signing/visibleSignature";
+import { signingOrderFor } from "./signingOrder";
 
 // Grada A: qué se firma (Testing Decisions, costura 1) — la orden lleva el
 // modelo elegido y la rúbrica solo viaja cuando «Con rúbrica» está encendido.

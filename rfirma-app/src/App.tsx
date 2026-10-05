@@ -4,20 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { forgetActivity } from "./App.forgetActivity";
 import type { MainWindowPorts } from "./App.ports";
-import { SignFlowPrompts, signFlowPromptOpen } from "./App.SignFlowPrompts";
 import { useCertificateChoice } from "./App.useCertificateChoice";
 import { useDropNotices } from "./App.useDropNotices";
 import { useNativeTitlebar } from "./App.useNativeTitlebar";
 import { useOpenShortcut } from "./App.useOpenShortcut";
-import { usePageGeometry } from "./App.usePageGeometry";
-import { useDestination, usePreferencesState } from "./App.usePreferencesState";
-import { usePreviousSignatures } from "./App.usePreviousSignatures";
-import { useSignedSummary } from "./App.useSignedSummary";
+import { usePreferencesState } from "./App.usePreferencesState";
 import { useSignFlow } from "./App.useSignFlow";
-import { useSigningFailure } from "./App.useSigningFailure";
 import { useStartupNotices } from "./App.useStartupNotices";
 import { useViewedSignatures } from "./App.useViewedSignatures";
-import { useVisibleSignature } from "./App.useVisibleSignature";
 import { AboutDialog } from "./about/AboutDialog";
 import { DocumentTabs } from "./documents/DocumentTabs";
 import { isAPdf } from "./documents/document";
@@ -25,6 +19,13 @@ import { RecentsSection } from "./documents/RecentRows";
 import type { RecentDocument } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
 import { useOpenPdf } from "./documents/useOpenPdf";
+import { SignPrompts, signPromptOpen } from "./journey/SignPrompts";
+import { useDestination } from "./journey/useDestination";
+import { usePageGeometry } from "./journey/usePageGeometry";
+import { usePreviousSignatures } from "./journey/usePreviousSignatures";
+import { useSignedSummary } from "./journey/useSignedSummary";
+import { useSigningFailure } from "./journey/useSigningFailure";
+import { useVisibleSignature } from "./journey/useVisibleSignature";
 import { firstSealedPage } from "./placement/pageSets";
 import { usePlacement } from "./placement/usePlacement";
 import { PreferencesView } from "./preferences/PreferencesView";
@@ -227,8 +228,7 @@ export function App({
   });
   const { stamp, sign } = signFlow;
 
-  const modalOpen =
-    dialog !== null || signFlowPromptOpen(signFlow) || signing.state.kind === "running";
+  const modalOpen = dialog !== null || signPromptOpen(signFlow) || signing.state.kind === "running";
   const canOpen = !covered && view === null && !modalOpen;
   useOpenShortcut(openDocument, canOpen);
 
@@ -457,7 +457,7 @@ export function App({
           onClose={() => setDialog(null)}
         />
       )}
-      <SignFlowPrompts flow={signFlow} locale={i18n.resolvedLanguage ?? i18n.language} />
+      <SignPrompts flow={signFlow} locale={i18n.resolvedLanguage ?? i18n.language} />
       {signing.state.kind === "running" && <SigningProgressDialog stage={signing.state.stage} />}
     </>
   );

@@ -1,11 +1,11 @@
 //! El acuse de recibo del documento firmado y los dos caminos hasta el fichero.
 
 import { useEffect, useState } from "react";
-import type { SignedDocumentOpener } from "./signing/destination";
-import type { SigningBackend } from "./signing/flow";
-import type { DocumentFinding, PreviousSignature } from "./signing/previousSignatures";
-import { useSignedDocumentOpening } from "./signing/useSignedDocumentOpening";
-import { acknowledgementFor, type Signing } from "./signing/useSigning";
+import type { SignedDocumentOpener } from "../signing/destination";
+import type { SigningBackend } from "../signing/flow";
+import type { DocumentFinding, PreviousSignature } from "../signing/previousSignatures";
+import { useSignedDocumentOpening } from "../signing/useSignedDocumentOpening";
+import { acknowledgementFor, type Signing } from "../signing/useSigning";
 
 /**
  * El acuse de recibo del documento que se acaba de firmar, y los dos caminos

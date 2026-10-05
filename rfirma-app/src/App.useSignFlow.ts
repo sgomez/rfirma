@@ -1,9 +1,9 @@
 //! La vista previa del sello y la firma, con los dos avisos que pueden interponerse antes del PIN.
 
 import { useMemo, useState } from "react";
-import type { PageGeometry } from "./App.signingOrder";
-import { signingOrderFor } from "./App.signingOrder";
 import type { DocumentInHand } from "./documents/document";
+import type { PageGeometry } from "./journey/signingOrder";
+import { signingOrderFor } from "./journey/signingOrder";
 import { firstSealedPage, type Placement, sealedPages } from "./placement/pageSets";
 import type { Certificate } from "./signing/certificate";
 import { isUsable } from "./signing/certificate";
