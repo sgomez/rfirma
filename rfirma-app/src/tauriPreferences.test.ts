@@ -17,6 +17,7 @@ const aConfiguration = {
   setupWizardSeen: false,
   consentCountdown: true,
   honourAutomaticSelection: false,
+  allowSha1: false,
 };
 
 /**
@@ -46,6 +47,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       setupWizardSeen: false,
       consentCountdown: true,
       honourAutomaticSelection: false,
+      allowSha1: false,
     });
   });
 
@@ -100,6 +102,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       setupWizardSeen: false,
       consentCountdown: false,
       honourAutomaticSelection: false,
+      allowSha1: false,
     });
 
     expect(invoke).toHaveBeenLastCalledWith("write_configuration", {
@@ -110,6 +113,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
         rememberVisibleSignature: false,
         consentCountdown: false,
         honourAutomaticSelection: false,
+        allowSha1: false,
       },
     });
   });
@@ -134,6 +138,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       setupWizardSeen: false,
       consentCountdown: true,
       honourAutomaticSelection: false,
+      allowSha1: false,
     });
 
     expect(invoke).toHaveBeenLastCalledWith("write_configuration", {
@@ -166,6 +171,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       setupWizardSeen: true,
       consentCountdown: true,
       honourAutomaticSelection: false,
+      allowSha1: false,
     });
 
     const [, { configuration }] = invoke.mock.calls.at(-1) as [string, { configuration: object }];

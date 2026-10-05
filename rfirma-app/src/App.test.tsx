@@ -132,6 +132,7 @@ describe("App", () => {
         setupWizardSeen: false,
         consentCountdown: true,
         honourAutomaticSelection: false,
+        allowSha1: false,
       }),
       save: refused,
       forgetActivity: async () => {},

@@ -34,6 +34,7 @@ fn what_was_chosen_lands_on_the_disk_and_on_the_live_copy() {
         setup_wizard_seen: false,
         consent_countdown: true,
         honour_automatic_selection: false,
+        allow_sha1: false,
     };
 
     memory
@@ -151,6 +152,7 @@ fn writing_the_configuration_never_moves_the_destination_folder() {
         setup_wizard_seen: false,
         consent_countdown: true,
         honour_automatic_selection: false,
+        allow_sha1: false,
     };
 
     let next = merged(&live, &chosen);
@@ -176,6 +178,20 @@ fn turning_the_automatic_selection_on_survives_the_round_trip_to_the_window() {
     );
 
     assert!(merged(&configuration, &view).honour_automatic_selection);
+}
+
+#[test]
+fn allowing_sha1_survives_the_round_trip_to_the_window() {
+    let configuration = Configuration {
+        allow_sha1: true,
+        ..Configuration::default()
+    };
+    let view = shown(
+        &configuration,
+        std::path::Path::new("/home/quien/Documentos"),
+    );
+
+    assert!(merged(&configuration, &view).allow_sha1);
 }
 
 #[test]

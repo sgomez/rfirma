@@ -35,6 +35,7 @@ const aPreferences: Preferences = {
   setupWizardSeen: false,
   consentCountdown: true,
   honourAutomaticSelection: false,
+  allowSha1: false,
 };
 
 function openTabs() {

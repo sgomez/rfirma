@@ -34,6 +34,7 @@ interface ConfigurationView {
   setupWizardSeen: boolean;
   consentCountdown: boolean;
   honourAutomaticSelection: boolean;
+  allowSha1: boolean;
 }
 
 function readConfiguration(): Promise<ConfigurationView> {
@@ -75,6 +76,7 @@ export function tauriPreferences(): PreferencesStore {
         setupWizardSeen: configuration.setupWizardSeen,
         consentCountdown: configuration.consentCountdown,
         honourAutomaticSelection: configuration.honourAutomaticSelection,
+        allowSha1: configuration.allowSha1,
       };
     },
     save: async (preferences) => {
@@ -89,6 +91,7 @@ export function tauriPreferences(): PreferencesStore {
         setupWizardSeen: preferences.setupWizardSeen,
         consentCountdown: preferences.consentCountdown,
         honourAutomaticSelection: preferences.honourAutomaticSelection,
+        allowSha1: preferences.allowSha1,
       });
     },
     forgetActivity: () => invoke<void>("forget_activity"),

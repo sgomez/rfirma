@@ -46,6 +46,8 @@ pub struct Configuration {
     pub consent_countdown: bool,
     /// Indica si la sede puede elegir sola el único certificado candidato (ADR-0032).
     pub honour_automatic_selection: bool,
+    /// Indica si se permite firmar con SHA-1 fuera de XML.
+    pub allow_sha1: bool,
 }
 
 impl Default for Configuration {
@@ -61,6 +63,7 @@ impl Default for Configuration {
             setup_wizard_version_seen: 0,
             consent_countdown: true,
             honour_automatic_selection: false,
+            allow_sha1: false,
         }
     }
 }

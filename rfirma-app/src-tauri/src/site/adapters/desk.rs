@@ -55,6 +55,10 @@ impl Neighbours for Neighbourhood<'_> {
         self.signing.configuration().honour_automatic_selection
     }
 
+    fn sha1_allowed(&self) -> bool {
+        self.signing.configuration().allow_sha1
+    }
+
     fn open_unrecorded(&self, path: PathBuf) -> String {
         self.documents.open_unrecorded(path)
     }

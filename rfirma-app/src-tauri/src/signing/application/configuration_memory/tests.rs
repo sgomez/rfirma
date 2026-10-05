@@ -24,6 +24,20 @@ fn the_site_does_not_choose_the_certificate_alone_by_default() {
 }
 
 #[test]
+fn sha1_is_not_allowed_by_default() {
+    assert!(!Configuration::default().allow_sha1);
+}
+
+#[test]
+fn a_configuration_saved_without_allow_sha1_reads_it_off() {
+    let saved = r#"{"version": 1, "language": "es", "honour_automatic_selection": true}"#;
+
+    let configuration: Configuration = serde_json::from_str(saved).expect("deberia leerse");
+
+    assert!(!configuration.allow_sha1);
+}
+
+#[test]
 fn the_setup_wizard_has_not_been_seen_by_default() {
     assert!(!Configuration::default().setup_wizard_seen());
 }
@@ -91,6 +105,7 @@ fn the_configuration_holds_no_path_to_the_rubric_the_user_chose() {
     assert_eq!(
         fields,
         vec![
+            "allow_sha1",
             "consent_countdown",
             "destination",
             "destination_mode",

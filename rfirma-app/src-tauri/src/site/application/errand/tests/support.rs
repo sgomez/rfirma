@@ -384,6 +384,10 @@ impl Neighbours for TheNeighbours<'_> {
         self.memory.configuration().honour_automatic_selection
     }
 
+    fn sha1_allowed(&self) -> bool {
+        self.memory.configuration().allow_sha1
+    }
+
     fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
         self.opened.mint(Document::passing_through(path))
     }
@@ -487,6 +491,10 @@ impl Neighbours for ASignerThatSucceeds<'_> {
 
     fn automatic_selection_honoured(&self) -> bool {
         self.neighbours.automatic_selection_honoured()
+    }
+
+    fn sha1_allowed(&self) -> bool {
+        self.neighbours.sha1_allowed()
     }
 
     fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
