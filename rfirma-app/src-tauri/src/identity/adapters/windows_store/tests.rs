@@ -9,7 +9,7 @@ use openssl::rsa::Padding as RsaPadding;
 use openssl::sign::{RsaPssSaltlen, Verifier};
 use openssl::x509::X509;
 
-use super::cng::{cancelled_by_the_person, padding_of, situation_of, Padding};
+use super::cng::{cancelled_by_the_person, hash_name, padding_of, situation_of, Padding};
 use super::{candidate_modules, is_the_user_store, user_store, WindowsToken};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -60,6 +60,27 @@ fn each_algorithm_gets_the_padding_cng_expects() {
     assert_eq!(padding_of(SignatureAlgorithm::Sha256Rsa), Padding::Pkcs1);
     assert_eq!(padding_of(SignatureAlgorithm::Sha512RsaPss), Padding::Pss);
     assert_eq!(padding_of(SignatureAlgorithm::Sha384Ecdsa), Padding::None);
+}
+
+fn wide_text(name: *const u16) -> String {
+    let length = (0..).take_while(|&i| unsafe { *name.add(i) } != 0).count();
+    String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(name, length) })
+}
+
+#[test]
+fn each_algorithm_gets_its_own_cng_hash_name() {
+    let expected = [
+        (SignatureAlgorithm::Sha1Rsa, "SHA1"),
+        (SignatureAlgorithm::Sha1Ecdsa, "SHA1"),
+        (SignatureAlgorithm::Sha256Rsa, "SHA256"),
+        (SignatureAlgorithm::Sha256RsaPss, "SHA256"),
+        (SignatureAlgorithm::Sha256Ecdsa, "SHA256"),
+        (SignatureAlgorithm::Sha384Rsa, "SHA384"),
+        (SignatureAlgorithm::Sha512Ecdsa, "SHA512"),
+    ];
+    for (algorithm, name) in expected {
+        assert_eq!(wide_text(hash_name(algorithm)), name);
+    }
 }
 
 #[test]
