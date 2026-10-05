@@ -49,6 +49,8 @@ pub(crate) struct BridgeCall {
     pub(crate) algorithm: String,
     /// El bloque `java.util.Properties` que cruzó.
     pub(crate) extra_params: String,
+    /// El documento que cruzó, en Base64.
+    pub(crate) document_b64: String,
 }
 
 /// Un puente que resuelve las dos fases con firmas del banco de referencia y apunta lo que le llega.
@@ -72,6 +74,7 @@ impl Bridge for ABridgeThatSigns {
             operation: request.operation,
             algorithm: request.algorithm.to_owned(),
             extra_params: request.extra_params.to_owned(),
+            document_b64: request.document_b64.to_owned(),
         });
         Ok(PreSignature {
             session: "<xml/>".to_owned(),

@@ -23,8 +23,6 @@ pub enum RefusalSituation {
     PortsTaken,
     /// La sede pide firmar con SHA-1 (ADR-0023).
     Sha1,
-    /// La sede pide la XAdES explícita, que firma la huella SHA-1 y no el documento.
-    ExplicitXades,
     /// La sede pide cofirmar o contrafirmar una factura electrónica.
     InvoiceMultisignature,
     /// La sede pide contrafirmar fuera de CAdES, CMS y XAdES.
@@ -125,9 +123,7 @@ impl Refusal {
     pub fn is_shown_before_it_is_answered(&self) -> bool {
         let refused_to_sign = matches!(
             self.situation,
-            RefusalSituation::ExplicitXades
-                | RefusalSituation::InvoiceMultisignature
-                | RefusalSituation::UnsupportedCountersignature
+            RefusalSituation::InvoiceMultisignature | RefusalSituation::UnsupportedCountersignature
         );
         let shown_by_the_original = !self.found_while_processing
             && matches!(

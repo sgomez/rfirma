@@ -1,5 +1,6 @@
 //! Los dobles y ayudantes en grada A compartidos por las pruebas del tramite.
 
+use base64::Engine as _;
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -217,6 +218,17 @@ impl TheBridge {
         let calls = bridge.calls();
         let call = calls.first().expect("la prefirma cruzo");
         call.extra_params.clone()
+    }
+
+    pub(crate) fn document_of_the_presign(&self) -> Vec<u8> {
+        let Self::Answering(bridge) = self else {
+            panic!("este puente no atiende nada");
+        };
+        let calls = bridge.calls();
+        let call = calls.first().expect("la prefirma cruzo");
+        base64::engine::general_purpose::STANDARD
+            .decode(&call.document_b64)
+            .expect("el documento cruza en Base64")
     }
 
     pub(crate) fn operation_of_the_presign(&self) -> SignatureOperation {

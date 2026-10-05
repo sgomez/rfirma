@@ -128,11 +128,13 @@ pub enum NoCertificate {
 pub struct SigningConsent {
     /// Identificador del documento para la ventana (ADR-0011).
     pub document: String,
+    /// El asa de la huella SHA-1 que firma el puente en lugar del documento, en la XAdES explícita (ADR-0023).
+    pub sha1_of_the_data: Option<String>,
     /// Formato de firma que la sede pidió, ya atendido por el puente.
     pub format: Format,
     /// Huella que la sede pidió para esta firma.
     pub algorithm: AskedAlgorithm,
-    /// Si la firma pide SHA-1 y la persona no lo permite todavía, ni en Preferencias ni en esta operación.
+    /// Si la firma pide SHA-1, en el algoritmo o en la XAdES explícita, y la persona no lo permite todavía, ni en Preferencias ni en esta operación.
     pub sha1_to_allow: bool,
     /// Modalidad de firma solicitada.
     pub round: SignatureRound,
@@ -159,6 +161,11 @@ pub struct SigningConsent {
 }
 
 impl SigningConsent {
+    /// Si la firma pide SHA-1: en el algoritmo o en la XAdES explícita.
+    pub fn asks_for_sha1(&self) -> bool {
+        self.algorithm == AskedAlgorithm::Sha1 || self.sha1_of_the_data.is_some()
+    }
+
     /// El momento en el que la persona elige certificado y consiente.
     pub fn consenting(&self) -> Moment {
         Moment::AskingToSign {
@@ -168,7 +175,7 @@ impl SigningConsent {
             certificates: self.certificates.clone(),
             already_chosen: self.already_chosen.clone(),
             without_asking: self.without_asking,
-            sha1_allowed: self.algorithm == AskedAlgorithm::Sha1 && !self.sha1_to_allow,
+            sha1_allowed: self.asks_for_sha1() && !self.sha1_to_allow,
             sha1_to_allow: self.sha1_to_allow,
         }
     }

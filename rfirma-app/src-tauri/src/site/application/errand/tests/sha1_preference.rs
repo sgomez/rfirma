@@ -2,17 +2,15 @@
 
 use super::support::*;
 use super::support_requests::*;
-use crate::documents::application::documents::OpenedDocuments;
+use crate::documents::application::documents::{self, OpenedDocuments};
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::application::session;
-use crate::signing::application::tests::{a_memory, A_CADES_SIGNATURE};
+use crate::signing::application::tests::{a_memory, A_CADES_SIGNATURE, A_XADES_SIGNATURE};
 use crate::site::application::errand::*;
 use crate::site::domain::channel::ArrivalMode;
-use crate::site::domain::protocol::{
-    AfirmaUrl, ChannelMessage, NegotiatedCredential, Refusal, RefusalSituation, SafCode,
-};
+use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, NegotiatedCredential};
 use base64::Engine as _;
 
 const AN_INVOICE: &[u8] = b"<Facturae><FileHeader/><Parties/><Invoices/></Facturae>";
@@ -36,6 +34,14 @@ struct Attended {
     refused_at_consent: Option<SiteRefusal>,
     signed_with: Vec<SignatureAlgorithm>,
     sha1_still_allowed_once: bool,
+    shown: Option<Vec<u8>>,
+    bridged: Option<Bridged>,
+}
+
+/// Lo que recibió la prefirma del puente.
+struct Bridged {
+    document: Vec<u8>,
+    extra_params: String,
 }
 
 /// Atiende `url` con la preferencia dada y, si llega al consentimiento, consiente y firma en el token.
@@ -76,7 +82,17 @@ fn attended(url: AfirmaUrl, allowed: bool, allowed_once: bool) -> Attended {
         live.allow_sha1_once();
     }
     let mut refused_at_consent = None;
+    let mut shown = None;
+    let mut bridged = None;
     if let ErrandStep::AskingToSign(asking) = &step {
+        shown = Some(
+            std::fs::read(
+                documents::opened_document(&opened, &asking.document)
+                    .expect("el documento esta en la mano")
+                    .reading_path(),
+            )
+            .expect("el fichero de paso existe"),
+        );
         let chosen = asking.certificates[0].id.clone();
         match consent(&desk, &chosen, &live) {
             Err(ConsentError::Refused(refusal)) => refused_at_consent = Some(refusal),
@@ -88,6 +104,10 @@ fn attended(url: AfirmaUrl, allowed: bool, allowed_once: bool) -> Attended {
                     &the_typed_secret(),
                 )
                 .expect("el token de pruebas firma el PRE");
+                bridged = asking.format.bridged().is_ok().then(|| Bridged {
+                    document: neighbours.bridge.document_of_the_presign(),
+                    extra_params: neighbours.bridge.extra_params_of_the_presign(),
+                });
             }
         }
     }
@@ -98,14 +118,9 @@ fn attended(url: AfirmaUrl, allowed: bool, allowed_once: bool) -> Attended {
         refused_at_consent,
         signed_with: neighbours.signer.signed_with(),
         sha1_still_allowed_once,
+        shown,
+        bridged,
     }
-}
-
-fn the_refusal_shown(step: &ErrandStep, what: &str) -> Refusal {
-    let ErrandStep::ShowingTheRefusal(refusal) = step else {
-        panic!("{what}: el rechazo se enseña antes de contestar: {step:?}");
-    };
-    refusal.clone()
 }
 
 fn every_signature_with_sha1() -> Vec<(AfirmaUrl, &'static str)> {
@@ -162,8 +177,26 @@ fn every_signature_with_sha1() -> Vec<(AfirmaUrl, &'static str)> {
             ),
             "signandsave",
         ),
+        (
+            a_request(
+                "op=sign&format=XAdES&algorithm=SHA256withRSA",
+                Some(AN_XML_CHALLENGE),
+                EXPLICIT,
+            ),
+            "XAdES explícita con SHA-256",
+        ),
+        (
+            a_request(
+                "op=signandsave&cop=sign&format=XAdES&algorithm=SHA512",
+                Some(AN_XML_CHALLENGE),
+                EXPLICIT,
+            ),
+            "signandsave de una XAdES explícita con SHA-512",
+        ),
     ]
 }
+
+const EXPLICIT: &str = "mode=explicit\n";
 
 #[test]
 fn without_the_preference_every_signature_with_sha1_asks_to_allow_it_and_never_consents_alone() {
@@ -412,17 +445,130 @@ fn with_the_preference_xades_and_facturae_are_signed_with_sha1_on_the_token() {
     }
 }
 
+fn the_sha1_of(data: &[u8]) -> Vec<u8> {
+    openssl::sha::sha1(data).to_vec()
+}
+
 #[test]
-fn with_the_preference_the_explicit_xades_is_still_refused() {
-    let url = a_request(
-        "op=sign&format=XAdES&algorithm=SHA1",
-        Some(AN_XML_CHALLENGE),
-        "mode=explicit\n",
+fn an_explicit_xades_allowed_signs_the_sha1_of_the_data_with_the_algorithm_the_site_asked() {
+    for (attended, what) in [
+        (
+            attended_with_the_preference(
+                a_request(
+                    "op=sign&format=XAdES&algorithm=SHA256withRSA",
+                    Some(AN_XML_CHALLENGE),
+                    EXPLICIT,
+                ),
+                true,
+            ),
+            "con la preferencia",
+        ),
+        (
+            attended(
+                a_request(
+                    "op=signandsave&cop=sign&format=XAdES&algorithm=SHA256withRSA",
+                    Some(AN_XML_CHALLENGE),
+                    EXPLICIT,
+                ),
+                false,
+                true,
+            ),
+            "solo esta vez, en signandsave",
+        ),
+    ] {
+        assert!(attended.refused_at_consent.is_none(), "{what}");
+        let bridged = attended.bridged.expect("la prefirma cruzo");
+        assert_eq!(
+            bridged.document,
+            the_sha1_of(AN_XML_CHALLENGE),
+            "{what}: el puente recibe la huella SHA-1 de los datos"
+        );
+        assert!(
+            bridged.extra_params.contains("mimeType=hash/sha1"),
+            "{what}: {}",
+            bridged.extra_params
+        );
+        assert_eq!(
+            attended.signed_with,
+            vec![SignatureAlgorithm::Sha256Ecdsa],
+            "{what}: el algoritmo es el que pidio la sede"
+        );
+        assert_eq!(
+            attended.shown.as_deref(),
+            Some(AN_XML_CHALLENGE),
+            "{what}: el consentimiento enseña el documento de la sede"
+        );
+    }
+}
+
+#[test]
+fn with_the_preference_an_explicit_xades_carries_the_sha1_mark() {
+    let attended = attended_with_the_preference(
+        a_request(
+            "op=sign&format=XAdES&algorithm=SHA256",
+            Some(AN_XML_CHALLENGE),
+            EXPLICIT,
+        ),
+        true,
     );
 
-    let attended = attended_with_the_preference(url, true);
+    let ErrandStep::AskingToSign(asking) = &attended.step else {
+        panic!("llega al consentimiento: {:?}", attended.step);
+    };
+    assert!(!asking.sha1_to_allow);
+    assert!(matches!(
+        asking.consenting(),
+        Moment::AskingToSign {
+            sha1_allowed: true,
+            sha1_to_allow: false,
+            ..
+        }
+    ));
+}
 
-    let refusal = the_refusal_shown(&attended.step, "XAdES explícita");
-    assert_eq!(refusal.situation(), RefusalSituation::ExplicitXades);
-    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+#[test]
+fn an_explicit_xades_outside_a_first_signature_signs_the_whole_document() {
+    for (url, document, what) in [
+        (
+            a_request(
+                "op=sign&format=XAdES&algorithm=SHA256",
+                Some(AN_XML_CHALLENGE),
+                "mode=explicit\nuseManifest=true\n",
+            ),
+            AN_XML_CHALLENGE,
+            "con useManifest=true",
+        ),
+        (
+            a_request(
+                "op=cosign&format=XAdES&algorithm=SHA256",
+                Some(A_XADES_SIGNATURE),
+                EXPLICIT,
+            ),
+            A_XADES_SIGNATURE,
+            "cofirma",
+        ),
+        (
+            a_request(
+                "op=countersign&format=XAdES&algorithm=SHA256",
+                Some(A_XADES_SIGNATURE),
+                EXPLICIT,
+            ),
+            A_XADES_SIGNATURE,
+            "contrafirma",
+        ),
+    ] {
+        let attended = attended_with_the_preference(url, false);
+
+        let ErrandStep::AskingToSign(asking) = &attended.step else {
+            panic!("{what}: llega al consentimiento: {:?}", attended.step);
+        };
+        assert!(!asking.sha1_to_allow, "{what}: no pide SHA-1");
+        let bridged = attended.bridged.expect("la prefirma cruzo");
+        assert_eq!(bridged.document, document, "{what}: el documento entero");
+        assert!(
+            !bridged.extra_params.contains("hash/sha1"),
+            "{what}: {}",
+            bridged.extra_params
+        );
+    }
 }

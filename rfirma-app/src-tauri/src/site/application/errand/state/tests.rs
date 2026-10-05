@@ -43,6 +43,7 @@ fn asking_with(label: &str) -> Moment {
 fn a_pending_signature() -> PendingSignature {
     PendingSignature {
         document: "doc-1".to_owned(),
+        sha1_of_the_data: None,
         filter: SiteFilter::default(),
         format: Format::Pades,
         algorithm: AskedAlgorithm::Sha256,

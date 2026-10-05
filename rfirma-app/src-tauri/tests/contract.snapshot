@@ -432,7 +432,6 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       ErrandInFlight
       PortsTaken
       Sha1
-      ExplicitXades
       InvoiceMultisignature
       UnsupportedCountersignature
       BatchPresignerUnreachable

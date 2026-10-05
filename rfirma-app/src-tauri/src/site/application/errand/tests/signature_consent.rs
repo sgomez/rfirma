@@ -348,7 +348,7 @@ fn the_asic_s_container_of_cades_reaches_the_consent_like_any_other_format() {
 }
 
 #[test]
-fn explicit_mode_with_xades_is_refused_before_asking_for_consent() {
+fn explicit_mode_with_xades_asks_to_allow_sha1_before_consenting() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -374,10 +374,11 @@ fn explicit_mode_with_xades_is_refused_before_asking_for_consent() {
         &live,
     );
 
-    let ErrandStep::ShowingTheRefusal(refusal) = step else {
-        panic!("la XAdES explicita firma la huella SHA-1: {step:?}");
+    let ErrandStep::AskingToSign(consent) = step else {
+        panic!("la XAdES explicita llega al consentimiento: {step:?}");
     };
-    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+    assert!(consent.sha1_to_allow, "firma la huella SHA-1");
+    assert!(consent.sha1_of_the_data.is_some());
 }
 
 /// Y los formatos que el puente sí atiende siguen su curso hasta el consentimiento.

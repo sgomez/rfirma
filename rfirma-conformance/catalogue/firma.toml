@@ -1322,7 +1322,7 @@ declarado con mimeType=hash/sha1.
 [check.drive]
 mode = "v4"
 script = "signxadesexplicit"
-act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma firma sin enseñar nada; rFirma enseña el rechazo antes de contestar a la sede."
+act.consent = "AutoFirma firma sin enseñar nada; rFirma pide permiso para firmar con SHA-1, salvo que esté permitido en Preferencias: elige «Firmar solo esta vez» y el certificado."
 expects.completes.conditions = ["the-sha1-of-the-data-signed"]
 
 [[check]]

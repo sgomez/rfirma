@@ -111,32 +111,6 @@ fn assert_shown_then_answered(refused: &Refused, situation: RefusalSituation, co
 }
 
 #[test]
-fn an_explicit_xades_sent_by_the_site_is_shown_before_the_site_gets_saf_06() {
-    let url = a_request("sign", "XAdES", Some(AN_XML_CHALLENGE), "mode=explicit\n");
-
-    let refused = what_happens_with(url, None);
-
-    assert_shown_then_answered(
-        &refused,
-        RefusalSituation::ExplicitXades,
-        SafCode::UnsupportedFormat,
-    );
-}
-
-#[test]
-fn an_explicit_xades_over_a_chosen_document_is_shown_instead_of_leaving_the_selector_hanging() {
-    let url = a_request("sign", "XAdES", None, "mode=explicit\n");
-
-    let refused = what_happens_with(url, Some(AN_XML_CHALLENGE));
-
-    assert_shown_then_answered(
-        &refused,
-        RefusalSituation::ExplicitXades,
-        SafCode::UnsupportedFormat,
-    );
-}
-
-#[test]
 fn a_cosignature_of_an_invoice_sent_by_the_site_is_shown_before_the_site_gets_saf_04() {
     let url = a_request("cosign", "FacturaE", Some(AN_INVOICE), "");
 
