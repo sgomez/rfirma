@@ -24,9 +24,9 @@ import { isAPdf } from "./documents/document";
 import { RecentsSection } from "./documents/RecentRows";
 import type { RecentDocument } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
-import { classify } from "./errors/classify";
+import { useOpenPdf } from "./documents/useOpenPdf";
 import { firstSealedPage } from "./placement/pageSets";
-import { type PlacedDocument, usePlacement } from "./placement/usePlacement";
+import { usePlacement } from "./placement/usePlacement";
 import { PreferencesView } from "./preferences/PreferencesView";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
@@ -40,9 +40,7 @@ import { StatusView } from "./status/StatusView";
 import { InstallUpdateDialog } from "./updates/InstallUpdateDialog";
 import { NewVersionStrip } from "./updates/NewVersionStrip";
 import { DocumentViewer } from "./viewer/DocumentViewer";
-import type { PdfDocument } from "./viewer/pdf";
 import { standardRectOnPageOf } from "./viewer/signatureBox";
-import type { DocumentFailure } from "./viewer/source";
 
 type OpenDialog = "about" | "installUpdate" | null;
 type ActiveView = "status" | "preferences" | null;
@@ -120,21 +118,9 @@ export function App({
   const { newVersion, versionDismissed, setVersionDismissed, setStatusRows, hasAttention } =
     useStartupNotices(status, versions);
 
-  const [pdf, setPdf] = useState<PdfDocument | null>(null);
-  // Por qué no se pudo pintar el último documento que se eligió. Vive al lado
-  // del PDF y no dentro del visor porque lo produce quien abre, y el visor solo
-  // lo enseña.
-  const [pdfFailure, setPdfFailure] = useState<DocumentFailure | null>(null);
-  // Cuánto ocupa el documento que hay delante. Lo cuenta quien lo abrió, que es
-  // el único que ve los bytes: por encima de cierto tamaño la vista previa del
-  // sello deja de recalcularse sola.
-  const [sizeBytes, setSizeBytes] = useState<number | null>(null);
   // Un gesto sobre el recuadro está en curso. Sólo lo mira la vista previa: es
   // lo que congela la vista anterior en vez de pagar un ciclo por fotograma.
   const [gesturing, setGesturing] = useState(false);
-  // Un valor nuevo por cada apertura, también del mismo documento: es lo que
-  // repone la colocación.
-  const [placedDocument, setPlacedDocument] = useState<PlacedDocument | null>(null);
   const {
     certificate,
     lookForCertificates,
@@ -153,6 +139,14 @@ export function App({
   const rememberActivity = settings?.rememberActivity ?? true;
   const documents = useDocuments(recents, picker, rememberActivity);
   const activeId = documents.active?.id ?? null;
+  const {
+    pdf,
+    failure: pdfFailure,
+    sizeBytes,
+    opening,
+    open: openDocument,
+    clearRecents,
+  } = useOpenPdf(documents, pdfs);
   // Con la actividad apagada no se enseñan los recientes que ya hubiera guardados.
   const visibleRecents = rememberActivity ? documents.recents : NO_RECENTS;
   const previousSignatures = usePreviousSignatures(signer, activeId);
@@ -176,9 +170,13 @@ export function App({
     [signingInstant, i18n.language],
   );
 
+  useEffect(() => {
+    if (opening !== null) setSigningInstant(new Date());
+  }, [opening]);
+
   const standardRectOn = useMemo(() => (pdf === null ? null : standardRectOnPageOf(pdf)), [pdf]);
   const placementState = usePlacement({
-    document: placedDocument,
+    document: opening,
     standardRectOn,
     onChange: documents.place,
   });
@@ -193,34 +191,6 @@ export function App({
   // firma se decide con la orden ya armada.
   const boxPage = placement === null ? null : (firstSealedPage(placement) ?? 1);
   const geometry = usePageGeometry(pdf, boxPage);
-
-  useEffect(() => {
-    const active = documents.active;
-    if (!active || !isAPdf(active)) {
-      setPdf(null);
-      setPdfFailure(null);
-      setSizeBytes(null);
-      setPlacedDocument(null);
-      return;
-    }
-    let current = true;
-    void pdfs.open(active).then((opened) => {
-      if (!current) return;
-      setPdf(opened.ok ? opened.pdf : null);
-      setPdfFailure(opened.ok ? null : opened.failure);
-      setSizeBytes(opened.ok ? opened.sizeBytes : null);
-      setPlacedDocument({
-        placement: active.placement,
-        pageCount: opened.ok ? opened.pdf.pageCount : 0,
-      });
-      // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
-      // abrió, y el recuadro de este llevaría estampada una hora vieja.
-      setSigningInstant(new Date());
-    });
-    return () => {
-      current = false;
-    };
-  }, [documents.active, pdfs]);
 
   const viewedSignatures = useViewedSignatures(signer, activeId);
   const { dropNotice } = useDropNotices(
@@ -238,13 +208,6 @@ export function App({
     signer,
   );
   const { failedHere } = useSigningFailure(signing, activeId);
-
-  // Sin el `catch`, el rechazo quedaría sin dueño; se cuenta en el visor.
-  const reportingFailure = (command: () => Promise<void>) => () => {
-    command().catch((thrown: unknown) => setPdfFailure(classify(thrown)));
-  };
-  const openDocument = reportingFailure(documents.open);
-  const clearRecents = reportingFailure(documents.clearRecents);
 
   const signFlow = useSignFlow({
     pdf,
