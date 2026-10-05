@@ -343,3 +343,34 @@ fn certgui_excludes_alias_and_certtui_but_not_a_filter() {
         assert_eq!(outcome.exit_code, REFUSED, "{extra:?}");
     }
 }
+
+#[test]
+fn xades_with_sha1_is_refused_before_the_window_asks_for_a_certificate() {
+    let window = ScriptedWindow::choosing(0, Some("1234"));
+    let signer = RecordingSigner::default();
+    let files = FilesInMemory::with("doc.pdf", A_PDF);
+    let ports = CommandLinePorts {
+        stores: &StoresHolding(vec![a_usable_certificate("uno")]),
+        terminal: &ScriptedTerminal,
+        descriptor: &ScriptedDescriptor,
+        desktop: &RecordingDesktop::default(),
+        filter: &Untouched,
+        files: &files,
+        verifier: &Untouched,
+        reader: &Untouched,
+        time_zone: &Untouched,
+        language: crate::signing::domain::Language::Spanish,
+        platform: crate::desktop::domain::platform::Platform::Linux,
+        signer: &signer,
+        window: &window,
+        sha1_allowed: true,
+    };
+    let mut words = CERTGUI.to_vec();
+    words.extend(["-format", "xades", "-algorithm", "sha1"]);
+
+    let outcome = attend(&arguments_of(&words), &ports);
+
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(window.shown.borrow().is_empty());
+    assert!(signer.asked.borrow().is_empty());
+}

@@ -373,7 +373,13 @@ fn each_command_gives_its_syntax_on_stdout_with_help() {
 
 #[test]
 fn a_parameter_not_yet_available_fails_with_a_clear_message_and_an_empty_stdout() {
-    let outcome = attended(&["cosign", "-i", "a.pdf", "-o", "b.pdf", "-certtui"]);
+    let outcome = attended_in(
+        &["cosign", "-i", "a.pdf", "-o", "b.pdf", "-certtui"],
+        &StoresWith::labels(&["yo"]),
+        &RecordingDesktop::default(),
+        &FilesInMemory::with("a.pdf", A_PDF),
+        &RecordingSigner::default(),
+    );
 
     assert_eq!(outcome.exit_code, FAILED);
     assert!(outcome.stdout.is_empty());
