@@ -67,6 +67,7 @@ export function tauriSiteErrands(): SiteErrandPort {
     // que se cerró sin elegir, y un rechazo llega tal cual a quien llama.
     installCertificate: () => invoke<boolean>("site_install_certificate"),
     lookAgain: () => invoke<void>("site_look_again"),
+    allowSha1Once: () => invoke<void>("site_allow_sha1_once"),
     installLocalCa: () => invoke<void>("install_local_ca"),
     closeWindow: () => invoke<void>("close_site_window"),
     dismissWarning: () => invoke<void>("site_dismiss_the_warning"),

@@ -280,6 +280,7 @@ fn with_the_five_roots(
             site::adapters::tauri::site_finish_signing,
             site::adapters::tauri::site_install_certificate,
             site::adapters::tauri::site_look_again,
+            site::adapters::tauri::site_allow_sha1_once,
             site::adapters::tauri::site_dismiss_the_warning,
             site::adapters::tauri::site_save_file,
             site::adapters::tauri::site_load_files,
@@ -481,35 +482,7 @@ fn the_transport(
     use site::application::errand::Transport as _;
     use tauri::Manager as _;
 
-    let inbox = {
-        let handle = app.clone();
-        let arrived_handle = app.clone();
-        let left_handle = app.clone();
-        let idle_handle = app.clone();
-        site::ports::Inbox::of(
-            move || {
-                arrived_handle
-                    .state::<site::SiteRoot>()
-                    .errand
-                    .browser_arrived();
-            },
-            move |url, origin, reply| {
-                site::adapters::window::attend_site_operation(&handle, url, origin, reply);
-            },
-        )
-        .when_the_first_client_leaves(move || {
-            left_handle
-                .state::<site::SiteRoot>()
-                .errand
-                .the_first_client_left();
-        })
-        .when_the_channel_idles(move || {
-            idle_handle
-                .state::<site::SiteRoot>()
-                .errand
-                .the_channel_went_idle();
-        })
-    };
+    let inbox = site::adapters::window::the_inbox(app);
 
     let wss = site::adapters::transport::LoopbackWss::new(store.clone(), inbox.clone());
 

@@ -86,6 +86,15 @@ fn the_remote_batch_with_the_preference(
     presign: Vec<u8>,
     allowed: bool,
 ) -> RemoteBatch {
+    the_remote_batch(url, presign, allowed, false)
+}
+
+fn the_remote_batch(
+    url: &AfirmaUrl,
+    presign: Vec<u8>,
+    allowed: bool,
+    allowed_once: bool,
+) -> RemoteBatch {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = remembering_the_preference(home.path(), allowed);
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -106,6 +115,9 @@ fn the_remote_batch_with_the_preference(
     let ErrandStep::AskingToSignTheBatch(asked) = remembered(&live, step) else {
         panic!("un lote pide consentimiento");
     };
+    if allowed_once {
+        live.allow_sha1_once();
+    }
     consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
     let finished = finish_the_batch(&desk, &the_typed_secret(), &live);
 
@@ -307,4 +319,51 @@ fn a_local_batch_with_sha2_carries_no_sha1_mark() {
     let batch = the_local_batch_with_the_preference(&a_local_batch(""), true);
 
     assert!(!batch.consent.sha1_allowed);
+}
+
+#[test]
+fn without_the_preference_a_remote_batch_with_sha1_asks_to_allow_it_and_never_consents_alone() {
+    for (url, presign, what) in remote_batches_with_sha1() {
+        let batch = the_remote_batch_with_the_preference(&url, presign, false);
+
+        assert!(batch.consent.sha1_to_allow, "{what}: pide permitirlo");
+        assert!(!batch.consent.without_asking, "{what}: no consiente solo");
+    }
+}
+
+#[test]
+fn allowed_once_a_remote_batch_signs_every_pk1_with_sha1_without_the_preference() {
+    for (url, presign, what) in remote_batches_with_sha1() {
+        let batch = the_remote_batch(&url, presign, false, true);
+
+        batch.finished.expect("el lote sale entero");
+        assert!(!batch.signed_with.is_empty(), "{what}: el token firma");
+        assert!(
+            batch
+                .signed_with
+                .iter()
+                .all(|algorithm| algorithm.starts_with("SHA1")),
+            "{what}: cada PK1 se firma con SHA-1: {:?}",
+            batch.signed_with
+        );
+    }
+}
+
+#[test]
+fn with_the_preference_a_remote_batch_with_sha1_does_not_ask_to_allow_it() {
+    for (url, presign, what) in remote_batches_with_sha1() {
+        let batch = the_remote_batch_with_the_preference(&url, presign, true);
+
+        assert!(!batch.consent.sha1_to_allow, "{what}");
+    }
+}
+
+#[test]
+fn allowing_sha1_once_lasts_only_until_the_operation_ends() {
+    let live = a_live();
+
+    live.allow_sha1_once();
+    live.end();
+
+    assert!(!live.sha1_allowed_once());
 }

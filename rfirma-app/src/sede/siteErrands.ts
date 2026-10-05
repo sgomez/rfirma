@@ -112,6 +112,8 @@ export interface SiteCommands {
   installCertificate(): Promise<boolean>;
   /** `site_look_again`: continúa el trámite, no lo reinicia. */
   lookAgain(): Promise<void>;
+  /** `site_allow_sha1_once`: permite SHA-1 solo en esta operación, sin tocar Preferencias. */
+  allowSha1Once(): Promise<void>;
   /** `install_local_ca`: sin ella el navegador ni llega a preguntar. */
   installLocalCa(): Promise<void>;
   /** `close_site_window`. */
@@ -227,6 +229,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
 
     signing = { certificate, document: stage.document, signs: stage.signs };
     move({ kind: "signing", certificate, phase: "signing" });
+    if (stage.sha1ToAllow) await commands.allowSha1Once();
     const begun = await commands.beginSigning(certificateId);
     if (arrival !== arrivals) return;
     if (!begun.ok && (begun.failure.situation as string) === DECLINED) {

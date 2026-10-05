@@ -172,6 +172,28 @@
   list-style: none;
 }
 
+/* El aviso de SHA-1: el título a la altura del triángulo y el cuerpo sangrado hasta su texto. */
+.sede-consent__warning {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  margin-block: var(--rf-space-sm);
+}
+
+.sede-consent__warning-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sede-consent__warning-head > .rf-title {
+  font-size: 16px;
+}
+
+.sede-consent__warning-body {
+  padding-left: 30px;
+}
+
 /* 3 · Firmando */
 
 .sede-signing {

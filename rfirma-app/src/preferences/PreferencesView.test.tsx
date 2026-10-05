@@ -249,14 +249,14 @@ describe("PreferencesView", () => {
     expect(onChange).toHaveBeenCalledWith({ ...defaults, allowSha1: true });
   });
 
-  it("explains the SHA-1 risk and that it does not apply to XML", async () => {
+  it("explains the SHA-1 risk in plain words", async () => {
     const user = userEvent.setup();
     renderView({ preferences: { ...defaults, allowSha1: true } });
     await openTab(user, "Firma");
 
     const toggle = screen.getByRole("switch", { name: "Permitir SHA-1" });
     expect(toggle).toBeChecked();
-    expect(toggle).toHaveAccessibleDescription(/ya no es seguro.*No vale para firmas XML/);
+    expect(toggle).toHaveAccessibleDescription(/menos seguro.*si confías en la sede/);
   });
 
   it("closes on Cerrar", async () => {

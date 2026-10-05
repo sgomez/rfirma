@@ -79,6 +79,7 @@ impl ErrandStep {
                 already_chosen: consent.already_chosen.clone(),
                 without_asking: consent.without_asking,
                 sha1_allowed: consent.sha1_allowed,
+                sha1_to_allow: consent.sha1_to_allow,
             }),
             Self::AskingToSignTheLocalBatch(consent) => Some(Moment::AskingToSignTheLocalBatch {
                 items: consent.items.clone(),
@@ -227,6 +228,8 @@ pub struct BatchConsent {
     pub without_asking: bool,
     /// Si el lote se firma con SHA-1 porque la persona lo permite.
     pub sha1_allowed: bool,
+    /// Si el lote pide SHA-1 y la persona no lo permite todavía, ni en Preferencias ni en esta operación.
+    pub sha1_to_allow: bool,
 }
 
 /// El resumen de un elemento del lote local: ni su ruta ni su contenido cruzan.
@@ -448,6 +451,8 @@ pub enum Moment {
         without_asking: bool,
         /// Si el lote se firma con SHA-1 porque la persona lo permite.
         sha1_allowed: bool,
+        /// Si el lote pide SHA-1 y la persona no lo permite todavía.
+        sha1_to_allow: bool,
     },
     /// Consentimiento del lote local, con el resumen de cada uno de sus elementos.
     AskingToSignTheLocalBatch {

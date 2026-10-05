@@ -165,6 +165,30 @@ fn fit_to(window: &tauri::WebviewWindow, moment: &Moment) {
     let _ = window.center();
 }
 
+/// El buzón del canal: lo que llega de la sede va a la ventana y al trámite vivo.
+pub fn the_inbox(app: &tauri::AppHandle) -> crate::site::ports::Inbox {
+    let handle = app.clone();
+    let arrived_handle = app.clone();
+    let left_handle = app.clone();
+    let idle_handle = app.clone();
+    crate::site::ports::Inbox::of(
+        move || arrived_handle.state::<SiteRoot>().errand.browser_arrived(),
+        move |url, origin, reply| attend_site_operation(&handle, url, origin, reply),
+    )
+    .when_the_first_client_leaves(move || {
+        left_handle
+            .state::<SiteRoot>()
+            .errand
+            .the_first_client_left();
+    })
+    .when_the_channel_idles(move || {
+        idle_handle
+            .state::<SiteRoot>()
+            .errand
+            .the_channel_went_idle();
+    })
+}
+
 /// Publica el rechazo de un servidor intermedio que no pudo entregar la respuesta a la sede.
 pub fn note_a_relay_failure(app: &tauri::AppHandle, refusal: Refusal) {
     app.state::<SiteRoot>()

@@ -58,6 +58,15 @@ describe("2 · consent", () => {
     expect(calls.consent).toHaveBeenCalledWith("handle-1");
   });
 
+  describe("a site asking for SHA-1 the person has not allowed", () => {
+    it("signs just this once, with the countdown even when it is turned off", () => {
+      const { port } = scriptedErrand(consentStage({ sha1ToAllow: true }));
+      renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
+
+      expect(screen.getByRole("button", { name: /^Firmar solo esta vez \(\d+\)$/ })).toBeDisabled();
+    });
+  });
+
   describe("preselection", () => {
     const expired = { kind: "expired", notAfter: 1_600_000_000 } as const;
 

@@ -13,6 +13,8 @@ describe("el lote remoto", () => {
       certificates: [certificate()],
       alreadyChosen: null,
       withoutAsking: false,
+      sha1Allowed: false,
+      sha1ToAllow: false,
     },
   };
 
@@ -26,6 +28,8 @@ describe("el lote remoto", () => {
         certificates: [certificate()],
         alreadyChosen: "handle-1",
         withoutAsking: true,
+        sha1Allowed: false,
+        sha1ToAllow: false,
       },
     });
 
@@ -49,6 +53,46 @@ describe("el lote remoto", () => {
       outcome: { kind: "batchSigned", signs: 3 },
     });
     expect(seen.map((errand) => errand?.stage.kind)).toEqual(["consent", "signing", "outcome"]);
+  });
+
+  it("allows SHA-1 just this once before beginning to sign a batch that asks for it", async () => {
+    const order: string[] = [];
+    const { push, port, last } = watched({
+      allowSha1Once: async () => {
+        order.push("allowSha1Once");
+      },
+      beginSigning: async () => {
+        order.push("beginSigning");
+        return { ok: true, value: { kind: "typedOnScreen" } };
+      },
+    });
+    push({
+      origin: "sede.ejemplo.gob.es",
+      stage: {
+        kind: "askingToSignTheBatch",
+        signs: 3,
+        certificates: [certificate()],
+        alreadyChosen: null,
+        withoutAsking: false,
+        sha1Allowed: false,
+        sha1ToAllow: true,
+      },
+    });
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.consent("handle-1");
+
+    expect(order).toEqual(["allowSha1Once", "beginSigning"]);
+  });
+
+  it("does not allow SHA-1 for a batch that does not ask for it", async () => {
+    const { push, port, calls, last } = watched();
+    push(ASKING_TO_SIGN_THE_BATCH);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.consent("handle-1");
+
+    expect(calls.allowSha1Once).not.toHaveBeenCalled();
   });
 
   it("names the batch's own refusals as the refusal table knows them", async () => {

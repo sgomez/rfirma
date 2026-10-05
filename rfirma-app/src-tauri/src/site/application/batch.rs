@@ -39,6 +39,8 @@ pub struct BatchRun<'a> {
     pub certificate: &'a TokenCertificate,
     /// El secreto ya abierto, el mismo para todas las firmas.
     pub secret: &'a ProtectedSecret,
+    /// Si la persona permite SHA-1, en Preferencias o solo en esta operación (ADR-0023).
+    pub sha1_allowed: bool,
 }
 
 /// Caso de uso: prefirma el lote, firma cada `PK1` con el token y postfirma; el resultado sale tal cual.
@@ -112,7 +114,7 @@ fn every_pre_signed(
     request: &BatchRequest,
     triphase_data: TriphaseData,
 ) -> Result<TriphaseData, SiteRefusal> {
-    let algorithm = batch_algorithm(format_of(request), request.lote(), run.token.sha1_allowed())
+    let algorithm = batch_algorithm(format_of(request), request.lote(), run.sha1_allowed)
         .map_err(refused_header)?;
     let mut refused: Option<SigningRefusal> = None;
     let with_pk1 = apply_pk1(triphase_data, |pre| {

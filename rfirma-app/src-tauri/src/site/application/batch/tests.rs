@@ -62,6 +62,7 @@ fn a_run<'a>(
         token,
         certificate,
         secret: the_test_secret(),
+        sha1_allowed: token.sha1_allowed(),
     }
 }
 

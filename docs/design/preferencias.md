@@ -102,8 +102,8 @@ Un solo grupo, **Privacidad** (`preferences.sections.privacy`):
   (`preferences.honourAutomaticSelection.label`), apagado por omisión: si solo
   sirve uno, la sede lo elige sin preguntar.
 - **Permitir SHA-1** (`preferences.allowSha1.*`), apagado por omisión, con su
-  explicación del riesgo debajo: algunas sedes aún lo piden, ya no es seguro y
-  no vale para firmas XML.
+  explicación debajo, sin tecnicismos: algunas sedes antiguas lo piden y es
+  menos seguro, así que se activa solo si se confía en la sede.
 
 ### Certificados
 

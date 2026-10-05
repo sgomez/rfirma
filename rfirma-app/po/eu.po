@@ -1074,10 +1074,8 @@ msgstr "Onartu SHA-1"
 
 msgid "preferences.allowSha1.hint"
 msgstr ""
-"Egoitza batzuek oraindik SHA-1 eskatzen dute, jada segurua ez den "
-"algoritmoa: harekin sinadura bera duten bi dokumentu fabrika daitezke. "
-"Aktibatu soilik zure konfiantzazko egoitza batek behar badu. Ez du balio XML "
-"sinaduretarako."
+"Egoitza zahar batzuek eskatzen dute. Ez da hain segurua: aktibatu egoitzaz "
+"fidatzen bazara bakarrik."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Gogoratu nire jarduera"
@@ -1311,6 +1309,17 @@ msgid "sede.consent.sha1Allowed"
 msgstr ""
 "Egoitza honek SHA-1 eskatzen du, algoritmo zaharkitua. Hobespenetan onartuta "
 "daukazu."
+
+msgid "sede.consent.sha1ToAllowTitle"
+msgstr "Sinadura ez hain segurua"
+
+msgid "sede.consent.sha1ToAllow"
+msgstr ""
+"Egoitza honek SHA-1 erabiltzen du, sinatzeko metodo zahar eta ez hain "
+"segurua. Sinatu fidatzen bazara bakarrik."
+
+msgid "sede.consent.signOnce"
+msgstr "Sinatu oraingo honetan bakarrik"
 
 msgid "sede.consent.willSend"
 msgstr ""

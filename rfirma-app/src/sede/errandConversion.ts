@@ -111,6 +111,7 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         certificates: stage.certificates,
         narrowed: false,
         sha1Allowed: false,
+        sha1ToAllow: false,
       };
     case "askingToSign":
       return {
@@ -122,6 +123,7 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         certificates: stage.certificates,
         narrowed: false,
         sha1Allowed: stage.sha1Allowed,
+        sha1ToAllow: false,
       };
     case "askingToConfirm":
       return { kind: "confirming", messageCode: stage.messageCode };
@@ -138,7 +140,8 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         items: null,
         certificates: stage.certificates,
         narrowed: false,
-        sha1Allowed: false,
+        sha1Allowed: stage.sha1Allowed,
+        sha1ToAllow: stage.sha1ToAllow,
       };
     case "askingToSignTheLocalBatch":
       // Igual que el lote remoto, y además con el resumen de cada elemento:
@@ -152,6 +155,7 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         certificates: stage.certificates,
         narrowed: false,
         sha1Allowed: false,
+        sha1ToAllow: false,
       };
   }
 }

@@ -3,7 +3,7 @@
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileIcon } from "../design-system/icons";
+import { AlertIcon, FileIcon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
 import type { Certificate } from "../signing/certificate";
 import { sitePreselection } from "../signing/certificate";
@@ -63,10 +63,14 @@ export function SedeConsent({
   // firmar: una sola pregunta, resuelta en el vocabulario del trámite y no
   // repetida aquí.
   const identity = consentActionKey(operation) === "identify";
-  const remaining = useConsentCountdown(countdown);
+  const remaining = useConsentCountdown(countdown || stage.sha1ToAllow);
   const ready = chosen !== null && remaining === 0;
   const consentButton = useDefaultButton(ready);
-  const action = identity ? t("sede.consent.identify") : t("actions.sign");
+  const action = identity
+    ? t("sede.consent.identify")
+    : stage.sha1ToAllow
+      ? t("sede.consent.signOnce")
+      : t("actions.sign");
 
   return (
     <SedeBody
@@ -133,6 +137,18 @@ export function SedeConsent({
             )}
 
             {stage.sha1Allowed && <p className="rf-hint">{t("sede.consent.sha1Allowed")}</p>}
+
+            {stage.sha1ToAllow && (
+              <div className="sede-consent__warning">
+                <div className="sede-consent__warning-head">
+                  <AlertIcon size={20} />
+                  <span className="rf-title">{t("sede.consent.sha1ToAllowTitle")}</span>
+                </div>
+                <p className="rf-body sede-consent__warning-body">
+                  {t("sede.consent.sha1ToAllow")}
+                </p>
+              </div>
+            )}
 
             {stage.document !== null && (
               <DocumentCard document={stage.document} certificate={chosen} />

@@ -314,6 +314,7 @@ pub fn finish_the_batch<E: FilterEngine, P: PolicyEngine>(
             token: desk.neighbours,
             certificate: &chosen,
             secret,
+            sha1_allowed: desk.neighbours.sha1_allowed() || live.sha1_allowed_once(),
         },
         &request,
     )

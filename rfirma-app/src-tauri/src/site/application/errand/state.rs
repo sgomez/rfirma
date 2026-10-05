@@ -48,6 +48,7 @@ pub struct LiveErrand {
     held_launch: Mutex<Option<HeldLaunch>>,
     chosen_document: Mutex<Option<String>>,
     origin: Mutex<SiteOrigin>,
+    sha1_once: std::sync::atomic::AtomicBool,
 }
 
 /// Datos identificativos y de conexión de un trámite en curso.
@@ -234,7 +235,20 @@ impl LiveErrand {
         }
         *crate::lock(&self.asked) = None;
         *crate::lock(&self.chosen_document) = None;
+        self.sha1_once
+            .store(false, std::sync::atomic::Ordering::SeqCst);
         self.forget_the_consent();
+    }
+
+    /// Permite SHA-1 fuera de XML solo en la operación en curso, sin tocar la preferencia (ADR-0023).
+    pub fn allow_sha1_once(&self) {
+        self.sha1_once
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// Si la persona permitió SHA-1 en la operación en curso.
+    pub fn sha1_allowed_once(&self) -> bool {
+        self.sha1_once.load(std::sync::atomic::Ordering::SeqCst)
     }
 
     fn serves_many_operations(&self) -> bool {

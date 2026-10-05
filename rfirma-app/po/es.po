@@ -1073,9 +1073,8 @@ msgstr "Permitir SHA-1"
 
 msgid "preferences.allowSha1.hint"
 msgstr ""
-"Algunas sedes todavía piden SHA-1, un algoritmo que ya no es seguro: con él "
-"se pueden fabricar dos documentos con la misma firma. Actívalo solo si una "
-"sede de tu confianza lo necesita. No vale para firmas XML."
+"Algunas sedes antiguas lo piden. Es menos seguro: actívalo solo si confías "
+"en la sede."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar mi actividad"
@@ -1307,6 +1306,17 @@ msgid "sede.consent.sha1Allowed"
 msgstr ""
 "Esta sede pide SHA-1, un algoritmo obsoleto. Lo tienes permitido en "
 "Preferencias."
+
+msgid "sede.consent.sha1ToAllowTitle"
+msgstr "Firma poco segura"
+
+msgid "sede.consent.sha1ToAllow"
+msgstr ""
+"Esta sede usa SHA-1, un método de firma antiguo y menos seguro. Firma solo "
+"si confías en ella."
+
+msgid "sede.consent.signOnce"
+msgstr "Firmar solo esta vez"
 
 msgid "sede.consent.willSend"
 msgstr ""
