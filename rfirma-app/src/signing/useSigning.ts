@@ -1,4 +1,4 @@
-//! El recorrido de firma etapa a etapa, y el acuse o el error que se enseñan solo mientras sigue delante su documento.
+//! Las tres etapas de la firma trifásica, el tramo del recorrido que llega al backend, y el acuse o el error que se enseñan solo mientras sigue delante su documento.
 
 import { useState } from "react";
 import type { Certificate } from "./certificate";
@@ -6,7 +6,7 @@ import { refusalFor, type SigningFailure } from "./failure";
 import type { SignedDocument, SigningBackend, SigningOrder, SigningStage } from "./flow";
 
 /**
- * En qué punto del recorrido de firma está la ventana.
+ * En qué punto de las tres etapas está la firma.
  *
  * `signed` y `failed` llevan dentro el **identificador del documento de
  * partida** (`origin`), y no solo lo que produjo el ciclo: el acuse de recibo y
@@ -60,7 +60,7 @@ export interface Signing {
 }
 
 /**
- * El recorrido de firma, etapa a etapa.
+ * Las tres etapas de la firma trifásica, una tras otra.
  *
  * El orden no es negociable y es el del ADR: **prefirma → firma → postfirma**.
  * El diálogo modal del secreto, de ser necesario, lo gestiona de forma nativa
