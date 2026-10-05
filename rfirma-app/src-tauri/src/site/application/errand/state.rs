@@ -35,7 +35,7 @@ struct KeptScratch {
 pub struct LiveErrand {
     errand: Mutex<Option<Errand>>,
     codec: Mutex<Option<NegotiatedCodec>>,
-    scratch: Mutex<Option<KeptScratch>>,
+    scratch: Mutex<Vec<KeptScratch>>,
     reply: Mutex<Option<ReplyHandle>>,
     asked: Mutex<Option<AfirmaUrl>>,
     consent: Mutex<Option<PendingConsent>>,
@@ -132,9 +132,9 @@ impl LiveErrand {
         live
     }
 
-    /// Registra la ruta temporal del documento de paso.
+    /// Registra la ruta temporal de un fichero de paso, que se borra al acabar la operación.
     pub(super) fn keep_the_scratch(&self, path: PathBuf, files: Arc<dyn Scratch + Send + Sync>) {
-        *crate::lock(&self.scratch) = Some(KeptScratch { path, files });
+        crate::lock(&self.scratch).push(KeptScratch { path, files });
     }
 
     /// Registra la petición original de la sede.
@@ -230,7 +230,7 @@ impl LiveErrand {
 
     fn end_the_operation(&self) {
         drop(crate::lock(&self.reply).take());
-        if let Some(scratch) = crate::lock(&self.scratch).take() {
+        for scratch in std::mem::take(&mut *crate::lock(&self.scratch)) {
             scratch.files.erase(&scratch.path);
         }
         *crate::lock(&self.asked) = None;
@@ -335,11 +335,11 @@ impl LiveErrand {
         }
     }
 
-    /// Ruta al fichero temporal para pruebas.
+    /// Ruta al primer fichero de paso de la operación, para pruebas.
     #[cfg(test)]
     pub fn scratch_path(&self) -> Option<PathBuf> {
         crate::lock(&self.scratch)
-            .as_ref()
+            .first()
             .map(|scratch| scratch.path.clone())
     }
 

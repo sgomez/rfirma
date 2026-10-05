@@ -217,10 +217,6 @@ fn each_refusal_situation_crosses_as_its_own_view() {
             RefusalSituationView::PortsTaken,
         ),
         (
-            RefusalSituation::ExplicitXades,
-            RefusalSituationView::ExplicitXades,
-        ),
-        (
             RefusalSituation::InvoiceMultisignature,
             RefusalSituationView::InvoiceMultisignature,
         ),

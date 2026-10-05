@@ -65,26 +65,23 @@ pub fn refuse_a_countersignature_outside_cades_and_xades(
     Ok(())
 }
 
-/// `SAF_06` donde AutoFirma firmaría la huella SHA-1 en vez del documento.
-pub fn refuse_explicit_xades(
+/// Si AutoFirma firmaría la huella SHA-1 de los datos en vez de los datos: la XAdES explícita (ADR-0023).
+pub fn signs_the_sha1_of_the_data(
     round: SignatureRound,
     format: RequestedFormat,
     through_the_site_server: Option<ServerFormat>,
     declared_params: &[(String, String)],
-) -> Result<(), Refusal> {
-    let signs_the_digest = matches!(round, SignatureRound::First)
+) -> bool {
+    matches!(round, SignatureRound::First)
         && matches!(format, RequestedFormat::Xades(_))
         && through_the_site_server != Some(ServerFormat::Xades)
         && declares(declared_params, "mode", "explicit")
-        && !declares(declared_params, "useManifest", "true");
-    if signs_the_digest {
-        return Err(Refusal::new(
-            SafCode::UnsupportedFormat,
-            "mode=explicit con XAdES (firma de la huella SHA-1)",
-        )
-        .because(RefusalSituation::ExplicitXades));
-    }
-    Ok(())
+        && !declares(declared_params, "useManifest", "true")
+}
+
+/// La huella SHA-1 que firma la XAdES explícita en lugar de los datos.
+pub fn sha1_of_the_data(data: &[u8]) -> [u8; 20] {
+    openssl::sha::sha1(data)
 }
 
 fn declares(declared_params: &[(String, String)], key: &str, value: &str) -> bool {
@@ -110,12 +107,12 @@ pub(super) fn requested_format(url: &AfirmaUrl) -> Result<Option<RequestedFormat
     })
 }
 
-/// El `SAF_03` de SHA-1 cuando la persona no lo permite (ADR-0023).
-pub fn refuse_sha1_unless_allowed(algorithm: AskedAlgorithm, allowed: bool) -> Result<(), Refusal> {
-    if algorithm == AskedAlgorithm::Sha1 && !allowed {
+/// El `SAF_03` de SHA-1, en el algoritmo o en la XAdES explícita, cuando la persona no lo permite (ADR-0023).
+pub fn refuse_sha1_unless_allowed(asks_for_sha1: bool, allowed: bool) -> Result<(), Refusal> {
+    if asks_for_sha1 && !allowed {
         return Err(Refusal::about(
             Parameter::Algorithm,
-            "el algoritmo es SHA-1: rFirma firma con SHA-2",
+            "la firma pide SHA-1: rFirma firma con SHA-2",
         )
         .because(RefusalSituation::Sha1));
     }

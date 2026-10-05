@@ -41,7 +41,7 @@ pub(super) fn begun_with_the_pdf_password<E: FilterEngine, P: PolicyEngine>(
                 from_the_site: &from_the_site,
                 allow_unregistered_signatures: pending.unregistered_signatures,
             },
-            &pending.document,
+            pending.what_the_bridge_signs(),
             certificate,
             desk.neighbours,
         );

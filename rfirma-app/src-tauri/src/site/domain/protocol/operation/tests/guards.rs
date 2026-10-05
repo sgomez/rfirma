@@ -337,16 +337,17 @@ fn explicit_with_a_manifest() -> Vec<(String, String)> {
 const ENVELOPING: RequestedFormat = RequestedFormat::Xades(XadesEnvelope::Enveloping);
 
 #[test]
-fn explicit_mode_with_xades_is_refused_with_saf_06() {
-    let refusal = refuse_explicit_xades(SignatureRound::First, ENVELOPING, None, &explicit())
-        .expect_err("la XAdES explicita firma la huella SHA-1");
-
-    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
-    assert!(refusal.detail().contains("mode=explicit"));
+fn an_explicit_xades_signs_the_sha1_of_the_data() {
+    assert!(signs_the_sha1_of_the_data(
+        SignatureRound::First,
+        ENVELOPING,
+        None,
+        &explicit()
+    ));
 }
 
 #[test]
-fn signing_and_saving_an_explicit_xades_is_refused_with_saf_06() {
+fn signing_and_saving_an_explicit_xades_signs_the_sha1_of_the_data() {
     let url = an_operation(&format!(
         "op={SIGN_AND_SAVE}&cop={SIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=XAdES&\
          algorithm=SHA256withRSA&properties={}&dat={}",
@@ -357,75 +358,87 @@ fn signing_and_saving_an_explicit_xades_is_refused_with_saf_06() {
         panic!("es un signandsave");
     };
 
-    let refusal = refuse_explicit_xades(
+    assert!(signs_the_sha1_of_the_data(
         request.round(),
         request.format(),
         request.through_the_site_server(),
         request.declared_params(),
-    )
-    .expect_err("signandsave con XAdES explicita firma la huella SHA-1");
-
-    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+    ));
 }
 
 #[test]
-fn explicit_mode_with_pades_is_not_refused_here() {
-    refuse_explicit_xades(
+fn an_explicit_pades_signs_the_document() {
+    assert!(!signs_the_sha1_of_the_data(
         SignatureRound::First,
         RequestedFormat::Pades,
         None,
         &explicit(),
-    )
-    .expect("PAdES no tiene esta desviacion");
+    ));
 }
 
 #[test]
-fn implicit_mode_with_xades_is_not_refused() {
-    refuse_explicit_xades(
+fn an_implicit_xades_signs_the_document() {
+    assert!(!signs_the_sha1_of_the_data(
         SignatureRound::First,
         RequestedFormat::Xades(XadesEnvelope::Detached),
         None,
         &[("mode".to_owned(), "implicit".to_owned())],
-    )
-    .expect("solo se rechaza el modo explicito");
+    ));
 }
 
 #[test]
-fn an_explicit_xades_cosignature_is_not_refused() {
-    refuse_explicit_xades(SignatureRound::Again, ENVELOPING, None, &explicit())
-        .expect("AutoFirma solo firma la huella en sign");
+fn an_explicit_xades_cosignature_signs_the_document() {
+    assert!(!signs_the_sha1_of_the_data(
+        SignatureRound::Again,
+        ENVELOPING,
+        None,
+        &explicit()
+    ));
 }
 
 #[test]
-fn an_explicit_xades_countersignature_is_not_refused() {
+fn an_explicit_xades_countersignature_signs_the_document() {
     let round = SignatureRound::Counter {
         target: CounterTarget::Leafs,
     };
 
-    refuse_explicit_xades(round, ENVELOPING, None, &explicit())
-        .expect("AutoFirma solo firma la huella en sign");
+    assert!(!signs_the_sha1_of_the_data(
+        round,
+        ENVELOPING,
+        None,
+        &explicit()
+    ));
 }
 
 #[test]
-fn an_explicit_xadestri_signature_is_not_refused() {
-    refuse_explicit_xades(
+fn an_explicit_xadestri_signature_signs_the_document() {
+    assert!(!signs_the_sha1_of_the_data(
         SignatureRound::First,
         ENVELOPING,
         Some(ServerFormat::Xades),
         &explicit(),
-    )
-    .expect("AutoFirma no firma la huella en XAdEStri");
+    ));
 }
 
 #[test]
-fn an_explicit_xades_signature_with_a_manifest_is_not_refused() {
-    refuse_explicit_xades(
+fn an_explicit_xades_signature_with_a_manifest_signs_the_document() {
+    assert!(!signs_the_sha1_of_the_data(
         SignatureRound::First,
         ENVELOPING,
         None,
         &explicit_with_a_manifest(),
-    )
-    .expect("AutoFirma no firma la huella con useManifest=true");
+    ));
+}
+
+#[test]
+fn the_sha1_of_the_data_is_its_digest() {
+    assert_eq!(
+        sha1_of_the_data(b"abc"),
+        [
+            0xa9, 0x99, 0x3e, 0x36, 0x47, 0x06, 0x81, 0x6a, 0xba, 0x3e, 0x25, 0x71, 0x78, 0x50,
+            0xc2, 0x6c, 0x9c, 0xd0, 0xd8, 0x9d,
+        ]
+    );
 }
 
 #[test]
@@ -504,19 +517,6 @@ fn the_format_auto_is_resolved_over_the_downloaded_document() {
         panic!("es una firma");
     };
     assert_eq!(request.format(), RequestedFormat::Pades);
-}
-
-#[test]
-fn the_explicit_xades_refusal_is_shown_with_its_own_situation_and_detail() {
-    let refusal = refuse_explicit_xades(SignatureRound::First, ENVELOPING, None, &explicit())
-        .expect_err("la XAdES explicita firma la huella SHA-1");
-
-    assert_eq!(refusal.situation(), RefusalSituation::ExplicitXades);
-    assert_eq!(
-        refusal.to_string(),
-        "SAF_06: mode=explicit con XAdES (firma de la huella SHA-1)"
-    );
-    assert!(refusal.is_shown_before_it_is_answered());
 }
 
 #[test]

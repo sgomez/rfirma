@@ -54,6 +54,8 @@ pub(in crate::site::application::errand) struct PendingLocalBatch {
 pub(in crate::site::application::errand) struct PendingSignature {
     /// Identificador del documento para la ventana.
     pub(in crate::site::application::errand) document: String,
+    /// El asa de la huella SHA-1 que firma el puente en lugar del documento, en la XAdES explícita.
+    pub(in crate::site::application::errand) sha1_of_the_data: Option<String>,
     /// Filtro solicitado por la sede.
     pub(in crate::site::application::errand) filter: SiteFilter,
     /// Formato de firma que pidió la sede, ya atendido por el puente.
@@ -74,6 +76,18 @@ pub(in crate::site::application::errand) struct PendingSignature {
     pub(in crate::site::application::errand) through_the_server: Option<ServerSignature>,
     /// El área de la firma visible que falta por marcar, si falta.
     pub(in crate::site::application::errand) area: Option<AreaToMark>,
+}
+
+impl PendingSignature {
+    /// Si la firma pide SHA-1: en el algoritmo o en la XAdES explícita.
+    pub(in crate::site::application::errand) fn asks_for_sha1(&self) -> bool {
+        self.algorithm == AskedAlgorithm::Sha1 || self.sha1_of_the_data.is_some()
+    }
+
+    /// El asa de lo que firma el puente: la huella SHA-1 en la XAdES explícita, si no el documento.
+    pub(in crate::site::application::errand) fn what_the_bridge_signs(&self) -> &str {
+        self.sha1_of_the_data.as_deref().unwrap_or(&self.document)
+    }
 }
 
 /// Lo que la firma contra el servidor trifásico lleva del consentimiento a la entrega.

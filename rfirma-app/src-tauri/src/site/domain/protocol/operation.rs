@@ -37,7 +37,7 @@ use sign_and_save::sign_and_save_request;
 pub use batch::BatchRequest;
 pub use guards::{
     refuse_a_countersignature_outside_cades_and_xades, refuse_a_multisignature_of_an_invoice,
-    refuse_explicit_xades, refuse_sha1_unless_allowed,
+    refuse_sha1_unless_allowed, sha1_of_the_data, signs_the_sha1_of_the_data,
 };
 pub use properties::{pairs_of, without_the_launcher_keys};
 pub use save_load::{LoadRequest, SaveRequest};

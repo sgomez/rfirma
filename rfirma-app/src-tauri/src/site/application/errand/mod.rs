@@ -101,6 +101,7 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
         }
         ErrandStep::AskingToSign(asked) => live.remember_signature(state::PendingSignature {
             document: asked.document.clone(),
+            sha1_of_the_data: asked.sha1_of_the_data.clone(),
             filter: asked.filter.clone(),
             format: asked.format,
             algorithm: asked.algorithm,
@@ -198,7 +199,7 @@ pub fn consent<E: FilterEngine, P: PolicyEngine>(
         return Err(ConsentError::NothingPending);
     };
     if let Err(refusal) = refuse_sha1_unless_allowed(
-        pending.algorithm,
+        pending.asks_for_sha1(),
         desk.neighbours.sha1_allowed() || live.sha1_allowed_once(),
     ) {
         return Err(refused_by_the_protocol(live, refusal));

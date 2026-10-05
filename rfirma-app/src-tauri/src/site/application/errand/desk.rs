@@ -26,10 +26,10 @@ use crate::signing::domain::{
 };
 use crate::site::domain::protocol::{
     forget_the_box, refuse_a_countersignature_outside_cades_and_xades,
-    refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, visible_signature_of, AfirmaUrl,
-    AskedAlgorithm, LoadRequest, PendingSignRequest, RequestedFormat, SaveRequest,
-    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
-    StickyCertificate,
+    refuse_a_multisignature_of_an_invoice, sha1_of_the_data, signs_the_sha1_of_the_data,
+    visible_signature_of, AfirmaUrl, AskedAlgorithm, LoadRequest, PendingSignRequest,
+    RequestedFormat, SaveRequest, SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
+    SiteVisibleSignature, StickyCertificate,
 };
 use crate::site::domain::triphase_server::ServerFormat;
 
@@ -311,15 +311,6 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine>(
         return ErrandStep::ShowingTheRefusal(refusal);
     }
 
-    if let Err(refusal) = refuse_explicit_xades(
-        ask.round,
-        ask.format,
-        ask.through_the_site_server,
-        ask.declared_params,
-    ) {
-        return ErrandStep::ShowingTheRefusal(refusal);
-    }
-
     let format = Format::from(ask.format);
 
     let waivers = waivers_declared_in(&ask);
@@ -411,17 +402,25 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine>(
         Ok(document) => document,
         Err(refusal) => return answering(live, SiteOutcome::Refused(refusal)),
     };
+    let sha1_of_the_data = match the_sha1_of_the_data_kept(desk, live, &ask, &mut from_the_site) {
+        Ok(digest) => digest,
+        Err(refusal) => return answering(live, SiteOutcome::Refused(refusal)),
+    };
 
     let (certificates, stuck) =
         rows_preselecting_the_stuck(accepted, ask.sticky, desk.neighbours, live);
     let preselected =
         Preselected::among(&certificates, stuck, ask.waives_the_choice, desk.neighbours)
             .unless_there_is_a_notice(unregistered_signatures);
-    let sha1_to_allow = ask.algorithm == AskedAlgorithm::Sha1
-        && !(desk.neighbours.sha1_allowed() || live.sha1_allowed_once());
+    let sha1_to_allow = sha1_still_to_allow(
+        desk,
+        live,
+        ask.algorithm == AskedAlgorithm::Sha1 || sha1_of_the_data.is_some(),
+    );
     ErrandStep::AskingToSign(Box::new(SigningConsent {
         sha1_to_allow,
         document,
+        sha1_of_the_data,
         format,
         algorithm: ask.algorithm,
         round: ask.round,
@@ -443,6 +442,36 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine>(
 
 const UNREGISTERED_SIGNATURES: &str = "pdfHasUnregisteredSignatures";
 const COUNTER_TARGET_KEY: &str = "target";
+const MIME_TYPE_KEY: &str = "mimeType";
+const HASH_SHA1: &str = "hash/sha1";
+
+/// En la XAdES explícita, el asa de la huella SHA-1 que firma el puente y el `mimeType` que la declara (ADR-0023).
+fn the_sha1_of_the_data_kept<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
+    live: &LiveErrand,
+    ask: &SignatureAsk<'_>,
+    from_the_site: &mut BTreeMap<String, String>,
+) -> Result<Option<String>, SiteRefusal> {
+    if !signs_the_sha1_of_the_data(
+        ask.round,
+        ask.format,
+        ask.through_the_site_server,
+        ask.declared_params,
+    ) {
+        return Ok(None);
+    }
+    from_the_site.insert(MIME_TYPE_KEY.to_owned(), HASH_SHA1.to_owned());
+    let format = Format::from(ask.format);
+    keep_the_document(desk, live, format, &sha1_of_the_data(ask.document)).map(Some)
+}
+
+fn sha1_still_to_allow<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
+    live: &LiveErrand,
+    asks_for_sha1: bool,
+) -> bool {
+    asks_for_sha1 && !(desk.neighbours.sha1_allowed() || live.sha1_allowed_once())
+}
 
 fn waivers_declared_in(ask: &SignatureAsk<'_>) -> Waivers {
     let declared = Waivers::declared_in(
