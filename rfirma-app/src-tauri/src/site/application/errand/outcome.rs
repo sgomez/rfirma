@@ -78,12 +78,14 @@ impl ErrandStep {
                 certificates: consent.certificates.clone(),
                 already_chosen: consent.already_chosen.clone(),
                 without_asking: consent.without_asking,
+                sha1_allowed: consent.sha1_allowed,
             }),
             Self::AskingToSignTheLocalBatch(consent) => Some(Moment::AskingToSignTheLocalBatch {
                 items: consent.items.clone(),
                 certificates: consent.certificates.clone(),
                 already_chosen: consent.already_chosen.clone(),
                 without_asking: consent.without_asking,
+                sha1_allowed: consent.sha1_allowed,
             }),
             Self::Saving(consent) => Some(Moment::Saving {
                 filename: consent.filename.clone().or_else(|| consent.title.clone()),
@@ -223,6 +225,8 @@ pub struct BatchConsent {
     pub already_chosen: Option<String>,
     /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
     pub without_asking: bool,
+    /// Si el lote se firma con SHA-1 porque la persona lo permite.
+    pub sha1_allowed: bool,
 }
 
 /// El resumen de un elemento del lote local: ni su ruta ni su contenido cruzan.
@@ -251,6 +255,8 @@ pub struct LocalBatchConsent {
     pub already_chosen: Option<String>,
     /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
     pub without_asking: bool,
+    /// Si el lote se firma con SHA-1 porque la persona lo permite.
+    pub sha1_allowed: bool,
 }
 
 /// Pistas de guardado de `signandsave`, calculadas antes de firmar y usadas tras la postfirma.
@@ -440,6 +446,8 @@ pub enum Moment {
         already_chosen: Option<String>,
         /// Si la ventana consiente sola con `already_chosen`.
         without_asking: bool,
+        /// Si el lote se firma con SHA-1 porque la persona lo permite.
+        sha1_allowed: bool,
     },
     /// Consentimiento del lote local, con el resumen de cada uno de sus elementos.
     AskingToSignTheLocalBatch {
@@ -451,6 +459,8 @@ pub enum Moment {
         already_chosen: Option<String>,
         /// Si la ventana consiente sola con `already_chosen`.
         without_asking: bool,
+        /// Si el lote se firma con SHA-1 porque la persona lo permite.
+        sha1_allowed: bool,
     },
     /// Trámite sin certificados disponibles.
     NoCertificate {

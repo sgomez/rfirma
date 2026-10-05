@@ -18,6 +18,7 @@ mod pdf_awaiting_the_person;
 mod pdf_password;
 mod relay_window;
 mod service;
+mod sha1_batches;
 mod sha1_preference;
 mod shown_refusals;
 mod signature_basics;

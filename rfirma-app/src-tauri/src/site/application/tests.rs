@@ -312,6 +312,7 @@ pub(crate) struct InMemoryTokenSigning {
     attempts: Mutex<usize>,
     signed: Mutex<Vec<(String, Vec<u8>)>>,
     refusing: Option<SigningRefusal>,
+    sha1_allowed: bool,
 }
 
 impl InMemoryTokenSigning {
@@ -319,6 +320,14 @@ impl InMemoryTokenSigning {
     pub(crate) fn refusing(refusal: SigningRefusal) -> Self {
         Self {
             refusing: Some(refusal),
+            ..Self::default()
+        }
+    }
+
+    /// Un token al lado de una persona que permite SHA-1.
+    pub(crate) fn allowing_sha1() -> Self {
+        Self {
+            sha1_allowed: true,
             ..Self::default()
         }
     }
@@ -365,7 +374,7 @@ impl Neighbours for InMemoryTokenSigning {
     }
 
     fn sha1_allowed(&self) -> bool {
-        unreachable!("las pruebas del lote remoto no preguntan por SHA-1")
+        self.sha1_allowed
     }
 
     fn open_unrecorded(&self, _path: PathBuf) -> String {

@@ -291,7 +291,7 @@ fn an_algorithm_the_batch_does_not_declare_fails_the_signature_after_the_presign
 }
 
 #[test]
-fn a_batch_with_sha1_is_refused_as_sha1_and_the_token_signs_nothing() {
+fn without_the_preference_a_batch_with_sha1_is_refused_as_sha1_and_the_token_signs_nothing() {
     for (lote, json, presign) in [
         (
             "{\"algorithm\":\"SHA1withRSA\",\"singlesigns\":[]}",
@@ -322,6 +322,37 @@ fn a_batch_with_sha1_is_refused_as_sha1_and_the_token_signs_nothing() {
         );
         assert_eq!(token.signing_attempts(), 0);
     }
+}
+
+#[test]
+fn with_the_preference_a_batch_with_sha1_signs_every_pk1_with_the_header_as_the_site_wrote_it() {
+    let services =
+        InMemoryBatchServices::answering(PRESIGN_WITH_TWO_SIGNS.to_vec(), b"RESULTADO".to_vec());
+    let token = InMemoryTokenSigning::allowing_sha1();
+    let certificate = a_usable_certificate("un certificado");
+    let request = a_batch_request(
+        "{\"algorithm\":\"SHA1withRSA\",\"singlesigns\":[{\"id\":\"001\",\"datareference\":\"AAAA\",\"format\":\"XAdES\"}]}",
+        true,
+    );
+
+    signed_batch(&a_run(&services, &token, &certificate), &request).expect("el lote sale entero");
+
+    assert_eq!(
+        token.signed(),
+        vec![
+            ("SHA1withRSA".to_owned(), b"ABC".to_vec()),
+            ("SHA1withRSA".to_owned(), b"DEF".to_vec())
+        ]
+    );
+}
+
+#[test]
+fn only_a_batch_whose_header_asks_for_sha1_asks_for_sha1() {
+    assert!(asks_for_sha1(&a_batch_request(
+        "<signbatch algorithm=\"SHA1\"><singlesign id=\"001\"/></signbatch>",
+        false
+    )));
+    assert!(!asks_for_sha1(&a_batch_request(JSON_LOTE, true)));
 }
 
 #[test]

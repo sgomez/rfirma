@@ -11,6 +11,7 @@ use crate::site::domain::protocol::SafCode;
 #[derive(Default)]
 struct RecordingSigner {
     signed: Mutex<Vec<(String, Vec<u8>)>>,
+    algorithms: Mutex<Vec<SignatureAlgorithm>>,
 }
 
 impl Signer for RecordingSigner {
@@ -38,9 +39,10 @@ impl Signer for RecordingSigner {
         &self,
         _reference: &CertificateRef,
         secret: &crate::identity::domain::protected_secret::ProtectedSecret,
-        _algorithm: SignatureAlgorithm,
+        algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
+        crate::lock(&self.algorithms).push(algorithm);
         let pin = secret.as_str().expect("PIN de prueba en UTF-8").to_owned();
         crate::lock(&self.signed).push((pin, data.to_vec()));
         Ok(b"PK1".to_vec())
@@ -104,6 +106,28 @@ fn the_algorithm_is_read_as_the_site_writes_it() {
         signed_for_the_remote_batch(&signer, &certificate, &pin, algorithm, b"uno")
             .expect("el algoritmo de la sede se lee sin distinguir caja ni espacios");
     }
+}
+
+#[test]
+fn a_sha1_header_the_errand_admitted_is_signed_with_sha1_and_the_key_of_the_certificate() {
+    let signer = RecordingSigner::default();
+    let certificate = a_usable_certificate("FNMT-ACTIVO");
+
+    let pin = ProtectedSecret::from_str("1234");
+    for algorithm in ["SHA1withRSA", "sha1", "SHA-1"] {
+        signed_for_the_remote_batch(&signer, &certificate, &pin, algorithm, b"uno")
+            .expect("el trámite ya admitió SHA-1 con la preferencia");
+    }
+
+    let algorithms = crate::lock(&signer.algorithms).clone();
+    assert_eq!(algorithms.len(), 3);
+    assert!(
+        algorithms.iter().all(|algorithm| matches!(
+            algorithm,
+            SignatureAlgorithm::Sha1Rsa | SignatureAlgorithm::Sha1Ecdsa
+        )),
+        "{algorithms:?}"
+    );
 }
 
 #[test]

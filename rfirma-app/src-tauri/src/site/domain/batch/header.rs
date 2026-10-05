@@ -12,19 +12,33 @@ pub enum HeaderRefusal {
     Unreadable(String),
 }
 
-/// El `algorithm` del lote, ya admitido: atributo de `<signbatch>` en el XML heredado, o campo del objeto raíz en JSON.
-pub fn batch_algorithm(format: BatchFormat, lote: &[u8]) -> Result<String, HeaderRefusal> {
-    let algorithm = match format {
-        BatchFormat::Json => algorithm_in_json(lote),
-        BatchFormat::Xml => algorithm_in_xml(lote),
-    }
-    .map_err(HeaderRefusal::Unreadable)?;
+/// El `algorithm` del lote (atributo de `<signbatch>` en XML, campo raíz en JSON), ya admitido; SHA-1, si la persona lo permite (ADR-0023).
+pub fn batch_algorithm(
+    format: BatchFormat,
+    lote: &[u8],
+    sha1_allowed: bool,
+) -> Result<String, HeaderRefusal> {
+    let algorithm = declared_algorithm(format, lote).map_err(HeaderRefusal::Unreadable)?;
     match AskedAlgorithm::read(&algorithm) {
         AlgorithmReading::Attended(_) => Ok(algorithm),
+        AlgorithmReading::Sha1 if sha1_allowed => Ok(algorithm),
         AlgorithmReading::Sha1 => Err(HeaderRefusal::Sha1(sha1_detail(&algorithm))),
         AlgorithmReading::Unrecognized => Err(HeaderRefusal::Unreadable(format!(
             "el algoritmo de lote '{algorithm}' no se atiende"
         ))),
+    }
+}
+
+/// Si la cabecera del lote pide SHA-1, en cualquier grafía.
+pub fn batch_asks_for_sha1(format: BatchFormat, lote: &[u8]) -> bool {
+    declared_algorithm(format, lote)
+        .is_ok_and(|algorithm| AskedAlgorithm::read(&algorithm) == AlgorithmReading::Sha1)
+}
+
+fn declared_algorithm(format: BatchFormat, lote: &[u8]) -> Result<String, String> {
+    match format {
+        BatchFormat::Json => algorithm_in_json(lote),
+        BatchFormat::Xml => algorithm_in_xml(lote),
     }
 }
 

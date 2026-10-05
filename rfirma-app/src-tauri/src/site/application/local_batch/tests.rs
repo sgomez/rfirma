@@ -42,7 +42,7 @@ impl Neighbours for Untouched {
     }
 
     fn sha1_allowed(&self) -> bool {
-        unreachable!("la guarda no llega a preguntar por SHA-1")
+        false
     }
 
     fn open_unrecorded(&self, _path: PathBuf) -> String {
@@ -205,7 +205,7 @@ fn a_batch_with_an_algorithm_rfirma_does_not_sign_is_refused() {
 }
 
 #[test]
-fn a_batch_with_sha1_is_refused_as_sha1_before_signing_any_item() {
+fn without_the_preference_a_batch_with_sha1_is_refused_as_sha1_before_signing_any_item() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let desk = a_desk_that_is_never_touched(home.path());
     let certificate = a_usable_certificate("FIRMA");

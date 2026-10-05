@@ -4,7 +4,8 @@ use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::signing::domain::bridge::Format;
 use crate::site::domain::batch::LocalSingleSign;
 use crate::site::domain::protocol::{
-    BatchRequest, SelectCertificate, SiteFilter, StickyCertificate,
+    AlgorithmReading, AskedAlgorithm, BatchRequest, SelectCertificate, SiteFilter,
+    StickyCertificate,
 };
 
 use super::super::outcome::{
@@ -76,12 +77,15 @@ pub fn consent_to_the_batch<E: FilterEngine>(
     let (rows, stuck) = rows_preselecting_the_stuck(accepted, request.sticky(), certificates, live);
     let preselected = Preselected::among(&rows, stuck, request.waives_the_choice(), certificates);
 
+    let sha1_allowed = batch::asks_for_sha1(&request) && certificates.sha1_allowed();
+
     ErrandStep::AskingToSignTheBatch(Box::new(BatchConsent {
         signs: batch::how_many(&request),
         request,
         certificates: rows,
         already_chosen: preselected.row,
         without_asking: preselected.without_asking,
+        sha1_allowed,
     }))
 }
 
@@ -109,6 +113,11 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
     let (rows, stuck) = rows_preselecting_the_stuck(accepted, request.sticky(), certificates, live);
     let preselected = Preselected::among(&rows, stuck, request.waives_the_choice(), certificates);
 
+    let sha1_allowed = batch
+        .as_ref()
+        .is_ok_and(|batch| AskedAlgorithm::read(batch.algorithm()) == AlgorithmReading::Sha1)
+        && certificates.sha1_allowed();
+
     ErrandStep::AskingToSignTheLocalBatch(Box::new(LocalBatchConsent {
         items: batch
             .as_ref()
@@ -119,6 +128,7 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
         certificates: rows,
         already_chosen: preselected.row,
         without_asking: preselected.without_asking,
+        sha1_allowed,
     }))
 }
 
