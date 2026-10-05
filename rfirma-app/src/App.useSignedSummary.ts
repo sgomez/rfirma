@@ -1,9 +1,10 @@
 //! El acuse de recibo del documento firmado y los dos caminos hasta el fichero.
 
 import { useEffect, useState } from "react";
-import { classify, type NamedFailure } from "./errors/classify";
+import type { SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend } from "./signing/flow";
 import type { DocumentFinding, PreviousSignature } from "./signing/previousSignatures";
+import { useSignedDocumentOpening } from "./signing/useSignedDocumentOpening";
 import { acknowledgementFor, type Signing } from "./signing/useSigning";
 
 /**
@@ -16,12 +17,10 @@ export function useSignedSummary(
   activeDocumentId: string | null,
   reopenDocument: () => void,
   signer: SigningBackend,
+  opener: SignedDocumentOpener,
 ) {
-  // Por qué no se pudo abrir el firmado o su carpeta. Vive aquí y no dentro del
-  // resumen porque lo produce quien llama al portal, y el resumen solo lo
-  // enseña; sin él, el único camino que el usuario tiene hasta el fichero
-  // fallaría sin decir nada (ADR-0011).
-  const [openFailure, setOpenFailure] = useState<NamedFailure | null>(null);
+  const opening = useSignedDocumentOpening(opener);
+  const { forgetFailure } = opening;
 
   // El acuse de recibo, solo si sigue siendo de lo que hay delante. El estado
   // «Firmado» guarda el asa del documento que se firmó; el recuento de páginas
@@ -62,16 +61,8 @@ export function useSignedSummary(
     if (signedSomewhere && signedHere === null) signAnother();
     // Y el fallo de abrir se va con el resumen del que hablaba: es de un
     // documento concreto, como el propio acuse de recibo.
-    if (signedHere === null) setOpenFailure(null);
-  }, [signedSomewhere, signedHere, signAnother]);
-
-  // Los dos caminos hasta el fichero. El fallo se recoge aquí y se enseña en el
-  // resumen: un botón que no hace nada y no dice por qué deja al usuario sin
-  // ninguna forma de llegar a lo que acaba de firmar.
-  const openSigned = (open: () => Promise<void>) => {
-    setOpenFailure(null);
-    open().catch((thrown: unknown) => setOpenFailure(classify(thrown)));
-  };
+    if (signedHere === null) forgetFailure();
+  }, [signedSomewhere, signedHere, signAnother, forgetFailure]);
 
   // «Firmar»: se cierra el resumen y **se relee el original del
   // disco**. Es abrir el documento otra vez, porque entre una firma y
@@ -79,10 +70,10 @@ export function useSignedSummary(
   // configurar la firma. Lo que decida el recuadro recordado —incluido el aviso
   // de que ya no cabe— lo resuelve el camino de siempre, no uno nuevo.
   const signAgain = () => {
-    setOpenFailure(null);
+    forgetFailure();
     signing.signAnother();
     reopenDocument();
   };
 
-  return { signedHere, signatures, findings, openFailure, openSigned, signAgain };
+  return { signedHere, signatures, findings, opening, signAgain };
 }
