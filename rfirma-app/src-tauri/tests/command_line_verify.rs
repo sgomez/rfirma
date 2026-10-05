@@ -22,6 +22,7 @@ use rfirma_lib::desktop::application::command_line::{
 use rfirma_lib::desktop::ports::{
     CommandLineSigning, DocumentSigner, GraphicalPicker, LocalTimeZone, WindowChoice, WindowOffer,
 };
+use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, XadesVariant};
@@ -153,6 +154,23 @@ fn a_pades_signed_with_the_token_prints_firma_valida() {
     );
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("verify-signed.pdf");
     std::fs::write(&path, signed).expect("el PDF firmado se escribe");
+
+    assert_eq!(printed_lines(&verified(&path)), ["Firma valida"]);
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn a_xades_signed_with_sha1_with_the_token_prints_firma_valida() {
+    let document = std::fs::read(sample("reference/document.xml")).expect("el XML se lee");
+    let signed = a_cycle_of(
+        Format::Xades(XadesVariant::Enveloping),
+        SignatureAlgorithm::Sha1Rsa,
+        &document,
+        SignatureOperation::Sign,
+        &[],
+    );
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("verify-sha1.xsig");
+    std::fs::write(&path, signed).expect("el XAdES con SHA-1 se escribe");
 
     assert_eq!(printed_lines(&verified(&path)), ["Firma valida"]);
 }

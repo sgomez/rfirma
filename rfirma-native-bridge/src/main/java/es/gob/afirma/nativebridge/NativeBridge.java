@@ -96,6 +96,7 @@ public final class NativeBridge {
         // ICC aborte el proceso en vez de dar un error recuperable.
         System.setProperty("java.awt.headless", "true");
         silenceAutoFirmaLogging();
+        XmlSha1Policy.allowSha1();
     }
 
     private static void silenceAutoFirmaLogging() {

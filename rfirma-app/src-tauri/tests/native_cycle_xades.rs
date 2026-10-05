@@ -4,6 +4,7 @@
 mod support;
 
 mod full_cycle {
+    use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
     use rfirma_lib::signing::application::cycle;
     use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, XadesVariant};
 
@@ -92,6 +93,60 @@ mod full_cycle {
             String::from_utf8_lossy(&signed).contains("ecdsa-sha256"),
             "el XML declara el algoritmo de firma de curva elíptica"
         );
+    }
+
+    const RSA_SHA1: &str = "http://www.w3.org/2000/09/xmldsig#rsa-sha1";
+
+    fn signed_with_sha1(format: Format, data: &[u8], name: &str) -> String {
+        let signed = a_cycle_of(
+            format,
+            SignatureAlgorithm::Sha1Rsa,
+            data,
+            SignatureOperation::Sign,
+            &[],
+        );
+        let path = write_to_target(name, &signed);
+
+        the_original_validator_accepts(&path);
+        String::from_utf8(signed).expect("una firma XML es UTF-8")
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_xades_signature_made_with_sha1_declares_rsa_sha1_and_validates() {
+        let signed = signed_with_sha1(
+            Format::Xades(XadesVariant::Enveloping),
+            A_REFERENCE_XML,
+            "xades-sha1.xml",
+        );
+
+        assert!(signed.contains(RSA_SHA1), "{signed}");
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_xades_signature_made_with_sha1_and_the_ec_certificate_declares_ecdsa_sha1_and_validates() {
+        let signed = a_cycle_signed_by(
+            &certificate_labelled(ACTIVE_EC),
+            PIN,
+            Format::Xades(XadesVariant::Enveloping),
+            SignatureAlgorithm::Sha1Ecdsa,
+            A_REFERENCE_XML,
+            SignatureOperation::Sign,
+            &[],
+        );
+        let path = write_to_target("xades-ecdsa-sha1.xml", &signed);
+
+        the_original_validator_accepts(&path);
+        assert!(String::from_utf8_lossy(&signed).contains("xmldsig-more#ecdsa-sha1"));
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_facturae_signature_made_with_sha1_declares_rsa_sha1_and_validates() {
+        let signed = signed_with_sha1(Format::FacturaE, A_REFERENCE_INVOICE, "facturae-sha1.xsig");
+
+        assert!(signed.contains(RSA_SHA1), "{signed}");
     }
 
     /// Las entradas que el ASiC-S del original mete en el ZIP.
