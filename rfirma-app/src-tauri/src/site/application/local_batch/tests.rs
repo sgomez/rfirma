@@ -178,6 +178,7 @@ fn an_empty_batch_cannot_even_start() {
         &certificate,
         &crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234"),
         &batch,
+        false,
     )
     .expect_err("un lote sin firmas no puede empezar");
 
@@ -198,6 +199,7 @@ fn a_batch_with_an_algorithm_rfirma_does_not_sign_is_refused() {
         &certificate,
         &crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234"),
         &batch,
+        false,
     )
     .expect_err("RIPEMD160 no se atiende");
 
@@ -218,6 +220,7 @@ fn without_the_preference_a_batch_with_sha1_is_refused_as_sha1_before_signing_an
         &certificate,
         &crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234"),
         &batch,
+        false,
     )
     .expect_err("SHA-1 no se atiende");
 
@@ -245,6 +248,7 @@ fn a_pades_countersign_in_the_batch_fails_that_item_without_signing_it() {
         &certificate,
         &crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234"),
         &batch,
+        false,
     )
     .expect("el lote empieza aunque el elemento no se atienda");
 

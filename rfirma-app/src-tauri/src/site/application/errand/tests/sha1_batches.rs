@@ -214,12 +214,19 @@ struct LocalBatchRun {
 }
 
 fn the_local_batch_with_the_preference(url: &AfirmaUrl, allowed: bool) -> LocalBatchRun {
+    the_local_batch(url, allowed, false)
+}
+
+fn the_local_batch(url: &AfirmaUrl, allowed: bool, allowed_once: bool) -> LocalBatchRun {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = remembering_the_preference(home.path(), allowed);
     let ours = vec![a_usable_certificate("FIRMA")];
     let (listed, _) = listed_from(&ours);
     let opened = OpenedDocuments::new();
     let live = a_live();
+    if allowed_once {
+        live.allow_sha1_once();
+    }
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0], &[0]]);
@@ -246,20 +253,33 @@ fn the_local_batch_with_the_preference(url: &AfirmaUrl, allowed: bool) -> LocalB
 }
 
 #[test]
-fn without_the_preference_a_local_batch_with_sha1_is_refused_as_sha1_before_signing_any_item() {
+fn without_the_preference_a_local_batch_with_sha1_asks_to_allow_it_and_never_consents_alone() {
     let batch = the_local_batch_with_the_preference(&a_local_batch_with_sha1(false), false);
 
-    let Err(ConsentError::Refused(SiteRefusal::Signing(refused))) = batch.finished else {
-        panic!("el lote local se rechaza entero");
-    };
-    assert_eq!(refused.situation, "sha1");
-    assert_eq!(refused.code, SafCode::LocalBatchSign);
-    assert!(
-        batch.presigned.is_empty(),
-        "ningún elemento cruza al puente"
-    );
-    assert!(batch.signed_with.is_empty(), "el token no firma");
+    assert!(batch.consent.sha1_to_allow, "pide permitirlo");
+    assert!(!batch.consent.without_asking, "no consiente solo");
     assert!(!batch.consent.sha1_allowed, "sin la marca");
+}
+
+#[test]
+fn allowed_once_a_local_batch_signs_every_item_with_sha1_without_the_preference() {
+    let batch = the_local_batch(&a_local_batch_with_sha1(false), false, true);
+
+    batch.finished.expect("el lote local contesta");
+    assert_eq!(batch.presigned.len(), 3);
+    assert_eq!(
+        batch.signed_with,
+        vec![SignatureAlgorithm::Sha1Ecdsa; 3],
+        "cada elemento se firma con SHA-1"
+    );
+    assert!(!batch.consent.sha1_to_allow);
+}
+
+#[test]
+fn with_the_preference_a_local_batch_with_sha1_does_not_ask_to_allow_it() {
+    let batch = the_local_batch_with_the_preference(&a_local_batch_with_sha1(false), true);
+
+    assert!(!batch.consent.sha1_to_allow);
 }
 
 #[test]

@@ -77,6 +77,28 @@ export const BatchAsksForSha1: Story = {
   },
 };
 
+export const SingleSignAsksForSha1: Story = {
+  args: { errand: sedeErrand(consentStage({ sha1ToAllow: true })) },
+};
+
+export const LocalBatchAsksForSha1: Story = {
+  args: {
+    errand: sedeErrand(
+      consentStage({
+        document: null,
+        signs: 3,
+        signing: null,
+        sha1ToAllow: true,
+        items: [
+          { id: "001", signing: "pdf", round: { kind: "sign" } },
+          { id: "002", signing: "challenge", round: { kind: "cosign" } },
+          { id: "003", signing: "xml", round: { kind: "sign" } },
+        ],
+      }),
+    ),
+  },
+};
+
 export const UntitledDocument: Story = {
   args: { errand: sedeErrand(consentStage({ document: documentWith({ title: null }) })) },
 };

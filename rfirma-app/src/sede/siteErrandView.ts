@@ -35,6 +35,8 @@ export type SiteStageView =
       withoutAsking: boolean;
       /** Se atiende una petición con SHA-1 porque la persona lo permitió. */
       sha1Allowed: boolean;
+      /** La petición pide SHA-1 y la persona no lo permite todavía. */
+      sha1ToAllow: boolean;
     }
   | {
       kind: "askingToConfirm";
@@ -64,6 +66,10 @@ export type SiteStageView =
       alreadyChosen: string | null;
       /** La ventana consiente sola con `alreadyChosen`, sin esperar a la persona. */
       withoutAsking: boolean;
+      /** Se atiende un lote con SHA-1 porque la persona lo permitió. */
+      sha1Allowed: boolean;
+      /** El lote pide SHA-1 y la persona no lo permite todavía. */
+      sha1ToAllow: boolean;
     }
   | { kind: "saving"; filename: string | null }
   | { kind: "loading"; multiple: boolean }

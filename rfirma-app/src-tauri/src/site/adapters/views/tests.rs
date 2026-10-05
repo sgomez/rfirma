@@ -248,6 +248,7 @@ fn both_batch_consents_cross_whether_sha1_is_signed_because_the_person_allows_it
                 already_chosen: None,
                 without_asking: false,
                 sha1_allowed: allowed,
+                sha1_to_allow: false,
             },
         ] {
             let view = SiteErrandView::from(&moment);
@@ -330,6 +331,7 @@ fn the_local_batch_consent_crosses_with_what_each_item_is_and_never_its_content(
             already_chosen: None,
             without_asking: false,
             sha1_allowed: false,
+            sha1_to_allow: false,
         }))
         .expect("el consentimiento del lote local cruza"),
         serde_json::json!({
@@ -344,6 +346,7 @@ fn the_local_batch_consent_crosses_with_what_each_item_is_and_never_its_content(
                 "alreadyChosen": null,
                 "withoutAsking": false,
                 "sha1Allowed": false,
+                "sha1ToAllow": false,
             },
         })
     );

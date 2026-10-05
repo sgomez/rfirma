@@ -116,10 +116,11 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
     let (rows, stuck) = rows_preselecting_the_stuck(accepted, request.sticky(), certificates, live);
     let preselected = Preselected::among(&rows, stuck, request.waives_the_choice(), certificates);
 
-    let sha1_allowed = batch
+    let asks_for_sha1 = batch
         .as_ref()
-        .is_ok_and(|batch| AskedAlgorithm::read(batch.algorithm()) == AlgorithmReading::Sha1)
-        && certificates.sha1_allowed();
+        .is_ok_and(|batch| AskedAlgorithm::read(batch.algorithm()) == AlgorithmReading::Sha1);
+    let sha1_allowed = asks_for_sha1 && (certificates.sha1_allowed() || live.sha1_allowed_once());
+    let sha1_to_allow = asks_for_sha1 && !sha1_allowed;
 
     ErrandStep::AskingToSignTheLocalBatch(Box::new(LocalBatchConsent {
         items: batch
@@ -130,8 +131,9 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
         batch,
         certificates: rows,
         already_chosen: preselected.row,
-        without_asking: preselected.without_asking,
+        without_asking: preselected.without_asking && !sha1_to_allow,
         sha1_allowed,
+        sha1_to_allow,
     }))
 }
 
