@@ -53,6 +53,7 @@ sus comentarios a las formas que admite la regla 6 de `CLAUDE.md`.
 | `shell/` | La ventana y su cabecera (ADR-0007). |
 | `documents/` | Los documentos abiertos y los recientes. |
 | `signing/` | La firma, en el lado de la interfaz. |
+| `journey/` | El recorrido de la firma en la ventana principal, plano y hermano de `placement/`: el orden de firma, la geometría de la página, la firma visible, las firmas previas, el destino, los avisos previos al PIN, el acuse y el fallo. Solo la raíz lo importa. |
 | `placement/` | El vocabulario de la colocación de la firma visible: el recuadro en espacio de usuario, el conjunto de páginas, sus modos y el conjunto tecleado, y el estado de la colocación que comparten las dos ventanas, con su vista, el bloque «Colocación». No sabe de píxeles ni de gestos, ni importa nada del visor: la posición estándar del recuadro se la pasa cada ventana. |
 | `viewer/` | El visor de PDF: los píxeles y los gestos sobre el recuadro. |
 | `status/` | El estado de la instalación. |
@@ -74,7 +75,7 @@ Dos módulos se leen antes que sus hermanos, porque cablean una ventana entera:
 
 ## La dirección de los imports
 
-`src-tauri/tests/window_directions.rs` (de `just structural-guards`) vigila dos
+`src-tauri/tests/window_directions.rs` (de `just structural-guards`) vigila tres
 reglas:
 
 - **Nada fuera de la raíz importa de los `App.*`.** Lo que una zona necesita de
@@ -84,6 +85,9 @@ reglas:
   sus puertos.
 - **`placement/` no importa de otra zona**, salvo `design-system/` e `i18n/`.
   Lo que necesita de fuera se lo pasa cada ventana.
+- **Nada fuera de la raíz importa de `journey/`.** La ventana principal es la
+  única que lo cablea. Quedan exentos el andamiaje de pruebas y los `*.test.*`,
+  igual que en la primera regla.
 
 ## El circuito de cadenas (ADR-0009 enmendado)
 

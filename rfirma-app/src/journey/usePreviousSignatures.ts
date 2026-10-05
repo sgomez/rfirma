@@ -1,11 +1,11 @@
 //! El informe de firmas previas del documento activo, pedido al abrir o cargar.
 
 import { useEffect, useState } from "react";
-import type { SigningBackend } from "./signing/flow";
+import type { SigningBackend } from "../signing/flow";
 import {
   NO_PREVIOUS_SIGNATURES,
   type PreviousSignaturesReport,
-} from "./signing/previousSignatures";
+} from "../signing/previousSignatures";
 
 /**
  * Las firmas que ya trae el documento activo, pedidas al abrir o cargar el

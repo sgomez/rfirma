@@ -1,4 +1,4 @@
-//! Guarda de dirección de la interfaz: nada fuera de la raíz importa de los módulos de la ventana principal, y la colocación solo importa de sí misma, del sistema de diseño y del catálogo.
+//! Guarda de dirección de la interfaz: nada fuera de la raíz importa de los módulos de la ventana principal ni del recorrido de firma, y la colocación solo importa de sí misma, del sistema de diseño y del catálogo.
 
 #[path = "ts_imports/support.rs"]
 mod support;
@@ -10,6 +10,7 @@ use support::{
 };
 
 const SRC: &str = "rfirma-app/src";
+const JOURNEY_FOLDER: &str = "journey";
 const PLACEMENT_FOLDER: &str = "placement";
 const PLACEMENT_ALLOWED_FOLDERS: [&str; 3] = ["placement", "design-system", "i18n"];
 
@@ -56,6 +57,28 @@ fn main_window_offences_in(module: &str, source: &str) -> Vec<String> {
         .collect()
 }
 
+fn journey_offences_in(module: &str, source: &str) -> Vec<String> {
+    let relative = relative_to_src(module);
+    let in_the_root = !relative.contains('/');
+    if in_the_root || is_test_scaffolding(relative) {
+        return Vec::new();
+    }
+    source
+        .lines()
+        .filter_map(|line| {
+            let specifier = specifier_of(line)?;
+            let folder = src_folder_targeted(module, &specifier)?;
+            if folder != JOURNEY_FOLDER || relative.split('/').next() == Some(JOURNEY_FOLDER) {
+                return None;
+            }
+            Some(format!(
+                "`{module}` importa `{specifier}`, del recorrido de firma: solo la raiz lo \
+                 importa, y la ventana habla con el a traves de su gancho"
+            ))
+        })
+        .collect()
+}
+
 fn placement_offences_in(module: &str, source: &str) -> Vec<String> {
     if relative_to_src(module).split('/').next() != Some(PLACEMENT_FOLDER) {
         return Vec::new();
@@ -79,6 +102,7 @@ fn placement_offences_in(module: &str, source: &str) -> Vec<String> {
 
 fn offences_in(module: &str, source: &str) -> Vec<String> {
     let mut found = main_window_offences_in(module, source);
+    found.extend(journey_offences_in(module, source));
     found.extend(placement_offences_in(module, source));
     found
 }
@@ -178,4 +202,40 @@ fn the_placement_may_import_itself_the_design_system_and_the_catalogue() {
     }
     let elsewhere = "import { x } from \"../signing/x\";";
     assert!(placement_offences_in("rfirma-app/src/viewer/Viewer.tsx", elsewhere).is_empty());
+}
+
+#[test]
+fn a_module_outside_the_root_importing_the_journey_turns_red() {
+    for (module, source) in [
+        (
+            "rfirma-app/src/signing/SignedPanel.tsx",
+            "import { signingOrderFor } from \"../journey/signingOrder\";",
+        ),
+        (
+            "rfirma-app/src/viewer/Viewer.tsx",
+            "const view = import('../journey/usePageGeometry');",
+        ),
+    ] {
+        assert_eq!(
+            journey_offences_in(module, source).len(),
+            1,
+            "{module}: {source}"
+        );
+    }
+}
+
+#[test]
+fn the_root_the_journey_the_tests_and_their_scaffolding_may_import_the_journey() {
+    let source = "import { signingOrderFor } from \"../journey/signingOrder\";";
+    for module in [
+        "rfirma-app/src/journey/useSignedSummary.ts",
+        "rfirma-app/src/testing/mainWindowDoubles.ts",
+        "rfirma-app/src/signing/SignedPanel.test.tsx",
+        "rfirma-app/src/signing/SigningPanel.testSupport.tsx",
+        "rfirma-app/src/signing/panelFixtures.ts",
+    ] {
+        assert!(journey_offences_in(module, source).is_empty(), "{module}");
+    }
+    let from_the_root = "import { signingOrderFor } from \"./journey/signingOrder\";";
+    assert!(journey_offences_in("rfirma-app/src/App.useSignFlow.ts", from_the_root).is_empty());
 }

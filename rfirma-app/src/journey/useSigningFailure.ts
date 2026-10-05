@@ -1,7 +1,7 @@
 //! El error de firma del documento activo, y su salida al cambiar de pestaña.
 
 import { useEffect } from "react";
-import { failureFor, type Signing } from "./signing/useSigning";
+import { failureFor, type Signing } from "../signing/useSigning";
 
 /**
  * El error de firma del documento que se tiene delante, y su salida al

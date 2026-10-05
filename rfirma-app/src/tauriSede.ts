@@ -95,7 +95,7 @@ export function tauriSiteErrands(): SiteErrandPort {
       }
     },
     // Un fallo al pedirlas no es una puerta, igual que en escritorio
-    // (App.usePreviousSignatures.ts): el aviso simplemente no se monta.
+    // (journey/usePreviousSignatures.ts): el aviso simplemente no se monta.
     previousSignatures: (document) =>
       invoke<PreviousSignaturesReport>("previous_signatures", { document }).catch(
         () => NO_PREVIOUS_SIGNATURES,
