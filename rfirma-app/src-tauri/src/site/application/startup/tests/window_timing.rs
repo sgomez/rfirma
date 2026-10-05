@@ -110,6 +110,7 @@ fn a_relay_launch_with_fileid_and_stservlet_in_url_preserves_the_delivered_momen
         already_chosen: None,
         without_asking: false,
         sha1_allowed: false,
+        sha1_to_allow: false,
     };
 
     let live_for_delivery = Arc::clone(&live);
@@ -162,6 +163,7 @@ fn a_relay_launch_with_fileid_and_parameters_xml_preserves_the_delivered_moment(
         already_chosen: None,
         without_asking: false,
         sha1_allowed: false,
+        sha1_to_allow: false,
     };
 
     let live_for_delivery = Arc::clone(&live);

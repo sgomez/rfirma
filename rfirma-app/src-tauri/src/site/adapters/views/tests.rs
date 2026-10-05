@@ -110,6 +110,7 @@ fn the_round_crosses_named_as_the_site_asked_for_it() {
         already_chosen: None,
         without_asking: false,
         sha1_allowed: false,
+        sha1_to_allow: false,
     });
 
     assert_eq!(
@@ -129,6 +130,7 @@ fn the_consent_crosses_whether_sha1_is_signed_because_the_person_allows_it() {
             already_chosen: None,
             without_asking: false,
             sha1_allowed: allowed,
+            sha1_to_allow: false,
         });
 
         assert_eq!(
@@ -150,6 +152,7 @@ fn a_countersignature_crosses_with_its_own_label_and_target() {
         already_chosen: None,
         without_asking: false,
         sha1_allowed: false,
+        sha1_to_allow: false,
     });
 
     assert_eq!(
@@ -371,6 +374,7 @@ fn what_is_signed_crosses_named_after_the_format_the_site_asked_for() {
             already_chosen: None,
             without_asking: false,
             sha1_allowed: false,
+            sha1_to_allow: false,
         });
 
         assert_eq!(

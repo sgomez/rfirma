@@ -26,10 +26,10 @@ use crate::signing::domain::{
 };
 use crate::site::domain::protocol::{
     forget_the_box, refuse_a_countersignature_outside_cades_and_xades,
-    refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, refuse_sha1_unless_allowed,
-    visible_signature_of, AfirmaUrl, AskedAlgorithm, LoadRequest, PendingSignRequest,
-    RequestedFormat, SaveRequest, SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
-    SiteVisibleSignature, StickyCertificate,
+    refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, visible_signature_of, AfirmaUrl,
+    AskedAlgorithm, LoadRequest, PendingSignRequest, RequestedFormat, SaveRequest,
+    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
+    StickyCertificate,
 };
 use crate::site::domain::triphase_server::ServerFormat;
 
@@ -83,13 +83,6 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
         }
         attended => attended,
     };
-
-    if let Some(algorithm) = operation.signature_algorithm() {
-        if let Err(refusal) = refuse_sha1_unless_allowed(algorithm, desk.neighbours.sha1_allowed())
-        {
-            return ErrandStep::ShowingTheRefusal(refusal);
-        }
-    }
 
     live.keep_the_request(url.clone());
 
@@ -424,7 +417,10 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine>(
     let preselected =
         Preselected::among(&certificates, stuck, ask.waives_the_choice, desk.neighbours)
             .unless_there_is_a_notice(unregistered_signatures);
+    let sha1_to_allow = ask.algorithm == AskedAlgorithm::Sha1
+        && !(desk.neighbours.sha1_allowed() || live.sha1_allowed_once());
     ErrandStep::AskingToSign(Box::new(SigningConsent {
+        sha1_to_allow,
         document,
         format,
         algorithm: ask.algorithm,
@@ -437,7 +433,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine>(
         headless: ask.headless,
         saving,
         already_chosen: preselected.row,
-        without_asking: preselected.without_asking,
+        without_asking: preselected.without_asking && !sha1_to_allow,
         for_the_site_server: ask.through_the_site_server.map(|format| ForTheSiteServer {
             format,
             document: ask.document.to_vec(),

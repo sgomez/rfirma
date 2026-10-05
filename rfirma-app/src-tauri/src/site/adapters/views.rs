@@ -152,30 +152,6 @@ impl SiteErrandView {
             },
         }
     }
-
-    /// Estado de solicitud de consentimiento para firma de documento.
-    pub fn asking_to_sign(
-        document: &str,
-        format: Format,
-        round: SignatureRound,
-        certificates: &[ListedCertificate],
-        already_chosen: Option<&str>,
-        without_asking: bool,
-        sha1_allowed: bool,
-    ) -> Self {
-        Self {
-            origin: None,
-            stage: SiteStageView::AskingToSign {
-                document: document.to_owned(),
-                signing: format.into(),
-                round: round.into(),
-                certificates: rows_of(certificates),
-                already_chosen: already_chosen.map(str::to_owned),
-                without_asking,
-                sha1_allowed,
-            },
-        }
-    }
 }
 
 fn rows_of(certificates: &[ListedCertificate]) -> Vec<CertificateView> {
@@ -209,15 +185,17 @@ impl From<&Moment> for SiteErrandView {
                 already_chosen,
                 without_asking,
                 sha1_allowed,
-            } => Self::asking_to_sign(
-                document,
-                *format,
-                *round,
-                certificates,
-                already_chosen.as_deref(),
-                *without_asking,
-                *sha1_allowed,
-            ),
+                sha1_to_allow,
+            } => Self::at(SiteStageView::AskingToSign {
+                document: document.clone(),
+                signing: (*format).into(),
+                round: (*round).into(),
+                certificates: rows_of(certificates),
+                already_chosen: already_chosen.clone(),
+                without_asking: *without_asking,
+                sha1_allowed: *sha1_allowed,
+                sha1_to_allow: *sha1_to_allow,
+            }),
             Moment::MarkingTheArea { document } => Self::at(SiteStageView::MarkingTheArea {
                 document: document.clone(),
             }),
@@ -405,6 +383,8 @@ crossing! {
             without_asking: bool,
             /// Si se firma con SHA-1 porque la persona lo permite, para recordárselo.
             sha1_allowed: bool,
+            /// Si la firma pide SHA-1 y la persona no lo permite todavía: la ventana se lo pregunta.
+            sha1_to_allow: bool,
         },
         /// La firma espera a que la persona confirme lo que el validador del original señala.
         #[serde(rename_all = "camelCase")]
