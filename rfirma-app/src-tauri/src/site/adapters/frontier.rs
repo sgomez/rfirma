@@ -80,13 +80,10 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             Failure::new("invalidSignature", reason.clone()),
             SafCode::InvalidSignature,
         ),
-        SiteRefusal::ConfirmationNeeded(message) => (
-            Failure::new("confirmationNeeded", message.clone()),
-            SafCode::ConfirmationNeeded,
-        ),
-        SiteRefusal::Sha1NotAllowed(detail) => {
-            (Failure::new("sha1", detail.clone()), SafCode::Params)
+        SiteRefusal::ConfirmationNeeded(message) => {
+            about_the_detail("confirmationNeeded", message, SafCode::ConfirmationNeeded)
         }
+        SiteRefusal::Sha1NotAllowed(detail) => about_the_detail("sha1", detail, SafCode::Params),
         SiteRefusal::CouldNotValidate(error) => (Failure::from(error), code_of_bridge(error)),
         SiteRefusal::Triphase(error) => (
             Failure::new(
@@ -96,6 +93,10 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             code_of_triphase(error.situation()),
         ),
     }
+}
+
+fn about_the_detail(situation: &str, detail: &str, code: SafCode) -> (Failure, SafCode) {
+    (Failure::new(situation, detail), code)
 }
 
 /// Etiqueta de ventana de una situación de la firma contra el servidor trifásico.

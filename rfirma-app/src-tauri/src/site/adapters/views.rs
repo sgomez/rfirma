@@ -152,32 +152,6 @@ impl SiteErrandView {
             },
         }
     }
-
-    /// Estado de solicitud de consentimiento para firma de documento.
-    pub fn asking_to_sign(
-        document: &str,
-        format: Format,
-        round: SignatureRound,
-        certificates: &[ListedCertificate],
-        already_chosen: Option<&str>,
-        without_asking: bool,
-        sha1_allowed: bool,
-        sha1_to_allow: bool,
-    ) -> Self {
-        Self {
-            origin: None,
-            stage: SiteStageView::AskingToSign {
-                document: document.to_owned(),
-                signing: format.into(),
-                round: round.into(),
-                certificates: rows_of(certificates),
-                already_chosen: already_chosen.map(str::to_owned),
-                without_asking,
-                sha1_allowed,
-                sha1_to_allow,
-            },
-        }
-    }
 }
 
 fn rows_of(certificates: &[ListedCertificate]) -> Vec<CertificateView> {
@@ -212,16 +186,16 @@ impl From<&Moment> for SiteErrandView {
                 without_asking,
                 sha1_allowed,
                 sha1_to_allow,
-            } => Self::asking_to_sign(
-                document,
-                *format,
-                *round,
-                certificates,
-                already_chosen.as_deref(),
-                *without_asking,
-                *sha1_allowed,
-                *sha1_to_allow,
-            ),
+            } => Self::at(SiteStageView::AskingToSign {
+                document: document.clone(),
+                signing: (*format).into(),
+                round: (*round).into(),
+                certificates: rows_of(certificates),
+                already_chosen: already_chosen.clone(),
+                without_asking: *without_asking,
+                sha1_allowed: *sha1_allowed,
+                sha1_to_allow: *sha1_to_allow,
+            }),
             Moment::MarkingTheArea { document } => Self::at(SiteStageView::MarkingTheArea {
                 document: document.clone(),
             }),

@@ -11,7 +11,7 @@ use crate::signing::application::tests::{a_memory, A_CADES_SIGNATURE};
 use crate::site::application::errand::*;
 use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::{
-    AfirmaUrl, ChannelMessage, NegotiatedCredential, Parameter, Refusal, RefusalSituation, SafCode,
+    AfirmaUrl, ChannelMessage, NegotiatedCredential, Refusal, RefusalSituation, SafCode,
 };
 use base64::Engine as _;
 
