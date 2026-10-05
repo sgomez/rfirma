@@ -40,6 +40,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
         certificates: [certificate()],
         narrowed: false,
         sha1Allowed: false,
+        sha1ToAllow: false,
       },
     });
   });
@@ -53,6 +54,8 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
         certificates: [certificate()],
         alreadyChosen: null,
         withoutAsking: false,
+        sha1Allowed: false,
+        sha1ToAllow: false,
       },
     };
 
@@ -68,6 +71,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
         certificates: [certificate()],
         narrowed: false,
         sha1Allowed: false,
+        sha1ToAllow: false,
       },
     });
   });
@@ -219,6 +223,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
           certificates: [certificate()],
           narrowed: false,
           sha1Allowed: false,
+          sha1ToAllow: false,
         },
       }),
     );
@@ -349,6 +354,7 @@ describe("el lote local: el resumen de cada elemento", () => {
         certificates: [certificate()],
         narrowed: false,
         sha1Allowed: false,
+        sha1ToAllow: false,
       },
     });
   });

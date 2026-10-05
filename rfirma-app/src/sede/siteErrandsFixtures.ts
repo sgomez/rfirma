@@ -54,6 +54,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     loadFiles: fn(),
     installCertificate: fn(),
     lookAgain: fn(),
+    allowSha1Once: fn(),
     installLocalCa: fn(),
     closeWindow: fn(),
     dismissWarning: fn(),
@@ -109,6 +110,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
       return true;
     },
     lookAgain: async () => calls.lookAgain(),
+    allowSha1Once: async () => calls.allowSha1Once(),
     installLocalCa: async () => calls.installLocalCa(),
     closeWindow: async () => calls.closeWindow(),
     dismissWarning: async () => calls.dismissWarning(),

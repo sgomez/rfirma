@@ -1073,9 +1073,8 @@ msgstr "Allow SHA-1"
 
 msgid "preferences.allowSha1.hint"
 msgstr ""
-"Some sites still ask for SHA-1, an algorithm that is no longer secure: with "
-"it, two documents can be crafted that share the same signature. Turn it on "
-"only if a site you trust needs it. It does not apply to XML signatures."
+"Some older sites ask for it. It is less secure: turn it on only if you trust "
+"the site."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Remember my activity"
@@ -1307,6 +1306,17 @@ msgid "sede.consent.sha1Allowed"
 msgstr ""
 "This site asks for SHA-1, an obsolete algorithm. You have allowed it in "
 "Preferences."
+
+msgid "sede.consent.sha1ToAllowTitle"
+msgstr "Less secure signature"
+
+msgid "sede.consent.sha1ToAllow"
+msgstr ""
+"This site uses SHA-1, an old, less secure signing method. Sign only if you "
+"trust it."
+
+msgid "sede.consent.signOnce"
+msgstr "Sign just this once"
 
 msgid "sede.consent.willSend"
 msgstr ""

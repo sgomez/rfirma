@@ -69,6 +69,14 @@ export const Sha1Allowed: Story = {
   args: { errand: sedeErrand(consentStage({ sha1Allowed: true })) },
 };
 
+export const BatchAsksForSha1: Story = {
+  args: {
+    errand: sedeErrand(
+      consentStage({ document: null, signing: null, signs: 3, sha1ToAllow: true }),
+    ),
+  },
+};
+
 export const UntitledDocument: Story = {
   args: { errand: sedeErrand(consentStage({ document: documentWith({ title: null }) })) },
 };

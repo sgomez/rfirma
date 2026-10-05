@@ -144,6 +144,11 @@ de las cabeceras de los componentes.
   pide, una línea informativa, en el mismo lugar que la nota de acotado, dice «Esta
   sede pide SHA-1, un algoritmo obsoleto. Lo tienes permitido en Preferencias.» No
   corta el trámite.
+- **SHA-1 por permitir**: cuando un lote remoto pide SHA-1 y la persona no lo
+  permitió en Preferencias, un aviso con el triángulo, «Firma poco segura», y
+  debajo «Esta sede usa SHA-1, un método de firma antiguo y menos seguro. Firma
+  solo si confías en ella.». El botón dice «Firmar solo esta vez», siempre con
+  la cuenta atrás, y consentir permite SHA-1 solo en esa operación (ADR-0023).
 - **El origen se nombra a secas**: atribuye sin afirmar, porque el `Origin` es
   falsificable. Dice también el formato pedido, para que nadie firme a ciegas un
   reto de autenticación creyendo que es un documento. Sin origen válido queda una

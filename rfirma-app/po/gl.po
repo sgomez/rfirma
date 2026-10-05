@@ -1070,9 +1070,7 @@ msgstr "Permitir SHA-1"
 
 msgid "preferences.allowSha1.hint"
 msgstr ""
-"Algunhas sedes aínda piden SHA-1, un algoritmo que xa non é seguro: con el "
-"pódense fabricar dous documentos coa mesma sinatura. Actívao só se unha sede "
-"da túa confianza o necesita. Non vale para sinaturas XML."
+"Algunhas sedes antigas pídeno. É menos seguro: actívao só se confías na sede."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Lembrar a miña actividade"
@@ -1303,6 +1301,17 @@ msgstr "A sede limitou os certificados válidos."
 msgid "sede.consent.sha1Allowed"
 msgstr ""
 "Esta sede pide SHA-1, un algoritmo obsoleto. Telo permitido en Preferencias."
+
+msgid "sede.consent.sha1ToAllowTitle"
+msgstr "Sinatura pouco segura"
+
+msgid "sede.consent.sha1ToAllow"
+msgstr ""
+"Esta sede usa SHA-1, un método de sinatura antigo e menos seguro. Asina só "
+"se confías nela."
+
+msgid "sede.consent.signOnce"
+msgstr "Asinar só esta vez"
 
 msgid "sede.consent.willSend"
 msgstr ""

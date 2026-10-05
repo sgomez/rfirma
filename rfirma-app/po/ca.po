@@ -1074,9 +1074,8 @@ msgstr "Permetre SHA-1"
 
 msgid "preferences.allowSha1.hint"
 msgstr ""
-"Algunes seus encara demanen SHA-1, un algorisme que ja no és segur: amb ell "
-"es poden fabricar dos documents amb la mateixa signatura. Activa'l només si "
-"una seu de la teva confiança el necessita. No val per a signatures XML."
+"Algunes seus antigues ho demanen. És menys segur: activa-ho només si confies "
+"en la seu."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar la meva activitat"
@@ -1308,6 +1307,17 @@ msgid "sede.consent.sha1Allowed"
 msgstr ""
 "Aquesta seu demana SHA-1, un algorisme obsolet. Ho tens permès a "
 "Preferències."
+
+msgid "sede.consent.sha1ToAllowTitle"
+msgstr "Signatura poc segura"
+
+msgid "sede.consent.sha1ToAllow"
+msgstr ""
+"Aquesta seu fa servir SHA-1, un mètode de signatura antic i menys segur. "
+"Signa només si hi confies."
+
+msgid "sede.consent.signOnce"
+msgstr "Signar només aquesta vegada"
 
 msgid "sede.consent.willSend"
 msgstr ""

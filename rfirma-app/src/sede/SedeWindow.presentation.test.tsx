@@ -115,6 +115,15 @@ const rows: [string, ComponentType, Expectation][] = [
     },
   ],
   [
+    "2 · batch asking for SHA-1",
+    consent.BatchAsksForSha1,
+    {
+      shows: [
+        "Esta sede usa SHA-1, un método de firma antiguo y menos seguro. Firma solo si confías en ella.",
+      ],
+    },
+  ],
+  [
     "2 · cosign",
     consent.Cosign,
     { shows: ["Ya viene firmado: la tuya será una cofirma junto a las firmas que ya tiene."] },

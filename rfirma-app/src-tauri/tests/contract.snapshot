@@ -56,6 +56,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async site_install_certificate() -> Result<bool, Failure>
   async site_dismiss_the_warning()
   async site_look_again()
+  async site_allow_sha1_once()
   async site_save_file() -> Result<bool, Failure>
   async site_load_files() -> Result<Option<u32>, Failure>
   async install_local_ca()
@@ -405,7 +406,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       MarkingTheArea { document: String }
       AskingToSign { document: String, signing: SigningKindView, round: SignatureRoundView, certificates: Vec<CertificateView>, alreadyChosen: Option<String>, withoutAsking: bool, sha1Allowed: bool }
       AskingToConfirm { messageCode: String }
-      AskingToSignTheBatch { signs: usize, certificates: Vec<CertificateView>, alreadyChosen: Option<String>, withoutAsking: bool, sha1Allowed: bool }
+      AskingToSignTheBatch { signs: usize, certificates: Vec<CertificateView>, alreadyChosen: Option<String>, withoutAsking: bool, sha1Allowed: bool, sha1ToAllow: bool }
       AskingToSignTheLocalBatch { items: Vec<LocalBatchItemView>, certificates: Vec<CertificateView>, alreadyChosen: Option<String>, withoutAsking: bool, sha1Allowed: bool }
       NoChannel { reason: NoChannelView }
       Outcome { outcome: SiteOutcomeView }

@@ -131,6 +131,12 @@ pub fn site_look_again(app_handle: tauri::AppHandle) {
     site_window::publish_what_moved(&app_handle, looked);
 }
 
+/// Permite SHA-1 solo en la operación en curso, antes de consentir la firma (ADR-0023).
+#[tauri::command(async)]
+pub fn site_allow_sha1_once(site: State<'_, SiteRoot>) {
+    site.errand.allow_sha1_once();
+}
+
 /// El nombre base y la ruta de cada fichero que la persona eligió.
 fn named_paths(chosen: Vec<std::path::PathBuf>) -> Vec<(String, std::path::PathBuf)> {
     chosen

@@ -246,6 +246,8 @@ export type ErrandStage =
       narrowed: boolean;
       /** Si se atiende una petición con SHA-1 porque la persona lo permitió en Preferencias. */
       sha1Allowed: boolean;
+      /** Si la sede pide SHA-1 y la persona no lo permite todavía: no se firma sin que lo permita. */
+      sha1ToAllow: boolean;
     }
   /**
    * Entre que la persona acepta y que la firma vuelve a la sede. Dos momentos,

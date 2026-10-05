@@ -52,8 +52,8 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
    levantarla.** Con colisiones de prefijo elegido ya prácticas, quien prepara
    el documento —la sede o el propio firmante— puede fabricar dos documentos
    con la misma huella, y la firma vale para los dos: se pierde el no repudio.
-   - **Por defecto se rechaza**, en todo formato, en toda operación, en los dos
-     lotes —local y remoto— y en la línea de órdenes. Se decide en rFirma,
+   - **Por defecto se rechaza**, en todo formato, en toda operación, en el
+     lote local y en la línea de órdenes; el lote remoto lo pregunta (abajo). Se decide en rFirma,
      antes de llegar al puente, y antes de pedir certificado allí donde el
      algoritmo ya se conoce.
    - **Una preferencia, «Permitir SHA-1», apagada por defecto, lo permite** en
@@ -67,6 +67,14 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
    - **La preferencia es una sola, para todas las sedes.** La ventana de sede
      no escribe nada (ADR-0010) y no hay estado por sede donde guardar una
      excepción.
+   - **En el lote remoto, sin la preferencia, el consentimiento pregunta en
+     vez de rechazar.** Avisa de que la firma es poco segura, y su botón pasa
+     a «Firmar solo esta vez», con la cuenta atrás aunque la persona la tenga
+     desactivada; el lote no se consiente solo aunque la sede lo pida.
+     Consentir permite SHA-1 en esa operación y en ninguna otra: el permiso
+     vive en la memoria del trámite, se olvida al acabar la operación y no toca
+     la preferencia. El rechazo llegaba después de teclear el PIN y obligaba a
+     repetir el trámite desde la sede; la pregunta llega antes y no lo corta.
    - **No se ofrece en el asistente de primer arranque.** La decisión tiene
      sentido cuando una sede la pide, no al instalar: quien nunca se encuentra
      una sede así no tiene por qué leerla.
