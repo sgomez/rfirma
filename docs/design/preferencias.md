@@ -68,7 +68,7 @@ cambiar de panel no enturbia nada porque no hay transacción que confirmar.
 
 ## Los ajustes
 
-Nueve, en cuatro paneles. Los textos están en `preferences.*` de `po/es.po` y no
+Diez, en cuatro paneles. Los textos están en `preferences.*` de `po/es.po` y no
 se copian aquí.
 
 ### General
@@ -101,6 +101,9 @@ Un solo grupo, **Privacidad** (`preferences.sections.privacy`):
 - **Usar el certificado que elija la sede**
   (`preferences.honourAutomaticSelection.label`), apagado por omisión: si solo
   sirve uno, la sede lo elige sin preguntar.
+- **Permitir SHA-1** (`preferences.allowSha1.*`), apagado por omisión, con su
+  explicación del riesgo debajo: algunas sedes aún lo piden, ya no es seguro y
+  no vale para firmas XML.
 
 ### Certificados
 

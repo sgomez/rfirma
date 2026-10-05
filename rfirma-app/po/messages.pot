@@ -1061,6 +1061,9 @@ msgstr ""
 msgid "preferences.allowSha1.label"
 msgstr ""
 
+msgid "preferences.allowSha1.hint"
+msgstr ""
+
 msgid "preferences.rememberActivity.label"
 msgstr ""
 
