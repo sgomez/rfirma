@@ -145,7 +145,7 @@ de las cabeceras de los componentes.
   sede pide SHA-1, un algoritmo obsoleto. Lo tienes permitido en Preferencias.» No
   corta el trámite.
 - **SHA-1 por permitir**: cuando una firma suelta, un lote remoto o un lote
-  local piden SHA-1 (o una XAdES explícita, que llega con la misma marca) y la
+  local piden SHA-1 y la
   persona no lo permitió en Preferencias, un aviso con el triángulo, «Firma poco segura», y
   debajo «Esta sede usa SHA-1, un método de firma antiguo y menos seguro. Firma
   solo si confías en ella.». El botón dice «Firmar solo esta vez», siempre con
@@ -258,13 +258,12 @@ de las cabeceras de los componentes.
   `REFUSAL_ACTION_OF`. Los rechazos del token, el puente y el documento se cuentan
   con el título que les da la ventana principal, sin redactarlos dos veces. Solo
   cae en la frase genérica lo que ni el backend sabe clasificar.
-- **Las firmas que rFirma se niega a hacer** (SHA-1, XAdES explícita, cofirma o
+- **Las firmas que rFirma se niega a hacer** (SHA-1, cofirma o
   contrafirma de factura, contrafirma fuera de CAdES, CMS y XAdES; ADR-0023) dicen
   que no es un fallo de quien firma, y esa causa ocupa el lugar de la acción. La
   nota para quien mantiene la sede va dentro de la caja del detalle y se copia con él.
   El rechazo por SHA-1 añade, antes de la caja, la pista «Si confías en esta sede,
-  puedes permitir SHA-1 en Preferencias → Firma y volver a firmar desde la sede.»;
-  el de SHA-1 en XML no la lleva, porque ahí la preferencia no actúa.
+  puedes permitir SHA-1 en Preferencias → Firma y volver a firmar desde la sede.»
 - **La caja del detalle es de la sede y solo de la sede.** El enlace a comentarios
   y ayuda, que solo aparece cuando ni se sabe qué se rechazó, va fuera: eso no se
   lleva a la sede, se reporta a rFirma.

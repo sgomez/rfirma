@@ -1489,9 +1489,6 @@ msgstr ""
 msgid "sede.refusalCauses.sha1"
 msgstr ""
 
-msgid "sede.refusalCauses.explicitXades"
-msgstr ""
-
 msgid "sede.refusalCauses.invoiceMultisignature"
 msgstr ""
 
@@ -1502,9 +1499,6 @@ msgid "sede.siteNotes.sha1"
 msgstr ""
 
 msgid "sede.refusalHints.sha1"
-msgstr ""
-
-msgid "sede.siteNotes.explicitXades"
 msgstr ""
 
 msgid "sede.siteNotes.invoiceMultisignature"

@@ -1531,11 +1531,6 @@ msgstr "No se puede firmar con ese certificado. Vuelve a la sede y elige otro."
 msgid "sede.refusalCauses.sha1"
 msgstr "La sede ha pedido una firma con SHA-1, que ya no es segura."
 
-msgid "sede.refusalCauses.explicitXades"
-msgstr ""
-"La sede ha pedido un tipo de firma antiguo que podría hacerse pasar por la "
-"de otro documento."
-
 msgid "sede.refusalCauses.invoiceMultisignature"
 msgstr ""
 "La sede ha pedido añadir una segunda firma a una factura electrónica, que "
@@ -1553,11 +1548,6 @@ msgid "sede.refusalHints.sha1"
 msgstr ""
 "Si confías en esta sede, puedes permitir SHA-1 en Preferencias → Firma y "
 "volver a firmar desde la sede."
-
-msgid "sede.siteNotes.explicitXades"
-msgstr ""
-"Quitad mode=explicit o usad CAdES explícita, que firma el documento sin "
-"incluirlo."
 
 msgid "sede.siteNotes.invoiceMultisignature"
 msgstr ""

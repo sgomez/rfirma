@@ -18,8 +18,6 @@ const RETRY = "Vuelve a la sede e inténtalo de nuevo.";
 const CONTACT_SITE = "Contacta con la sede para terminar el trámite.";
 const CLOSE_OTHER = "Cierra el otro trámite o la otra aplicación de firma y vuelve a intentarlo.";
 const SHA1_CAUSE = "La sede ha pedido una firma con SHA-1, que ya no es segura.";
-const EXPLICIT_XADES_CAUSE =
-  "La sede ha pedido un tipo de firma antiguo que podría hacerse pasar por la de otro documento.";
 const INVOICE_MULTISIGNATURE_CAUSE =
   "La sede ha pedido añadir una segunda firma a una factura electrónica, que solo admite una.";
 const UNSUPPORTED_COUNTERSIGNATURE_CAUSE =
@@ -35,8 +33,6 @@ const SITE_ACTION: Record<keyof typeof REFUSAL_ACTION_OF, string> = {
   errandInFlight: CLOSE_OTHER,
   portsTaken: CLOSE_OTHER,
   sha1: SHA1_CAUSE,
-  sha1InXml: SHA1_CAUSE,
-  explicitXades: EXPLICIT_XADES_CAUSE,
   invoiceMultisignature: INVOICE_MULTISIGNATURE_CAUSE,
   unsupportedCountersignature: UNSUPPORTED_COUNTERSIGNATURE_CAUSE,
   saveCancelled: RETRY,
@@ -128,12 +124,6 @@ describe("4 · outcome", () => {
       detail: "SAF_03: el algoritmo 'SHA1withRSA' es SHA-1: rFirma firma con SHA-2",
       cause: SHA1_CAUSE,
       note: "Pedid SHA256withRSA o superior.",
-    },
-    {
-      situation: "explicitXades",
-      detail: "SAF_06: mode=explicit con XAdES (firma de la huella SHA-1)",
-      cause: EXPLICIT_XADES_CAUSE,
-      note: "Quitad mode=explicit o usad CAdES explícita, que firma el documento sin incluirlo.",
     },
     {
       situation: "invoiceMultisignature",

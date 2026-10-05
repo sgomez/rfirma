@@ -62,8 +62,6 @@ export const REFUSAL_ACTION_OF = {
   errandInFlight: "closeOther",
   portsTaken: "closeOther",
   sha1: "contactSite",
-  sha1InXml: "contactSite",
-  explicitXades: "contactSite",
   invoiceMultisignature: "contactSite",
   unsupportedCountersignature: "contactSite",
   saveCancelled: "retry",

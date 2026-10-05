@@ -1534,11 +1534,6 @@ msgstr ""
 msgid "sede.refusalCauses.sha1"
 msgstr "La seu ha demanat una signatura amb SHA-1, que ja no és segura."
 
-msgid "sede.refusalCauses.explicitXades"
-msgstr ""
-"La seu ha demanat un tipus de signatura antic que es podria fer passar per "
-"la d'un altre document."
-
 msgid "sede.refusalCauses.invoiceMultisignature"
 msgstr ""
 "La seu ha demanat afegir una segona signatura a una factura electrònica, que "
@@ -1556,11 +1551,6 @@ msgid "sede.refusalHints.sha1"
 msgstr ""
 "Si confies en aquesta seu, pots permetre SHA-1 a Preferències → Signatura i "
 "tornar a signar des de la seu."
-
-msgid "sede.siteNotes.explicitXades"
-msgstr ""
-"Traieu mode=explicit o feu servir CAdES explícita, que signa el document "
-"sense incloure'l."
 
 msgid "sede.siteNotes.invoiceMultisignature"
 msgstr ""

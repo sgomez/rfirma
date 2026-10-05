@@ -1543,11 +1543,6 @@ msgstr ""
 "Egoitzak SHA-1 erabiltzen duen sinadura bat eskatu du, eta hori ez da "
 "segurua jada."
 
-msgid "sede.refusalCauses.explicitXades"
-msgstr ""
-"Egoitzak sinadura mota zahar bat eskatu du, beste dokumentu baten sinadura "
-"balitz bezala aurkez daitekeena."
-
 msgid "sede.refusalCauses.invoiceMultisignature"
 msgstr ""
 "Egoitzak bigarren sinadura bat gehitzeko eskatu du faktura elektroniko "
@@ -1565,11 +1560,6 @@ msgid "sede.refusalHints.sha1"
 msgstr ""
 "Egoitza honetan fidatzen bazara, SHA-1 onar dezakezu Hobespenak → Sinadura "
 "atalean eta egoitzatik berriro sinatu."
-
-msgid "sede.siteNotes.explicitXades"
-msgstr ""
-"Kendu mode=explicit edo erabili CAdES esplizitua, dokumentua sartu gabe "
-"sinatzen baitu."
 
 msgid "sede.siteNotes.invoiceMultisignature"
 msgstr ""
