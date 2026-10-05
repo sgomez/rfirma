@@ -35,6 +35,7 @@ fn filtered_with(accepted: &[&'static str], words: &[&str], signer: &RecordingSi
         platform: crate::desktop::domain::platform::Platform::Linux,
         signer,
         window: &Untouched,
+        sha1_allowed: false,
     };
     attend(&arguments_of(words), &ports)
 }

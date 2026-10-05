@@ -94,6 +94,7 @@ fn attended(words: &[&str]) -> Outcome {
             platform: rfirma_lib::desktop::adapters::paths::Platform::Linux,
             signer: &NeverSigns,
             window: &NeverSigns,
+            sha1_allowed: false,
         },
     )
 }

@@ -2,7 +2,7 @@ use super::*;
 
 fn parsed(words: &[&str]) -> Result<SignArguments, ArgumentsRefusal> {
     let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
-    parse_sign_arguments(&arguments)
+    parse_sign_arguments(&arguments, false)
 }
 
 #[test]
@@ -70,6 +70,18 @@ fn sha1_is_refused() {
         parsed(&["-i", "a", "-o", "b", "-alias", "yo", "-algorithm", "SHA1"]),
         Err(ArgumentsRefusal::Sha1Refused)
     );
+}
+
+#[test]
+fn sha1_is_read_when_the_preference_allows_it() {
+    let arguments: Vec<String> = ["-i", "a", "-o", "b", "-alias", "yo", "-algorithm", "SHA1"]
+        .iter()
+        .map(|word| (*word).to_owned())
+        .collect();
+
+    let parsed = parse_sign_arguments(&arguments, true).expect("válidos");
+
+    assert_eq!(parsed.algorithm, Algorithm::Sha1);
 }
 
 #[test]
