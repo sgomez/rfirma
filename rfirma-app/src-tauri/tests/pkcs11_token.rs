@@ -242,6 +242,7 @@ fn signing_a_hash_with_the_bare_rsa_mechanism_would_not_verify() {
 #[test]
 fn each_rsa_digest_signs_and_openssl_verifies_it_with_the_one_it_names() {
     for (algorithm, digest) in [
+        (SignatureAlgorithm::Sha1Rsa, MessageDigest::sha1()),
         (SignatureAlgorithm::Sha256Rsa, MessageDigest::sha256()),
         (SignatureAlgorithm::Sha384Rsa, MessageDigest::sha384()),
         (SignatureAlgorithm::Sha512Rsa, MessageDigest::sha512()),
@@ -341,6 +342,7 @@ fn an_rsa_algorithm_over_an_ec_key_is_refused_the_same_way() {
 #[test]
 fn each_ecdsa_digest_signs_and_openssl_verifies_it_with_the_one_it_names() {
     for (algorithm, digest) in [
+        (SignatureAlgorithm::Sha1Ecdsa, MessageDigest::sha1()),
         (SignatureAlgorithm::Sha256Ecdsa, MessageDigest::sha256()),
         (SignatureAlgorithm::Sha384Ecdsa, MessageDigest::sha384()),
         (SignatureAlgorithm::Sha512Ecdsa, MessageDigest::sha512()),
