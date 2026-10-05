@@ -116,7 +116,10 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
   puente quita al arrancar las prohibiciones de la huella SHA-1, `rsa-sha1` y
   `ecdsa-sha1`, y deja el resto. El ciclo trifásico XAdES y FacturaE con
   `SHA1withRSA`, y la XAdES explícita, dan firmas que aceptan el validador del
-  original y xmlsec. Lo que cambia es rFirma, que deja de rechazarlas.
+  original y xmlsec. Lo que cambia es rFirma, que deja de rechazarlas. La
+  política relajada rige también al validar: `rfirma verify` da por válida una
+  XAdES firmada con `rsa-sha1` sin que intervenga el permiso de SHA-1, igual
+  que el original.
 - La guarda de la XAdES explícita reproduce las condiciones exactas del
   original, ahora para decidir cuándo se sustituye el documento por su huella;
   una cofirma, una contrafirma, `XAdEStri` o `useManifest=true` firman el
