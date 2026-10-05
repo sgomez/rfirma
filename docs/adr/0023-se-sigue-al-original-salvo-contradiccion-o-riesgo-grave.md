@@ -110,11 +110,13 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
   `SHA256withRSAandMGF1` o el URI de XMLDSig, que allí no están. Rechaza de
   menos, nunca firma con una huella distinta de la nombrada. Reconoce todas las
   grafías de SHA-1, y el permiso decide si las atiende o pregunta.
-- El puente firma XML con SHA-1 sin ajustes: la política del JDK que prohíbe
-  SHA-1 en XMLDSig (`jdk.xml.dsig.secureValidationPolicy`) se aplica al
-  validar, no al firmar. El ciclo trifásico XAdES y FacturaE con `SHA1withRSA`,
-  y la XAdES explícita, dan firmas que aceptan el validador del original y
-  xmlsec. Lo que cambia es rFirma, que deja de rechazarlas.
+- En la imagen nativa firma XML el proveedor XMLDSig del JDK, no el Santuario
+  externo de la JVM, y su política de validación segura
+  (`jdk.xml.dsig.secureValidationPolicy`) prohíbe SHA-1 también al firmar. El
+  puente quita al arrancar las prohibiciones de la huella SHA-1, `rsa-sha1` y
+  `ecdsa-sha1`, y deja el resto. El ciclo trifásico XAdES y FacturaE con
+  `SHA1withRSA`, y la XAdES explícita, dan firmas que aceptan el validador del
+  original y xmlsec. Lo que cambia es rFirma, que deja de rechazarlas.
 - La guarda de la XAdES explícita reproduce las condiciones exactas del
   original, ahora para decidir cuándo se sustituye el documento por su huella;
   una cofirma, una contrafirma, `XAdEStri` o `useManifest=true` firman el
