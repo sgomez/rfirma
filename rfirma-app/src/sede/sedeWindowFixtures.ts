@@ -105,6 +105,7 @@ export function consentStage(overrides: Partial<ConsentStage> = {}): ConsentStag
     items: null,
     certificates: [certificate()],
     narrowed: false,
+    sha1Allowed: false,
     ...overrides,
   };
 }

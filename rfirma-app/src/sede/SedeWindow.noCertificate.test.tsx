@@ -127,6 +127,7 @@ describe("when a child throws", () => {
       items: null,
       certificates: undefined as unknown as Certificate[],
       narrowed: false,
+      sha1Allowed: false,
     });
     renderWithCatalog(
       <RenderErrorBoundary>

@@ -62,6 +62,7 @@ export const REFUSAL_ACTION_OF = {
   errandInFlight: "closeOther",
   portsTaken: "closeOther",
   sha1: "contactSite",
+  sha1InXml: "contactSite",
   explicitXades: "contactSite",
   invoiceMultisignature: "contactSite",
   unsupportedCountersignature: "contactSite",
@@ -243,6 +244,8 @@ export type ErrandStage =
        * se enumera lo que descartó ni con qué criterio.
        */
       narrowed: boolean;
+      /** Si se atiende una petición con SHA-1 porque la persona lo permitió en Preferencias. */
+      sha1Allowed: boolean;
     }
   /**
    * Entre que la persona acepta y que la firma vuelve a la sede. Dos momentos,

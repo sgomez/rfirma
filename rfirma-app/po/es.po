@@ -1072,7 +1072,10 @@ msgid "preferences.allowSha1.label"
 msgstr "Permitir SHA-1"
 
 msgid "preferences.allowSha1.hint"
-msgstr "Algunas sedes todavía piden SHA-1, un algoritmo que ya no es seguro: con él se pueden fabricar dos documentos con la misma firma. Actívalo solo si una sede de tu confianza lo necesita. No vale para firmas XML."
+msgstr ""
+"Algunas sedes todavía piden SHA-1, un algoritmo que ya no es seguro: con él "
+"se pueden fabricar dos documentos con la misma firma. Actívalo solo si una "
+"sede de tu confianza lo necesita. No vale para firmas XML."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar mi actividad"
@@ -1299,6 +1302,11 @@ msgstr "{{origin}} ha limitado los certificados válidos."
 
 msgid "sede.consent.narrowedUnknownOrigin"
 msgstr "La sede ha limitado los certificados válidos."
+
+msgid "sede.consent.sha1Allowed"
+msgstr ""
+"Esta sede pide SHA-1, un algoritmo obsoleto. Lo tienes permitido en "
+"Preferencias."
 
 msgid "sede.consent.willSend"
 msgstr ""
@@ -1530,6 +1538,11 @@ msgstr ""
 
 msgid "sede.siteNotes.sha1"
 msgstr "Pedid SHA256withRSA o superior."
+
+msgid "sede.refusalHints.sha1"
+msgstr ""
+"Si confías en esta sede, puedes permitir SHA-1 en Preferencias → Firma y "
+"volver a firmar desde la sede."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""

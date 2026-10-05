@@ -1073,7 +1073,10 @@ msgid "preferences.allowSha1.label"
 msgstr "Permetre SHA-1"
 
 msgid "preferences.allowSha1.hint"
-msgstr "Algunes seus encara demanen SHA-1, un algorisme que ja no és segur: amb ell es poden fabricar dos documents amb la mateixa signatura. Activa'l només si una seu de la teva confiança el necessita. No val per a signatures XML."
+msgstr ""
+"Algunes seus encara demanen SHA-1, un algorisme que ja no és segur: amb ell "
+"es poden fabricar dos documents amb la mateixa signatura. Activa'l només si "
+"una seu de la teva confiança el necessita. No val per a signatures XML."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar la meva activitat"
@@ -1300,6 +1303,11 @@ msgstr "{{origin}} ha limitat els certificats vàlids."
 
 msgid "sede.consent.narrowedUnknownOrigin"
 msgstr "La seu ha limitat els certificats vàlids."
+
+msgid "sede.consent.sha1Allowed"
+msgstr ""
+"Aquesta seu demana SHA-1, un algorisme obsolet. Ho tens permès a "
+"Preferències."
 
 msgid "sede.consent.willSend"
 msgstr ""
@@ -1533,6 +1541,11 @@ msgstr ""
 
 msgid "sede.siteNotes.sha1"
 msgstr "Demaneu SHA256withRSA o superior."
+
+msgid "sede.refusalHints.sha1"
+msgstr ""
+"Si confies en aquesta seu, pots permetre SHA-1 a Preferències → Signatura i "
+"tornar a signar des de la seu."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""

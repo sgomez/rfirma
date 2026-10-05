@@ -1073,7 +1073,11 @@ msgid "preferences.allowSha1.label"
 msgstr "Onartu SHA-1"
 
 msgid "preferences.allowSha1.hint"
-msgstr "Egoitza batzuek oraindik SHA-1 eskatzen dute, jada segurua ez den algoritmoa: harekin sinadura bera duten bi dokumentu fabrika daitezke. Aktibatu soilik zure konfiantzazko egoitza batek behar badu. Ez du balio XML sinaduretarako."
+msgstr ""
+"Egoitza batzuek oraindik SHA-1 eskatzen dute, jada segurua ez den "
+"algoritmoa: harekin sinadura bera duten bi dokumentu fabrika daitezke. "
+"Aktibatu soilik zure konfiantzazko egoitza batek behar badu. Ez du balio XML "
+"sinaduretarako."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Gogoratu nire jarduera"
@@ -1302,6 +1306,11 @@ msgstr "{{origin}}(e)k baliozko ziurtagiriak mugatu ditu."
 
 msgid "sede.consent.narrowedUnknownOrigin"
 msgstr "Egoitzak baliozko ziurtagiriak mugatu ditu."
+
+msgid "sede.consent.sha1Allowed"
+msgstr ""
+"Egoitza honek SHA-1 eskatzen du, algoritmo zaharkitua. Hobespenetan onartuta "
+"daukazu."
 
 msgid "sede.consent.willSend"
 msgstr ""
@@ -1542,6 +1551,11 @@ msgstr ""
 
 msgid "sede.siteNotes.sha1"
 msgstr "Eskatu SHA256withRSA edo handiagoa."
+
+msgid "sede.refusalHints.sha1"
+msgstr ""
+"Egoitza honetan fidatzen bazara, SHA-1 onar dezakezu Hobespenak → Sinadura "
+"atalean eta egoitzatik berriro sinatu."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""

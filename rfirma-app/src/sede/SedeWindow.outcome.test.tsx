@@ -28,6 +28,7 @@ const SITE_ACTION: Record<keyof typeof REFUSAL_ACTION_OF, string> = {
   errandInFlight: CLOSE_OTHER,
   portsTaken: CLOSE_OTHER,
   sha1: CONTACT_SITE,
+  sha1InXml: CONTACT_SITE,
   explicitXades: CONTACT_SITE,
   invoiceMultisignature: CONTACT_SITE,
   unsupportedCountersignature: CONTACT_SITE,

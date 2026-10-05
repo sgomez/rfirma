@@ -1284,6 +1284,9 @@ msgstr ""
 msgid "sede.consent.narrowedUnknownOrigin"
 msgstr ""
 
+msgid "sede.consent.sha1Allowed"
+msgstr ""
+
 msgid "sede.consent.willSend"
 msgstr ""
 
@@ -1487,6 +1490,9 @@ msgid "sede.refusalCauses.unsupportedCountersignature"
 msgstr ""
 
 msgid "sede.siteNotes.sha1"
+msgstr ""
+
+msgid "sede.refusalHints.sha1"
 msgstr ""
 
 msgid "sede.siteNotes.explicitXades"

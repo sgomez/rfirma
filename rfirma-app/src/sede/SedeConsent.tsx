@@ -132,6 +132,8 @@ export function SedeConsent({
               </p>
             )}
 
+            {stage.sha1Allowed && <p className="rf-hint">{t("sede.consent.sha1Allowed")}</p>}
+
             {stage.document !== null && (
               <DocumentCard document={stage.document} certificate={chosen} />
             )}

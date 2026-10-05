@@ -141,6 +141,9 @@ export function SedeOutcome({ origin, outcome, onClose, onOpenHelp }: SedeOutcom
               <RefusalSentence situation={outcome.situation} />
             </p>
             <p className="rf-hint">{t("sede.outcome.refusedNote")}</p>
+            {outcome.situation === "sha1" && (
+              <p className="rf-prose">{t("sede.refusalHints.sha1")}</p>
+            )}
             <SiteNote situation={outcome.situation} />
             <Stack gap="xs" className="sede-outcome__detail">
               <Row gap="xs" className="sede-outcome__detail-head">
@@ -240,6 +243,7 @@ function RefusalCause({ situation }: { situation: RefusalSituation }) {
 
   switch (situation) {
     case "sha1":
+    case "sha1InXml":
       return <p className="rf-prose">{t("sede.refusalCauses.sha1")}</p>;
     case "explicitXades":
       return <p className="rf-prose">{t("sede.refusalCauses.explicitXades")}</p>;
@@ -258,6 +262,7 @@ function SiteNote({ situation }: { situation: RefusalSituation }) {
 
   switch (situation) {
     case "sha1":
+    case "sha1InXml":
       return <p className="rf-hint">{t("sede.siteNotes.sha1")}</p>;
     case "explicitXades":
       return <p className="rf-hint">{t("sede.siteNotes.explicitXades")}</p>;

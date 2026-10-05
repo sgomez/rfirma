@@ -140,6 +140,10 @@ de las cabeceras de los componentes.
   documento con sus firmas previas; pie fijo con cancelar y la acción principal.
   La nota de acotado va debajo del desplegable porque habla de lo que la lista
   contiene y se lee después de verla.
+- **SHA-1 permitido**: cuando la persona lo permitió en Preferencias y la sede lo
+  pide, una línea informativa, en el mismo lugar que la nota de acotado, dice «Esta
+  sede pide SHA-1, un algoritmo obsoleto. Lo tienes permitido en Preferencias.» No
+  corta el trámite.
 - **El origen se nombra a secas**: atribuye sin afirmar, porque el `Origin` es
   falsificable. Dice también el formato pedido, para que nadie firme a ciegas un
   reto de autenticación creyendo que es un documento. Sin origen válido queda una
@@ -251,6 +255,9 @@ de las cabeceras de los componentes.
 - **Las firmas que rFirma se niega a hacer** (SHA-1, XAdES explícita, cofirma o
   contrafirma de factura, contrafirma fuera de CAdES, CMS y XAdES; ADR-0023) dicen
   que no es un fallo de quien firma, con una nota para quien mantiene la sede.
+  El rechazo por SHA-1 añade, antes de esa nota, la pista «Si confías en esta sede,
+  puedes permitir SHA-1 en Preferencias → Firma y volver a firmar desde la sede.»;
+  el de SHA-1 en XML no la lleva, porque ahí la preferencia no actúa.
 - **La caja del detalle es de la sede y solo de la sede.** El enlace a comentarios
   y ayuda, que solo aparece cuando ni se sabe qué se rechazó, va fuera: eso no se
   lleva a la sede, se reporta a rFirma.

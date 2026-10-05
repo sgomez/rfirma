@@ -524,6 +524,7 @@ describe("la selección automática que pide la sede", () => {
   const withTheOnlyOne = (withoutAsking: boolean): SiteErrandView => ({
     origin: "sede.ejemplo.gob.es",
     stage: {
+      sha1Allowed: false,
       kind: "askingToSign",
       document: "asa-opaca-1",
       signing: "pdf",

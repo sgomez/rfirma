@@ -1072,7 +1072,10 @@ msgid "preferences.allowSha1.label"
 msgstr "Allow SHA-1"
 
 msgid "preferences.allowSha1.hint"
-msgstr "Some sites still ask for SHA-1, an algorithm that is no longer secure: with it, two documents can be crafted that share the same signature. Turn it on only if a site you trust needs it. It does not apply to XML signatures."
+msgstr ""
+"Some sites still ask for SHA-1, an algorithm that is no longer secure: with "
+"it, two documents can be crafted that share the same signature. Turn it on "
+"only if a site you trust needs it. It does not apply to XML signatures."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Remember my activity"
@@ -1299,6 +1302,11 @@ msgstr "{{origin}} has narrowed down the valid certificates."
 
 msgid "sede.consent.narrowedUnknownOrigin"
 msgstr "The site has narrowed down the valid certificates."
+
+msgid "sede.consent.sha1Allowed"
+msgstr ""
+"This site asks for SHA-1, an obsolete algorithm. You have allowed it in "
+"Preferences."
 
 msgid "sede.consent.willSend"
 msgstr ""
@@ -1529,6 +1537,11 @@ msgstr ""
 
 msgid "sede.siteNotes.sha1"
 msgstr "Ask for SHA256withRSA or higher."
+
+msgid "sede.refusalHints.sha1"
+msgstr ""
+"If you trust this site, you can allow SHA-1 in Preferences → Signing and "
+"sign again from the site."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""

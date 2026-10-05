@@ -33,6 +33,8 @@ export type SiteStageView =
       alreadyChosen: string | null;
       /** La ventana consiente sola con `alreadyChosen`, sin esperar a la persona. */
       withoutAsking: boolean;
+      /** Se atiende una petición con SHA-1 porque la persona lo permitió. */
+      sha1Allowed: boolean;
     }
   | {
       kind: "askingToConfirm";
