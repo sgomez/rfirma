@@ -347,7 +347,15 @@ pub fn finish_the_local_batch<E: FilterEngine, P: PolicyEngine>(
         .batch
         .as_ref()
         .map_err(|unread| SiteRefusal::LocalBatch(unread.to_string()))
-        .and_then(|batch| local_batch::signed_local_batch(desk, &chosen, secret, batch))
+        .and_then(|batch| {
+            local_batch::signed_local_batch(
+                desk,
+                &chosen,
+                secret,
+                batch,
+                desk.neighbours.sha1_allowed() || live.sha1_allowed_once(),
+            )
+        })
         .map_err(|refusal| ConsentError::Refused(told_to_the_site(live, refusal)))?;
 
     let signer_der = pending.request.needcert().then(|| chosen.der().to_vec());

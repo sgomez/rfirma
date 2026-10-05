@@ -20,6 +20,7 @@ pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine>(
     certificate: &TokenCertificate,
     secret: &ProtectedSecret,
     batch: &LocalBatch,
+    sha1_allowed: bool,
 ) -> Result<Vec<LocalBatchResult>, SiteRefusal> {
     if batch.signs().is_empty() {
         return Err(SiteRefusal::LocalBatch(
@@ -29,7 +30,7 @@ pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine>(
 
     let algorithm = match AskedAlgorithm::read(batch.algorithm()) {
         AlgorithmReading::Attended(algorithm) => algorithm,
-        AlgorithmReading::Sha1 if desk.neighbours.sha1_allowed() => AskedAlgorithm::Sha1,
+        AlgorithmReading::Sha1 if sha1_allowed => AskedAlgorithm::Sha1,
         AlgorithmReading::Sha1 => {
             return Err(SiteRefusal::Signing(SigningRefusal {
                 code: SafCode::LocalBatchSign,
