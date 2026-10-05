@@ -396,3 +396,11 @@ siguen en `.scratch/archive/`.
 2026-10-05 spec=#1636 sub=#1641 model=sonnet effort=medium pr=#1646 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=merged
 2026-10-05 spec=#1636 sub=#1640 model=opus effort=medium pr=#1647 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
 2026-10-05 spec=#1636 sub=#1642 model=sonnet effort=medium pr=#1648 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
+2026-10-05 spec=#1607 sub=#1608 model=sonnet effort=medium pr=#1651 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-10-05 spec=#1607 sub=#1609 model=opus effort=medium pr=#1652 verdict=CLEAN cycles=0 mergefix=1 wave=1 outcome=merged
+2026-10-05 spec=#1607 sub=#1610 model=sonnet effort=medium pr=#1653 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
+2026-10-05 spec=#1607 sub=#1611 model=opus effort=medium pr=#1654 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=merged
+2026-10-05 spec=#1607 sub=#1612 model=opus effort=medium pr=#1655 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
+2026-10-05 spec=#1607 sub=#1615 model=sonnet effort=medium pr=#1656 verdict=CLEAN cycles=0 mergefix=0 wave=5 outcome=merged
+2026-10-05 spec=#1607 sub=#1613 model=sonnet effort=medium pr=#1657 verdict=CLEAN cycles=0 mergefix=0 wave=5 outcome=merged
+2026-10-05 spec=#1607 sub=#1614 model=sonnet effort=medium pr=#1658 verdict=CLEAN cycles=1 mergefix=0 wave=5 outcome=merged
