@@ -93,6 +93,11 @@ Cualquier `cargo` necesita `rfirma-app/dist` ya construido, también
 `tauri::generate_context!()` y revienta con «The `frontendDist` configuration
 is set to `"../dist"` but this path doesn't exist».
 
+Si `just test-one-rust` falla con «falta po/es.po, y es el original» y la ruta
+es la de un worktree que ya no existe, el `build.rs` de `rfirma` se compiló
+desde ese worktree y el target compartido (ADR-0014) lo conserva. Un
+`touch rfirma-app/src-tauri/build.rs` en el tuyo obliga a recompilarlo.
+
 ## Las pruebas que se leen a sí mismas
 
 Leen el código **como texto**: `signing/application/cycle/tests.rs`,
