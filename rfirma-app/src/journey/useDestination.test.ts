@@ -37,4 +37,21 @@ describe("useDestination", () => {
     expect(result.current.singleDestinationId).toBeNull();
     await waitFor(() => expect(result.current.destination?.folder).toBe("Documentos"));
   });
+
+  it("falls back to the settings folder while the backend has not answered or has failed", async () => {
+    const destinations = {
+      previewFor: () => Promise.reject(new Error("sin respuesta")),
+      chooseSingle: () => Promise.resolve(null),
+    };
+    const { result } = renderHook(() =>
+      useDestination(destinations, "factura.pdf", "Documentos", "idle"),
+    );
+
+    expect(result.current.destination).toEqual({
+      folder: "Documentos",
+      name: null,
+      writable: true,
+    });
+    await waitFor(() => expect(result.current.destination.folder).toBe("Documentos"));
+  });
 });

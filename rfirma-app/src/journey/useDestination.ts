@@ -62,5 +62,14 @@ export function useDestination(
     if (chosen !== null) setSingleDestinationId(chosen.id);
   };
 
-  return { destination, singleDestinationId, chooseSingleDestination };
+  return {
+    destination: destination ?? fallbackDestination(chosenFolder),
+    singleDestinationId,
+    chooseSingleDestination,
+  };
+}
+
+/** El destino mientras el backend no ha respondido o ha fallado: la carpeta de los ajustes. */
+function fallbackDestination(chosenFolder: string | null): Destination {
+  return { folder: chosenFolder ?? "", name: null, writable: true };
 }

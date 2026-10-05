@@ -4,12 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { forgetActivity } from "./App.forgetActivity";
 import type { MainWindowPorts } from "./App.ports";
-import { useCertificateChoice } from "./App.useCertificateChoice";
 import { useDropNotices } from "./App.useDropNotices";
 import { useNativeTitlebar } from "./App.useNativeTitlebar";
 import { useOpenShortcut } from "./App.useOpenShortcut";
 import { usePreferencesState } from "./App.usePreferencesState";
-import { useSignFlow } from "./App.useSignFlow";
 import { useStartupNotices } from "./App.useStartupNotices";
 import { useViewedSignatures } from "./App.useViewedSignatures";
 import { AboutDialog } from "./about/AboutDialog";
@@ -20,11 +18,12 @@ import type { RecentDocument } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
 import { useOpenPdf } from "./documents/useOpenPdf";
 import { SignPrompts, signPromptOpen } from "./journey/SignPrompts";
+import { useCertificateChoice } from "./journey/useCertificateChoice";
 import { useDestination } from "./journey/useDestination";
 import { usePageGeometry } from "./journey/usePageGeometry";
 import { usePreviousSignatures } from "./journey/usePreviousSignatures";
-import { useSignedSummary } from "./journey/useSignedSummary";
-import { useSigningFailure } from "./journey/useSigningFailure";
+import { useSignFlow } from "./journey/useSignFlow";
+import { useSigningOutcome } from "./journey/useSigningOutcome";
 import { useVisibleSignature } from "./journey/useVisibleSignature";
 import { firstSealedPage } from "./placement/pageSets";
 import { usePlacement } from "./placement/usePlacement";
@@ -34,7 +33,6 @@ import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import { SignedPanel } from "./signing/SignedPanel";
 import { SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
-import { formatSignedAt } from "./signing/signedAt";
 import { useCertificateListing } from "./signing/useCertificateListing";
 import { useSignedDocumentOpening } from "./signing/useSignedDocumentOpening";
 import { useSigning } from "./signing/useSigning";
@@ -121,13 +119,9 @@ export function App({
   const { newVersion, versionDismissed, setVersionDismissed, setStatusRows, hasAttention } =
     useStartupNotices(status, versions);
 
-  // Un gesto sobre el recuadro está en curso. Sólo lo mira la vista previa: es
-  // lo que congela la vista anterior en vez de pagar un ciclo por fotograma.
-  const [gesturing, setGesturing] = useState(false);
   const certificateListing = useCertificateListing(certificates);
   const { certificate, chooseCertificate } = useCertificateChoice(certificateListing.listing);
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
-  const [signature, setSignature] = useVisibleSignature(initialSignature, chosen);
   const signing = useSigning(signer);
   const { settings, changeSettings, chooseDestination, rubric, rubricFailure, chooseRubric } =
     usePreferencesState(preferences, rubrics, covered, windowTheme);
@@ -153,22 +147,6 @@ export function App({
     signing.state.kind,
   );
   const { i18n } = useTranslation();
-  // El instante del recuadro **es estado, no un reloj**: se fija al abrir el
-  // documento y no vuelve a correr. Recalcularlo en cada pintada haría que la
-  // vista previa enseñara una hora y se estampara otra, que es la diferencia
-  // entre enseñar el PDF que se va a firmar y enseñar uno parecido.
-  //
-  // El **formato** sí se rehace al cambiar de idioma: la hora es la misma, y
-  // solo cambia cómo se escribe.
-  const [signingInstant, setSigningInstant] = useState(() => new Date());
-  const signedAt = useMemo(
-    () => formatSignedAt(signingInstant, i18n.language),
-    [signingInstant, i18n.language],
-  );
-
-  useEffect(() => {
-    if (opening !== null) setSigningInstant(new Date());
-  }, [opening]);
 
   const standardRectOn = useMemo(() => (pdf === null ? null : standardRectOnPageOf(pdf)), [pdf]);
   const placementState = usePlacement({
@@ -178,10 +156,11 @@ export function App({
   });
   const { placing, placement, viewPage, moveBox, sealPage, placeOnViewedPage } = placementState;
 
-  const signatureOn = signature.enabled && pdf !== null;
-  useEffect(() => {
-    if (signatureOn && placing.rect === null) placeOnViewedPage();
-  }, [signatureOn, placing.rect, placeOnViewedPage]);
+  const [signature, setSignature] = useVisibleSignature(initialSignature, chosen, {
+    documentOpen: pdf !== null,
+    placed: placing.rect !== null,
+    placeOnViewedPage,
+  });
 
   // Se lee aquí, y no en la vista previa, porque es asíncrono y el ciclo de la
   // firma se decide con la orden ya armada.
@@ -204,8 +183,8 @@ export function App({
     findings,
     opening: signedOpening,
     signAgain,
-  } = useSignedSummary(signing, activeId, documents.reopen, signer, opener);
-  const { failedHere } = useSigningFailure(signing, activeId);
+    failedHere,
+  } = useSigningOutcome(signing, activeId, documents.reopen, signer, opener);
 
   const signFlow = useSignFlow({
     pdf,
@@ -215,18 +194,17 @@ export function App({
     boxPage,
     signature,
     rubric,
-    signedAt,
+    opening,
     language: i18n.resolvedLanguage ?? i18n.language,
     chosen,
     signer,
     stamps,
     sizeBytes,
-    gesturing,
     singleDestinationId,
     previousSignatures,
     startSigning: signing.start,
   });
-  const { stamp, sign } = signFlow;
+  const { stamp, sign, signingInstant } = signFlow;
 
   const modalOpen = dialog !== null || signPromptOpen(signFlow) || signing.state.kind === "running";
   const canOpen = !covered && view === null && !modalOpen;
@@ -326,7 +304,7 @@ export function App({
             pdf={pdf}
             stamped={stamp.pdf}
             stampFrozen={stamp.state.kind === "frozen"}
-            onGesture={setGesturing}
+            onGesture={stamp.onGesture}
             placement={placement}
             canPlace={signature.enabled}
             onMove={moveBox}
@@ -370,9 +348,7 @@ export function App({
               signedAt={signingInstant}
               signatures={signatures}
               findings={findings}
-              destination={
-                destination ?? { folder: settings?.destination ?? "", name: null, writable: true }
-              }
+              destination={destination}
               onOpenDocument={() => signedOpening.openDocument()}
               onOpenFolder={() => signedOpening.openFolder()}
               onSign={signAgain}
@@ -426,9 +402,7 @@ export function App({
               rubric={rubric}
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}
-              destination={
-                destination ?? { folder: settings?.destination ?? "", name: null, writable: true }
-              }
+              destination={destination}
               onChangeDestination={() => void chooseSingleDestination()}
               onSign={() => void sign()}
               signing={signing.state.kind === "running"}
