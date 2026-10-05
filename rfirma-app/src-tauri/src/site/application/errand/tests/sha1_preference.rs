@@ -267,7 +267,7 @@ fn a_consent_with_sha2_carries_no_sha1_mark() {
 }
 
 #[test]
-fn with_the_preference_xades_and_facturae_are_refused_without_the_sha1_situation() {
+fn with_the_preference_xades_and_facturae_are_signed_with_sha1_on_the_token() {
     for (url, what) in [
         (
             a_request(
@@ -296,10 +296,16 @@ fn with_the_preference_xades_and_facturae_are_refused_without_the_sha1_situation
     ] {
         let attended = attended_with_the_preference(url, true);
 
-        let refusal = the_refusal_shown(&attended.step, what);
-        assert_saf_03_naming_the_algorithm(&refusal, what);
-        assert_eq!(refusal.situation(), RefusalSituation::Sha1InXml, "{what}");
-        assert!(attended.signed_with.is_empty(), "{what}: el token no firma");
+        assert!(
+            matches!(&attended.step, ErrandStep::AskingToSign(_)),
+            "{what}: llega al consentimiento: {:?}",
+            attended.step
+        );
+        assert_eq!(
+            attended.signed_with,
+            vec![SignatureAlgorithm::Sha1Ecdsa],
+            "{what}: el certificado de pruebas lleva clave EC y firma con SHA-1, nunca con SHA-256"
+        );
     }
 }
 

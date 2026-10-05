@@ -54,6 +54,22 @@ final class XadesCycle {
         return sign(document, extraParams, "sign");
     }
 
+    static byte[] signWith(final String algorithm, final byte[] document,
+            final Properties extraParams) throws Exception {
+        final X509Certificate[] chain = TestFixtures.certificateChain();
+        final XadesBridge.PreSignResult pre =
+                XadesBridge.preSign(document, algorithm, chain, extraParams, "sign");
+        final List<XadesBridge.SignatureValue> values = new ArrayList<>();
+        for (final XadesBridge.PreSign each : pre.pres()) {
+            final Signature signature = Signature.getInstance(algorithm);
+            signature.initSign(TestFixtures.privateKey());
+            signature.update(Base64.getDecoder().decode(each.pre()));
+            values.add(new XadesBridge.SignatureValue(each.id(),
+                    Base64.getEncoder().encodeToString(signature.sign())));
+        }
+        return XadesBridge.postSign(document, chain, pre.stamp(), pre.session(), values);
+    }
+
     static byte[] sign(final byte[] document, final Properties extraParams, final String operation)
             throws Exception {
         return signedBy(document, extraParams, operation,

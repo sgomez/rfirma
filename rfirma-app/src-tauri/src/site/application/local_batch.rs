@@ -9,8 +9,7 @@ use crate::site::application::errand::desk::{write_the_document, ErrandDesk};
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::{sha1_detail, LocalBatch, LocalBatchResult, LocalSingleSign};
 use crate::site::domain::protocol::{
-    refuse_a_countersignature_outside_cades_and_xades, refuse_sha1_in_xml, AlgorithmReading,
-    AskedAlgorithm, SafCode,
+    refuse_a_countersignature_outside_cades_and_xades, AlgorithmReading, AskedAlgorithm, SafCode,
 };
 use crate::site::domain::signing::SigningRefusal;
 use crate::site::ports::{FilterEngine, PolicyEngine, SiteSigningRequest};
@@ -83,7 +82,6 @@ fn sign_one<E: FilterEngine, P: PolicyEngine>(
     sign: &LocalSingleSign,
 ) -> Result<Vec<u8>, SiteRefusal> {
     refuse_a_countersignature_outside_cades_and_xades(sign.round(), sign.effective_format())
-        .and_then(|()| refuse_sha1_in_xml(algorithm, sign.effective_format(), None))
         .map_err(|refusal| SiteRefusal::LocalBatch(refusal.to_string()))?;
     let format = Format::from(sign.effective_format());
 

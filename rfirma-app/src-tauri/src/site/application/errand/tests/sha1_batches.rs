@@ -263,55 +263,25 @@ fn without_the_preference_a_local_batch_with_sha1_is_refused_as_sha1_before_sign
 }
 
 #[test]
-fn with_the_preference_a_local_batch_signs_outside_xml_with_sha1_and_fails_the_xades_item() {
+fn with_the_preference_a_local_batch_signs_every_item_with_sha1_xades_included() {
     let batch = the_local_batch_with_the_preference(&a_local_batch_with_sha1(false), true);
 
     batch.finished.expect("el lote local contesta");
     let result = batch.result.expect("la sede recibe el resultado");
-    assert!(
-        result.contains("\"id\":\"001\",\"result\":\"DONE_AND_SAVED\""),
-        "{result}"
-    );
-    assert!(
-        result.contains("\"id\":\"002\",\"result\":\"DONE_AND_SAVED\""),
-        "{result}"
-    );
-    assert!(
-        result.contains("\"id\":\"003\",\"result\":\"ERROR_PRE\""),
-        "{result}"
-    );
-    assert!(result.contains("XML con SHA-1"), "{result}");
-    assert_eq!(
-        batch.presigned,
-        vec![Format::Pades, Format::Cades],
-        "el elemento XAdES no cruza al puente"
-    );
+    for id in ["001", "002", "003"] {
+        assert!(
+            result.contains(&format!("\"id\":\"{id}\",\"result\":\"DONE_AND_SAVED\"")),
+            "{result}"
+        );
+    }
+    assert_eq!(batch.presigned.len(), 3);
+    assert!(matches!(batch.presigned[2], Format::Xades(_)));
     assert_eq!(
         batch.signed_with,
-        vec![SignatureAlgorithm::Sha1Ecdsa, SignatureAlgorithm::Sha1Ecdsa],
+        vec![SignatureAlgorithm::Sha1Ecdsa; 3],
         "el certificado de pruebas lleva clave EC y firma con SHA-1, nunca con SHA-256"
     );
     assert!(batch.consent.sha1_allowed, "con la marca");
-}
-
-#[test]
-fn with_the_preference_a_local_batch_that_stops_on_error_stops_at_the_xades_item() {
-    let batch = the_local_batch_with_the_preference(&a_local_batch_with_sha1(true), true);
-
-    batch.finished.expect("el lote local contesta");
-    let result = batch.result.expect("la sede recibe el resultado");
-    assert!(
-        result.contains("\"id\":\"001\",\"result\":\"SKIPPED\""),
-        "{result}"
-    );
-    assert!(
-        result.contains("\"id\":\"002\",\"result\":\"SKIPPED\""),
-        "{result}"
-    );
-    assert!(
-        result.contains("\"id\":\"003\",\"result\":\"ERROR_PRE\""),
-        "{result}"
-    );
 }
 
 #[test]
