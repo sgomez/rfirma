@@ -120,6 +120,11 @@ fn the_digest_the_site_asks_for_is_composed_with_the_key_of_the_certificate() {
             SignatureAlgorithm::Sha384Ecdsa,
         ),
         (
+            AskedAlgorithm::Sha1,
+            SignatureAlgorithm::Sha1Rsa,
+            SignatureAlgorithm::Sha1Ecdsa,
+        ),
+        (
             AskedAlgorithm::Sha512,
             SignatureAlgorithm::Sha512Rsa,
             SignatureAlgorithm::Sha512Ecdsa,
