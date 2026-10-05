@@ -175,6 +175,8 @@ describe("el lote local", () => {
       certificates: [certificate()],
       alreadyChosen: null,
       withoutAsking: false,
+      sha1Allowed: false,
+      sha1ToAllow: false,
     },
   };
 
@@ -191,6 +193,43 @@ describe("el lote local", () => {
       kind: "outcome",
       outcome: { kind: "batchSigned", signs: 3 },
     });
+  });
+
+  it("allows SHA-1 just this once before beginning to sign a local batch that asks for it", async () => {
+    const order: string[] = [];
+    const { push, port, last } = watched({
+      allowSha1Once: async () => {
+        order.push("allowSha1Once");
+      },
+      beginSigning: async () => {
+        order.push("beginSigning");
+        return { ok: true, value: { kind: "typedOnScreen" } };
+      },
+    });
+    push({
+      ...ASKING_TO_SIGN_THE_LOCAL_BATCH,
+      stage: {
+        ...ASKING_TO_SIGN_THE_LOCAL_BATCH.stage,
+        sha1ToAllow: true,
+      } as SiteErrandView["stage"],
+    });
+    await vi.waitFor(() =>
+      expect(last()?.stage).toMatchObject({ kind: "consent", sha1ToAllow: true }),
+    );
+
+    await port.consent("handle-1");
+
+    expect(order).toEqual(["allowSha1Once", "beginSigning"]);
+  });
+
+  it("does not allow SHA-1 for a local batch that does not ask for it", async () => {
+    const { push, port, calls, last } = watched();
+    push(ASKING_TO_SIGN_THE_LOCAL_BATCH);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.consent("handle-1");
+
+    expect(calls.allowSha1Once).not.toHaveBeenCalled();
   });
 
   it("names the local batch's own refusals as the refusal table knows them", async () => {

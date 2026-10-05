@@ -123,7 +123,7 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         certificates: stage.certificates,
         narrowed: false,
         sha1Allowed: stage.sha1Allowed,
-        sha1ToAllow: false,
+        sha1ToAllow: stage.sha1ToAllow,
       };
     case "askingToConfirm":
       return { kind: "confirming", messageCode: stage.messageCode };
@@ -154,8 +154,8 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         items: stage.items,
         certificates: stage.certificates,
         narrowed: false,
-        sha1Allowed: false,
-        sha1ToAllow: false,
+        sha1Allowed: stage.sha1Allowed,
+        sha1ToAllow: stage.sha1ToAllow,
       };
   }
 }
