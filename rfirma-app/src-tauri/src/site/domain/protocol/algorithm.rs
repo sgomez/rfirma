@@ -3,6 +3,8 @@
 /// La huella que pide la sede, sea cual sea el nombre con el que la escriba.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AskedAlgorithm {
+    /// `SHA1`, `SHA1withRSA` o `SHA1withECDSA`.
+    Sha1,
     /// `SHA256`, `SHA256withRSA` o `SHA256withECDSA`.
     Sha256,
     /// `SHA384`, `SHA384withRSA` o `SHA384withECDSA`.
@@ -43,6 +45,7 @@ impl AskedAlgorithm {
     /// El nombre de la huella, sin la clave con la que se compone el algoritmo.
     pub fn name(self) -> &'static str {
         match self {
+            Self::Sha1 => "SHA1",
             Self::Sha256 => "SHA256",
             Self::Sha384 => "SHA384",
             Self::Sha512 => "SHA512",
