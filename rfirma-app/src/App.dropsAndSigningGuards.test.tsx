@@ -152,7 +152,7 @@ describe("App, al soltar ficheros en la ventana", () => {
 
 /**
  * **TD-64**: la ventana distingue el documento que se firma de la fila que se
- * guarda (ID-287), y sabe pintar y firmar uno del que no queda rastro (ID-286).
+ * guarda (ID-287), y sabe pintar uno del que no queda rastro (ID-286).
  *
  * Se prueba por los puertos doblados —el selector entrega el documento, la
  * bandeja es el almacén en memoria— porque eso es exactamente lo que hará la

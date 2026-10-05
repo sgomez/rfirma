@@ -226,8 +226,9 @@ describe("useSigningJourney, antes del PIN: ¿Firmar de todos modos?", () => {
 
     await sign();
 
-    expect(result.current.dialogs.signAnyway?.problems).toHaveLength(1);
-    expect(result.current.dialogs.sealLoss).toBeNull();
+    expect(result.current.dialogs.signAnyway?.problems).toEqual([
+      { kind: "signature", number: 1, signature: unknownTypeSignature },
+    ]);
   });
 
   it("lets the bridge cosign once the unknown-type row is accepted", async () => {
