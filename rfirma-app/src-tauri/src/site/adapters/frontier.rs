@@ -84,6 +84,9 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             Failure::new("confirmationNeeded", message.clone()),
             SafCode::ConfirmationNeeded,
         ),
+        SiteRefusal::Sha1NotAllowed(detail) => {
+            (Failure::new("sha1", detail.clone()), SafCode::Params)
+        }
         SiteRefusal::CouldNotValidate(error) => (Failure::from(error), code_of_bridge(error)),
         SiteRefusal::Triphase(error) => (
             Failure::new(

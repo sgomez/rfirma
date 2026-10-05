@@ -19,7 +19,7 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::site::domain::batch::build_local_result;
-use crate::site::domain::protocol::{AfirmaUrl, SiteFilter};
+use crate::site::domain::protocol::{refuse_sha1_unless_allowed, AfirmaUrl, Refusal, SiteFilter};
 use crate::site::domain::signing::SigningRefusal;
 
 use crate::site::application::batch;
@@ -197,6 +197,12 @@ pub fn consent<E: FilterEngine, P: PolicyEngine>(
     let Some(pending) = live.the_signature_consented() else {
         return Err(ConsentError::NothingPending);
     };
+    if let Err(refusal) = refuse_sha1_unless_allowed(
+        pending.algorithm,
+        desk.neighbours.sha1_allowed() || live.sha1_allowed_once(),
+    ) {
+        return Err(refused_by_the_protocol(live, refusal));
+    }
     if let Some(server) = pending.through_the_server.clone() {
         return server_signature::consented(desk, pending, server, certificate, live);
     }
@@ -454,6 +460,12 @@ fn told_to_the_site(live: &LiveErrand, refusal: SiteRefusal) -> SiteRefusal {
         SiteOutcome::Refused(refusal) => refusal,
         answered => unreachable!("una firma que no sale es siempre un rechazo: {answered:?}"),
     }
+}
+
+fn refused_by_the_protocol(live: &LiveErrand, refusal: Refusal) -> ConsentError {
+    let detail = refusal.detail().to_owned();
+    replies::over(live, SiteOutcome::RefusedByTheProtocol(refusal));
+    ConsentError::Refused(SiteRefusal::Sha1NotAllowed(detail))
 }
 
 /// Cancela el trámite de sede notificando cancelación a la sede.

@@ -132,6 +132,8 @@ pub struct SigningConsent {
     pub format: Format,
     /// Huella que la sede pidió para esta firma.
     pub algorithm: AskedAlgorithm,
+    /// Si la firma pide SHA-1 y la persona no lo permite todavía, ni en Preferencias ni en esta operación.
+    pub sha1_to_allow: bool,
     /// Modalidad de firma solicitada.
     pub round: SignatureRound,
     /// Certificados aceptados por la sede, ya cribados.
@@ -166,7 +168,8 @@ impl SigningConsent {
             certificates: self.certificates.clone(),
             already_chosen: self.already_chosen.clone(),
             without_asking: self.without_asking,
-            sha1_allowed: self.algorithm == AskedAlgorithm::Sha1,
+            sha1_allowed: self.algorithm == AskedAlgorithm::Sha1 && !self.sha1_to_allow,
+            sha1_to_allow: self.sha1_to_allow,
         }
     }
 }
@@ -428,6 +431,8 @@ pub enum Moment {
         without_asking: bool,
         /// Si se firma con SHA-1 porque la persona lo permite.
         sha1_allowed: bool,
+        /// Si la firma pide SHA-1 y la persona no lo permite todavía.
+        sha1_to_allow: bool,
     },
     /// La persona marca sobre el PDF el área de la firma visible, antes de elegir certificado.
     MarkingTheArea {

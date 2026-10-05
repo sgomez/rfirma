@@ -48,6 +48,8 @@ pub enum SiteRefusal {
     InvalidSignature(String),
     /// Seguir necesita que la persona confirme, y la sede pidió `headless`.
     ConfirmationNeeded(String),
+    /// La firma pide SHA-1 y la persona no lo ha permitido, ni en Preferencias ni en esta operación.
+    Sha1NotAllowed(String),
     /// Las firmas del documento no se han podido examinar.
     CouldNotValidate(BridgeError),
     /// La firma contra el servidor trifásico de la sede no ha salido.
@@ -78,7 +80,8 @@ impl SiteRefusal {
             | Self::CannotReadData(detail)
             | Self::LocalBatch(detail)
             | Self::InvalidSignature(detail)
-            | Self::ConfirmationNeeded(detail) => detail.clone(),
+            | Self::ConfirmationNeeded(detail)
+            | Self::Sha1NotAllowed(detail) => detail.clone(),
             Self::Signing(refusal) | Self::BatchSigningFailed(refusal) => refusal.detail.clone(),
             Self::Batch(error) => error.detail().to_owned(),
             Self::Triphase(error) => error.detail().to_owned(),
