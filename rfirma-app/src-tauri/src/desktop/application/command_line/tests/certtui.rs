@@ -129,6 +129,7 @@ fn chosen_on(
         platform,
         signer,
         window: &Untouched,
+        sha1_allowed: false,
     };
     attend(&arguments_of(words), &ports)
 }

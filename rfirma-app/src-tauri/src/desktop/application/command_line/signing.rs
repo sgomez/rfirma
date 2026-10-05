@@ -3,6 +3,7 @@
 use base64::Engine as _;
 
 use super::*;
+use crate::desktop::domain::sign_arguments::Algorithm;
 
 pub(super) fn sign(
     arguments: &[String],
@@ -92,6 +93,11 @@ fn signed(
         ))
     })?;
     let format = signature_format_of(parsed.format, &bytes);
+    if parsed.algorithm == Algorithm::Sha1 && matches!(format, SignatureFormat::Xades(_)) {
+        return Err(Outcome::failed(
+            "rfirma: sha1 no se admite en las firmas XML (XAdES y FacturaE)".to_owned(),
+        ));
+    }
     let document = ports
         .signer
         .sign(&CommandLineSigning {

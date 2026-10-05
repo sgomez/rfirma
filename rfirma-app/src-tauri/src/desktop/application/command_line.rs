@@ -74,6 +74,8 @@ pub struct CommandLinePorts<'a> {
     pub signer: &'a dyn DocumentSigner,
     /// La ventana de sede en la que se elige con `-certgui`.
     pub window: &'a dyn GraphicalPicker,
+    /// Si la preferencia «Permitir SHA-1» está activada.
+    pub sha1_allowed: bool,
 }
 
 /// Lo que una orden deja al terminar: código de salida, bytes de stdout y líneas de stderr.
@@ -175,7 +177,7 @@ pub fn attend(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
         return Outcome::refused(&Refusal::JsonWithXml);
     }
     let signing = if matches!(command, Command::Sign | Command::Cosign) {
-        match parse_sign_arguments(&arguments[1..]) {
+        match parse_sign_arguments(&arguments[1..], ports.sha1_allowed) {
             Ok(parsed) => Some(parsed),
             Err(refusal) => return Outcome::refused(&Refusal::InvalidArguments(refusal)),
         }

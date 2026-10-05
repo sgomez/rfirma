@@ -273,6 +273,7 @@ fn attended_in(
             platform: crate::desktop::domain::platform::Platform::Linux,
             signer: &Untouched,
             window: &Untouched,
+            sha1_allowed: false,
         },
     )
 }

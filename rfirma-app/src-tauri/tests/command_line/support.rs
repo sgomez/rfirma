@@ -254,6 +254,7 @@ pub fn attended_with_the_window(
         platform: rfirma_lib::desktop::adapters::paths::Platform::Linux,
         signer: &RootsSigner::of(roots),
         window,
+        sha1_allowed: RootsSigner::of(roots).sha1_allowed(),
     };
     let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
     attend(&arguments, &ports)

@@ -149,6 +149,7 @@ fn attended_on(
         platform,
         signer,
         window: &Untouched,
+        sha1_allowed: false,
     };
     attend(&arguments_of(words), &ports)
 }
@@ -320,6 +321,7 @@ mod listaliases_json;
 mod platform;
 #[path = "../../../../tests/command_line/schema.rs"]
 pub(super) mod schema;
+mod sha1;
 mod sign_config;
 mod sign_formats;
 mod sign_json;

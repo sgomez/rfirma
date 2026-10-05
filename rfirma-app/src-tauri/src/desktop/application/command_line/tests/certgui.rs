@@ -134,6 +134,7 @@ fn chosen_with(
         platform: crate::desktop::domain::platform::Platform::Linux,
         signer,
         window,
+        sha1_allowed: false,
     };
     attend(&arguments_of(words), &ports)
 }
