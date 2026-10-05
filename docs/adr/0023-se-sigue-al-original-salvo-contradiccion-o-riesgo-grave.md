@@ -1,4 +1,4 @@
-# Se sigue al original salvo contradicción o riesgo grave: SHA-1 no, XAdES explícita no
+# Se sigue al original salvo contradicción o riesgo grave: SHA-1 solo si la persona lo permite, XAdES explícita no
 
 rFirma es el cliente que la sede invoca en lugar de AutoFirma 1.9.2. Cada
 petición que el original atiende y rFirma rechaza deja a una persona a mitad de
@@ -12,9 +12,10 @@ acepta ninguno más (`UrlParametersToSign.SUPPORTED_SIGNATURE_ALGORITHMS`):
 `withECDSA`. Para `op=batch` ni siquiera comprueba nada: el algoritmo viaja
 dentro del `dat` y se pasa tal cual a los dos servlets
 (`BatchSigner.getAlgorithmForXML`). Hay sedes en producción que todavía piden
-SHA-1, en firma suelta y en lote. SHA-1 ya no es apto para generar firmas
-nuevas (ETSI TS 119 312), y las colisiones de prefijo elegido son prácticas
-desde 2020.
+SHA-1, en firma suelta y en lote; el `clientSigner.js` de Guadaltel, por
+ejemplo, monta el acceso con certificado como un lote remoto CAdES de una sola
+firma con `SHA1withRSA`. SHA-1 ya no es apto para generar firmas nuevas
+(ETSI TS 119 312), y las colisiones de prefijo elegido son prácticas desde 2020.
 
 **La XAdES explícita.** Con `mode=explicit`, formato XAdES, operación `sign` (o
 `signandsave`), sin `useManifest=true` y fuera de `XAdEStri`, AutoFirma sustituye
@@ -39,34 +40,56 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
    resulta no tiene valor jurídico. Que el original lo entregue en ese caso no
    ata a rFirma, que no lo entrega nunca, admita o no el filtro de la sede al
    certificado caducado.
-2. **Del catálogo de algoritmos del original se aceptan SHA-256, SHA-384 y
-   SHA-512, con clave RSA o de curva elíptica, y nada más.** SHA-1 no, por el
-   punto 4. MD5 y RIPEMD-160 siguen fuera, como allí.
-3. **SHA-1 se rechaza; no se sustituye por SHA-256 por lo bajo.** En trifásico
-   el servlet construye la prefirma con la huella que declaró y el `PK1` del
-   token tiene que corresponderse con ella. Firmar con otra huella no da una
-   firma mejor: da una firma inválida. Una degradación silenciosa aquí sería un
-   fallo, no una defensa.
-4. **SHA-1 es un caso de la excepción de seguridad.** Con colisiones de prefijo
-   elegido ya prácticas, quien prepara el documento —la sede o el propio
-   firmante— puede fabricar dos documentos con la misma huella, y la firma vale
-   para los dos: se pierde el no repudio. Que la firma declare SHA-1 a la vista
-   no protege a quien firma, ni a un tercero que la reciba sin validar su
-   política. El rechazo alcanza a todo formato, a toda operación y a los dos
-   lotes, local y remoto. Se decide en rFirma, antes de llegar al puente, y
-   antes de pedir certificado allí donde el algoritmo ya se conoce. Tiene
-   situación propia: la ventana de sede explica a la persona que no es un fallo
-   suyo y, bajo «Para quien mantiene la sede:», que pida SHA-256 o superior.
-   Después la sede recibe el código que ese punto de entrada da a un algoritmo
-   que no se atiende: `SAF_03`, que nombra `algorithm`, en la firma suelta, como
-   en el original. Un algoritmo que rFirma no reconoce no es SHA-1 y no lleva
-   esa explicación.
-5. **La XAdES explícita es otro caso de la excepción.** Donde AutoFirma
-   firmaría la huella SHA-1 en lugar del documento, rFirma no firma: enseña el
-   rechazo a la persona usuaria y, al cerrar la ventana, la sede recibe
-   `SAF_06`. El riesgo es el del punto 4, y además escondido: el algoritmo de
-   la firma puede ser SHA-256 y aun así lo único que la ata al documento es un
-   SHA-1. En los demás casos `mode` se ignora, como en el original.
+2. **Del catálogo de algoritmos del original se atienden SHA-256, SHA-384 y
+   SHA-512, con clave RSA o de curva elíptica, y SHA-1 solo con la preferencia
+   del punto 4.** MD5 y RIPEMD-160 siguen fuera, como allí.
+3. **SHA-1 no se sustituye por SHA-256 por lo bajo.** En trifásico el servlet
+   construye la prefirma con la huella que declaró y el `PK1` del token tiene
+   que corresponderse con ella. Firmar con otra huella no da una firma mejor:
+   da una firma inválida. Una degradación silenciosa aquí sería un fallo, no
+   una defensa.
+4. **SHA-1 es un caso de la excepción de seguridad, y la persona puede
+   levantarla.** Con colisiones de prefijo elegido ya prácticas, quien prepara
+   el documento —la sede o el propio firmante— puede fabricar dos documentos
+   con la misma huella, y la firma vale para los dos: se pierde el no repudio.
+   - **Por defecto se rechaza**, en todo formato, en toda operación, en los dos
+     lotes —local y remoto— y en la línea de órdenes. Se decide en rFirma,
+     antes de llegar al puente, y antes de pedir certificado allí donde el
+     algoritmo ya se conoce.
+   - **Una preferencia, «Permitir SHA-1», apagada por defecto, lo permite** en
+     los formatos que no firman XML: CAdES y sus variantes, CMS, PKCS#1 y
+     PAdES. Vale en los mismos puntos de entrada que el rechazo. Quien la
+     activa no queda peor protegido que con AutoFirma, que es adonde volvería
+     para acabar el trámite; quien no sabe nada de esto sigue protegido.
+   - **La preferencia es una sola, para todas las sedes.** La ventana de sede
+     no escribe nada (ADR-0010) y no hay estado por sede donde guardar una
+     excepción.
+   - **No se ofrece en el asistente de primer arranque.** La decisión tiene
+     sentido cuando una sede la pide, no al instalar: quien nunca se encuentra
+     una sede así no tiene por qué leerla.
+   - **El rechazo explica el arreglo.** La ventana de sede dice a la persona
+     que no es un fallo suyo, que puede permitir SHA-1 en Preferencias → Firma
+     si confía en la sede, y que después tiene que volver a firmar desde la
+     sede. Solo texto: ningún botón la lleva al ajuste. Bajo «Para quien
+     mantiene la sede:», que pida SHA-256 o superior. El error de la línea de
+     órdenes nombra el mismo ajuste. Después la sede recibe el código que ese
+     punto de entrada da a un algoritmo que no se atiende: `SAF_03`, que nombra
+     `algorithm`, en la firma suelta, como en el original.
+   - **Con la preferencia activada, el consentimiento lo recuerda** con una
+     línea informativa: la sede pide SHA-1 y la persona lo tiene permitido. No
+     corta el trámite.
+   - **En XAdES y FacturaE, SHA-1 se rechaza siempre**, y ese rechazo no
+     sugiere la preferencia, porque no lo arreglaría.
+   - Un algoritmo que rFirma no reconoce no es SHA-1 y no lleva esa
+     explicación.
+5. **La XAdES explícita es otro caso de la excepción, y no tiene preferencia.**
+   Donde AutoFirma firmaría la huella SHA-1 en lugar del documento, rFirma no
+   firma: enseña el rechazo a la persona usuaria y, al cerrar la ventana, la
+   sede recibe `SAF_06`. El algoritmo de la firma puede ser SHA-256 y aun así
+   lo único que la ata al documento es un SHA-1, y el propio original la da
+   por incorrecta: no es un caso feliz. La preferencia del punto 4 no la
+   cubre, y su rechazo no la sugiere. En los demás casos `mode` se ignora,
+   como en el original.
 6. **Un filtro en el que el original no reconoce nada no es un filtro.** El
    original descarta las condiciones que no reconoce, y si no le queda
    ninguna, la expresión admite todos los certificados y, como ya cuenta como
@@ -78,17 +101,22 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
 
 ## Consequences
 
-- `SignatureAlgorithm` no tiene variantes SHA-1, ni rFirma pide al token
-  `CKM_SHA1_RSA_PKCS` o `CKM_ECDSA_SHA1`.
+- `SignatureAlgorithm` tiene `SHA1withRSA` y `SHA1withECDSA`, y rFirma pide al
+  token `CKM_SHA1_RSA_PKCS` o `CKM_ECDSA_SHA1` (y su equivalente en CNG) solo
+  con la preferencia activada. Cada traducción de un algoritmo a un mecanismo o
+  a un nombre de huella nombra SHA-1 de forma explícita: un comodín que caiga
+  en SHA-256 incumpliría el punto 3.
 - El catálogo de `site/domain/protocol/algorithm.rs` sigue siendo por alias y
   es más laxo que el conjunto cerrado del original: acepta `SHA-256`,
   `SHA256withRSAandMGF1` o el URI de XMLDSig, que allí no están. Rechaza de
   menos, nunca firma con una huella distinta de la nombrada. Reconoce todas las
-  grafías de SHA-1 para rechazarlas con su situación, no para atenderlas.
+  grafías de SHA-1, y la preferencia decide si las atiende o las rechaza con su
+  situación.
 - El puente no está preparado para SHA-1 en XML: el JDK con el que se compila
   prohíbe SHA-1 en XMLDSig (`jdk.xml.dsig.secureValidationPolicy`), también al
-  firmar. Si algún día se vuelve a aceptar SHA-1, XAdES y FacturaE necesitan
-  ese ajuste en el puente además del cambio en rFirma.
+  firmar. Si la preferencia se extiende algún día a XAdES y FacturaE, hace
+  falta ese ajuste en el puente, acotado a la firma y sin relajar la
+  validación.
 - La guarda de la XAdES explícita (`refuse_explicit_xades`) reproduce las
   condiciones exactas del original; una cofirma, una contrafirma, `XAdEStri` o
   `useManifest=true` llegan al consentimiento.
@@ -99,65 +127,18 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
   XAdES— van por el mismo camino: repiten el rechazo del propio AutoFirma, y no
   son desviaciones.
 - Las comprobaciones de la suite de conformidad que exigen lo que este ADR
-  decide no hacer llevan la etiqueta `rfirma:adr-0023`: las que miden que el
-  original firma con SHA-1 —`a_cades_signature_is_made_with_the_sha1_requested`,
+  decide no hacer por defecto llevan la etiqueta `rfirma:adr-0023`: las que
+  miden que el original firma con SHA-1 —`a_cades_signature_is_made_with_the_sha1_requested`,
   `a_xades_signature_is_made_with_the_sha1_requested`,
   `a_pades_signature_is_made_with_the_sha1_requested` y
   `a_local_batch_with_the_sha1_algorithm_is_signed_with_sha1`—, la XAdES explícita,
   `an_explicit_xades_signs_the_sha1_of_the_data`, que además lleva
   `manual:deprecated` porque el original la marca como obsoleta, y el
   certificado caducado de la regla 1,
-  `expired_certificates_are_hidden_only_without_filters`. Su NO CONFORME en
-  rFirma cuenta como explicado.
+  `expired_certificates_are_hidden_only_without_filters`. Con las preferencias
+  por defecto, su NO CONFORME en rFirma cuenta como explicado.
 - En el protocolo afirma, rFirma puede ser más permisiva que el original pero nunca
   más estricta sin un criterio que ningún documento legítimo pueda disparar; el caso
   de `checkSignatures` y el certificado caducado está en el ADR-0044.
 - Si una versión posterior del original retira SHA-1 de su catálogo, o la
   XAdES explícita, este ADR se reescribe midiéndolo contra ese tag.
-
-## Considered Options
-
-**Aceptar SHA-1 como el original.** Atiende a las sedes que todavía lo piden, y
-fue lo que rFirma hizo durante un tiempo con el argumento de que la firma
-declara SHA-1 y quien la valida aplica su política. Descartada: el validador
-que la recibe primero suele ser la misma sede que pidió SHA-1, y lo acepta; el
-riesgo de colisión lo sufre quien firma o un tercero que la reciba después.
-Además, en XAdES y FacturaE nunca llegó a funcionar: el puente fallaba con un
-error técnico en crudo.
-
-**Aceptar SHA-1 con un aviso en la pantalla de consentimiento.** Quien firma
-pulsa «sí» para acabar el trámite, y el riesgo no es solo suyo: un aviso no
-protege al tercero. Descartada por el mismo motivo que el aviso de la XAdES
-explícita.
-
-**Un ajuste de Preferencias, desactivado por defecto, que permita SHA-1.**
-Aplazada, no descartada. Explica el riesgo donde se activa, pero quien lo
-activa suele llegar con prisa desde un rechazo, y una vez activado vale para
-todas las sedes. Se puede añadir encima del rechazo si muchas personas se
-quedan sin trámite; entonces hace falta además el ajuste del puente de
-Consequences.
-
-**Rechazar SHA-1 sin explicarlo.** La persona ve un error que parece suyo o de
-su certificado, y la sede no sabe qué cambiar. Descartada.
-
-**Aceptar SHA-1 pero firmar con SHA-256.** Rompe la prefirma del servlet y
-produce firmas que no validan. Descartada por incorrecta, no por política.
-
-**Imitar la XAdES explícita.** Firmaría la huella SHA-1 en lugar del documento,
-con la pérdida de no repudio del punto 4, en una función que el propio original
-da por incorrecta. Descartada.
-
-**Imitar la XAdES explícita con un aviso.** El daño lo sufre un tercero, o lo
-aprovecha el propio firmante, y un aviso en la pantalla no protege a ninguno de
-los dos. Descartada.
-
-**Rechazar `mode=explicit` con XAdES en cualquier operación.** Era lo que hacía
-rFirma: rechazaba cofirmas, contrafirmas, `XAdEStri` y `useManifest=true`, que
-el original firma enteras. Rechazar un caso feliz sin el riesgo que justifica
-la excepción la extiende más allá de su motivo. Descartada.
-
-**Entregar a la sede un certificado caducado cuando su filtro lo admite, como
-hace el original.** Es exactamente lo que la regla 1 permitiría si entregar un
-certificado caducado fuera un caso feliz: no lo es, porque la firma que
-resulta no tiene valor jurídico aunque el original la produzca sin protestar.
-Descartada.
