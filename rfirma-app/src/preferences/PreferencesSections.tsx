@@ -260,6 +260,7 @@ export function SigningSection({
         <Switch
           checked={preferences.allowSha1}
           label={t("preferences.allowSha1.label")}
+          hint={t("preferences.allowSha1.hint")}
           wide
           onChange={onAllowSha1Change}
         />

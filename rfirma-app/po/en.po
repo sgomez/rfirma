@@ -1069,7 +1069,10 @@ msgstr ""
 "If only one certificate works and the site allows it, use it without asking"
 
 msgid "preferences.allowSha1.label"
-msgstr "Allow SHA-1 in non-XML signatures"
+msgstr "Allow SHA-1"
+
+msgid "preferences.allowSha1.hint"
+msgstr "Some sites still ask for SHA-1, an algorithm that is no longer secure: with it, two documents can be crafted that share the same signature. Turn it on only if a site you trust needs it. It does not apply to XML signatures."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Remember my activity"
