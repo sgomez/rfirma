@@ -8,6 +8,111 @@ Desde la v0.11.2 cada sección la genera `just release <version>` a partir de
 los títulos de las PR fusionadas en `main` desde la etiqueta anterior: los
 `feat`, `fix` y `perf` que no son de ámbito interno.
 
+## [0.14.0] - 2026-10-05
+
+### Added
+- RFirma compila en macOS para Apple Silicon (#1226).
+- El puente valida con o sin comprobar la caducidad del certificado (#1351).
+- Proceso de terminal: el rol, la entrada en la biblioteca y el contrato de salida (#1352).
+- Análisis de argumentos de sign y cosign y sus rechazos (#1354).
+- -gui: entregar el fichero al proceso de escritorio (#1353).
+- Listaliases y el arnés de extremo a extremo (#1355).
+- -store acota los almacenes de listaliases (#1357).
+- Verify (#1356).
+- `sign -alias`: firma PAdES con el almacén de rFirma (#1358).
+- Sign -filter elige el certificado y -xml devuelve la respuesta XML (#1360).
+- El PIN en la terminal (#1359).
+- `-config` en las firmas PAdES (#1361).
+- CAdES y XAdES (#1363).
+- -password-fd y el diálogo de escritorio (#1362).
+- Cosign (#1364).
+- `-certtui`: el selector de certificado en la terminal (#1365).
+- `-certgui`: el backend de la ventana de sede para la línea de órdenes (#1369).
+- -certgui: la variante de origen en la ventana de sede (#1370).
+- Sintaxis --opción y --version en la línea de órdenes (#1388).
+- `verify --gui` entrega a la ventana la intención de ver las firmas (#1390).
+- El resumen unificado tras firmar (#1391).
+- Verify --gui con PDF abre el resumen de firmas (#1393).
+- `verify -v` con PDF: firmantes, emisor y fecha (#1392).
+- El puente lee los firmantes de CAdES (#1394).
+- La ventana abre con `verify --gui` ficheros que no son PDF (#1395).
+- Verify -v con representación, sello de empresa y -vv (#1396).
+- CAdES con contrafirmas anidadas en verify -v (#1397).
+- XAdES y FacturaE en verify -v (#1398).
+- Contrafirmas anidadas en el resumen (#1399).
+- Listaliases responde en XML y rechaza --password-fd (#1404).
+- --json da la misma respuesta que --xml en sign, cosign y listaliases (#1407).
+- Validez en PDF: tres valores, motivo y hallazgos del documento (#1424).
+- Validez por firma en CAdES (#1425).
+- Validez por firma en XAdES (#1426).
+- Validez en PDF: sello de tiempo y cofirma no admitida (#1427).
+- Un único «¿Firmar de todos modos?» (#1428).
+- Fichas con validez en el resumen y en el diálogo «Ver firmas» (#1430).
+- Verify -v y -vv con la validez de cada firma (#1429).
+- Aviso compacto de firmas previas en el panel y en la sede (#1431).
+- Número de serie, vigencia, algoritmo y perfil en verify -vvv (#1432).
+- Los motivos de validez de verify -vv salen del catálogo, en el idioma del sistema (#1456).
+- Hallazgos, etiquetas y recuento de verify -v traducidos, con los plurales de cada idioma (#1457).
+- Rechazar MD5 al validar firmas (#1461).
+- Listaliases --json propio, con los esquemas y su validación (#1470).
+- Sign y cosign --json propios, y el --xml se queda solo (#1471).
+- Verify --json sobre el modelo de firmas previas (#1472).
+- SignatureAlgorithm de verify --json con el nombre de las RFC y su OID (#1473).
+- Fase 0: Storybook mínimo con historias de la sede y su prueba en vitest (#1487).
+- Primitivos: Button, Stack, Row, Card, Badge y Field, con sus historias (#1516).
+- Base de Storybook, revisión de accesibilidad y dobles compartidos (#1517).
+- Primitivo Popover para los desplegables de la app (#1519).
+- Primitivo Dialog: los 8 diálogos con Escape, foco y trampa de foco (#1518).
+- Piloto de la sede: historias por variante, vista exportable, ficha y artboards (#1524).
+- Publicar Storybook en GitHub Pages en cada push a main (#1521).
+- Diálogos de firma, historias, fichas y artboards (#1527).
+- Pieza de dominio CertificateCard compartida por el selector y Preferencias (#1531).
+- Tanda: estado y retirar certificado, completa (#1534).
+- La línea de órdenes sabe en qué plataforma corre: -store y mensajes de Windows (#1535).
+- Tanda: panel de firma, historias, ficha y artboard (#1536).
+- Tanda: preferencias, acerca de y primer arranque, completa (#1537).
+- El binario de consola rfirma.com, con su prueba de humo en el CI de Windows (#1542).
+- El instalador de Windows: rfirma.com, el PATH del usuario y la documentación (#1545).
+- Primitivo de menú, con el menú de la aplicación como primer uso (#1564).
+- Rfirma --version dice el canal, el sistema y dónde está la librería (#1584).
+- La salida compilada de la web se prueba, con sitemap, robots, favicon, JSON-LD y 404 (#1595).
+- El título, la descripción y el h1 de la landing hablan a la ciudadanía, en cinco idiomas (#1597).
+- Manual de uso en /manual/ con Starlight y la página «Línea de órdenes» (#1599).
+- Manual: Instalación, Firmar un PDF, Ver las firmas y Preferencias (#1605).
+- Manual: Firmar en una sede, Problemas frecuentes y Si vienes de AutoFirma (#1606).
+- El token firma con SHA1withRSA y SHA1withECDSA (#1626).
+- La preferencia «Permitir SHA-1» se guarda y llega a Preferencias (#1627).
+- Permitir SHA-1 en Preferencias → Firma (#1628).
+- La firma suelta de sede obedece a la preferencia «Permitir SHA-1» (#1630).
+- La línea de órdenes obedece a la preferencia «Permitir SHA-1» (#1629).
+- El rechazo dice cómo permitir SHA-1 y el consentimiento lo recuerda (#1631).
+- Los lotes obedecen a la preferencia «Permitir SHA-1» (#1632).
+- Un lote que pide SHA-1 se puede firmar solo esta vez desde el consentimiento (#1635).
+- SHA-1 en XAdES y FacturaE sigue a la preferencia (backend) (#1643).
+- «Firmar solo esta vez» en la firma suelta (backend) (#1644).
+- Un lote local que pide SHA-1 se puede firmar solo esta vez desde el consentimiento (#1645).
+- Aviso y «Firmar solo esta vez» en la firma suelta y el lote local (#1646).
+- XAdES explícita con el permiso de SHA-1 (#1647).
+
+### Changed
+- Las capturas de la landing se optimizan al compilar (AVIF/WebP y srcset) (#1598).
+
+### Fixed
+- La lista de `-certtui` agrupa las copias, dice en calidad de qué se firma y deja filtrar (#1371).
+- Kit de SoftHSM idempotente, almacén privado por ejecución y fila única sin orden de ranuras (#1439).
+- El aviso de cambios tras la última firma ya no salta sin motivo en un PDF con varias firmas (#1440).
+- Verify deja de enseñar el registro de Java, y la CLI y la ventana muestran igual las firmas de un PDF certificado (#1444).
+- La sede da por válida una CAdES manipulada con checkSignatures (#1458).
+- PDF con varias firmas: el veredicto de la sede compara con la revisión equivocada (#1459).
+- La clave que verifica una XAdES tiene que ser la del certificado que se muestra (#1460).
+- El /ByteRange de cada firma debe cubrir su revisión entera (#1462).
+- Un PDF cerrado por su certificación ya no ofrece «Firmar» en escritorio (#1474).
+- La cofirma de sede siempre dice «1 firma anterior» (#1570).
+- La ayuda de consola lista las operaciones de sede que rFirma atiende hoy.
+- El rechazo por una firma insegura dice el porqué y deja la nota para la sede en el detalle (#1633).
+- CNG firma con SHA-1 sin comodín a SHA-256 (#1634).
+- Las firmas XAdES y FacturaE con SHA-1 se hacen cuando la persona lo permite (#1649).
+
 ## [0.13.0] - 2026-10-01
 
 ### Added
