@@ -1,7 +1,6 @@
 //! Vocabulario de salida del trámite con la sede y la ventana, y `ProtocolCodec`, el puerto que lo pone en el cable.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
 
 use crate::identity::domain::certificate::ListedCertificate;
 use crate::signing::domain::bridge::Format;
@@ -11,10 +10,13 @@ use crate::site::domain::protocol::{
     AfirmaUrl, AskedAlgorithm, BatchRequest, PendingSignRequest, Refusal, RequestedFormat,
     SignAndSaveRequest, SignatureRound, SiteFilter, SiteVisibleSignature, StickyCertificate,
 };
-use crate::site::domain::signing::SiteSignature;
 use crate::site::domain::triphase_server::ServerFormat;
 
 use super::request::SiteRequest;
+
+mod portal;
+
+pub use portal::{LoadingConsent, SavingConsent, SavingHints};
 
 /// En qué queda la operación que llegó por el canal.
 #[derive(Debug)]
@@ -273,93 +275,6 @@ pub struct LocalBatchConsent {
     pub sha1_allowed: bool,
     /// Si el lote pide SHA-1 y la persona no lo permite todavía, ni en Preferencias ni en esta operación.
     pub sha1_to_allow: bool,
-}
-
-/// Pistas de guardado de `signandsave`, calculadas antes de firmar y usadas tras la postfirma.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SavingHints {
-    /// Nombre de fichero propuesto (`signandsave` no declara `title`; siempre hay uno).
-    pub filename: String,
-    /// Extensiones admitidas por el filtro del diálogo de guardado.
-    pub extensions: Vec<String>,
-    /// Descripción del filtro de extensiones, si la sede la declaró.
-    pub description: Option<String>,
-    /// Carpeta inicial sugerida por la sede, nunca la fuente de la escritura.
-    pub starting_folder: Option<String>,
-}
-
-impl SavingHints {
-    /// El paso de guardado tras la postfirma, contestando con el mismo par que `sign`.
-    pub fn into_consent(self, signed: &SiteSignature) -> SavingConsent {
-        SavingConsent {
-            data: signed.signature.clone(),
-            title: None,
-            filename: Some(self.filename),
-            extensions: self.extensions,
-            description: self.description,
-            starting_folder: self.starting_folder,
-            signer_der: Some(signed.signer_der.clone()),
-        }
-    }
-}
-
-/// Datos para el diálogo de guardado del portal: el nombre cruza, la ruta nunca (ADR-0011).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SavingConsent {
-    /// El fichero que la sede pide guardar, en bytes.
-    pub data: Vec<u8>,
-    /// Título del diálogo declarado por la sede.
-    pub title: Option<String>,
-    /// Nombre de fichero propuesto por la sede.
-    pub filename: Option<String>,
-    /// Extensiones admitidas por el filtro del diálogo.
-    pub extensions: Vec<String>,
-    /// Descripción del filtro de extensiones declarada por la sede.
-    pub description: Option<String>,
-    /// Carpeta inicial sugerida por la sede, si la declaró (`signandsave`; `save` no la tiene).
-    pub starting_folder: Option<String>,
-    /// El DER del firmante con el que contestar si esto viene de `signandsave`, `None` en `save`.
-    pub signer_der: Option<Vec<u8>>,
-}
-
-impl SavingConsent {
-    /// La carpeta en la que se abre el diálogo: la que declaró la sede o, si no, `home`.
-    pub fn dialog_folder(&self, home: Option<&Path>) -> Option<PathBuf> {
-        declared_or_home(self.starting_folder.as_deref(), home)
-    }
-}
-
-impl LoadingConsent {
-    /// La carpeta en la que se abre el selector: la que declaró la sede o, si no, `home`.
-    pub fn dialog_folder(&self, home: Option<&Path>) -> Option<PathBuf> {
-        declared_or_home(self.starting_folder.as_deref(), home)
-    }
-}
-
-fn declared_or_home(declared: Option<&str>, home: Option<&Path>) -> Option<PathBuf> {
-    declared
-        .map(PathBuf::from)
-        .or_else(|| home.map(Path::to_path_buf))
-}
-
-/// Datos para el selector de carga del portal: el nombre cruza, la ruta nunca (ADR-0011).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LoadingConsent {
-    /// Título del selector declarado por la sede.
-    pub title: Option<String>,
-    /// Nombre que la sede propone al selector (`filenameActualName`), si lo declaró.
-    pub filename: Option<String>,
-    /// Extensiones admitidas por el filtro del selector.
-    pub extensions: Vec<String>,
-    /// Descripción del filtro de extensiones declarada por la sede.
-    pub description: Option<String>,
-    /// Carpeta inicial sugerida por la sede, nunca la fuente de la lectura.
-    pub starting_folder: Option<String>,
-    /// Si la sede pide varios ficheros (`multiload=true`) o uno solo.
-    pub multiple: bool,
-    /// Si este selector viene de una firma sin `dat`, la petición que continúa con el documento
-    /// elegido; `None` cuando es un `load` corriente que contesta a la sede.
-    pub to_sign: Option<Box<PendingSignature>>,
 }
 
 /// La firma que espera al documento que la persona elija en el selector.
