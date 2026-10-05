@@ -122,7 +122,9 @@ export function pdfsOf(pages: Record<string, number>): PdfSource {
  * hace falta para que `correctPositionSignature` se coma alguna en silencio
  * y para probarlo hace falta más de un tamaño en el mismo documento.
  */
-function aPdfWithViews(views: readonly (readonly [number, number, number, number])[]): PdfDocument {
+export function aPdfWithViews(
+  views: readonly (readonly [number, number, number, number])[],
+): PdfDocument {
   const pageOf = (number: number): PdfPage => {
     const view = views[number - 1];
     if (view === undefined) throw new Error(`no hay view para la página ${number}`);
@@ -135,21 +137,6 @@ function aPdfWithViews(views: readonly (readonly [number, number, number, number
     };
   };
   return { pageCount: views.length, getPage: (number) => Promise.resolve(pageOf(number)) };
-}
-
-/** Un origen que abre `name` con las `views` que se le den, tamaños mezclados incluidos. */
-export function pdfsWithViews(
-  name: string,
-  views: readonly (readonly [number, number, number, number])[],
-): PdfSource {
-  return {
-    open: async (opened) => {
-      if (opened.name !== name) {
-        return { ok: false, failure: { situation: "documentUnreadable", detail: "roto" } };
-      }
-      return { ok: true, pdf: aPdfWithViews(views), sizeBytes: 2_400_000 };
-    },
-  };
 }
 
 export const aCertificate: Certificate = {
