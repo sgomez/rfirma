@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.security.Security;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -40,6 +42,18 @@ class XmlSha1PolicyTest {
                 "minKeySize RSA 1024",
                 "noDuplicateIds"),
                 XmlSha1Policy.withoutSha1(JDK_POLICY));
+    }
+
+    private String originalPolicy;
+
+    @BeforeEach
+    void rememberThePolicy() {
+        originalPolicy = Security.getProperty(XmlSha1Policy.PROPERTY);
+    }
+
+    @AfterEach
+    void restoreThePolicy() {
+        Security.setProperty(XmlSha1Policy.PROPERTY, originalPolicy == null ? "" : originalPolicy);
     }
 
     @Test
