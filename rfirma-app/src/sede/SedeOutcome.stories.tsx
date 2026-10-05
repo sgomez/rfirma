@@ -43,18 +43,6 @@ export const RefusedWithCause = outcome({
   detail: "SAF_03: el algoritmo 'SHA1withRSA' es SHA-1: rFirma firma con SHA-2",
 });
 
-export const RefusedSha1InXml = outcome({
-  kind: "refused",
-  situation: "sha1InXml",
-  detail: "SAF_03: el algoritmo 'SHA1withRSA' es SHA-1 en una firma XML",
-});
-
-export const RefusedExplicitXades = outcome({
-  kind: "refused",
-  situation: "explicitXades",
-  detail: "SAF_04: XAdES explícito",
-});
-
 export const RefusedInvoiceMultisignature = outcome({
   kind: "refused",
   situation: "invoiceMultisignature",

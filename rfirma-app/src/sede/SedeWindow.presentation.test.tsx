@@ -328,14 +328,6 @@ const rows: [string, ComponentType, Expectation][] = [
     },
   ],
   [
-    "4 · SHA-1 in XML refusal does not",
-    outcome.RefusedSha1InXml,
-    {
-      shows: ["Pedid SHA256withRSA o superior."],
-      hides: [/Preferencias/],
-    },
-  ],
-  [
     "4 · refusal without origin",
     outcome.RefusedWithoutOrigin,
     { shows: [/La sede ha pedido una firma con SHA-1/], hides: [/La petición/, CONTACT_SITE] },

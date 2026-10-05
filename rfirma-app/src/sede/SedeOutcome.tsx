@@ -224,10 +224,7 @@ function RefusalStatement({ situation }: { situation: RefusalSituation }) {
 
   switch (situation) {
     case "sha1":
-    case "sha1InXml":
       return <>{t("sede.refusalCauses.sha1")}</>;
-    case "explicitXades":
-      return <>{t("sede.refusalCauses.explicitXades")}</>;
     case "invoiceMultisignature":
       return <>{t("sede.refusalCauses.invoiceMultisignature")}</>;
     case "unsupportedCountersignature":
@@ -269,10 +266,7 @@ function TechnicalDetail({ situation, detail }: { situation: RefusalSituation; d
 function siteNote(situation: RefusalSituation, t: TFunction): string | null {
   switch (situation) {
     case "sha1":
-    case "sha1InXml":
       return t("sede.siteNotes.sha1");
-    case "explicitXades":
-      return t("sede.siteNotes.explicitXades");
     case "invoiceMultisignature":
       return t("sede.siteNotes.invoiceMultisignature");
     case "unsupportedCountersignature":

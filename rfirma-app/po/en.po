@@ -1530,11 +1530,6 @@ msgstr ""
 msgid "sede.refusalCauses.sha1"
 msgstr "The site asked for a SHA-1 signature, which is no longer secure."
 
-msgid "sede.refusalCauses.explicitXades"
-msgstr ""
-"The site asked for an old type of signature that could pass for another "
-"document's."
-
 msgid "sede.refusalCauses.invoiceMultisignature"
 msgstr ""
 "The site asked to add a second signature to an electronic invoice, which "
@@ -1552,11 +1547,6 @@ msgid "sede.refusalHints.sha1"
 msgstr ""
 "If you trust this site, you can allow SHA-1 in Preferences → Signing and "
 "sign again from the site."
-
-msgid "sede.siteNotes.explicitXades"
-msgstr ""
-"Remove mode=explicit or use explicit CAdES, which signs the document without "
-"including it."
 
 msgid "sede.siteNotes.invoiceMultisignature"
 msgstr ""
