@@ -28,7 +28,6 @@ const links = [
   >
     <a
       href={home}
-      aria-label={t("nav.home.aria")}
       style="display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;flex:none"
     >
       <Logo size={34} disc="#067781" stroke="#ffffff" />
@@ -73,7 +72,7 @@ const links = [
     <details class="lang">
       <summary
         class="rf-btn rf-btn--ghost lang__summary"
-        aria-label={t("lang.aria")}
+        aria-label={`${t("lang.aria")}: ${t(`lang.${locale}` as const)}`}
         style="color:var(--rf-text);padding:0 10px;gap:6px"
       >
         <svg
