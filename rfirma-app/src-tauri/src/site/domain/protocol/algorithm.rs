@@ -18,7 +18,7 @@ pub enum AskedAlgorithm {
 pub enum AlgorithmReading {
     /// Una huella SHA-2 que rFirma firma.
     Attended(AskedAlgorithm),
-    /// SHA-1 en cualquier grafía: se reconoce y se rechaza por seguridad.
+    /// SHA-1 en cualquier grafía: se reconoce, y la preferencia de la persona decide si se firma.
     Sha1,
     /// Un nombre que rFirma no reconoce.
     Unrecognized,

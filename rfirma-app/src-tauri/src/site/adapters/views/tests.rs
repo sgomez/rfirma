@@ -109,12 +109,33 @@ fn the_round_crosses_named_as_the_site_asked_for_it() {
         certificates: Vec::new(),
         already_chosen: None,
         without_asking: false,
+        sha1_allowed: false,
     });
 
     assert_eq!(
         serde_json::to_value(&view).expect("serializa")["stage"]["round"],
         serde_json::to_value(SignatureRoundView::Cosign).expect("serializa")
     );
+}
+
+#[test]
+fn the_consent_crosses_whether_sha1_is_signed_because_the_person_allows_it() {
+    for allowed in [true, false] {
+        let view = SiteErrandView::from(&Moment::AskingToSign {
+            document: "doc-1".to_owned(),
+            format: Format::Cades,
+            round: SignatureRound::First,
+            certificates: Vec::new(),
+            already_chosen: None,
+            without_asking: false,
+            sha1_allowed: allowed,
+        });
+
+        assert_eq!(
+            serde_json::to_value(&view).expect("serializa")["stage"]["sha1Allowed"],
+            serde_json::json!(allowed)
+        );
+    }
 }
 
 #[test]
@@ -128,6 +149,7 @@ fn a_countersignature_crosses_with_its_own_label_and_target() {
         certificates: Vec::new(),
         already_chosen: None,
         without_asking: false,
+        sha1_allowed: false,
     });
 
     assert_eq!(
@@ -308,6 +330,7 @@ fn what_is_signed_crosses_named_after_the_format_the_site_asked_for() {
             certificates: Vec::new(),
             already_chosen: None,
             without_asking: false,
+            sha1_allowed: false,
         });
 
         assert_eq!(

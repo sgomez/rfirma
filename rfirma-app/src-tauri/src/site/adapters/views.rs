@@ -155,6 +155,7 @@ impl SiteErrandView {
         certificates: &[ListedCertificate],
         already_chosen: Option<&str>,
         without_asking: bool,
+        sha1_allowed: bool,
     ) -> Self {
         Self {
             origin: None,
@@ -165,6 +166,7 @@ impl SiteErrandView {
                 certificates: rows_of(certificates),
                 already_chosen: already_chosen.map(str::to_owned),
                 without_asking,
+                sha1_allowed,
             },
         }
     }
@@ -200,6 +202,7 @@ impl From<&Moment> for SiteErrandView {
                 certificates,
                 already_chosen,
                 without_asking,
+                sha1_allowed,
             } => Self::asking_to_sign(
                 document,
                 *format,
@@ -207,6 +210,7 @@ impl From<&Moment> for SiteErrandView {
                 certificates,
                 already_chosen.as_deref(),
                 *without_asking,
+                *sha1_allowed,
             ),
             Moment::MarkingTheArea { document } => Self::at(SiteStageView::MarkingTheArea {
                 document: document.clone(),
@@ -387,6 +391,8 @@ crossing! {
             already_chosen: Option<String>,
             /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
             without_asking: bool,
+            /// Si se firma con SHA-1 porque la persona lo permite, para recordárselo.
+            sha1_allowed: bool,
         },
         /// La firma espera a que la persona confirme lo que el validador del original señala.
         #[serde(rename_all = "camelCase")]
