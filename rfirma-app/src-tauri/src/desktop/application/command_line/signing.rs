@@ -3,7 +3,6 @@
 use base64::Engine as _;
 
 use super::*;
-use crate::desktop::domain::sign_arguments::Algorithm;
 
 pub(super) fn sign(
     arguments: &[String],
