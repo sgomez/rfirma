@@ -76,10 +76,12 @@ fn attended(url: AfirmaUrl, allowed: bool, allowed_once: bool) -> Attended {
         live.allow_sha1_once();
     }
     let mut refused_at_consent = None;
-    let sha1_still_allowed_once = if let ErrandStep::AskingToSign(asking) = &step {
+    if let ErrandStep::AskingToSign(asking) = &step {
         let chosen = asking.certificates[0].id.clone();
         match consent(&desk, &chosen, &live) {
-            Ok(Consented::SigningWith(_)) => {
+            Err(ConsentError::Refused(refusal)) => refused_at_consent = Some(refusal),
+            consented => {
+                consented.expect("el certificado vale");
                 session::sign_on_token(
                     &neighbours.signer,
                     &neighbours.session,
@@ -87,15 +89,10 @@ fn attended(url: AfirmaUrl, allowed: bool, allowed_once: bool) -> Attended {
                 )
                 .expect("el token de pruebas firma el PRE");
             }
-            Ok(_) => panic!("una firma se consiente firmando"),
-            Err(ConsentError::Refused(refusal)) => refused_at_consent = Some(refusal),
-            Err(other) => panic!("el certificado vale: {other:?}"),
         }
-        live.end();
-        live.sha1_allowed_once()
-    } else {
-        false
-    };
+    }
+    live.end();
+    let sha1_still_allowed_once = live.sha1_allowed_once();
     Attended {
         step,
         refused_at_consent,
