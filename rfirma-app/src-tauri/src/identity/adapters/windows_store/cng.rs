@@ -9,9 +9,9 @@ use windows_sys::Win32::Security::Cryptography::{
     CertCloseStore, CertEnumCertificatesInStore, CertFindCertificateInStore,
     CertFreeCertificateContext, CertGetCertificateContextProperty, CertOpenStore,
     CryptAcquireCertificatePrivateKey, NCryptFreeObject, NCryptSetProperty, NCryptSignHash,
-    BCRYPT_PKCS1_PADDING_INFO, BCRYPT_PSS_PADDING_INFO, BCRYPT_SHA256_ALGORITHM,
-    BCRYPT_SHA384_ALGORITHM, BCRYPT_SHA512_ALGORITHM, CERT_CONTEXT, CERT_FIND_SHA1_HASH,
-    CERT_FRIENDLY_NAME_PROP_ID, CERT_HASH_PROP_ID, CERT_KEY_PROV_INFO_PROP_ID,
+    BCRYPT_PKCS1_PADDING_INFO, BCRYPT_PSS_PADDING_INFO, BCRYPT_SHA1_ALGORITHM,
+    BCRYPT_SHA256_ALGORITHM, BCRYPT_SHA384_ALGORITHM, BCRYPT_SHA512_ALGORITHM, CERT_CONTEXT,
+    CERT_FIND_SHA1_HASH, CERT_FRIENDLY_NAME_PROP_ID, CERT_HASH_PROP_ID, CERT_KEY_PROV_INFO_PROP_ID,
     CERT_STORE_OPEN_EXISTING_FLAG, CERT_STORE_PROV_SYSTEM_W, CERT_STORE_READONLY_FLAG,
     CERT_SYSTEM_STORE_CURRENT_USER, CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG,
     CRYPT_ACQUIRE_WINDOW_HANDLE_FLAG, CRYPT_INTEGER_BLOB, HCERTSTORE, NCRYPT_KEY_HANDLE,
@@ -444,14 +444,17 @@ pub fn padding_of(algorithm: SignatureAlgorithm) -> Padding {
     }
 }
 
-fn hash_name(algorithm: SignatureAlgorithm) -> PCWSTR {
+pub fn hash_name(algorithm: SignatureAlgorithm) -> PCWSTR {
     match algorithm {
+        SignatureAlgorithm::Sha1Rsa | SignatureAlgorithm::Sha1Ecdsa => BCRYPT_SHA1_ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa
+        | SignatureAlgorithm::Sha256RsaPss
+        | SignatureAlgorithm::Sha256Ecdsa => BCRYPT_SHA256_ALGORITHM,
         SignatureAlgorithm::Sha384Rsa
         | SignatureAlgorithm::Sha384RsaPss
         | SignatureAlgorithm::Sha384Ecdsa => BCRYPT_SHA384_ALGORITHM,
         SignatureAlgorithm::Sha512Rsa
         | SignatureAlgorithm::Sha512RsaPss
         | SignatureAlgorithm::Sha512Ecdsa => BCRYPT_SHA512_ALGORITHM,
-        _ => BCRYPT_SHA256_ALGORITHM,
     }
 }
