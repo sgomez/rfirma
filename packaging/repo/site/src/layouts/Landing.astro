@@ -11,6 +11,7 @@ import NoticeTop from "../components/NoticeTop.astro";
 import Pillars from "../components/Pillars.astro";
 import Transparency from "../components/Transparency.astro";
 import { defaultLocale, localePath, locales, openGraphLocales, translator, type Locale } from "../i18n";
+import interLatin from "../../../../../rfirma-app/src/design-system/bundle/fonts/inter-latin.woff2?url";
 import "../styles/landing.css";
 
 interface Props {
@@ -46,6 +47,7 @@ const structuredData = JSON.stringify(application).replaceAll("<", "\\u003c");
     <title>{t("meta.title")}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical.href} />
+    <link rel="preload" href={interLatin} as="font" type="font/woff2" crossorigin />
     <Favicons />
     {
       locales.map((other) => (

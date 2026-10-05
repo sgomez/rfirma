@@ -651,7 +651,7 @@ a:hover {
   font-weight: 600;
   cursor: pointer;
   background: transparent;
-  color: var(--rf-text-muted);
+  color: #475569;
   transition:
     background-color 150ms,
     color 150ms,
