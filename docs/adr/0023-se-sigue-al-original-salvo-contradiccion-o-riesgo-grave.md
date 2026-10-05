@@ -57,8 +57,11 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
      antes de llegar al puente, y antes de pedir certificado allí donde el
      algoritmo ya se conoce.
    - **Una preferencia, «Permitir SHA-1», apagada por defecto, lo permite** en
-     los formatos que no firman XML: CAdES y sus variantes, CMS, PKCS#1 y
-     PAdES. Vale en los mismos puntos de entrada que el rechazo. Quien la
+     los mismos puntos de entrada que el rechazo, y en toda operación. En el
+     lote remoto vale para cualquier formato: la firma la construyen los
+     servicios de la sede y rFirma solo firma la huella. Donde la construye el
+     puente —firma suelta y lote local— vale en los formatos que no firman XML:
+     CAdES y sus variantes, CMS, PKCS#1 y PAdES. Quien la
      activa no queda peor protegido que con AutoFirma, que es adonde volvería
      para acabar el trámite; quien no sabe nada de esto sigue protegido.
    - **La preferencia es una sola, para todas las sedes.** La ventana de sede
@@ -78,8 +81,10 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
    - **Con la preferencia activada, el consentimiento lo recuerda** con una
      línea informativa: la sede pide SHA-1 y la persona lo tiene permitido. No
      corta el trámite.
-   - **En XAdES y FacturaE, SHA-1 se rechaza siempre**, y ese rechazo no
-     sugiere la preferencia, porque no lo arreglaría.
+   - **En XAdES y FacturaE que firma el puente, SHA-1 se rechaza siempre**, y
+     ese rechazo no sugiere la preferencia, porque no lo arreglaría. En el lote
+     local, ese elemento falla como cualquier otro que no se puede firmar, y
+     `stoponerror` decide si el lote sigue.
    - Un algoritmo que rFirma no reconoce no es SHA-1 y no lleva esa
      explicación.
 5. **La XAdES explícita es otro caso de la excepción, y no tiene preferencia.**
@@ -114,9 +119,10 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
   situación.
 - El puente no está preparado para SHA-1 en XML: el JDK con el que se compila
   prohíbe SHA-1 en XMLDSig (`jdk.xml.dsig.secureValidationPolicy`), también al
-  firmar. Si la preferencia se extiende algún día a XAdES y FacturaE, hace
-  falta ese ajuste en el puente, acotado a la firma y sin relajar la
-  validación.
+  firmar. El lote remoto no pasa por el puente y no lo necesita. Si la
+  preferencia se extiende algún día a XAdES y FacturaE en la firma suelta y
+  el lote local, hace falta ese ajuste en el puente, acotado a la firma y sin
+  relajar la validación.
 - La guarda de la XAdES explícita (`refuse_explicit_xades`) reproduce las
   condiciones exactas del original; una cofirma, una contrafirma, `XAdEStri` o
   `useManifest=true` llegan al consentimiento.
