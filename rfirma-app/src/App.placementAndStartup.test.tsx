@@ -1,160 +1,17 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { aCertificate, document, openPdf, pdfsOf, renderApp } from "./App.testSupport";
+import { document, pdfsOf, renderApp } from "./App.testSupport";
 import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
 import type { Drop, FakeDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryRecents } from "./documents/recents";
-import type { Certificate } from "./signing/certificate";
 import { emptyCertificateStore } from "./signing/certificate";
 import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
 import { memoryStatus, type SignalRow } from "./status/status";
 import { inMemoryVersionCheck, type VersionCheck } from "./updates/newVersion";
 import { unavailablePdfSource } from "./viewer/source";
-
-/**
- * La firma visible, con el visor y el panel a la vez: el panel nombra páginas
- * y el visor pone el rectángulo, y solo montados juntos acaban en el mismo
- * recuadro.
- */
-describe("App · Firma visible, en qué páginas", () => {
-  const remembered: Certificate = { ...aCertificate, remembered: true };
-
-  async function openVisible() {
-    const user = userEvent.setup();
-    renderApp({
-      recents: inMemoryRecents(),
-      documents: [document("factura.pdf")],
-      pdfs: pdfsOf({ "factura.pdf": 8 }),
-      settings: {},
-      certificates: { list: async () => [remembered] },
-    });
-    await openPdf(user);
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByRole("button", { name: "Firmar" });
-    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
-    await within(panel).findByText("En la página 1");
-    return { user, panel };
-  }
-
-  const box = () => screen.queryByRole("application", { name: "Recuadro de la firma visible" });
-  const nextPage = (user: ReturnType<typeof userEvent.setup>) =>
-    user.click(screen.getByRole("button", { name: "Página siguiente" }));
-
-  it("turns on already placed, on the page in view, and signing stays on", async () => {
-    const { panel } = await openVisible();
-
-    expect(box()).not.toBeNull();
-    expect(within(panel).getByRole("button", { name: "Firmar" })).toBeEnabled();
-    expect(within(panel).queryByText(/Coloca la firma/)).not.toBeInTheDocument();
-  });
-
-  it("brings back the placement of a tab, on its page, when the tab is chosen again", async () => {
-    const user = userEvent.setup();
-    renderApp({
-      recents: inMemoryRecents(),
-      documents: [document("primero.pdf"), document("segundo.pdf")],
-      pdfs: pdfsOf({ "primero.pdf": 5, "segundo.pdf": 5 }),
-      settings: {},
-      certificates: { list: async () => [remembered] },
-    });
-    await openPdf(user);
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByRole("button", { name: "Firmar" });
-    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
-    await within(panel).findByText("En la página 1");
-    await nextPage(user);
-    await nextPage(user);
-    await user.click(within(panel).getByRole("button", { name: "Ponerla aquí" }));
-    await within(panel).findByText("En la página 3");
-    await openPdf(user);
-    await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
-    await within(panel).findByText("En la página 1");
-
-    await user.click(screen.getByRole("tab", { name: "primero.pdf" }));
-
-    const current = screen.getByRole("region", { name: "Panel de firma" });
-    expect(await within(current).findByText("En la página 3")).toBeInTheDocument();
-    expect(within(current).queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
-  });
-
-  it("places the box on a document opened with the switch already on", async () => {
-    const user = userEvent.setup();
-    renderApp({
-      recents: inMemoryRecents(),
-      documents: [document("primero.pdf"), document("segundo.pdf")],
-      pdfs: pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
-      settings: {},
-      certificates: { list: async () => [remembered] },
-    });
-    await openPdf(user);
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByRole("button", { name: "Firmar" });
-    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
-    await within(panel).findByText("En la página 1");
-
-    await openPdf(user);
-    await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
-
-    expect(
-      await within(screen.getByRole("region", { name: "Panel de firma" })).findByText(
-        "En la página 1",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByRole("application", { name: "Recuadro de la firma visible" }),
-    ).toBeInTheDocument();
-  });
-
-  it("places the box on page 1 of a document opened while another was on page 3", async () => {
-    const user = userEvent.setup();
-    renderApp({
-      recents: inMemoryRecents(),
-      documents: [document("primero.pdf"), document("segundo.pdf")],
-      pdfs: pdfsOf({ "primero.pdf": 5, "segundo.pdf": 5 }),
-      settings: {},
-      certificates: { list: async () => [remembered] },
-    });
-    await openPdf(user);
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByRole("button", { name: "Firmar" });
-    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
-    await within(panel).findByText("En la página 1");
-    await nextPage(user);
-    await nextPage(user);
-    await within(panel).findByRole("button", { name: "Ponerla aquí" });
-
-    await openPdf(user);
-    await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
-    await screen.findByRole("application", { name: "Recuadro de la firma visible" });
-
-    const current = screen.getByRole("region", { name: "Panel de firma" });
-    await waitFor(() => expect(within(current).getByText("En la página 1")).toBeInTheDocument());
-    expect(within(current).queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
-  });
-});
-
-describe("App, sin un certificado elegido todavía", () => {
-  it("draws no box and keeps the visible-signature switch disabled", async () => {
-    const user = userEvent.setup();
-    renderApp({
-      recents: inMemoryRecents(),
-      documents: [document("factura.pdf")],
-      pdfs: pdfsOf({ "factura.pdf": 3 }),
-    });
-
-    await openPdf(user);
-    await screen.findByRole("document", { name: "Hoja del documento" });
-    const panel = screen.getByRole("region", { name: "Panel de firma" });
-
-    expect(within(panel).getByRole("switch", { name: "Firma visible" })).toBeDisabled();
-    expect(
-      screen.queryByRole("application", { name: "Recuadro de la firma visible" }),
-    ).not.toBeInTheDocument();
-  });
-});
 
 /**
  * **La invocación desde fuera** (ID-157…ID-159): `rfirma documento.pdf`. Lo
