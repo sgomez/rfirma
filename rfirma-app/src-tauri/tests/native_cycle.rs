@@ -155,6 +155,10 @@ mod full_cycle {
             unreachable!("el filtrado no decide el consentimiento")
         }
 
+        fn sha1_allowed(&self) -> bool {
+            unreachable!("el filtrado no pregunta por SHA-1")
+        }
+
         fn open_unrecorded(&self, _path: PathBuf) -> String {
             unreachable!("el filtrado no apunta documentos de paso")
         }

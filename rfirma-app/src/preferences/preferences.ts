@@ -62,6 +62,7 @@ export interface Preferences {
   consentCountdown: boolean;
   /** Si la sede puede elegir sola el único certificado que acepta (ADR-0032). */
   honourAutomaticSelection: boolean;
+  allowSha1: boolean;
 }
 
 /**

@@ -1058,6 +1058,9 @@ msgstr ""
 msgid "preferences.honourAutomaticSelection.label"
 msgstr ""
 
+msgid "preferences.allowSha1.label"
+msgstr ""
+
 msgid "preferences.rememberActivity.label"
 msgstr ""
 

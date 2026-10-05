@@ -236,6 +236,19 @@ describe("PreferencesView", () => {
     expect(onChange).toHaveBeenCalledWith({ ...defaults, honourAutomaticSelection: true });
   });
 
+  it("turns SHA-1 on from the signing tab", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderView({ onChange });
+    await openTab(user, "Firma");
+
+    const toggle = screen.getByRole("switch", { name: /Permitir SHA-1/ });
+    expect(toggle).not.toBeChecked();
+    await user.click(toggle);
+
+    expect(onChange).toHaveBeenCalledWith({ ...defaults, allowSha1: true });
+  });
+
   it("closes on Cerrar", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();

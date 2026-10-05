@@ -392,6 +392,9 @@ pub trait Neighbours {
     /// Si la persona deja que la sede elija sola el único candidato (ADR-0032).
     fn automatic_selection_honoured(&self) -> bool;
 
+    /// Si la persona permite firmar con SHA-1 fuera de XML.
+    fn sha1_allowed(&self) -> bool;
+
     /// Apunta el documento de paso y devuelve el asa con la que la ventana lo pide.
     fn open_unrecorded(&self, path: PathBuf) -> String;
 

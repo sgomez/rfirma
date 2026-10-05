@@ -300,6 +300,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       setupWizardSeen: bool
       consentCountdown: bool
       honourAutomaticSelection: bool
+      allowSha1: bool
 
   pub enum DatumView
       Signer

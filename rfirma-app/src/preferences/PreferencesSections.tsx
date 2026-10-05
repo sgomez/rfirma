@@ -212,6 +212,7 @@ interface SigningSectionProps {
   onDestinationModeChange: (mode: DestinationMode) => void;
   onConsentCountdownChange: (checked: boolean) => void;
   onHonourAutomaticSelectionChange: (checked: boolean) => void;
+  onAllowSha1Change: (checked: boolean) => void;
 }
 
 export function SigningSection({
@@ -223,6 +224,7 @@ export function SigningSection({
   onDestinationModeChange,
   onConsentCountdownChange,
   onHonourAutomaticSelectionChange,
+  onAllowSha1Change,
 }: SigningSectionProps) {
   const { t } = useTranslation();
   const destinationName = useId();
@@ -254,6 +256,12 @@ export function SigningSection({
           label={t("preferences.honourAutomaticSelection.label")}
           wide
           onChange={onHonourAutomaticSelectionChange}
+        />
+        <Switch
+          checked={preferences.allowSha1}
+          label={t("preferences.allowSha1.label")}
+          wide
+          onChange={onAllowSha1Change}
         />
       </div>
       <SaveNotice section="signing" saveFailure={saveFailure} />

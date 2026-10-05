@@ -1065,6 +1065,9 @@ msgstr "Agardar 3 segundos antes de asinar"
 msgid "preferences.honourAutomaticSelection.label"
 msgstr "Se só serve un certificado e a sede o permite, usalo sen preguntar"
 
+msgid "preferences.allowSha1.label"
+msgstr "Permitir SHA-1 en sinaturas que non son XML"
+
 msgid "preferences.rememberActivity.label"
 msgstr "Lembrar a miña actividade"
 

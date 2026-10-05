@@ -31,6 +31,8 @@ pub struct Preferences {
     pub consent_countdown: bool,
     /// Si la sede puede elegir sola el único certificado candidato (ADR-0032).
     pub honour_automatic_selection: bool,
+    /// Si se permite firmar con SHA-1 fuera de XML.
+    pub allow_sha1: bool,
 }
 
 /// Resuelve el idioma soportado a partir de su código o devuelve castellano por omisión.
@@ -63,6 +65,7 @@ pub fn shown(configuration: &Configuration, documents_folder: &std::path::Path) 
         setup_wizard_seen: configuration.setup_wizard_seen(),
         consent_countdown: configuration.consent_countdown,
         honour_automatic_selection: configuration.honour_automatic_selection,
+        allow_sha1: configuration.allow_sha1,
     }
 }
 
@@ -98,6 +101,7 @@ pub fn merged(live: &Configuration, chosen: &Preferences) -> Configuration {
         },
         consent_countdown: chosen.consent_countdown,
         honour_automatic_selection: chosen.honour_automatic_selection,
+        allow_sha1: chosen.allow_sha1,
     }
 }
 

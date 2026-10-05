@@ -364,6 +364,10 @@ impl Neighbours for InMemoryTokenSigning {
         unreachable!("las pruebas del lote remoto no preguntan por la selección automática")
     }
 
+    fn sha1_allowed(&self) -> bool {
+        unreachable!("las pruebas del lote remoto no preguntan por SHA-1")
+    }
+
     fn open_unrecorded(&self, _path: PathBuf) -> String {
         unreachable!("las pruebas del lote remoto no apuntan documentos de paso")
     }
@@ -447,6 +451,10 @@ impl Neighbours for Directory<'_> {
     }
 
     fn automatic_selection_honoured(&self) -> bool {
+        false
+    }
+
+    fn sha1_allowed(&self) -> bool {
         false
     }
 

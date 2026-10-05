@@ -1069,6 +1069,9 @@ msgid "preferences.honourAutomaticSelection.label"
 msgstr ""
 "Ziurtagiri bakarrak balio badu eta egoitzak uzten badu, erabili galdetu gabe"
 
+msgid "preferences.allowSha1.label"
+msgstr "Onartu SHA-1 XML ez diren sinaduretan"
+
 msgid "preferences.rememberActivity.label"
 msgstr "Gogoratu nire jarduera"
 

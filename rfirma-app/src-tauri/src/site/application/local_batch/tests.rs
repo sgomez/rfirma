@@ -41,6 +41,10 @@ impl Neighbours for Untouched {
         unreachable!("la guarda no llega a elegir certificado")
     }
 
+    fn sha1_allowed(&self) -> bool {
+        unreachable!("la guarda no llega a preguntar por SHA-1")
+    }
+
     fn open_unrecorded(&self, _path: PathBuf) -> String {
         unreachable!("la guarda no llega a abrir ningún documento")
     }

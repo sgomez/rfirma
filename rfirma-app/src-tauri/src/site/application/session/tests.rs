@@ -186,6 +186,10 @@ impl Neighbours for NobodyHasItOpen<'_> {
         self.directory.automatic_selection_honoured()
     }
 
+    fn sha1_allowed(&self) -> bool {
+        self.directory.sha1_allowed()
+    }
+
     fn open_unrecorded(&self, _path: std::path::PathBuf) -> String {
         unreachable!("ninguna prueba de esta sesion apunta un documento de paso")
     }

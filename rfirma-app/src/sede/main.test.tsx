@@ -25,6 +25,7 @@ const configuration = {
   setupWizardSeen: false,
   consentCountdown: false,
   honourAutomaticSelection: false,
+  allowSha1: false,
 };
 
 describe("el punto de entrada de la ventana de sede", () => {

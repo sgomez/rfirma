@@ -304,6 +304,9 @@ export function PreferencesView({
             onChange({ ...preferences, honourAutomaticSelection: checked }),
           )
         }
+        onAllowSha1Change={(checked) =>
+          void change("signing", () => onChange({ ...preferences, allowSha1: checked }))
+        }
       />
     ),
     certificates: (

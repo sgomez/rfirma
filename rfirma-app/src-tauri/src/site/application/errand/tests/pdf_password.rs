@@ -59,6 +59,10 @@ impl Neighbours for ALockedPdf<'_> {
         self.neighbours.automatic_selection_honoured()
     }
 
+    fn sha1_allowed(&self) -> bool {
+        self.neighbours.sha1_allowed()
+    }
+
     fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
         self.neighbours.open_unrecorded(path)
     }
