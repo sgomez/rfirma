@@ -295,6 +295,40 @@ describe("un momento del backend gana a lo que estuviera en vuelo", () => {
 });
 
 describe("los momentos que pone el adaptador", () => {
+  it("allows SHA-1 just this once before beginning to sign a document that asks for it", async () => {
+    const order: string[] = [];
+    const { push, port, last } = watched({
+      allowSha1Once: async () => {
+        order.push("allowSha1Once");
+      },
+      beginSigning: async () => {
+        order.push("beginSigning");
+        return { ok: true, value: { kind: "typedOnScreen" } };
+      },
+    });
+    push({
+      ...ASKING_TO_SIGN,
+      stage: { ...ASKING_TO_SIGN.stage, sha1ToAllow: true } as SiteErrandView["stage"],
+    });
+    await vi.waitFor(() =>
+      expect(last()?.stage).toMatchObject({ kind: "consent", sha1ToAllow: true }),
+    );
+
+    await port.consent("handle-1");
+
+    expect(order).toEqual(["allowSha1Once", "beginSigning"]);
+  });
+
+  it("does not allow SHA-1 for a document that does not ask for it", async () => {
+    const { push, port, calls, last } = watched();
+    push(ASKING_TO_SIGN);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.consent("handle-1");
+
+    expect(calls.allowSha1Once).not.toHaveBeenCalled();
+  });
+
   it("walks from consent to the two signing legs and the outcome", async () => {
     const { push, port, seen, calls, last } = watched();
     push(ASKING_TO_SIGN);
@@ -525,6 +559,7 @@ describe("la selección automática que pide la sede", () => {
     origin: "sede.ejemplo.gob.es",
     stage: {
       sha1Allowed: false,
+      sha1ToAllow: false,
       kind: "askingToSign",
       document: "asa-opaca-1",
       signing: "pdf",

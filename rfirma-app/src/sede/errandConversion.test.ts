@@ -262,6 +262,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
           alreadyChosen: null,
           withoutAsking: false,
           sha1Allowed: false,
+          sha1ToAllow: false,
         },
       };
       const { push, last } = watched();
@@ -298,6 +299,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
           alreadyChosen: null,
           withoutAsking: false,
           sha1Allowed: false,
+          sha1ToAllow: false,
         },
       };
       const { push, last } = watched();
@@ -335,6 +337,8 @@ describe("el lote local: el resumen de cada elemento", () => {
         certificates: [certificate()],
         alreadyChosen: null,
         withoutAsking: false,
+        sha1Allowed: false,
+        sha1ToAllow: false,
       },
     };
 

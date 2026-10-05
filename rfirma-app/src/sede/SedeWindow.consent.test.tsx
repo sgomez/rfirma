@@ -67,6 +67,23 @@ describe("2 · consent", () => {
     });
   });
 
+  describe("a local batch asking for SHA-1 the person has not allowed", () => {
+    it("signs just this once, with the countdown even when it is turned off", () => {
+      const { port } = scriptedErrand(
+        consentStage({
+          document: null,
+          signs: 1,
+          signing: null,
+          sha1ToAllow: true,
+          items: [{ id: "001", signing: "pdf", round: { kind: "sign" } }],
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
+
+      expect(screen.getByRole("button", { name: /^Firmar solo esta vez \(\d+\)$/ })).toBeDisabled();
+    });
+  });
+
   describe("preselection", () => {
     const expired = { kind: "expired", notAfter: 1_600_000_000 } as const;
 
