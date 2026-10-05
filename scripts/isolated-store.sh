@@ -27,8 +27,8 @@
 # HOME y -Duser.home, rFirma HOME y XDG_*. La CA local de rFirma la crea este
 # script dentro del perfil, sin lanzar el cliente; la raiz de AutoFirma es la de
 # su instalacion. rFirma arranca en castellano, con el tema claro, sin la
-# cuenta atras de consentir y sin el asistente del primer arranque, como si la
-# persona lo hubiera elegido en sus preferencias.
+# cuenta atras de consentir, sin el asistente del primer arranque y con SHA-1
+# permitido, como si la persona lo hubiera elegido en sus preferencias.
 #
 # El perfil se rehace entero en cada llamada.
 
@@ -197,7 +197,7 @@ the_local_ca_of_rfirma() {
 the_configuration_of_rfirma() {
     local dir="$profile/.config/rfirma"
     mkdir -p "$dir"
-    printf '{"version": 1, "consent_countdown": false, "honour_automatic_selection": true, "setup_wizard_seen": true, "language": "es", "theme": "light"}\n' \
+    printf '{"version": 1, "consent_countdown": false, "honour_automatic_selection": true, "setup_wizard_seen": true, "allow_sha1": true, "language": "es", "theme": "light"}\n' \
         > "$dir/config.json"
 }
 
