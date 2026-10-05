@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { forgetActivity } from "./App.forgetActivity";
 import type { MainWindowPorts } from "./App.ports";
 import { SignFlowPrompts, signFlowPromptOpen } from "./App.SignFlowPrompts";
-import { useCertificateSearch } from "./App.useCertificateSearch";
+import { useCertificateChoice } from "./App.useCertificateChoice";
 import { useDropNotices } from "./App.useDropNotices";
 import { useNativeTitlebar } from "./App.useNativeTitlebar";
 import { useOpenShortcut } from "./App.useOpenShortcut";
@@ -34,6 +34,8 @@ import { SignedPanel } from "./signing/SignedPanel";
 import { SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
 import { formatSignedAt } from "./signing/signedAt";
+import { useCertificateListing } from "./signing/useCertificateListing";
+import { useSignedDocumentOpening } from "./signing/useSignedDocumentOpening";
 import { useSigning } from "./signing/useSigning";
 import type { VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
@@ -121,15 +123,8 @@ export function App({
   // Un gesto sobre el recuadro está en curso. Sólo lo mira la vista previa: es
   // lo que congela la vista anterior en vez de pagar un ciclo por fotograma.
   const [gesturing, setGesturing] = useState(false);
-  const {
-    certificate,
-    lookForCertificates,
-    installed,
-    installCertificate,
-    removeCertificate,
-    emptyStore,
-    chooseCertificate,
-  } = useCertificateSearch(certificates);
+  const certificateListing = useCertificateListing(certificates);
+  const { certificate, chooseCertificate } = useCertificateChoice(certificateListing.listing);
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
   const [signature, setSignature] = useVisibleSignature(initialSignature, chosen);
   const signing = useSigning(signer);
@@ -193,6 +188,7 @@ export function App({
   const geometry = usePageGeometry(pdf, boxPage);
 
   const viewedSignatures = useViewedSignatures(signer, activeId);
+  const viewedOpening = useSignedDocumentOpening(opener);
   const { dropNotice } = useDropNotices(
     drops,
     documents.accept,
@@ -201,12 +197,13 @@ export function App({
     viewedSignatures.view,
   );
 
-  const { signedHere, signatures, findings, openFailure, openSigned, signAgain } = useSignedSummary(
-    signing,
-    activeId,
-    documents.reopen,
-    signer,
-  );
+  const {
+    signedHere,
+    signatures,
+    findings,
+    opening: signedOpening,
+    signAgain,
+  } = useSignedSummary(signing, activeId, documents.reopen, signer, opener);
   const { failedHere } = useSigningFailure(signing, activeId);
 
   const signFlow = useSignFlow({
@@ -293,10 +290,10 @@ export function App({
               onChooseDestination={chooseDestination}
               onChange={changeSettings}
               onForgetActivity={forgetAll}
-              installedCertificates={installed}
-              onInstallCertificate={installCertificate}
-              onRemoveCertificate={removeCertificate}
-              onEmptyStore={emptyStore}
+              installedCertificates={certificateListing.installed}
+              onInstallCertificate={certificateListing.install}
+              onRemoveCertificate={certificateListing.remove}
+              onEmptyStore={certificateListing.emptyStore}
               onClose={() => setView(null)}
             />
           ) : null
@@ -376,11 +373,11 @@ export function App({
               destination={
                 destination ?? { folder: settings?.destination ?? "", name: null, writable: true }
               }
-              onOpenDocument={() => openSigned(() => opener.openDocument())}
-              onOpenFolder={() => openSigned(() => opener.openFolder())}
+              onOpenDocument={() => signedOpening.openDocument()}
+              onOpenFolder={() => signedOpening.openFolder()}
               onSign={signAgain}
               onChangeDestination={() => void chooseSingleDestination()}
-              failure={openFailure}
+              failure={signedOpening.failure}
               onOpenHelp={() => void externalDestinations.open("discussions")}
             />
           ) : viewedSignatures.viewing && documents.active ? (
@@ -405,10 +402,10 @@ export function App({
                 name: documents.active.name,
                 writable: true,
               }}
-              onOpenDocument={() => openSigned(() => opener.openDocument(documents.active?.id))}
-              onOpenFolder={() => openSigned(() => opener.openFolder(documents.active?.id))}
+              onOpenDocument={() => viewedOpening.openDocument(documents.active?.id)}
+              onOpenFolder={() => viewedOpening.openFolder(documents.active?.id)}
               onSign={viewedSignatures.stopViewing}
-              failure={openFailure}
+              failure={viewedOpening.failure}
               onOpenHelp={() => void externalDestinations.open("discussions")}
             />
           ) : pdf && documents.active ? (
@@ -421,8 +418,8 @@ export function App({
               previousSignatures={previousSignatures}
               certificate={certificate}
               onChooseCertificate={chooseCertificate}
-              onRetryCertificates={() => void lookForCertificates()}
-              onChooseModule={() => void lookForCertificates()}
+              onRetryCertificates={() => void certificateListing.lookAgain()}
+              onChooseModule={() => void certificateListing.lookAgain()}
               signature={signature}
               onChangeSignature={setSignature}
               placementState={placementState}
@@ -438,7 +435,7 @@ export function App({
               onOpenHelp={() => void externalDestinations.open("discussions")}
               failure={failedHere?.failure ?? null}
               onBack={signing.cancel}
-              onEmptyStore={() => void emptyStore()}
+              onEmptyStore={() => void certificateListing.emptyStore()}
             />
           ) : null
         }
