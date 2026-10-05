@@ -3,35 +3,37 @@
 Aplicación nativa de firma electrónica que sustituye la interfaz de **AutoFirma**
 para ciudadanos y empresas que firman ante la Administración española. Este
 documento es el glosario del dominio de la aplicación: define **qué es** cada
-término, no cómo está implementado (eso vive en `docs/adr/`). La suite de
+término, no cómo está implementado (eso vive en `docs/adr/`). Entre paréntesis, el
+nombre que le da el código, para encontrarlo; sin prefijo, es el mismo en
+TypeScript y en Rust. La suite de
 conformidad tiene el suyo; los dos están en `CONTEXT-MAP.md`.
 
 ## Language
 
 ### Proceso de firma
 
-**Firma trifásica**:
+**Firma trifásica** (TS `SIGNING_STAGES` · Rust `cycle`):
 Procedimiento de firma partido en tres etapas —prefirma, firma y postfirma— de
 modo que la clave privada nunca sale del dispositivo que la custodia.
 _Avoid_: firma en tres pasos, firma distribuida, triphase
 
-**Prefirma**:
+**Prefirma** (`presign` · Rust `PreSignature`):
 Primera etapa: a partir del documento y del certificado del firmante se calculan
 los datos que hay que firmar (típicamente un hash) y los metadatos necesarios
 para reensamblar la firma después.
 _Avoid_: pre-proceso, presign, preparación
 
-**Firma**:
+**Firma** (`sign` · Rust `TokenSignature`):
 Segunda etapa: la operación criptográfica que aplica la clave privada sobre los
 datos calculados en la prefirma. Es la única etapa que toca la clave privada.
 _Avoid_: firmado, sign, cifrado del hash
 
-**Postfirma**:
+**Postfirma** (`postsign`):
 Tercera etapa: ensamblado del documento firmado final incorporando el resultado
 de la firma en el formato de firma correspondiente.
 _Avoid_: post-proceso, postsign, ensamblado
 
-**Recorrido de firma**:
+**Recorrido de firma** (TS `SigningJourney`):
 Todo lo que la persona hace en la ventana principal con el documento que tiene
 delante, desde que elige certificado hasta que ve el acuse o el fallo: decidir
 la firma visible, atender los avisos que se interponen antes del PIN y las tres
@@ -41,21 +43,36 @@ visible siguen de un documento a otro. En un trámite de sede no hay recorrido:
 lo conduce el backend y la ventana solo lo sigue.
 _Avoid_: sesión de firma (choca con el sello de sesión), operación de firma, proceso de firma, flujo de firma
 
-**Configuración de firma**:
+**Panel de firma** (TS `SigningPanel`):
+La columna derecha de la ventana principal antes de firmar: todo lo que se
+decide sobre el documento que se tiene delante y el botón que lo firma.
+_Avoid_: panel lateral, formulario de firma
+
+**Acuse** (TS `Acknowledgement`):
+Lo que la ventana enseña del documento recién firmado en ella: sus firmas, dónde
+quedó y cómo llegar hasta él. Es del documento que lo produjo.
+_Avoid_: resumen, justificante, recibo, panel firmado
+
+**Lectura de firmas** (TS `SignatureReading`):
+Las firmas de un documento abierto solo para verlas, con su validez, sin haberlo
+firmado en la ventana.
+_Avoid_: verificación (promete validar contra una autoridad), vista de firmas
+
+**Configuración de firma** (Rust `SignatureConfig`):
 Conjunto de parámetros con que rFirma pide la firma de un PDF: el subfiltro, el
 recuadro y su contenido. Es lo que distingue una firma de
 otra a igualdad de documento y certificado. No incluye el certificado ni el
 documento, que son entradas por su cuenta.
 _Avoid_: extraParams, opciones de firma, perfil de firma
 
-**Cofirma**:
+**Cofirma** (Rust `SignatureOperation::Cosign`):
 Firma de un PDF que ya lleva otras: la nueva se añade detrás y las anteriores
 siguen siendo válidas, salvo que la primera no admita cofirmas, y entonces la
 nueva es no válida. Si alguna de las que ya tiene no la reconoce rFirma, la
 cofirma pide antes el consentimiento de la persona.
 _Avoid_: contrafirma (es otra cosa), multifirma, segunda firma
 
-**Sello de sesión**:
+**Sello de sesión** (Rust `SessionSeal`):
 Bloque que la prefirma devuelve y que la postfirma exige recibir idéntico:
 lleva la configuración de firma tal y como quedó tras la prefirma, el instante
 de la firma, la zona horaria y el algoritmo. rFirma lo transporta sin leerlo.
@@ -63,12 +80,12 @@ Existe porque la postfirma regenera el documento entero y cualquier diferencia
 invalida la firma sin dar error.
 _Avoid_: contexto de firma, sesión trifásica, sello de tiempo (es otra cosa)
 
-**Formato de firma**:
+**Formato de firma** (TS `SignatureFormat` · Rust `Format`):
 Estándar que define cómo se estructura y se incrusta una firma en un documento:
 CAdES, PAdES, XAdES y FacturaE.
 _Avoid_: tipo de firma, perfil de firma
 
-**Firma visible**:
+**Firma visible** (`VisibleSignature`):
 Recuadro que se estampa sobre una o varias páginas del PDF para que la firma se
 vea al abrir el documento. Es opcional y no aporta validez: la firma electrónica está
 en la estructura del PDF, se dibuje o no. Su apariencia forma parte del
@@ -77,7 +94,7 @@ del recuadro puede haber texto, la rúbrica del titular o las dos cosas; el
 texto lo redacta rFirma y sigue al idioma de la aplicación.
 _Avoid_: sello, marca de agua, firma gráfica
 
-**Colocación**:
+**Colocación** (`Placement`):
 Dónde y en qué páginas se estampa el recuadro de la firma visible: un
 rectángulo en espacio de usuario y el conjunto de páginas que lo llevan. No hay
 colocación «vacía»: encender la firma visible la coloca en la página a la
@@ -90,7 +107,7 @@ firma visible sin traer recuadro, la persona la coloca igual y dura lo que el
 trámite: no se guarda.
 _Avoid_: ancla, posición de la firma, página de firma
 
-**Modo de páginas**:
+**Modo de páginas** (`PageMode`):
 Cuál de las tres maneras de nombrar las páginas de una colocación está activa:
 una página, varias o todas. Cada modo recuerda su propio conjunto, y cambiar de
 modo no reescribe el que se deja: volver a él trae lo que tenía. Un modo que se
@@ -100,7 +117,7 @@ memoria de los otros modos dura mientras el documento sigue delante: al cambiar
 de documento o volver a abrirlo solo queda la colocación que se firmaría.
 _Avoid_: opción de páginas, tipo de colocación, selección de páginas
 
-**Recuadro que pide la sede**:
+**Recuadro que pide la sede** (Rust `SiteVisibleSignature::PlacedByTheSite`):
 La firma visible que un trámite de sede trae ya puesta en sus `extraParams`:
 cuatro esquinas y una página, calibradas contra AutoFirma. No es una
 colocación: no nace de un arrastre, no se guarda y no se convierte. Cruza al
@@ -108,7 +125,7 @@ puente tal y como vino, y rFirma solo decide si la petición lleva recuadro, si
 no lo lleva o si lo que pide no se atiende.
 _Avoid_: colocación de la sede, posición remota, recuadro del protocolo
 
-**Espacio de usuario**:
+**Espacio de usuario** (`UserSpaceRect`):
 Sistema de coordenadas del propio PDF, en puntos, con el origen donde lo ponga
 la MediaBox de la página. Es donde rFirma guarda el recuadro de la firma
 visible: los píxeles del visor se derivan de él en cada pintada, nunca al
@@ -116,7 +133,7 @@ revés, porque un recuadro guardado en píxeles se desplaza sobre el documento
 en cuanto cambia el zoom.
 _Avoid_: coordenadas del PDF, puntos de pantalla, píxeles
 
-**Rúbrica**:
+**Rúbrica** (TS `Rubric` · Rust `NormalizedRubric`):
 Imagen de la firma manuscrita del titular, escaneada, que puede mostrarse
 dentro del recuadro de la firma visible. Es un adorno del recuadro, no la
 firma: sin rúbrica la firma sigue siendo válida, y una rúbrica sin firma
@@ -124,7 +141,7 @@ electrónica no es nada. Rúbrica es **siempre** una imagen: el texto que
 acompaña al recuadro no es una rúbrica, es texto de la firma visible.
 _Avoid_: firma manuscrita (a secas), imagen de firma, sello, rúbrica de texto
 
-**Modelo**:
+**Modelo** (`VisibleContent`):
 La forma del contenido de la firma visible, una de tres: *Completa* (firmante,
 fecha y emisor), *Solo rúbrica* (la imagen y ningún texto) y *Personalizada*
 (una frase que la persona escribe con los datos que quiera). «Con rúbrica» se
@@ -132,7 +149,7 @@ suma a cualquiera de los tres, y *Solo rúbrica* la lleva siempre. El texto lo
 compone rFirma y el puente no sustituye nada en él.
 _Avoid_: plantilla, casillas, formato del sello
 
-**Dato**:
+**Dato** (`Datum`):
 Un valor que la firma visible toma del certificado o de la firma: el firmante
 —con el número de identidad enmascarado—, el emisor o la fecha. En la frase de
 *Personalizada* viaja como dato, nunca como comodín `$$…$$`.
@@ -140,7 +157,7 @@ _Avoid_: comodín, variable, etiqueta, campo
 
 ### Identidad y claves
 
-**Certificado**:
+**Certificado** (TS `Certificate` · Rust `TokenCertificate`):
 Certificado X.509 que identifica al firmante y que la Administración acepta como
 prueba de su identidad.
 _Avoid_: credencial, identidad digital
@@ -157,12 +174,12 @@ sistema) no permite extraer: solo puede usarse delegando la operación de firma
 en el propio dispositivo.
 _Avoid_: clave protegida, clave bloqueada
 
-**Tarjeta criptográfica**:
+**Tarjeta criptográfica** (Rust `StoreClass::Card`):
 Dispositivo físico que custodia una clave no exportable y ejecuta la firma en su
 interior, protegido por un PIN. El caso principal en España es el **DNIe**.
 _Avoid_: smartcard, token, tarjeta inteligente
 
-**Almacén**:
+**Almacén** (Rust `Store`):
 **Un** origen de certificados, no todos: una tarjeta criptográfica, el perfil de
 Firefox, la base de datos de Chrome, el Almacén de rFirma. Son varios a la vez
 y se abren por separado, así que uno que no cargue no deja sin certificados a
@@ -173,7 +190,7 @@ tarjeta, Almacén de rFirma, NSS del sistema, Firefox, Chrome.
 _Avoid_: keystore, repositorio de certificados, llavero, «el conjunto de
 certificados de la máquina»
 
-**Almacén NSS**:
+**Almacén NSS** (Rust `StoreClass::Nssdb`):
 El almacén de un navegador —el perfil de Firefox, la base de datos de Chrome—,
 que es a la vez de donde salen certificados para firmar y **donde la aplicación
 registra la CA local** para que ese navegador confíe en el servidor local. No es
@@ -181,7 +198,7 @@ el único almacén en el que rfirma escribe: el Almacén de rFirma también es u
 base NSS, pero propia de la aplicación, no de un navegador.
 _Avoid_: nssdb, base de datos de certificados, almacén del navegador
 
-**Almacén de rFirma**:
+**Almacén de rFirma** (Rust `StoreClass::Installed`):
 El almacén propio de rFirma en Linux: una única base NSS cifrada con un PIN
 aleatorio que la persona nunca ve ni teclea, guardado en el llavero del
 escritorio. Es donde caen los certificados personales que la persona instala.
@@ -189,7 +206,7 @@ El gesto que los lleva ahí se llama, en la interfaz, «Instalar certificado».
 _Avoid_: almacén NSS (es otra cosa), llavero (el llavero guarda el PIN, no el
 certificado), keystore
 
-**CA local**:
+**CA local** (Rust `LocalCa`):
 Certificado que rfirma genera en la máquina de la persona y registra en sus
 almacenes NSS. No identifica a nadie ni firma documentos: su único trabajo es
 firmar el certificado del servidor local. Es lo que se queda dentro del
@@ -197,7 +214,7 @@ navegador y puede sobrevivir a la desinstalación, así que su caducidad es la
 red.
 _Avoid_: ancla, ancla de confianza, CA raíz, certificado raíz
 
-**Solape**:
+**Solape** (Rust `Stage::Overlapping`):
 Los meses en los que hay dos CA locales de confianza en los almacenes NSS: la
 que sirve y la siguiente. La siguiente se fabrica e instala cuando a la vigente
 le queda poca vida y espera en su propia ranura; la vigente sigue firmando el
@@ -206,7 +223,7 @@ relevo sin instalar nada y sin reiniciar ningún navegador. Instalar solo añade
 nada se borra durante el solape.
 _Avoid_: rotación, renovación en caliente, rollover
 
-**Certificado del servidor local**:
+**Certificado del servidor local** (Rust `LocalServerCertificate`):
 El que rfirma presenta en cada saludo TLS del servidor local, firmado por la CA
 local. No se guarda en ningún sitio: se genera al arrancar y vive lo que vive el
 proceso.
@@ -224,13 +241,13 @@ El titular del certificado de una firma que ya trae el documento, leído de ella
 distinto del certificado con el que tú firmas.
 _Avoid_: firmador, autor
 
-**Validez**:
+**Validez** (`Validity`):
 El juicio sobre una firma que ya trae el documento, en una lista cerrada: válida,
 caducada o no válida. Es la misma dondequiera que se enseñe la firma; el motivo
 que la explica es detalle, no una validez más.
 _Avoid_: estado, veredicto, resultado, «no se ha podido comprobar del todo»
 
-**Hallazgo del documento**:
+**Hallazgo del documento** (`DocumentFinding`):
 Lo que la validación encuentra en el documento entero sin poder atribuirlo a una
 firma, como un cambio posterior a la última. Pesa como una firma no válida, pero
 no se cuelga de ninguna.
@@ -257,18 +274,18 @@ de rFirma, no una desviación: el original no lo tiene y nada que lo use deja de
 funcionar (ADR-0041).
 _Avoid_: equivalente, clon de AutoFirma, drop-in replacement
 
-**Petición de firma**:
+**Petición de firma** (TS `SiteOperation` · Rust `SiteRequest`):
 Solicitud, originada normalmente en una sede electrónica abierta en el
 navegador, que pide firmar unos datos concretos con un certificado que el
 usuario debe elegir.
 _Avoid_: request, encargo, trabajo de firma
 
-**Sede electrónica**:
+**Sede electrónica** (Rust `site`):
 Sitio web de la Administración que origina la petición de firma y recibe el
 documento firmado.
 _Avoid_: portal, cliente web, tercero
 
-**Trámite de sede**:
+**Trámite de sede** (`Errand`):
 Lo que rFirma atiende desde que llega una URL `afirma://` hasta que la sede
 tiene su respuesta: la negociación de arranque, el consentimiento de la
 persona, la firma y la entrega. Uno por **proceso de sede**. Con WebSocket
@@ -276,7 +293,7 @@ abarca todas las operaciones que llegan por el canal mientras siga conectado
 su primer cliente.
 _Avoid_: errand en prosa, sesión, operación (que es cada verbo del protocolo)
 
-**Rol del proceso**:
+**Rol del proceso** (Rust `Role`):
 Lo que un proceso de rFirma es desde que arranca, decidido por su línea de
 órdenes y sin cambiar después. El **proceso de escritorio** es la aplicación
 que abre la persona, único en el equipo, con la ventana principal y la
@@ -291,14 +308,14 @@ termina con su orden.
 _Avoid_: modo, instancia, app de navegador, dos aplicaciones, CLI, modo consola,
 modo desatendido
 
-**Canal**:
+**Canal** (Rust `OpenChannel`):
 La conexión `wss://` que la sede abre contra el servidor local, y lo que hace
 falta para sostenerla: escuchar en el *loopback*, el saludo TLS y comprobar de
 dónde viene la petición. Lo que lo cierra es la **credencial de canal**, abajo.
 _Avoid_: socket, conexión, túnel, canal a secas para flatpak, `.deb` o `.rpm` —eso es el
 **canal de distribución**
 
-**Credencial de canal**:
+**Credencial de canal** (Rust `ChannelCredential`):
 El `idsession` que la sede manda en la URL de arranque, y que repite en cada
 mensaje del canal. **No es un identificador de transacción**: es lo único que
 impide que otra página abierta en el mismo equipo use el canal. Es **opcional,
@@ -308,13 +325,13 @@ llega y está mal formado se rechaza siempre, hable el protocolo que hable la
 sede.
 _Avoid_: id de sesión, token, identificador de transacción
 
-**Conversación**:
+**Conversación** (Rust `conversation`):
 El ir y venir de mensajes sobre un canal ya abierto, con sus reglas: el eco
 antes de nada, el `idsession` en cada mensaje, la espera y el sondeo del
 resultado, y un solo trámite vivo a la vez.
 _Avoid_: sesión de protocolo, diálogo, intercambio
 
-**Llegada**:
+**Llegada** (Rust `Arrival`):
 Cuándo queda resuelto lo que se intercambia con la sede, sea la operación o un
 rechazo, y lo dice el transporte al abrirse, no la URL: **esperada** si la sede
 se conectará a un canal que queda escuchando para dar o recoger lo que toque
@@ -323,7 +340,7 @@ operación que se descarga o el rechazo que se sube (servidor intermedio). De
 ella depende si la ventana de sede espera o actúa ya.
 _Avoid_: modo de canal, canal sin puerto, puerto cero
 
-**Cliente de canal**:
+**Cliente de canal** (Rust `channel_client`):
 El cliente propio, escrito en Rust, con el que se prueba el canal: saluda por
 `wss://`, manda el eco y comprueba los **caminos de rechazo que un cliente
 conforme no puede provocar** —una credencial que no coincide, un canal abierto
@@ -341,13 +358,13 @@ hace. No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y 
 (`just autoscript`), y vive repartido en `tests/conformance_*.rs`.
 _Avoid_: tests de integración, e2e, banco de pruebas, suite de conformidad, cliente de canal
 
-**Suite de conformidad**:
+**Suite de conformidad** (`rfirma-conformance`):
 La herramienta local que mide si una aplicación —AutoFirma o rFirma— cumple el protocolo. Es otro
 bounded context, con su propio glosario (`CONTEXT-MAP.md`); en este sólo se nombra para no
 confundirla con el banco de conformidad ni con el cliente de canal.
 _Avoid_: banco de conformidad, cliente de canal
 
-**Códec del protocolo**:
+**Códec del protocolo** (Rust `ProtocolCodec`):
 La traducción entre el texto que viaja por el canal y las estructuras con las
 que se razona dentro: la URL de operación, la respuesta con sus campos
 separados, y el formato exacto de un error.
@@ -355,7 +372,7 @@ _Avoid_: serializador, parser, marshalling
 
 ### Memoria de la aplicación
 
-**Documento reciente**:
+**Documento reciente** (`RecentDocument`):
 Documento que la aplicación ha visto antes y ofrece para volver a él, sin
 guardar una copia. Se **guarda** por su ruta canónica y se **referencia** desde
 la ventana por un identificador opaco, del que no se reconstruye ninguna ruta
@@ -364,7 +381,7 @@ la ventana por un identificador opaco, del que no se reconstruye ninguna ruta
 enseñar.
 _Avoid_: historial, documento abierto, favorito
 
-**Carpeta de destino**:
+**Carpeta de destino** (Rust `DestinationFolder`):
 Carpeta que la persona elige en Preferencias. Recibe el documento firmado con
 el modo de destino «en esta carpeta», y con «junto al original» cuando el
 original entra por el portal y no tiene carpeta propia. La aplicación no la
@@ -372,25 +389,25 @@ crea nunca: si no está, no está. La enseña por su ruta donde la conoce y por 
 nombre donde no (ADR-0011).
 _Avoid_: carpeta fija, ruta de salida
 
-**Modo de destino**:
+**Modo de destino** (`DestinationMode`):
 Preferencia que decide dónde cae el documento firmado: «junto al documento
 original» —el de omisión— o «en esta carpeta», la carpeta de destino. Bajo el
 sandbox no se ofrece, porque ahí ningún original tiene carpeta propia (ADR-0011).
 _Avoid_: modo de guardado, ubicación de salida
 
-**Preferencia**:
+**Preferencia** (TS `Preferences` · Rust `Configuration`):
 Ajuste que el usuario elige y que la aplicación se limita a obedecer: el idioma,
 dónde guardar el documento firmado, los interruptores.
 _Avoid_: configuración, opción, setting
 
-**Estado**:
+**Estado** (Rust `State`):
 Lo que la aplicación recuerda por su cuenta, sin que nadie se lo pida: los
 documentos recientes, la última configuración de firma visible y el certificado
 usado la última vez. Borrarlo no reconfigura nada.
 _Avoid_: caché, historial, sesión, estado como lo que la aplicación informa de su instalación
 —eso es el **diagnóstico**
 
-**Certificado recordado**:
+**Certificado recordado** (`remembered`):
 El certificado de la última firma, que la aplicación vuelve a proponer en la
 siguiente. Es estado, no preferencia, y no responde por sí solo a una sede
 (ADR-0010).
@@ -398,7 +415,7 @@ _Avoid_: certificado por defecto, certificado fijo, sticky
 
 ### Distribución
 
-**Canal de distribución**:
+**Canal de distribución** (Rust `desktop::domain::channel::Channel`):
 La forma en la que la aplicación llegó a la máquina: flatpak, `.deb`, `.rpm`, `windows` o una compilación de
 desarrollo. Decide si corre dentro del **sandbox** y qué puede ver del sistema, así que es lo
 primero que hay que saber para interpretar todo lo demás.
@@ -412,7 +429,7 @@ de un documento que entre por ahí (ADR-0004, ADR-0011). Los canales nativos
 —`.deb`, `.rpm`— corren fuera de él.
 _Avoid_: arenero, caja de arena, jaula, contenedor
 
-**Señal**:
+**Señal** (`Signal`):
 Una comprobación de la instalación, con su lectura y su veredicto. La **lectura** es qué se midió y
 cuándo; el **veredicto** es el juicio que se pinta, y es una lista cerrada: correcto, atención,
 incorrecto, no aplica y comprobando. «No aplica» —el sujeto no existe en esta máquina— y
@@ -420,7 +437,7 @@ incorrecto, no aplica y comprobando. «No aplica» —el sujeto no existe en est
 de la lectura, no un veredicto más.
 _Avoid_: check, chequeo, casilla, indicador, estado de la instalación
 
-**Diagnóstico**:
+**Diagnóstico** (`status`):
 El conjunto de señales: lo que la aplicación informa por su cuenta sobre cómo ha quedado instalada.
 Es lo contrario de una **preferencia** —lo que la persona decide— y no es el **estado** —lo que la
 aplicación recuerda—. De una señal puede colgar una **reparación**, que la arregla ahí mismo y
@@ -439,7 +456,7 @@ castellano, identificadores en inglés— aplicada a un caso que no contemplaba,
 la vigila `just check-version`.
 _Avoid_: Rfirma, RFirma, RFIRMA, rFirma como identificador
 
-**Versión**:
+**Versión** (Rust `Version`):
 El número de la entrega, que vive en `rfirma-app/src-tauri/Cargo.toml`
 —única fuente: Tauri v2 la sella dentro de los tres paquetes y la interfaz la
 lee en tiempo de ejecución— y se replica en candado comprobado a `Cargo.lock`,
