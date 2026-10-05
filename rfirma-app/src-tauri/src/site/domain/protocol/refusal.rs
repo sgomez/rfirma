@@ -23,8 +23,6 @@ pub enum RefusalSituation {
     PortsTaken,
     /// La sede pide firmar con SHA-1 (ADR-0023).
     Sha1,
-    /// La sede pide firmar XML con SHA-1, que rFirma no hace ni con la preferencia (ADR-0023).
-    Sha1InXml,
     /// La sede pide la XAdES explícita, que firma la huella SHA-1 y no el documento.
     ExplicitXades,
     /// La sede pide cofirmar o contrafirmar una factura electrónica.

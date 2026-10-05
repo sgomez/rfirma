@@ -26,10 +26,10 @@ use crate::signing::domain::{
 };
 use crate::site::domain::protocol::{
     forget_the_box, refuse_a_countersignature_outside_cades_and_xades,
-    refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, refuse_sha1_in_xml,
-    refuse_sha1_unless_allowed, visible_signature_of, AfirmaUrl, AskedAlgorithm, LoadRequest,
-    PendingSignRequest, RequestedFormat, SaveRequest, SignAndSaveRequest, SignRequest,
-    SignatureRound, SiteFilter, SiteVisibleSignature, StickyCertificate,
+    refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, refuse_sha1_unless_allowed,
+    visible_signature_of, AfirmaUrl, AskedAlgorithm, LoadRequest, PendingSignRequest,
+    RequestedFormat, SaveRequest, SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
+    SiteVisibleSignature, StickyCertificate,
 };
 use crate::site::domain::triphase_server::ServerFormat;
 
@@ -324,11 +324,6 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine>(
         ask.through_the_site_server,
         ask.declared_params,
     ) {
-        return ErrandStep::ShowingTheRefusal(refusal);
-    }
-
-    if let Err(refusal) = refuse_sha1_in_xml(ask.algorithm, ask.format, ask.through_the_site_server)
-    {
         return ErrandStep::ShowingTheRefusal(refusal);
     }
 

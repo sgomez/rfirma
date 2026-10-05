@@ -78,15 +78,15 @@ fn sign_and_cosign_with_sha1_sign_with_sha1_when_the_preference_allows_it() {
 }
 
 #[test]
-fn xades_with_sha1_is_refused_without_suggesting_the_preference() {
-    let files = FilesInMemory::with("doc.pdf", A_PDF);
+fn xades_with_sha1_signs_with_sha1_when_the_preference_allows_it() {
+    let files = FilesInMemory::with("doc.xml", A_PDF);
     let signer = RecordingSigner::default();
 
     let outcome = signed_allowing_sha1(
         &[
             "sign",
             "-i",
-            "doc.pdf",
+            "doc.xml",
             "-o",
             "firmado.xsig",
             "-alias",
@@ -100,11 +100,6 @@ fn xades_with_sha1_is_refused_without_suggesting_the_preference() {
         &signer,
     );
 
-    assert_eq!(outcome.exit_code, FAILED);
-    assert!(
-        !said(&outcome).contains("Preferencias"),
-        "{}",
-        said(&outcome)
-    );
-    assert!(signer.asked.borrow().is_empty());
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{}", said(&outcome));
+    assert_eq!(signer.asked.borrow()[0].3, Algorithm::Sha1);
 }
