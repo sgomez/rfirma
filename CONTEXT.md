@@ -31,6 +31,16 @@ Tercera etapa: ensamblado del documento firmado final incorporando el resultado
 de la firma en el formato de firma correspondiente.
 _Avoid_: post-proceso, postsign, ensamblado
 
+**Recorrido de firma**:
+Todo lo que la persona hace en la ventana principal con el documento que tiene
+delante, desde que elige certificado hasta que ve el acuse o el fallo: decidir
+la firma visible, atender los avisos que se interponen antes del PIN y las tres
+etapas de la firma trifásica. El acuse y el fallo son del documento que los
+produjo, y cambiar de pestaña los cierra; el certificado elegido y la firma
+visible siguen de un documento a otro. En un trámite de sede no hay recorrido:
+lo conduce el backend y la ventana solo lo sigue.
+_Avoid_: sesión de firma (choca con el sello de sesión), operación de firma, proceso de firma, flujo de firma
+
 **Configuración de firma**:
 Conjunto de parámetros con que rFirma pide la firma de un PDF: el subfiltro, el
 recuadro y su contenido. Es lo que distingue una firma de
