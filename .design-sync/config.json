@@ -26,7 +26,10 @@
     "4·Recientes": "RecentsSection",
     "5·Visor": "DocumentViewer",
     "6·Franjadeversiónnueva": "NewVersionStrip",
-    "7·Avisodeerror": "ErrorNotice"
+    "7·Avisodeerror": "ErrorNotice",
+    "Menu": "Menu",
+    "Select": "Select",
+    "Switch": "Switch"
   },
   "extraEntries": [
     "./design-sync.entry.ts"

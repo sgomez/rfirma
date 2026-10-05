@@ -32,7 +32,7 @@ Proyecto: «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`), forma 
 
 - Hay que recompilar la referencia (`npx storybook build -c .storybook -o ../.design-sync/sb-reference` desde rfirma-app) cuando cambien historias, componentes o CSS.
 - Si una pantalla nueva también usa `position: fixed`, necesita un marco como `inSedeWindow`.
-- Las piezas componibles son los primitivos de `design-sync.entry.ts` (`Button`, `Card`, `Field`, `Badge`, `Dialog`, `Popover`, `Stack`, `Row`), y las convenciones enseñan a componer con ellos. Un primitivo nuevo se exporta en la entrada, lleva historia y entra en la tabla de las convenciones.
+- Las piezas componibles son los primitivos que exporta `design-sync.entry.ts`, y las convenciones enseñan a componer con ellos. Un primitivo nuevo se exporta en la entrada, lleva historia y entra en la tabla de las convenciones.
 - El `_ds_bundle.css` pesa unos 310 KB porque incluye `app.css` entero.
 - Herramientas probadas: Storybook 10.6.1, Vite 8, React 19.3 y Node 24.
 
@@ -42,5 +42,5 @@ Proyecto: «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`), forma 
 - `SedeView` › `Marking` y `Unreadable Document` (ventana de 1080 × 660) salen cortadas por la derecha en la captura de 900 px. Están graduadas `close`: el recorte es del marco, no del componente. Darle `viewport` a `SedeView` lo arreglaría, pero re-gradúa las 63 historias y agranda la tarjeta `single` de `Consent`.
 - `SedeView` tiene ya 66 historias; el driver se corre con `--max-stories 63` y las tres últimas quedan sin graduar (subir el tope las deja pendientes de nota).
 - `Header`: las pestañas se truncan algo antes que en la referencia porque el marco del preview lleva 24 px de margen de cuerpo. Aceptado.
-- Títulos sin mapear (`TITLE_UNMAPPED`), fuera de la sincronización a propósito: `Menu`, `ProgressBar`, `Select`, y las pantallas `1·Diálogo`, `2·Instalaractualización`, `Colocación`, `1·Antesdefirmar`, `2·Firmado`, `Pantalla`, `Primerarranque`.
+- Títulos sin mapear (`TITLE_UNMAPPED`), fuera de la sincronización a propósito: los que imprime el build.
 - `conventions.md` no menciona `CertificateSelect`.

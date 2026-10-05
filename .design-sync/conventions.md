@@ -18,7 +18,7 @@ const { DesignRoot } = window.RFirma;
 
 ### Estilo: primitivos, clases `rf-*` y tokens `--rf-*`
 
-Las pantallas se componen con primitivos: `Button`, `Card`, `Field`, `Badge`, `Dialog`, `Popover`, `Stack` y `Row` (todos en `window.RFirma`). Una clase `rf-*` se escribe a mano solo si aún no tiene primitivo: el texto, `rf-input`, `rf-divider`, `rf-label` y poco más. No inventes clases ni escribas colores, radios o sombras literales: para tu maquetación propia, `var(--rf-*)`.
+Las pantallas se componen con primitivos: `Button`, `Card`, `Field`, `Badge`, `Dialog`, `Popover`, `Menu` (con `MenuItem`), `Select`, `Switch`, `ProgressBar`, `Stack` y `Row` (todos en `window.RFirma`). Una clase `rf-*` se escribe a mano solo si aún no tiene primitivo: el texto, `rf-input`, `rf-divider`, `rf-label` y poco más. No inventes clases ni escribas colores, radios o sombras literales: para tu maquetación propia, `var(--rf-*)`.
 
 | Primitivo | Props |
 | --- | --- |
