@@ -130,6 +130,7 @@ impl SiteErrandView {
         already_chosen: Option<&str>,
         without_asking: bool,
         sha1_allowed: bool,
+        sha1_to_allow: bool,
     ) -> Self {
         Self {
             origin: None,
@@ -139,6 +140,7 @@ impl SiteErrandView {
                 already_chosen: already_chosen.map(str::to_owned),
                 without_asking,
                 sha1_allowed,
+                sha1_to_allow,
             },
         }
     }
@@ -221,12 +223,14 @@ impl From<&Moment> for SiteErrandView {
                 already_chosen,
                 without_asking,
                 sha1_allowed,
+                sha1_to_allow,
             } => Self::asking_to_sign_the_local_batch(
                 items,
                 certificates,
                 already_chosen.as_deref(),
                 *without_asking,
                 *sha1_allowed,
+                *sha1_to_allow,
             ),
             Moment::NoCertificate { reason, owned } => {
                 Self::without_certificates((*reason).into(), *owned)
@@ -421,6 +425,8 @@ crossing! {
             without_asking: bool,
             /// Si el lote se firma con SHA-1 porque la persona lo permite, para recordárselo.
             sha1_allowed: bool,
+            /// Si el lote pide SHA-1 y la persona no lo permite todavía: la ventana se lo pregunta.
+            sha1_to_allow: bool,
         },
         /// Canal no disponible.
         NoChannel {
