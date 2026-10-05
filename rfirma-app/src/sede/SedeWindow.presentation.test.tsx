@@ -108,6 +108,13 @@ const rows: [string, ComponentType, Expectation][] = [
     },
   ],
   [
+    "2 · SHA-1 allowed",
+    consent.Sha1Allowed,
+    {
+      shows: ["Esta sede pide SHA-1, un algoritmo obsoleto. Lo tienes permitido en Preferencias."],
+    },
+  ],
+  [
     "2 · cosign",
     consent.Cosign,
     { shows: ["Ya viene firmado: la tuya será una cofirma junto a las firmas que ya tiene."] },
@@ -299,6 +306,24 @@ const rows: [string, ComponentType, Expectation][] = [
       shows: ["No se ha completado la petición", CONTACT_SITE, "SAF_01: falta el parámetro format"],
       hides: [DOCUMENT_TITLE, /La sede ha pedido/, /pedid/, /el fallo es de/i],
       noButtons: [NO_COMMENTS_HELP],
+    },
+  ],
+  [
+    "4 · SHA-1 refusal tells how to allow it",
+    outcome.RefusedWithCause,
+    {
+      shows: [
+        "Si confías en esta sede, puedes permitir SHA-1 en Preferencias → Firma y volver a firmar desde la sede.",
+        "Pedid SHA256withRSA o superior.",
+      ],
+    },
+  ],
+  [
+    "4 · SHA-1 in XML refusal does not",
+    outcome.RefusedSha1InXml,
+    {
+      shows: ["Pedid SHA256withRSA o superior."],
+      hides: [/Preferencias/],
     },
   ],
   [

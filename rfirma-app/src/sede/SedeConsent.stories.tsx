@@ -65,6 +65,10 @@ export const NarrowedBySite: Story = {
   args: { errand: sedeErrand(consentStage({ narrowed: true })) },
 };
 
+export const Sha1Allowed: Story = {
+  args: { errand: sedeErrand(consentStage({ sha1Allowed: true })) },
+};
+
 export const UntitledDocument: Story = {
   args: { errand: sedeErrand(consentStage({ document: documentWith({ title: null }) })) },
 };

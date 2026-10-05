@@ -39,6 +39,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
         items: null,
         certificates: [certificate()],
         narrowed: false,
+        sha1Allowed: false,
       },
     });
   });
@@ -66,6 +67,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
         items: null,
         certificates: [certificate()],
         narrowed: false,
+        sha1Allowed: false,
       },
     });
   });
@@ -216,6 +218,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
           items: null,
           certificates: [certificate()],
           narrowed: false,
+          sha1Allowed: false,
         },
       }),
     );
@@ -253,6 +256,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
           certificates: [certificate()],
           alreadyChosen: null,
           withoutAsking: false,
+          sha1Allowed: false,
         },
       };
       const { push, last } = watched();
@@ -262,6 +266,18 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
       await vi.waitFor(() => expect(last()?.stage).toMatchObject({ signing }));
     },
   );
+
+  it("carries the SHA-1 allowance through to the consent stage", async () => {
+    const view: SiteErrandView = {
+      ...ASKING_TO_SIGN,
+      stage: { ...ASKING_TO_SIGN.stage, sha1Allowed: true } as SiteErrandView["stage"],
+    };
+    const { push, last } = watched();
+
+    push(view);
+
+    await vi.waitFor(() => expect(last()?.stage).toMatchObject({ sha1Allowed: true }));
+  });
 
   it.each(["tree", "leafs"] as const)(
     "carries the %s target of a countersignature through to the consent document",
@@ -276,6 +292,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
           certificates: [certificate()],
           alreadyChosen: null,
           withoutAsking: false,
+          sha1Allowed: false,
         },
       };
       const { push, last } = watched();
@@ -331,6 +348,7 @@ describe("el lote local: el resumen de cada elemento", () => {
         ],
         certificates: [certificate()],
         narrowed: false,
+        sha1Allowed: false,
       },
     });
   });

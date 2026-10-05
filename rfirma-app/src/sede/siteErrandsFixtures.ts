@@ -149,6 +149,7 @@ export const ASKING_TO_SIGN: SiteErrandView = {
     certificates: [certificate()],
     alreadyChosen: null,
     withoutAsking: false,
+    sha1Allowed: false,
   },
 };
 
