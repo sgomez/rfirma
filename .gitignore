@@ -76,3 +76,6 @@ node_modules/
 packaging/repo/site/dist/
 packaging/repo/site/.astro/
 rfirma-app/storybook-static/
+
+# Claude Code local settings
+.claude/settings.local.json
