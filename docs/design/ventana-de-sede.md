@@ -247,15 +247,16 @@ de las cabeceras de los componentes.
   arrancarse un programa en su equipo a petición de una web, y un rFirma que
   aparece y desaparece en silencio es indistinguible de uno roto. Lo accionable es
   el detalle copiable, para llevárselo a quien mantiene la sede.
-- **Cada rechazo propio de la sede lleva una acción** (reintentar, contactar con la
+- **Cada rechazo propio de la sede lleva una acción**, salvo las firmas que rFirma se niega a hacer (reintentar, contactar con la
   sede, cerrar la otra aplicación, elegir otro certificado) y es lo que protege
   `REFUSAL_ACTION_OF`. Los rechazos del token, el puente y el documento se cuentan
   con el título que les da la ventana principal, sin redactarlos dos veces. Solo
   cae en la frase genérica lo que ni el backend sabe clasificar.
 - **Las firmas que rFirma se niega a hacer** (SHA-1, XAdES explícita, cofirma o
   contrafirma de factura, contrafirma fuera de CAdES, CMS y XAdES; ADR-0023) dicen
-  que no es un fallo de quien firma, con una nota para quien mantiene la sede.
-  El rechazo por SHA-1 añade, antes de esa nota, la pista «Si confías en esta sede,
+  que no es un fallo de quien firma, y esa causa ocupa el lugar de la acción. La
+  nota para quien mantiene la sede va dentro de la caja del detalle y se copia con él.
+  El rechazo por SHA-1 añade, antes de la caja, la pista «Si confías en esta sede,
   puedes permitir SHA-1 en Preferencias → Firma y volver a firmar desde la sede.»;
   el de SHA-1 en XML no la lleva, porque ahí la preferencia no actúa.
 - **La caja del detalle es de la sede y solo de la sede.** El enlace a comentarios

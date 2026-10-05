@@ -1481,8 +1481,8 @@ msgstr "Cancelaches a sinatura"
 msgid "sede.outcome.refusedTitle"
 msgstr "Non se completou a petición"
 
-msgid "sede.outcome.refusedNote"
-msgstr "Para quen mantén a sede:"
+msgid "sede.outcome.technicalDetail"
+msgstr "Detalle técnico para a sede"
 
 msgid "sede.outcome.reportHint"
 msgstr "Parécheche un fallo de rFirma?"

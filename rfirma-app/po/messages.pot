@@ -1449,7 +1449,7 @@ msgstr ""
 msgid "sede.outcome.refusedTitle"
 msgstr ""
 
-msgid "sede.outcome.refusedNote"
+msgid "sede.outcome.technicalDetail"
 msgstr ""
 
 msgid "sede.outcome.reportHint"

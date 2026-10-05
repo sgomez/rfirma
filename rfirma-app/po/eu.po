@@ -1497,8 +1497,8 @@ msgstr "Sinadura bertan behera utzi duzu"
 msgid "sede.outcome.refusedTitle"
 msgstr "Ez da eskaera osatu"
 
-msgid "sede.outcome.refusedNote"
-msgstr "Egoitza mantentzen duenarentzat:"
+msgid "sede.outcome.technicalDetail"
+msgstr "Egoitzarentzako xehetasun teknikoa"
 
 msgid "sede.outcome.reportHint"
 msgstr "rFirmaren akatsa dela uste duzu?"

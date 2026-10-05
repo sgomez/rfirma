@@ -136,32 +136,13 @@ export function SedeOutcome({ origin, outcome, onClose, onOpenHelp }: SedeOutcom
         )}
         {outcome.kind === "refused" && (
           <>
-            <RefusalCause situation={outcome.situation} />
             <p className="rf-prose">
-              <RefusalSentence situation={outcome.situation} />
+              <RefusalStatement situation={outcome.situation} />
             </p>
-            <p className="rf-hint">{t("sede.outcome.refusedNote")}</p>
             {outcome.situation === "sha1" && (
               <p className="rf-prose">{t("sede.refusalHints.sha1")}</p>
             )}
-            <SiteNote situation={outcome.situation} />
-            <Stack gap="xs" className="sede-outcome__detail">
-              <Row gap="xs" className="sede-outcome__detail-head">
-                <span className="rf-label">{t("errors.technicalDetail")}</span>
-                <Button
-                  variant="ghost"
-                  className="sede-outcome__copy"
-                  onClick={() => void navigator.clipboard.writeText(outcome.detail)}
-                >
-                  <CopyIcon size={14} />
-                  {t("actions.copy")}
-                </Button>
-              </Row>
-              {/* biome-ignore lint/a11y/noNoninteractiveTabindex: la región con desplazamiento tiene que poder enfocarse para leerla con el teclado. */}
-              <code className="rf-body sede-outcome__detail-text" tabIndex={0}>
-                {outcome.detail}
-              </code>
-            </Stack>
+            <TechnicalDetail situation={outcome.situation} detail={outcome.detail} />
             {outcome.situation === "unknown" && (
               <Row gap="xs" className="sede-outcome__report">
                 <p className="rf-hint">{t("sede.outcome.reportHint")}</p>
@@ -237,39 +218,65 @@ function RefusalSentence({ situation }: { situation: RefusalSituation }) {
   }
 }
 
-/** Por qué rFirma no hace una firma que la sede pide de forma insegura o imposible. */
-function RefusalCause({ situation }: { situation: RefusalSituation }) {
+/** Por qué rFirma no hace una firma que la sede pide de forma insegura o imposible; en otro rechazo, qué hacer. */
+function RefusalStatement({ situation }: { situation: RefusalSituation }) {
   const { t } = useTranslation();
 
   switch (situation) {
     case "sha1":
     case "sha1InXml":
-      return <p className="rf-prose">{t("sede.refusalCauses.sha1")}</p>;
+      return <>{t("sede.refusalCauses.sha1")}</>;
     case "explicitXades":
-      return <p className="rf-prose">{t("sede.refusalCauses.explicitXades")}</p>;
+      return <>{t("sede.refusalCauses.explicitXades")}</>;
     case "invoiceMultisignature":
-      return <p className="rf-prose">{t("sede.refusalCauses.invoiceMultisignature")}</p>;
+      return <>{t("sede.refusalCauses.invoiceMultisignature")}</>;
     case "unsupportedCountersignature":
-      return <p className="rf-prose">{t("sede.refusalCauses.unsupportedCountersignature")}</p>;
+      return <>{t("sede.refusalCauses.unsupportedCountersignature")}</>;
     default:
-      return null;
+      return <RefusalSentence situation={situation} />;
   }
 }
 
-/** Lo que quien mantiene la sede puede cambiar para que rFirma firme, cuando rFirma se niega. */
-function SiteNote({ situation }: { situation: RefusalSituation }) {
+/** La caja que la persona copia y lleva a quien mantiene la sede: su nota, si la hay, y el detalle crudo. */
+function TechnicalDetail({ situation, detail }: { situation: RefusalSituation; detail: string }) {
   const { t } = useTranslation();
+  const note = siteNote(situation, t);
+  const copiedDetail = note === null ? detail : `${note}\n\n${detail}`;
 
+  return (
+    <Stack gap="xs" className="sede-outcome__detail">
+      <Row gap="xs" className="sede-outcome__detail-head">
+        <span className="rf-label">{t("sede.outcome.technicalDetail")}</span>
+        <Button
+          variant="ghost"
+          className="sede-outcome__copy"
+          onClick={() => void navigator.clipboard.writeText(copiedDetail)}
+        >
+          <CopyIcon size={14} />
+          {t("actions.copy")}
+        </Button>
+      </Row>
+      {note !== null && <p className="rf-hint">{note}</p>}
+      {/* biome-ignore lint/a11y/noNoninteractiveTabindex: la región con desplazamiento tiene que poder enfocarse para leerla con el teclado. */}
+      <code className="rf-body sede-outcome__detail-text" tabIndex={0}>
+        {detail}
+      </code>
+    </Stack>
+  );
+}
+
+/** Lo que quien mantiene la sede puede cambiar para que rFirma firme, cuando rFirma se niega. */
+function siteNote(situation: RefusalSituation, t: TFunction): string | null {
   switch (situation) {
     case "sha1":
     case "sha1InXml":
-      return <p className="rf-hint">{t("sede.siteNotes.sha1")}</p>;
+      return t("sede.siteNotes.sha1");
     case "explicitXades":
-      return <p className="rf-hint">{t("sede.siteNotes.explicitXades")}</p>;
+      return t("sede.siteNotes.explicitXades");
     case "invoiceMultisignature":
-      return <p className="rf-hint">{t("sede.siteNotes.invoiceMultisignature")}</p>;
+      return t("sede.siteNotes.invoiceMultisignature");
     case "unsupportedCountersignature":
-      return <p className="rf-hint">{t("sede.siteNotes.unsupportedCountersignature")}</p>;
+      return t("sede.siteNotes.unsupportedCountersignature");
     default:
       return null;
   }
