@@ -1302,7 +1302,7 @@ msgstr "A sede limitou os certificados válidos."
 
 msgid "sede.consent.sha1Allowed"
 msgstr ""
-"Esta sede pide SHA-1, un algoritmo obsoleto. Tes permitido en Preferencias."
+"Esta sede pide SHA-1, un algoritmo obsoleto. Telo permitido en Preferencias."
 
 msgid "sede.consent.willSend"
 msgstr ""

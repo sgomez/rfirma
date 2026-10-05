@@ -1306,7 +1306,7 @@ msgstr "La seu ha limitat els certificats vàlids."
 
 msgid "sede.consent.sha1Allowed"
 msgstr ""
-"Aquesta seu demana SHA-1, un algorisme obsolet. Ho teniu permès a "
+"Aquesta seu demana SHA-1, un algorisme obsolet. Ho tens permès a "
 "Preferències."
 
 msgid "sede.consent.willSend"
@@ -1544,7 +1544,7 @@ msgstr "Demaneu SHA256withRSA o superior."
 
 msgid "sede.refusalHints.sha1"
 msgstr ""
-"Si confieu en aquesta seu, podeu permetre SHA-1 a Preferències → Signatura i "
+"Si confies en aquesta seu, pots permetre SHA-1 a Preferències → Signatura i "
 "tornar a signar des de la seu."
 
 msgid "sede.siteNotes.explicitXades"
