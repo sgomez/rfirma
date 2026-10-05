@@ -78,6 +78,10 @@
     "DocumentViewer": {
       "cardMode": "column"
     },
+    "CertificateSelect": {
+      "cardMode": "single",
+      "primaryStory": "Open"
+    },
     "ErrorNotice": {
       "cardMode": "column"
     },
