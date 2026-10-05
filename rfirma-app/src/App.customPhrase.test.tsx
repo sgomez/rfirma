@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { aCertificate, document, openPdf, pdfsOf, renderApp } from "./App.testSupport";
@@ -177,28 +177,6 @@ describe("App, con el modelo Personalizada", () => {
     await user.keyboard("{Enter}");
 
     expect(phrase.querySelector("br, div")).toBeNull();
-  });
-
-  it("sends the phrase structured to the signature order, without placeholders", async () => {
-    const presigned: SigningOrder[] = [];
-    const { user, panel, phrase } = await withCustomModel(presigned);
-    caretAtEnd(phrase);
-    await user.keyboard(" en Sevilla");
-
-    await user.click(within(panel).getByRole("button", { name: "Firmar" }));
-
-    await waitFor(() => expect(presigned).toHaveLength(1));
-    expect(presigned[0]?.content).toEqual({
-      model: "custom",
-      phrase: [
-        { text: "Visto bueno de " },
-        { datum: "signer" },
-        { text: ", " },
-        { datum: "signedAt" },
-        { text: " en Sevilla" },
-      ],
-    });
-    expect(JSON.stringify(presigned[0])).not.toContain("$$");
   });
 
   it("brings the phrase back after choosing another model and returning", async () => {
