@@ -7,8 +7,9 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::{
-    apply_pk1, batch_algorithm, build_empty_result, build_result, parse_json_presign,
-    update_batch_with_errors, BatchDataResult, BatchFormat, HeaderRefusal, TriphaseData,
+    apply_pk1, batch_algorithm, batch_asks_for_sha1, build_empty_result, build_result,
+    parse_json_presign, update_batch_with_errors, BatchDataResult, BatchFormat, HeaderRefusal,
+    TriphaseData,
 };
 use crate::site::domain::batch_error::{BatchError, Situation};
 use crate::site::domain::protocol::{BatchRequest, SafCode};
@@ -21,6 +22,11 @@ pub fn how_many(request: &BatchRequest) -> usize {
         return single_signs_in_json(request.lote());
     }
     single_signs_in_xml(request.lote())
+}
+
+/// Si la cabecera del lote pide SHA-1, para marcarlo en el consentimiento cuando se atiende.
+pub fn asks_for_sha1(request: &BatchRequest) -> bool {
+    batch_asks_for_sha1(format_of(request), request.lote())
 }
 
 /// Lo que hace falta para firmar un lote ya consentido: los dos servlets, el token y el secreto abierto.
@@ -106,7 +112,8 @@ fn every_pre_signed(
     request: &BatchRequest,
     triphase_data: TriphaseData,
 ) -> Result<TriphaseData, SiteRefusal> {
-    let algorithm = batch_algorithm(format_of(request), request.lote()).map_err(refused_header)?;
+    let algorithm = batch_algorithm(format_of(request), request.lote(), run.token.sha1_allowed())
+        .map_err(refused_header)?;
     let mut refused: Option<SigningRefusal> = None;
     let with_pk1 = apply_pk1(triphase_data, |pre| {
         if refused.is_some() {

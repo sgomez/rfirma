@@ -15,7 +15,7 @@ use crate::identity::IdentityRoot;
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
-use crate::site::domain::protocol::AskedAlgorithm;
+use crate::site::domain::protocol::{AlgorithmReading, AskedAlgorithm};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{composed_for, signing_refusal_of, Neighbours, SiteSigningRequest};
 
@@ -160,13 +160,22 @@ pub fn signed_for_the_remote_batch(
     algorithm: &str,
     data: &[u8],
 ) -> Result<Vec<u8>, SigningRefusal> {
-    let asked = AskedAlgorithm::named(algorithm)
+    let asked = digest_named(algorithm)
         .ok_or_else(|| no_mechanism_for(algorithm))
         .and_then(|asked| composed_for(asked, certificate.key_kind()))
         .map_err(refusal_of_token)?;
     signer
         .sign_with_secret(certificate.reference(), secret, asked, data)
         .map_err(refusal_of_token)
+}
+
+/// La huella que nombra la cabecera, SHA-1 incluida: el trámite ya la admitió con la preferencia.
+fn digest_named(algorithm: &str) -> Option<AskedAlgorithm> {
+    match AskedAlgorithm::read(algorithm) {
+        AlgorithmReading::Attended(asked) => Some(asked),
+        AlgorithmReading::Sha1 => Some(AskedAlgorithm::Sha1),
+        AlgorithmReading::Unrecognized => None,
+    }
 }
 
 fn no_mechanism_for(algorithm: &str) -> TokenError {
