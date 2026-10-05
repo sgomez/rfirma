@@ -39,15 +39,17 @@ fn a_countersignature_in_pades_is_refused_with_the_code_of_the_original() {
 }
 
 #[test]
-fn signing_with_sha1_is_refused_as_a_security_exception() {
+fn a_signature_with_sha1_is_read_with_the_sha1_digest_for_the_errand_to_decide() {
     let url = an_operation(&format!(
         "op={SIGN}&format=PAdES&algorithm=SHA1withRSA&dat={}",
         dat(b"%PDF-1.7\n")
     ));
 
-    let refusal = read_operation(&url).expect_err("SHA-1 no se atiende");
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se lee") else {
+        panic!("es una firma");
+    };
 
-    assert_eq!(refusal.situation(), RefusalSituation::Sha1);
+    assert_eq!(request.algorithm(), AskedAlgorithm::Sha1);
 }
 
 #[test]

@@ -553,48 +553,6 @@ fn the_refusal_of_a_countersignature_outside_cades_and_xades_is_shown_with_its_o
 }
 
 #[test]
-fn sha1_is_refused_as_saf_03_naming_the_algorithm_in_every_operation_and_format() {
-    let pdf = dat(b"%PDF-1.7\n");
-    let signed_xml = dat(b"<?xml version=\"1.0\"?><a/>");
-    for (parameters, what) in [
-        (
-            format!("op=sign&format=PAdES&algorithm=SHA1withRSA&dat={pdf}"),
-            "sign en PAdES",
-        ),
-        (
-            format!("op=sign&format=XAdES&algorithm=SHA-1&dat={signed_xml}"),
-            "sign en XAdES",
-        ),
-        (
-            format!("op=sign&format=CAdES&algorithm=SHA1withECDSA&dat={pdf}"),
-            "sign en CAdES",
-        ),
-        (
-            format!("op=sign&format=FacturaE&algorithm=SHA&dat={signed_xml}"),
-            "sign en FacturaE",
-        ),
-        (
-            format!("op=cosign&format=PAdES&algorithm=SHA1&dat={pdf}"),
-            "cosign",
-        ),
-        (
-            format!("op=countersign&format=CAdES&algorithm=1.3.14.3.2.26&dat={pdf}"),
-            "countersign",
-        ),
-        (
-            format!("op=signandsave&cop=sign&format=PAdES&algorithm=SHA1withRSA&dat={pdf}"),
-            "signandsave",
-        ),
-    ] {
-        let refusal = read_operation(&an_operation(&parameters)).expect_err(what);
-
-        assert_eq!(refusal.code(), SafCode::Params, "{what}");
-        assert_eq!(refusal.blame(), Some(Parameter::Algorithm), "{what}");
-        assert_eq!(refusal.situation(), RefusalSituation::Sha1, "{what}");
-    }
-}
-
-#[test]
 fn an_unknown_algorithm_is_refused_without_the_sha1_situation() {
     let url = an_operation(&format!(
         "op=sign&format=PAdES&algorithm=desconocido&dat={}",

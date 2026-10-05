@@ -2,8 +2,8 @@
 
 use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::protocol::{
-    BatchRequest, LoadRequest, PendingSignRequest, Refusal, SaveRequest, SelectCertificate,
-    SignAndSaveRequest, SignRequest,
+    AskedAlgorithm, BatchRequest, LoadRequest, PendingSignRequest, Refusal, SaveRequest,
+    SelectCertificate, SignAndSaveRequest, SignRequest,
 };
 
 /// Lo que la sede pide, ya leído y sin versión de protocolo.
@@ -27,6 +27,23 @@ pub enum SiteRequest {
     LocalBatch(Box<LocalBatchAsk>),
     /// Operación no atendida con el rechazo correspondiente.
     NotAttended(Refusal),
+}
+
+impl SiteRequest {
+    /// La huella que pide una firma suelta, con documento o sin él; nada en las demás operaciones.
+    pub fn signature_algorithm(&self) -> Option<AskedAlgorithm> {
+        match self {
+            Self::Sign(request) => Some(request.algorithm()),
+            Self::SignWithoutDocument(request) => Some(request.algorithm()),
+            Self::SignAndSave(request) => Some(request.algorithm()),
+            Self::SelectCertificate(_)
+            | Self::Save(_)
+            | Self::Load(_)
+            | Self::Batch(_)
+            | Self::LocalBatch(_)
+            | Self::NotAttended(_) => None,
+        }
+    }
 }
 
 /// El lote local, leído o no, junto con lo que la sede pidió a su alrededor.

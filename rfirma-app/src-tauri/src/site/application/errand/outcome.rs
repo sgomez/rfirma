@@ -163,6 +163,7 @@ impl SigningConsent {
             certificates: self.certificates.clone(),
             already_chosen: self.already_chosen.clone(),
             without_asking: self.without_asking,
+            sha1_allowed: self.algorithm == AskedAlgorithm::Sha1,
         }
     }
 }
@@ -416,6 +417,8 @@ pub enum Moment {
         already_chosen: Option<String>,
         /// Si la ventana consiente sola con `already_chosen`.
         without_asking: bool,
+        /// Si se firma con SHA-1 porque la persona lo permite.
+        sha1_allowed: bool,
     },
     /// La persona marca sobre el PDF el área de la firma visible, antes de elegir certificado.
     MarkingTheArea {

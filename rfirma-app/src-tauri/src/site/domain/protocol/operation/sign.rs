@@ -96,7 +96,7 @@ impl SignRequest {
         self.round
     }
 
-    /// La huella que pidió la sede, ya admitida.
+    /// La huella que pidió la sede, ya leída; si se atiende SHA-1 lo decide el trámite.
     pub fn algorithm(&self) -> AskedAlgorithm {
         self.algorithm
     }
@@ -164,6 +164,11 @@ pub struct PendingSignRequest {
 }
 
 impl PendingSignRequest {
+    /// La huella que pidió la sede.
+    pub fn algorithm(&self) -> AskedAlgorithm {
+        self.algorithm
+    }
+
     /// Lo que la sede pide del listado.
     pub fn filter(&self) -> &SiteFilter {
         &self.filter

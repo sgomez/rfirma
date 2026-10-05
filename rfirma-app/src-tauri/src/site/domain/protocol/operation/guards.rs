@@ -110,16 +110,44 @@ pub(super) fn requested_format(url: &AfirmaUrl) -> Result<Option<RequestedFormat
     })
 }
 
-/// La huella del `algorithm` que pide la sede, o el `SAF_03` que lo nombra.
+/// El `SAF_03` de SHA-1 cuando la persona no lo permite (ADR-0023).
+pub fn refuse_sha1_unless_allowed(algorithm: AskedAlgorithm, allowed: bool) -> Result<(), Refusal> {
+    if algorithm == AskedAlgorithm::Sha1 && !allowed {
+        return Err(Refusal::about(
+            Parameter::Algorithm,
+            "el algoritmo es SHA-1: rFirma firma con SHA-2",
+        )
+        .because(RefusalSituation::Sha1));
+    }
+    Ok(())
+}
+
+/// El `SAF_03` de SHA-1 en la XAdES o la FacturaE que firma el puente, aunque la persona lo permita.
+pub fn refuse_sha1_in_xml(
+    algorithm: AskedAlgorithm,
+    format: RequestedFormat,
+    through_the_site_server: Option<ServerFormat>,
+) -> Result<(), Refusal> {
+    let signs_xml = matches!(
+        format,
+        RequestedFormat::Xades(_) | RequestedFormat::FacturaE
+    );
+    if algorithm == AskedAlgorithm::Sha1 && signs_xml && through_the_site_server.is_none() {
+        return Err(Refusal::about(
+            Parameter::Algorithm,
+            "el algoritmo es SHA-1: rFirma no firma XML con SHA-1",
+        )
+        .because(RefusalSituation::Sha1InXml));
+    }
+    Ok(())
+}
+
+/// La huella del `algorithm` que pide la sede, SHA-1 incluida, o el `SAF_03` que lo nombra.
 pub(super) fn check_algorithm(url: &AfirmaUrl) -> Result<AskedAlgorithm, Refusal> {
     let algorithm = required(url, "algorithm", Parameter::Algorithm)?;
     match AskedAlgorithm::read(algorithm) {
         AlgorithmReading::Attended(asked) => Ok(asked),
-        AlgorithmReading::Sha1 => Err(Refusal::about(
-            Parameter::Algorithm,
-            format!("el algoritmo '{algorithm}' es SHA-1: rFirma firma con SHA-2"),
-        )
-        .because(RefusalSituation::Sha1)),
+        AlgorithmReading::Sha1 => Ok(AskedAlgorithm::Sha1),
         AlgorithmReading::Unrecognized => Err(Refusal::about(
             Parameter::Algorithm,
             format!("el algoritmo '{algorithm}' no se atiende: rFirma firma con SHA-2"),
