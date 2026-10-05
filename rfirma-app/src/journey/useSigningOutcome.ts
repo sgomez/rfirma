@@ -1,18 +1,20 @@
-//! El acuse de recibo del documento firmado y los dos caminos hasta el fichero.
+//! El resultado de la firma del documento activo: el acuse con los dos caminos hasta el fichero, o el fallo, y su cierre al cambiar de pestaña.
 
 import { useEffect, useState } from "react";
 import type { SignedDocumentOpener } from "../signing/destination";
 import type { SigningBackend } from "../signing/flow";
 import type { DocumentFinding, PreviousSignature } from "../signing/previousSignatures";
 import { useSignedDocumentOpening } from "../signing/useSignedDocumentOpening";
-import { acknowledgementFor, type Signing } from "../signing/useSigning";
+import { acknowledgementFor, failureFor, type Signing } from "../signing/useSigning";
 
 /**
- * El acuse de recibo del documento que se acaba de firmar, y los dos caminos
- * hasta el fichero. Solo sigue en pie mientras el documento firmado siga
- * activo: cambiar de fila lo cierra, en vez de esperar a que vuelva.
+ * El acuse de recibo del documento que se acaba de firmar, con los dos caminos
+ * hasta el fichero, o el error de su firma. Los dos solo siguen en pie mientras
+ * su documento siga activo: cambiar de fila los cierra, en vez de esperar a que
+ * vuelva. Con un fallo, el ciclo a medias se olvida en el backend, igual que
+ * pulsar «Volver» a mano.
  */
-export function useSignedSummary(
+export function useSigningOutcome(
   signing: Signing,
   activeDocumentId: string | null,
   reopenDocument: () => void,
@@ -69,11 +71,18 @@ export function useSignedSummary(
   // la siguiente el usuario ha podido modificarlo fuera o haberse equivocado al
   // configurar la firma. Lo que decida el recuadro recordado —incluido el aviso
   // de que ya no cabe— lo resuelve el camino de siempre, no uno nuevo.
+  const failedHere = failureFor(signing.state, activeDocumentId);
+  const failedSomewhere = signing.state.kind === "failed";
+  const cancel = signing.cancel;
+  useEffect(() => {
+    if (failedSomewhere && failedHere === null) cancel();
+  }, [failedSomewhere, failedHere, cancel]);
+
   const signAgain = () => {
     forgetFailure();
     signing.signAnother();
     reopenDocument();
   };
 
-  return { signedHere, signatures, findings, opening, signAgain };
+  return { signedHere, signatures, findings, opening, signAgain, failedHere };
 }

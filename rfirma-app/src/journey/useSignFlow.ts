@@ -1,24 +1,27 @@
-//! La vista previa del sello y la firma, con los dos avisos que pueden interponerse antes del PIN.
+//! La vista previa del sello y la firma, armadas por el mismo sitio con la hora del recuadro y el gesto en curso, y los dos avisos que pueden interponerse antes del PIN.
 
-import { useMemo, useState } from "react";
-import type { DocumentInHand } from "./documents/document";
-import type { PageGeometry } from "./journey/signingOrder";
-import { signingOrderFor } from "./journey/signingOrder";
-import { firstSealedPage, type Placement, sealedPages } from "./placement/pageSets";
-import type { Certificate } from "./signing/certificate";
-import { isUsable } from "./signing/certificate";
-import type { SigningBackend, SigningOrder } from "./signing/flow";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { DocumentInHand } from "../documents/document";
+import { firstSealedPage, type Placement, sealedPages } from "../placement/pageSets";
+import type { PlacedDocument } from "../placement/usePlacement";
+import type { Certificate } from "../signing/certificate";
+import { isUsable } from "../signing/certificate";
+import type { SigningBackend, SigningOrder } from "../signing/flow";
 import {
   type PreviousSignaturesReport,
   type SigningProblem,
   signingProblems,
-} from "./signing/previousSignatures";
-import type { Rubric } from "./signing/rubric";
-import { composesOnRelease, type StampComposer, type StampRequest } from "./signing/stampPreview";
-import { pagesWithoutSeal } from "./signing/unsealedPages";
-import { useStampPreview } from "./signing/useStampPreview";
-import { rubricGapFor, type VisibleSignature } from "./signing/visibleSignature";
-import type { PdfDocument } from "./viewer/pdf";
+} from "../signing/previousSignatures";
+import type { Rubric } from "../signing/rubric";
+import { formatSignedAt } from "../signing/signedAt";
+import { composesOnRelease, type StampComposer, type StampRequest } from "../signing/stampPreview";
+import { pagesWithoutSeal } from "../signing/unsealedPages";
+import { useStampPreview } from "../signing/useStampPreview";
+import { rubricGapFor, type VisibleSignature } from "../signing/visibleSignature";
+import type { PdfDocument } from "../viewer/pdf";
+import type { PageGeometry } from "./signingOrder";
+import { signingOrderFor } from "./signingOrder";
 
 interface SignFlowInput {
   pdf: PdfDocument | null;
@@ -28,13 +31,13 @@ interface SignFlowInput {
   boxPage: number | null;
   signature: VisibleSignature;
   rubric: Rubric | null;
-  signedAt: string;
+  /** El documento que se está abriendo: cada apertura fija de nuevo la hora del recuadro. */
+  opening: PlacedDocument | null;
   language: string;
   chosen: Certificate | null;
   signer: SigningBackend;
   stamps: StampComposer;
   sizeBytes: number | null;
-  gesturing: boolean;
   /** El destino elegido para esta firma con «Cambiar», sin tocar la preferencia (ADR-0011). */
   singleDestinationId: string | null;
   previousSignatures: PreviousSignaturesReport;
@@ -58,13 +61,12 @@ export function useSignFlow({
   boxPage,
   signature,
   rubric,
-  signedAt,
+  opening,
   language,
   chosen,
   signer,
   stamps,
   sizeBytes,
-  gesturing,
   singleDestinationId,
   previousSignatures,
   startSigning,
@@ -81,6 +83,10 @@ export function useSignFlow({
   // tocar nada más. Cierra sin pedir nada al backend: ya sabe lo que necesita
   // del informe que trajo `usePreviousSignatures`.
   const [signAnywayPrompt, setSignAnywayPrompt] = useState<readonly SigningProblem[] | null>(null);
+  // Un gesto sobre el recuadro está en curso. Sólo lo mira la vista previa: es
+  // lo que congela la vista anterior en vez de pagar un ciclo por fotograma.
+  const [gesturing, setGesturing] = useState(false);
+  const { signingInstant, signedAt } = useSigningInstant(opening);
 
   // ── La vista previa del sello ───────────────────────────────────
   //
@@ -257,7 +263,12 @@ export function useSignFlow({
   };
 
   return {
-    stamp: { ...stamp, rubricGap: rubricGapFor(signature, rubric !== null) },
+    stamp: {
+      ...stamp,
+      rubricGap: rubricGapFor(signature, rubric !== null),
+      onGesture: setGesturing,
+    },
+    signingInstant,
     sign,
     sealLossPrompt,
     setSealLossPrompt,
@@ -266,6 +277,29 @@ export function useSignFlow({
     setSignAnywayPrompt,
     signDespiteProblems,
   };
+}
+
+/**
+ * El instante del recuadro y su formato.
+ *
+ * El instante **es estado, no un reloj**: se fija al abrir el documento y no
+ * vuelve a correr. Recalcularlo en cada pintada haría que la vista previa
+ * enseñara una hora y se estampara otra. El **formato** sí se rehace al cambiar
+ * de idioma: la hora es la misma, y solo cambia cómo se escribe.
+ */
+function useSigningInstant(opening: PlacedDocument | null) {
+  const { i18n } = useTranslation();
+  const [signingInstant, setSigningInstant] = useState(() => new Date());
+  const signedAt = useMemo(
+    () => formatSignedAt(signingInstant, i18n.language),
+    [signingInstant, i18n.language],
+  );
+
+  useEffect(() => {
+    if (opening !== null) setSigningInstant(new Date());
+  }, [opening]);
+
+  return { signingInstant, signedAt };
 }
 
 /**
