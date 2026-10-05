@@ -43,6 +43,8 @@ crossing! {
         PortsTaken,
         /// La sede pide firmar con SHA-1, que ya no es seguro.
         Sha1,
+        /// La sede pide firmar XML con SHA-1, que rFirma no hace.
+        Sha1InXml,
         /// La sede pide la XAdES explícita, que rFirma no hace.
         ExplicitXades,
         /// La sede pide cofirmar o contrafirmar una factura electrónica.
@@ -75,6 +77,7 @@ impl From<RefusalSituation> for RefusalSituationView {
             RefusalSituation::ErrandInFlight => Self::ErrandInFlight,
             RefusalSituation::PortsTaken => Self::PortsTaken,
             RefusalSituation::Sha1 => Self::Sha1,
+            RefusalSituation::Sha1InXml => Self::Sha1InXml,
             RefusalSituation::ExplicitXades => Self::ExplicitXades,
             RefusalSituation::InvoiceMultisignature => Self::InvoiceMultisignature,
             RefusalSituation::UnsupportedCountersignature => Self::UnsupportedCountersignature,

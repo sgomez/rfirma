@@ -268,6 +268,7 @@ impl IsolateHost for TheBridge {
 pub(crate) struct ATokenThatSigns {
     offered: Vec<SignatureAlgorithm>,
     secrets_asked: std::sync::Mutex<usize>,
+    signed_with: std::sync::Mutex<Vec<SignatureAlgorithm>>,
 }
 
 impl Default for ATokenThatSigns {
@@ -281,11 +282,17 @@ impl ATokenThatSigns {
         Self {
             offered: offered.to_vec(),
             secrets_asked: std::sync::Mutex::new(0),
+            signed_with: std::sync::Mutex::new(Vec::new()),
         }
     }
 
     pub(crate) fn secrets_asked(&self) -> usize {
         *crate::lock(&self.secrets_asked)
+    }
+
+    /// Los algoritmos con los que firmó, en orden.
+    pub(crate) fn signed_with(&self) -> Vec<SignatureAlgorithm> {
+        crate::lock(&self.signed_with).clone()
     }
 }
 
@@ -325,9 +332,10 @@ impl Signer for ATokenThatSigns {
         &self,
         _reference: &CertificateRef,
         _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
-        _algorithm: SignatureAlgorithm,
+        algorithm: SignatureAlgorithm,
         _data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
+        crate::lock(&self.signed_with).push(algorithm);
         Ok(vec![0x01; 256])
     }
 }

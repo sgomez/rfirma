@@ -62,7 +62,7 @@ impl SignAndSaveRequest {
         self.round
     }
 
-    /// La huella que pidió la sede, ya admitida.
+    /// La huella que pidió la sede, ya leída; si se atiende SHA-1 lo decide el trámite.
     pub fn algorithm(&self) -> AskedAlgorithm {
         self.algorithm
     }
