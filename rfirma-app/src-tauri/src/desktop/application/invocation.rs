@@ -180,7 +180,8 @@ const HELP_LEFT_OUT_DEVIATIONS: &str = "\
                       No existen.
   --preurl, --posturl, --hformat, --halgorithm, -r, --operation
                       No existen.
-  --algorithm sha1    Se rechaza.
+  --algorithm sha1    Se rechaza salvo con «Permitir SHA-1» en Preferencias →
+                      Firma, y nunca en XAdES.
   --store             Un almacén que AutoFirma no reconoce se rechaza.
 ";
 

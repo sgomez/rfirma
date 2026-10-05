@@ -137,6 +137,11 @@ impl<'a> RootsSigner<'a> {
 }
 
 impl RootsSigner<'_> {
+    /// Si la preferencia «Permitir SHA-1» está activada.
+    pub fn sha1_allowed(&self) -> bool {
+        self.signing.configuration().allow_sha1
+    }
+
     fn expanded(
         &self,
         request: &CommandLineSigning<'_>,
@@ -158,6 +163,7 @@ fn asked(algorithm: Algorithm) -> AskedAlgorithm {
         Algorithm::Sha512 => AskedAlgorithm::Sha512,
         Algorithm::Sha384 => AskedAlgorithm::Sha384,
         Algorithm::Sha256 => AskedAlgorithm::Sha256,
+        Algorithm::Sha1 => AskedAlgorithm::Sha1,
     }
 }
 
@@ -343,6 +349,7 @@ pub fn run_the_command_line(argv: &[String], context: tauri::Context<tauri::Wry>
             None => &Homeless,
         },
         window: &window,
+        sha1_allowed: signer.as_ref().is_some_and(RootsSigner::sha1_allowed),
     };
     let outcome = attend(argv.get(1..).unwrap_or_default(), &ports);
     for line in &outcome.stderr {

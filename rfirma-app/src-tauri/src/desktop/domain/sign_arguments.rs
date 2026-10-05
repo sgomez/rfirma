@@ -40,6 +40,7 @@ pub enum Algorithm {
     Sha512,
     Sha384,
     Sha256,
+    Sha1,
 }
 
 /// Cómo se elige el certificado.
@@ -102,7 +103,7 @@ impl fmt::Display for ArgumentsRefusal {
             ),
             Self::Sha1Refused => write!(
                 formatter,
-                "sha1 no se acepta por ser débil: usa sha512, sha384 o sha256"
+                "sha1 está desactivado por ser débil: permítelo en Preferencias → Firma o usa sha512, sha384 o sha256"
             ),
             Self::UnknownAlgorithm(algorithm) => write!(
                 formatter,
@@ -176,7 +177,7 @@ fn format_of(collected: &Collected) -> Result<Format, ArgumentsRefusal> {
     }
 }
 
-fn algorithm_of(collected: &Collected) -> Result<Algorithm, ArgumentsRefusal> {
+fn algorithm_of(collected: &Collected, sha1_allowed: bool) -> Result<Algorithm, ArgumentsRefusal> {
     let Some(name) = collected.value("-algorithm") else {
         return Ok(Algorithm::default());
     };
@@ -184,6 +185,7 @@ fn algorithm_of(collected: &Collected) -> Result<Algorithm, ArgumentsRefusal> {
         "sha512" => Ok(Algorithm::Sha512),
         "sha384" => Ok(Algorithm::Sha384),
         "sha256" => Ok(Algorithm::Sha256),
+        "sha1" if sha1_allowed => Ok(Algorithm::Sha1),
         "sha1" => Err(ArgumentsRefusal::Sha1Refused),
         _ => Err(ArgumentsRefusal::UnknownAlgorithm(name.to_owned())),
     }
@@ -219,7 +221,10 @@ fn descriptor_of(collected: &Collected) -> Result<Option<u32>, ArgumentsRefusal>
 }
 
 /// Analiza los argumentos que siguen a `sign` o a `cosign` y rechaza lo inválido.
-pub fn parse_sign_arguments(arguments: &[String]) -> Result<SignArguments, ArgumentsRefusal> {
+pub fn parse_sign_arguments(
+    arguments: &[String],
+    sha1_allowed: bool,
+) -> Result<SignArguments, ArgumentsRefusal> {
     let collected = collect(arguments)?;
     let input = collected
         .value("-i")
@@ -229,7 +234,7 @@ pub fn parse_sign_arguments(arguments: &[String]) -> Result<SignArguments, Argum
     let document = collected.has("-xml") || collected.has("-json");
     let output = collected.value("-o").map(str::to_owned);
     let format = format_of(&collected)?;
-    let algorithm = algorithm_of(&collected)?;
+    let algorithm = algorithm_of(&collected, sha1_allowed)?;
     let password_fd = descriptor_of(&collected)?;
     let selection = if hand_to_window {
         None
