@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { certificate } from "./sedeWindowFixtures";
 import type { SiteErrandView } from "./siteErrandView";
+import { certificate } from "./testing/fixtures/sedeWindow";
 
 const invoke = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));

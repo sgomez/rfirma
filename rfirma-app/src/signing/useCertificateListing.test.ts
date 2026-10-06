@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { anInstalledCertificate } from "../preferences/preferencesFixtures";
+import { anInstalledCertificate } from "../preferences/testing/fixtures";
 import type { Certificate, CertificateStore } from "./certificate";
 import { useCertificateListing } from "./useCertificateListing";
 

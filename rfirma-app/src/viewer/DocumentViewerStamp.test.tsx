@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
-import { box, noop, recordingDocument, seated } from "./testing/documentViewerFixtures";
+import { box, noop, recordingDocument, seated } from "./testing/fixtures";
 
 /**
  * **Grada A** (`vitest`, carril rápido). Sub-issue #58.

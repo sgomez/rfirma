@@ -23,11 +23,7 @@ fn is_main_window_module(target: &[String]) -> bool {
 
 fn is_test_scaffolding(relative: &str) -> bool {
     let file = relative.rsplit('/').next().unwrap_or(relative);
-    relative.split('/').any(|segment| segment == "testing")
-        || file.contains(".test.")
-        || file.contains(".testSupport.")
-        || file.ends_with("Fixtures.ts")
-        || file.ends_with("Fixtures.tsx")
+    relative.split('/').any(|segment| segment == "testing") || file.contains(".test.")
 }
 
 fn relative_to_src(module: &str) -> &str {
@@ -162,8 +158,8 @@ fn the_root_the_tests_and_their_scaffolding_may_import_main_window_modules() {
         "rfirma-app/src/testing/mainWindowDoubles.ts",
         "rfirma-app/src/viewer/testing/doubles.ts",
         "rfirma-app/src/signing/SignedPanel.test.tsx",
-        "rfirma-app/src/signing/SigningPanel.testSupport.tsx",
-        "rfirma-app/src/signing/panelFixtures.ts",
+        "rfirma-app/src/signing/testing/harness.tsx",
+        "rfirma-app/src/signing/testing/fixtures.ts",
     ] {
         assert!(offences_in(module, source).is_empty(), "{module}");
     }
@@ -231,8 +227,8 @@ fn the_root_the_journey_the_tests_and_their_scaffolding_may_import_the_journey()
         "rfirma-app/src/journey/useSignedSummary.ts",
         "rfirma-app/src/testing/mainWindowDoubles.ts",
         "rfirma-app/src/signing/SignedPanel.test.tsx",
-        "rfirma-app/src/signing/SigningPanel.testSupport.tsx",
-        "rfirma-app/src/signing/panelFixtures.ts",
+        "rfirma-app/src/signing/testing/harness.tsx",
+        "rfirma-app/src/signing/testing/fixtures.ts",
     ] {
         assert!(journey_offences_in(module, source).is_empty(), "{module}");
     }

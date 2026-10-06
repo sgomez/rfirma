@@ -1,13 +1,13 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { aCertificate, document, pdfsOf, renderApp, row } from "./App.testSupport";
 import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryRecents } from "./documents/recents";
 import type { SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend } from "./signing/flow";
 import { NO_PREVIOUS_SIGNATURES } from "./signing/previousSignatures";
 import { emptyRubricPicker } from "./signing/rubric";
+import { aCertificate, document, pdfsOf, renderApp, row } from "./testing/harness";
 
 const aSignature = (name: string) => ({
   name,

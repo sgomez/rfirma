@@ -5,7 +5,7 @@ import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
 import { previousSignature, previousSignaturesReport } from "../../.storybook/fixtures/sede";
 import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
-import { certificate, consentStage, signedDocument } from "./sedeWindowFixtures";
+import { certificate, consentStage, signedDocument } from "./testing/fixtures/sedeWindow";
 
 const meta = { title: "Flujos/Sede/Consentimiento", ...sedeStoryMeta } satisfies Meta<
   typeof SedeView

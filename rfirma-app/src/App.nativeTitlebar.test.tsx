@@ -1,7 +1,6 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { document, pdfsOf, renderApp, row } from "./App.testSupport";
 import {
   type ExternalDestinationOpener,
   inMemoryExternalDestinationOpener,
@@ -9,12 +8,13 @@ import {
 } from "./desktop/externalDestination";
 import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryRecents, type RecentDocument, type RecentsStore } from "./documents/recents";
-import { openTab } from "./preferences/testSupport";
+import { openTab } from "./preferences/testing/harness";
 import { inMemoryNativeTitlebar, type TitlebarActionName } from "./shell/nativeTitlebar";
 import { emptyCertificateStore } from "./signing/certificate";
 import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
 import { memoryStatus, type SignalRow, type StatusPort } from "./status/status";
+import { document, pdfsOf, renderApp, row } from "./testing/harness";
 import { inMemoryVersionCheck } from "./updates/newVersion";
 import { unavailablePdfSource } from "./viewer/source";
 

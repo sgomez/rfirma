@@ -2,12 +2,12 @@
 
 import type { Mock } from "storybook/test";
 import { fn } from "storybook/test";
-import type { Certificate } from "../signing/certificate";
-import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
-import { recordingDocument } from "../viewer/testing/documentViewerFixtures";
-import type { Errand } from "./errand";
-import type { DescribedDocument, SiteCommands, SiteErrandView } from "./siteErrands";
-import { siteErrands } from "./siteErrands";
+import type { Certificate } from "../../../signing/certificate";
+import { NO_PREVIOUS_SIGNATURES } from "../../../signing/previousSignatures";
+import { recordingDocument } from "../../../viewer/testing/fixtures";
+import type { Errand } from "../../errand";
+import type { DescribedDocument, SiteCommands, SiteErrandView } from "../../siteErrands";
+import { siteErrands } from "../../siteErrands";
 
 /** Los dobles y auxiliares que comparten las pruebas de `siteErrands`. */
 

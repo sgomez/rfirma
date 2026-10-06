@@ -1,7 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
-import { aCertificate, aPdfWithViews, document } from "../App.testSupport";
 import type { DocumentInHand } from "../documents/document";
 import type { Placement } from "../placement/pageSets";
 import { usePlacement } from "../placement/usePlacement";
@@ -14,6 +13,7 @@ import {
 } from "../signing/previousSignatures";
 import { unavailableStampComposer } from "../signing/stampPreview";
 import type { CertificateListing } from "../signing/useCertificateListing";
+import { aCertificate, aPdfWithViews, document } from "../testing/harness";
 import { CatalogProvider } from "../testing/render";
 import { useSigningJourney } from "./useSigningJourney";
 

@@ -6,7 +6,7 @@ import { renderWithCatalog } from "../testing/render";
 import * as confirmModule from "./SedeConfirm.stories";
 import * as signingModule from "./SedeSigning.stories";
 import { SedeWindow } from "./SedeWindow";
-import { scriptedFrom } from "./sedeWindowFixtures";
+import { scriptedFrom } from "./testing/fixtures/sedeWindow";
 
 /** Grada A: el momento 2b (la confirmación que exige el validador) y el 3 (la firma), por su puerto. */
 

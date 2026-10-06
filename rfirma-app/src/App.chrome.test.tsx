@@ -2,6 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
+import { inMemoryExternalDestinationOpener } from "./desktop/externalDestination";
+import { inMemoryRecents } from "./documents/recents";
+import type { PreferencesStore } from "./preferences/preferences";
+import type { Certificate } from "./signing/certificate";
+import { DEFAULT_VISIBLE_SIGNATURE } from "./signing/visibleSignature";
 import {
   aCertificate,
   aDestination,
@@ -10,12 +15,7 @@ import {
   pdfsOf,
   renderApp,
   row,
-} from "./App.testSupport";
-import { inMemoryExternalDestinationOpener } from "./desktop/externalDestination";
-import { inMemoryRecents } from "./documents/recents";
-import type { PreferencesStore } from "./preferences/preferences";
-import type { Certificate } from "./signing/certificate";
-import { DEFAULT_VISIBLE_SIGNATURE } from "./signing/visibleSignature";
+} from "./testing/harness";
 import { aMainWindowDoubles } from "./testing/mainWindowDoubles";
 import { renderWithCatalog } from "./testing/render";
 import { unavailablePdfSource } from "./viewer/source";

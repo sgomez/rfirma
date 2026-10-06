@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { placementStateOf } from "../placement/placementFixtures";
+import { placementStateOf } from "../placement/testing/fixtures";
 import {
   aCertificateSection,
   aSigningSection,
@@ -10,7 +10,7 @@ import {
   previousSignatureOf,
   renderPanel,
   reportOf,
-} from "./SigningPanel.testSupport";
+} from "./testing/harness";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 // Lo que se ve en cada estado, en `SigningPanel.presentation.test.tsx`.

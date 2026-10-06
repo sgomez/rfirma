@@ -1,7 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { aCertificate, document, openPdf, pdfsOf, renderApp } from "./App.testSupport";
 import type { DocumentInHand } from "./documents/document";
 import { inMemoryRecents } from "./documents/recents";
 import type { Placement } from "./placement/pageSets";
@@ -10,6 +9,7 @@ import type { SigningBackend } from "./signing/flow";
 import type { PreviousSignature } from "./signing/previousSignatures";
 import { NO_PREVIOUS_SIGNATURES } from "./signing/previousSignatures";
 import { emptyRubricPicker } from "./signing/rubric";
+import { aCertificate, document, openPdf, pdfsOf, renderApp } from "./testing/harness";
 
 /**
  * **Grada A del arrastre** (TD-17): los cuatro casos, contados por lo que se ve

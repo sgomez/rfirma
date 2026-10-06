@@ -6,7 +6,7 @@ import { renderWithCatalog } from "../testing/render";
 import * as consentModule from "./SedeConsent.stories";
 import * as noCertificateModule from "./SedeNoCertificate.stories";
 import { SedeWindow } from "./SedeWindow";
-import { errandOf, scriptedErrand, scriptedFrom } from "./sedeWindowFixtures";
+import { errandOf, scriptedErrand, scriptedFrom } from "./testing/fixtures/sedeWindow";
 
 /** Grada A: la variante de origen «orden de terminal» de la ventana de sede (`-certgui`). */
 

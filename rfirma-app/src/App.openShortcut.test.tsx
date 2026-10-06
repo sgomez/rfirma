@@ -2,12 +2,12 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
-import { aDestination, document, pdfsOf, renderApp } from "./App.testSupport";
 import { isOpenShortcut } from "./App.useOpenShortcut";
 import type { DocumentPicker } from "./documents/picker";
 import { inMemoryRecents } from "./documents/recents";
 import { inMemoryPreferences, type Preferences } from "./preferences/preferences";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./signing/visibleSignature";
+import { aDestination, document, pdfsOf, renderApp } from "./testing/harness";
 import { aMainWindowDoubles } from "./testing/mainWindowDoubles";
 import { renderWithCatalog } from "./testing/render";
 

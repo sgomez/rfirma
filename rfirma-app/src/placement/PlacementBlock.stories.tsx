@@ -2,7 +2,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { PlacementBlock } from "./PlacementBlock";
-import { placementStateOf } from "./placementFixtures";
+import { placementStateOf } from "./testing/fixtures";
 
 const RECT = { x0: 100, y0: 100, x1: 300, y1: 180 };
 

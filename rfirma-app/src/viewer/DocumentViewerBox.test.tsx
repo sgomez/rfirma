@@ -3,14 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Placement } from "../placement/pageSets";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
-import {
-  box,
-  goToPage,
-  noop,
-  recordingDocument,
-  reportingTo,
-  seated,
-} from "./testing/documentViewerFixtures";
+import { box, goToPage, noop, recordingDocument, reportingTo, seated } from "./testing/fixtures";
 
 /**
  * **Grada A** (`vitest`, carril rápido). Sub-issue #58.

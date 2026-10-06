@@ -2,7 +2,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { usePreferencesState } from "./App.usePreferencesState";
 import { inMemoryPreferences } from "./preferences/preferences";
-import { defaults } from "./preferences/testSupport";
+import { defaults } from "./preferences/testing/harness";
 import { absentWindowTheme } from "./preferences/theme";
 import { emptyRubricPicker } from "./signing/rubric";
 

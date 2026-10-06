@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import type { Errand } from "./errand";
 import { errandOf, refusedBy } from "./errandConversion";
-import { ASKING_TO_SIGN, certificate, watched } from "./siteErrandsFixtures";
 import type { SiteErrandView } from "./siteErrandView";
+import { ASKING_TO_SIGN, certificate, watched } from "./testing/fixtures/siteErrands";
 
 /**
  * Grada A: la conversión pura del momento del backend al `Errand` que la

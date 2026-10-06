@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { anInstalledCertificate, openTab, renderView } from "./testSupport";
+import { anInstalledCertificate, openTab, renderView } from "./testing/harness";
 
 /**
  * Certificados en fichero (docs/design/preferencias.md): una lista y dos

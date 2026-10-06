@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SiteErrandView } from "./siteErrands";
-import { certificate, watched } from "./siteErrandsFixtures";
+import { certificate, watched } from "./testing/fixtures/siteErrands";
 
 /** Grada A: el lote, remoto y local, contra las órdenes dobladas (TD-78). */
 
