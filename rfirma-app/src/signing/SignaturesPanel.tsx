@@ -183,10 +183,10 @@ function SignaturesSummary({ signatures, findings, format, justSigned }: Signatu
   const { t } = useTranslation();
   return (
     <section className="panel__section" aria-label={t("panel.signed.title")}>
-      <p className="rf-row rf-gap-xs signed-panel__title">
+      <Row as="p" gap="xs" className="signed-panel__title">
         <FileIcon size={16} />
         <span>{t("panel.signed.title")}</span>
-      </p>
+      </Row>
       {format !== undefined && (
         <Row gap="xs">
           <Badge>{FORMAT_BADGES[format]}</Badge>

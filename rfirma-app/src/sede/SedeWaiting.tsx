@@ -124,11 +124,11 @@ function BrowserTab({
 function ChromeRecipe() {
   const { t } = useTranslation();
   return (
-    <ol className="rf-stack sede-waiting__steps">
+    <Stack as="ol" className="sede-waiting__steps">
       <li className="rf-prose">{t("sede.repair.chromeAllow")}</li>
       <li className="rf-prose">
         {t("sede.repair.chromeGone")}
-        <span className="rf-row rf-gap-xs sede-waiting__address">
+        <Row as="span" gap="xs" className="sede-waiting__address">
           {/* Un `chrome://` no es navegable desde fuera: se copia, no se pulsa. */}
           <code className="rf-body">{CHROME_LOCAL_NETWORK_SETTINGS}</code>
           <Button
@@ -138,19 +138,19 @@ function ChromeRecipe() {
             <CopyIcon size={14} />
             {t("actions.copy")}
           </Button>
-        </span>
+        </Row>
         <span className="rf-hint">{t("sede.repair.chromePadlock")}</span>
       </li>
-    </ol>
+    </Stack>
   );
 }
 
 function FirefoxRecipe() {
   const { t } = useTranslation();
   return (
-    <ol className="rf-stack sede-waiting__steps">
+    <Stack as="ol" className="sede-waiting__steps">
       <li className="rf-prose">{t("sede.repair.firefoxAllow")}</li>
       <li className="rf-prose">{t("sede.repair.firefoxGone")}</li>
-    </ol>
+    </Stack>
   );
 }

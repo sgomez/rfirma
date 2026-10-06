@@ -382,14 +382,14 @@ function CertificateStep({ t, status, onInstall, onDecline }: CertificateStepPro
               <p className="rf-prose setup-wizard__step-outcome">
                 {t("setup.certificate.failedTitle")}
               </p>
-              <ul className="rf-stack setup-wizard__stores">
+              <Stack as="ul" className="setup-wizard__stores">
                 {status.detail.map((store) => (
-                  <li key={store.brand} className="rf-row rf-gap-xs rf-hint">
+                  <Row as="li" gap="xs" key={store.brand} className="rf-hint">
                     <span className="setup-wizard__store-mark">{store.trusted ? "✓" : "✗"}</span>
                     {storeBrandLabel(t, store.brand)}
-                  </li>
+                  </Row>
                 ))}
-              </ul>
+              </Stack>
               <Row>
                 <Button variant="secondary" onClick={onInstall}>
                   {t("actions.retry")}

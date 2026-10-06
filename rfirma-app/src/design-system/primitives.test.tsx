@@ -62,4 +62,27 @@ describe("primitives", () => {
     expect(screen.getByTestId("badge")).toHaveClass("rf-badge", "rf-badge--primary");
     expect(screen.getByTestId("field")).toHaveClass("rf-field");
   });
+
+  it("renders a div by default and the given element with as, keeping the classes", () => {
+    render(
+      <>
+        <Row data-testid="row" gap="xs" />
+        <Stack data-testid="stack" gap="md" />
+        <Card data-testid="card" />
+        <Row as="li" data-testid="row-li" gap="xs" />
+        <Stack as="ul" data-testid="stack-ul" gap="md" />
+        <Card as="li" data-testid="card-li" />
+      </>,
+    );
+
+    expect(screen.getByTestId("row").tagName).toBe("DIV");
+    expect(screen.getByTestId("stack").tagName).toBe("DIV");
+    expect(screen.getByTestId("card").tagName).toBe("DIV");
+    expect(screen.getByTestId("row-li").tagName).toBe("LI");
+    expect(screen.getByTestId("row-li")).toHaveClass("rf-row", "rf-gap-xs");
+    expect(screen.getByTestId("stack-ul").tagName).toBe("UL");
+    expect(screen.getByTestId("stack-ul")).toHaveClass("rf-stack", "rf-gap-md");
+    expect(screen.getByTestId("card-li").tagName).toBe("LI");
+    expect(screen.getByTestId("card-li")).toHaveClass("rf-card");
+  });
 });

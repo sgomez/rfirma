@@ -117,15 +117,6 @@
   gap: var(--rf-space-1);
 }
 .rf-card--elevated { box-shadow: var(--rf-shadow-elevated); }
-.rf-card--interactive {
-  cursor: pointer;
-  transition: border-color var(--rf-duration-fast) var(--rf-easing),
-              box-shadow var(--rf-duration-fast) var(--rf-easing);
-}
-.rf-card--interactive:hover {
-  border-color: var(--rf-border-strong);
-  box-shadow: var(--rf-shadow-elevated);
-}
 
 /* ------------------------------------------------------------- 5. Buttons */
 /* 44px minimum touch target. */
