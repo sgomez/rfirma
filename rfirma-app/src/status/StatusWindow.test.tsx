@@ -26,6 +26,16 @@ describe("StatusWindow", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it("does nothing on Enter", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithCatalog(<StatusWindow statusPort={memoryStatus()} onClose={onClose} />);
+
+    await user.keyboard("{Enter}");
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("does not call onClose when Escape was default-prevented", () => {
     const onClose = vi.fn();
     renderWithCatalog(<StatusWindow statusPort={memoryStatus()} onClose={onClose} />);
