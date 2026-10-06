@@ -1,6 +1,6 @@
 //! 1c · El área de la firma visible trazada sobre el PDF, y sus páginas, con el visor y el segmentado de la ventana principal, antes del consentimiento.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlacementBlock } from "../placement/PlacementBlock";
 import { firstSealedPage, type Placement } from "../placement/pageSets";
@@ -11,6 +11,7 @@ import { standardRectOnPageOf } from "../viewer/signatureBox";
 import type { MarkedArea } from "./errand";
 import { SedeBody } from "./SedeFrame";
 import "../signing/SigningPanel.css";
+import { useActionKeys } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 
 interface SedeMarkingProps {
@@ -34,6 +35,8 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   const placementState = usePlacement({ document, standardRectOn });
   const { placement, rangeError, viewPage, moveBox, sealPage } = placementState;
   const [handing, setHanding] = useState(false);
+  const continueButton = useRef<HTMLButtonElement>(null);
+  useActionKeys({ primary: continueButton });
 
   const accept = async () => {
     if (pdf === null || placement === null) return;
@@ -56,6 +59,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
             {t("actions.cancel")}
           </Button>
           <Button
+            ref={continueButton}
             variant="primary"
             disabled={placement === null || rangeError !== null || handing}
             onClick={() => void accept()}
