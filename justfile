@@ -597,7 +597,7 @@ flatpak-sources:
 # Regenera la entrada de design-sync, su titleMap y su sello desde los titulos de las historias (ADR-0046).
 [group('dev')]
 design-sync-selection:
-    {{ root }}/scripts/design_sync_selection.py write
+    {{ root }}/scripts/design_sync_selection.py
 
 # Mutation testing incremental, a mano antes de publicar una version: no bloquea (ADR-0014).
 [group('release')]
