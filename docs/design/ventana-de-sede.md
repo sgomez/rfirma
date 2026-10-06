@@ -353,18 +353,22 @@ color ni una sombra literales.
 ## Historias
 
 La verdad de lo que se ve es el código y estas historias, junto a sus componentes
-en `rfirma-app/src/sede/`. Todas pintan `SedeView`, la vista de la ventana, que
-recibe el trámite y sus órdenes por props y no conoce ningún puerto de Tauri;
-`SedeWindow` es la parte conectada a `SiteErrandPort`. `SedeView` se exporta en
-`design-sync.entry.ts`.
+en `rfirma-app/src/sede/`. Cada momento pinta su componente, desnudo y con props
+finas, sobre el fondo de la ventana. `SedeView.stories.tsx`
+(«Pantallas/Ventana de sede») compone la ventana entera con su marco: `Waiting`,
+`Consent` y `Signed` a 520 × 420 y `MarkingTheArea` a 1080 × 660. `SedeView` no
+conoce ningún puerto de Tauri; `SedeWindow` es la parte conectada a
+`SiteErrandPort`.
 
 | Momento | Historias |
 | --- | --- |
-| 0 y 1 · aviso del cliente antiguo y espera | `SedeWaiting.stories.tsx`: `OldWebClient`, `Waiting`, `Unreachable`, `NoChannel` |
+| 0 · aviso del cliente antiguo | `SedeOldWebClient.stories.tsx`: `OldWebClient` |
+| 1 · espera | `SedeWaiting.stories.tsx`: `Waiting`, `Unreachable`, `NoChannel` |
 | 1c · marcar el área | `SedeMarking.stories.tsx`: `Marking`, `UnreadableDocument` |
 | 2 · consentimiento | `SedeConsent.stories.tsx`: una por certificado, varios, acotado, sin título, cofirma, contrafirma sobre todas o sobre las últimas, firmas previas válidas o con problema, lote remoto y local, cesión de identidad, sin origen, cuenta atrás y orden de terminal |
 | 2b · confirmar | `SedeConfirm.stories.tsx`: `ShadowAttackSuspect`, `ModifiedForm`, `CertifiedPdf`, `UnknownMessage` |
-| 3 · firmando, guardar y cargar | `SedeSigning.stories.tsx`: `Signing`, `Returning`, `Saving*`, `Loading*` |
+| 3 · firmando | `SedeSigning.stories.tsx`: `Signing`, `Returning` |
+| 3 · guardar y cargar | `SedeTransfer.stories.tsx`: `Saving*`, `Loading*` |
 | 4 · desenlace | `SedeOutcome.stories.tsx`: un final por tipo y un rechazo por cada acción, el desconocido, el del escritorio y el de sin origen |
 | 5 · sin certificado | `SedeNoCertificate.stories.tsx`: `NoneInstalled`, `ExcludedBySite`, `InstallFailed` y las dos de terminal |
 
@@ -372,8 +376,8 @@ recibe el trámite y sus órdenes por props y no conoce ningún puerto de Tauri;
 revisada sin escribir otro test. El momento de consentimiento, que comparten las
 pruebas, está en `sede/testing/fixtures/sedeWindow.ts`; el resto de lo que usan las historias,
 en `rfirma-app/.storybook/`: las firmas previas y el PDF en blanco en
-`fixtures/sede.ts`, los espías de las órdenes en `fixtures/sedeView.ts` y el
-marco de la ventana —520 × 420, y 1080 × 660 al marcar el área— en
+`fixtures/sede.ts`, los espías de las órdenes en `fixtures/sedeView.ts` y los
+marcos —520 × 420, y 1080 × 660 al marcar el área— en
 `decorators/sedeWindow.tsx`.
 
 ## Claves i18n

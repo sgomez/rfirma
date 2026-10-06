@@ -23,6 +23,11 @@ export function sedeErrand(stage: ErrandStage, errand: Partial<Errand> = {}): Er
   return { origin: "sede.ejemplo.gob.es", operation: "sign", stage, ...errand };
 }
 
+/** Una historia de momento cuyo trámite entero viaja en sus parámetros, para montarlo en un test de comportamiento. */
+export function momentStory<Args>(args: Args, errand: Errand) {
+  return { args, parameters: { errand } };
+}
+
 /** Lo que un momento recibe del trámite además de su etapa: el origen, la orden terminal y la operación. */
 export function momentProps({ origin, terminalOrder, operation }: Errand) {
   return { origin, terminalOrder: terminalOrder ?? null, operation };

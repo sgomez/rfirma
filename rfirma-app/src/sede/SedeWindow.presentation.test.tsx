@@ -8,8 +8,10 @@ import * as confirmModule from "./SedeConfirm.stories";
 import * as consentModule from "./SedeConsent.stories";
 import * as markingModule from "./SedeMarking.stories";
 import * as noCertificateModule from "./SedeNoCertificate.stories";
+import * as oldWebClientModule from "./SedeOldWebClient.stories";
 import * as outcomeModule from "./SedeOutcome.stories";
 import * as signingModule from "./SedeSigning.stories";
+import * as transferModule from "./SedeTransfer.stories";
 import * as waitingModule from "./SedeWaiting.stories";
 
 /** Presentación: lo que enseña cada historia de la ventana de sede, una fila por historia. */
@@ -29,6 +31,8 @@ const waiting = composeStories(waitingModule);
 const consent = composeStories(consentModule);
 const confirm = composeStories(confirmModule);
 const signing = composeStories(signingModule);
+const transfer = composeStories(transferModule);
+const oldWebClient = composeStories(oldWebClientModule);
 const marking = composeStories(markingModule);
 const outcome = composeStories(outcomeModule);
 const noCertificate = composeStories(noCertificateModule);
@@ -43,7 +47,7 @@ const NO_CERTIFICATE_BUTTONS = [INSTALL, "Volver a buscar", "Cerrar"];
 const rows: [string, ComponentType, Expectation][] = [
   [
     "1 · old web client",
-    waiting.OldWebClient,
+    oldWebClient.OldWebClient,
     {
       shows: ["Esta página está desactualizada", /pulsa continuar para seguir/i],
       buttons: ["Continuar"],
@@ -251,13 +255,13 @@ const rows: [string, ComponentType, Expectation][] = [
   ],
   [
     "3 · saving a named file",
-    signing.SavingNamedFile,
+    transfer.SavingNamedFile,
     { shows: ["Guardando informe.pdf"], hides: [/\//] },
   ],
-  ["3 · saving an unnamed file", signing.SavingUnnamedFile, { shows: ["Guardando el fichero"] }],
+  ["3 · saving an unnamed file", transfer.SavingUnnamedFile, { shows: ["Guardando el fichero"] }],
   [
     "3 · saving into an unwritable destination",
-    signing.SavingUnwritableDestination,
+    transfer.SavingUnwritableDestination,
     {
       shows: [
         "No se ha podido guardar en el destino elegido. Elige otro en el diálogo del sistema.",
@@ -267,12 +271,12 @@ const rows: [string, ComponentType, Expectation][] = [
   ],
   [
     "3 · loading one file",
-    signing.LoadingOneFile,
+    transfer.LoadingOneFile,
     { shows: ["Cargando un fichero"], noButtonAtAll: true },
   ],
   [
     "3 · loading several files",
-    signing.LoadingSeveralFiles,
+    transfer.LoadingSeveralFiles,
     { shows: ["Cargando varios ficheros"], noButtonAtAll: true },
   ],
   [

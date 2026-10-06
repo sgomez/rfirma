@@ -76,13 +76,15 @@ Lo que hay en `window.RFirma`, por capa y título de historia.
 | Flujos | Firma / SigningProgressDialog | `SigningProgressDialog` |
 | Flujos | Firma / UnsealedPagesDialog | `UnsealedPagesDialog` |
 | Flujos | Firma / VisibleSignatureFieldset | `VisibleSignatureFieldset` |
-| Flujos | Sede / Confirmar | `SedeView` |
+| Flujos | Sede / Cliente antiguo | `SedeOldWebClient` |
+| Flujos | Sede / Confirmar | `SedeConfirm` |
 | Flujos | Sede / Consentimiento | `SedeConsent` |
 | Flujos | Sede / Desenlace | `SedeOutcome` |
-| Flujos | Sede / Espera | `SedeView` |
-| Flujos | Sede / Firmando | `SedeView` |
-| Flujos | Sede / Marcar la firma | `SedeView` |
-| Flujos | Sede / Sin certificado | `SedeView` |
+| Flujos | Sede / Espera | `SedeWaiting` |
+| Flujos | Sede / Firmando | `SedeSigning` |
+| Flujos | Sede / Guardar y cargar | `SedeTransfer` |
+| Flujos | Sede / Marcar la firma | `SedeMarking` |
+| Flujos | Sede / Sin certificado | `SedeNoCertificate` |
 | Flujos | Ventana principal / Header | `Header` |
 | Flujos | Ventana principal / MainWindow | `MainWindow` |
 | Primitivos | Badge | `Badge` |
