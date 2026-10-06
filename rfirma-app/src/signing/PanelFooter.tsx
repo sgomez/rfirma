@@ -111,18 +111,20 @@ export function PanelFooter(props: PanelFooterProps) {
         {writable ? (
           <div className="panel__destination-box">
             {destination.folder !== "" && (
-              <span
-                className="rf-row rf-gap-xs rf-text-muted panel__destination-folder"
+              <Row
+                as="span"
+                gap="xs"
+                className="rf-text-muted panel__destination-folder"
                 title={destination.folder}
               >
                 <FolderIcon size={15} />
                 <span className="panel__destination-ellipsis">{shortened.folder}</span>
-              </span>
+              </Row>
             )}
-            <span className="rf-row rf-gap-xs panel__destination-name" title={fullName}>
+            <Row as="span" gap="xs" className="panel__destination-name" title={fullName}>
               <FileIcon size={15} />
               <span className="panel__destination-ellipsis">{shortened.name}</span>
-            </span>
+            </Row>
           </div>
         ) : (
           <Row gap="xs" className="panel__destination-unwritable">
