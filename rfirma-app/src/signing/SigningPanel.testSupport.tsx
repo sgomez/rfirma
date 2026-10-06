@@ -9,7 +9,13 @@ import type { Certificate } from "./certificate";
 import type { PreviousSignature, PreviousSignaturesReport } from "./previousSignatures";
 import type { Rubric } from "./rubric";
 import { SigningPanel } from "./SigningPanel";
-import { aCertificateSection, aRubricSection } from "./signingSectionFixtures";
+import {
+  aCertificateSection,
+  aDestinationSection,
+  aRubricSection,
+  aSigningSection,
+  aVisibleSignatureSection,
+} from "./signingSectionFixtures";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 /** Una firma previa válida, lista para sobreescribir con `overrides`. */
@@ -45,7 +51,7 @@ export function reportOf(
   };
 }
 
-export { aCertificateSection, aRubricSection };
+export { aCertificateSection, aRubricSection, aSigningSection, aVisibleSignatureSection };
 
 export const certificate: Certificate = {
   id: "0123456789abcdef0123456789abcdef",
@@ -71,8 +77,6 @@ export const rubric: Rubric = {
   height: 80,
 };
 
-const noop = () => {};
-
 const rect = { x0: 100, y0: 100, x1: 300, y1: 180 };
 
 export type PanelProps = Partial<Parameters<typeof SigningPanel>[0]>;
@@ -87,8 +91,7 @@ function panelWith(props: PanelProps) {
         certificate,
         certificates: [certificate],
       })}
-      signature={{ ...DEFAULT_VISIBLE_SIGNATURE, enabled: true }}
-      onChangeSignature={noop}
+      signature={aVisibleSignatureSection({ ...DEFAULT_VISIBLE_SIGNATURE, enabled: true })}
       placementState={placementStateOf({
         rect,
         sets: { single: 3, these: null },
@@ -96,12 +99,13 @@ function panelWith(props: PanelProps) {
         pageCount: 27,
       })}
       rubric={aRubricSection()}
-      destination={{ folder: "Documentos", name: "contrato-firmado.pdf", writable: true }}
-      onChangeDestination={noop}
-      onSign={noop}
-      signing={false}
+      destination={aDestinationSection({
+        folder: "Documentos",
+        name: "contrato-firmado.pdf",
+        writable: true,
+      })}
+      signing={aSigningSection()}
       failure={null}
-      onBack={noop}
       {...props}
     />
   );

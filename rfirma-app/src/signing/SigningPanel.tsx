@@ -7,15 +7,16 @@ import { PlacementBlock, type PlacementBlockState } from "../placement/Placement
 import { CertificateNotice } from "./CertificateNotice";
 import { CertificateSelect } from "./CertificateSelect";
 import type { CertificateSection } from "./certificate";
-import type { Destination } from "./destination";
+import type { DestinationSection } from "./destination";
 import type { SigningFailure } from "./failure";
+import type { SigningSection } from "./flow";
 import { ModelFieldset } from "./ModelFieldset";
 import { PanelFooter } from "./PanelFooter";
 import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
 import type { PreviousSignaturesReport } from "./previousSignatures";
 import type { RubricSection } from "./rubric";
 import "./SigningPanel.css";
-import type { VisibleSignature } from "./visibleSignature";
+import type { VisibleSignatureSection } from "./visibleSignature";
 
 /** El documento que se va a firmar, con lo que el panel enseña de él. */
 interface SigningDocument {
@@ -31,19 +32,13 @@ interface SigningPanelProps {
   /** El informe de firmas previas del documento, pedido al abrir o cargar. */
   previousSignatures: PreviousSignaturesReport;
   certificate: CertificateSection;
-  signature: VisibleSignature;
-  onChangeSignature: (signature: VisibleSignature) => void;
+  signature: VisibleSignatureSection;
   /** La colocación de la firma visible, tal y como la entrega su estado. */
   placementState: PlacementBlockState;
   rubric: RubricSection;
-  destination: Destination;
-  onChangeDestination: () => void;
-  onSign: () => void;
-  /** Mientras la firma corre, el botón no acepta un segundo empujón. */
-  signing: boolean;
+  destination: DestinationSection;
+  signing: SigningSection;
   failure: SigningFailure | null;
-  /** Cierra el error y vuelve al panel, con el ciclo a medias olvidado en el backend. */
-  onBack: () => void;
   onOpenHelp?: () => void;
   /** Vacía el Almacén de rFirma, ofrecido cuando `failure` es `keyringPinMissing` (ADR-0034). */
   onEmptyStore?: () => void;
@@ -69,21 +64,19 @@ export function SigningPanel({
   document,
   previousSignatures,
   certificate: certificateSection,
-  signature,
-  onChangeSignature,
+  signature: signatureSection,
   placementState,
   rubric,
   destination,
-  onChangeDestination,
-  onSign,
-  signing,
+  signing: signingSection,
   failure,
-  onBack,
   onOpenHelp,
   onEmptyStore,
 }: SigningPanelProps) {
   const { t } = useTranslation();
   const certificate = certificateSection.state;
+  const { value: signature, change: onChangeSignature } = signatureSection;
+  const signing = signingSection.running;
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
 
   const visible = signature.enabled && chosen !== null;
@@ -185,17 +178,17 @@ export function SigningPanel({
 
       <PanelFooter
         failure={failure}
-        destination={destination}
+        destination={destination.value}
         documentName={document.name}
-        onChangeDestination={onChangeDestination}
+        onChangeDestination={() => void destination.chooseSingle()}
         signing={signing}
         blocked={blocked}
         closed={previousSignatures.closed === true}
         certificate={certificate}
         onRetryCertificates={() => void certificateSection.lookAgain()}
         onChooseModule={() => void certificateSection.lookAgain()}
-        onSign={onSign}
-        onBack={onBack}
+        onSign={() => void signingSection.sign()}
+        onBack={signingSection.back}
       />
     </div>
   );

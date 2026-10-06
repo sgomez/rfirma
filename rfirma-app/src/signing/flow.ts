@@ -100,6 +100,15 @@ export interface SigningOrder {
   allowUnregisteredSignatures: boolean;
 }
 
+/** La sección de firmar: si corre, cómo se firma y cómo se vuelve del fallo. */
+export interface SigningSection {
+  /** Mientras la firma corre, el botón no acepta un segundo empujón. */
+  running: boolean;
+  sign: () => void | Promise<void>;
+  /** Cierra el error y vuelve al panel, con el ciclo a medias olvidado en el backend. */
+  back: () => void;
+}
+
 /** Lo que devuelve una etapa: salió, o falló con una situación clasificada. */
 export type StageResult<T> = { ok: true; value: T } | { ok: false; failure: TokenFailure };
 

@@ -30,6 +30,12 @@ export interface Destination {
   writable: boolean;
 }
 
+/** La sección del destino: dónde cae el documento y cómo se elige otro para esta firma. */
+export interface DestinationSection {
+  value: Destination;
+  chooseSingle: () => void | Promise<void>;
+}
+
 /**
  * El destino de **una sola firma**, elegido con el diálogo de guardar: fija
  * carpeta y nombre a la vez y no toca la preferencia (ADR-0011).

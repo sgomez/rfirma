@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import { placementStateOf } from "../placement/placementFixtures";
 import {
   aCertificateSection,
+  aSigningSection,
+  aVisibleSignatureSection,
   certificate,
   previousSignatureOf,
   renderPanel,
@@ -39,7 +41,7 @@ describe("SigningPanel", () => {
     const onBack = vi.fn();
     renderPanel({
       failure: { situation: "tokenAbsent", detail: "CKR_DEVICE_REMOVED (C_Sign)" },
-      onBack,
+      signing: aSigningSection({ back: onBack }),
     });
 
     await user.click(screen.getByRole("button", { name: "Volver" }));
@@ -83,7 +85,8 @@ describe("SigningPanel", () => {
 });
 
 describe("la firma visible, al cambiar el certificado", () => {
-  const visible = { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true };
+  const visible = aVisibleSignatureSection({ ...DEFAULT_VISIBLE_SIGNATURE, enabled: true });
+  const hidden = aVisibleSignatureSection({ ...DEFAULT_VISIBLE_SIGNATURE, enabled: false });
 
   it("brings the placement back when a certificate that went away comes back", () => {
     const { show } = renderPanel({ signature: visible });
@@ -97,7 +100,7 @@ describe("la firma visible, al cambiar el certificado", () => {
   });
 
   it("shows no placement block with the visible signature off", () => {
-    renderPanel({ signature: { ...visible, enabled: false } });
+    renderPanel({ signature: hidden });
 
     expect(screen.queryByRole("radiogroup", { name: "En qué páginas" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /aquí/ })).not.toBeInTheDocument();

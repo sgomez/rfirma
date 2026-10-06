@@ -347,17 +347,13 @@ export function App({
               }}
               previousSignatures={journey.previousSignatures}
               certificate={journey.certificate}
-              signature={journey.signature.value}
-              onChangeSignature={journey.signature.change}
+              signature={journey.signature}
               placementState={placementState}
               rubric={rubricSection}
-              destination={journey.destination.value}
-              onChangeDestination={() => void journey.destination.chooseSingle()}
-              onSign={() => void journey.signing.sign()}
-              signing={journey.signals.signing}
+              destination={journey.destination}
+              signing={journey.signing}
               onOpenHelp={() => void externalDestinations.open("discussions")}
               failure={journey.failure}
-              onBack={journey.signing.back}
               onEmptyStore={() => void certificateListing.emptyStore()}
             />
           ) : null

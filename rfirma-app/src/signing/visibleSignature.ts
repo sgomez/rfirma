@@ -29,6 +29,12 @@ export interface VisibleSignature {
   content: VisibleContent;
 }
 
+/** La sección de la firma visible: lo que se estampa y cómo se cambia. */
+export interface VisibleSignatureSection {
+  value: VisibleSignature;
+  change: (signature: VisibleSignature) => void;
+}
+
 /**
  * Lo que sale marcado la primera vez: recuadro no —firmar sin él está
  * permitido, y encenderlo es un gesto aparte—, y dentro, para cuando se
