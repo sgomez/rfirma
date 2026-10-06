@@ -36,7 +36,7 @@ describe("WithdrawCertificateDialog", () => {
 
     const dialog = screen.getByRole("alertdialog", { name: "Retirar el certificado de rFirma" });
     expect(dialog).toBeVisible();
-    expect(dialog).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Retirar" })).toHaveFocus();
     expect(screen.getByText("El certificado de rFirma, de tus navegadores")).toBeInTheDocument();
     expect(screen.getByText("Que las sedes abran rFirma")).toBeInTheDocument();
     expect(screen.getByText("Podrás volver a instalarlo aquí.")).toBeInTheDocument();
@@ -145,5 +145,66 @@ describe("WithdrawCertificateDialog", () => {
     await user.click(screen.getByRole("button", { name: "Retirar" }));
     await user.keyboard("{Escape}");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("withdraws on Intro from the question and cancels on Escape", async () => {
+    const user = userEvent.setup();
+    const onWithdraw = vi.fn().mockResolvedValue(SUCCESSFUL_REPORT);
+    const onClose = vi.fn();
+    renderDialog({ onWithdraw, onClose });
+
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(onWithdraw).not.toHaveBeenCalled();
+
+    await user.keyboard("{Enter}");
+    expect(onWithdraw).toHaveBeenCalledOnce();
+  });
+
+  it("ignores Intro while working", async () => {
+    const user = userEvent.setup();
+    const onWithdraw = vi.fn().mockReturnValue(new Promise<WithdrawalReport>(() => {}));
+    const onClose = vi.fn();
+    renderDialog({ onWithdraw, onClose });
+
+    await user.keyboard("{Enter}");
+    await user.keyboard("{Enter}");
+    await user.keyboard("{Escape}");
+
+    expect(onWithdraw).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closes on Intro and on Escape after a successful withdrawal", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderDialog({ onClose });
+
+    await user.keyboard("{Enter}");
+    await screen.findByRole("alertdialog", { name: "Certificado retirado" });
+    await user.keyboard("{Enter}");
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries on Intro and closes on Escape after a partial withdrawal", async () => {
+    const user = userEvent.setup();
+    const partialReport: WithdrawalReport = {
+      handler: { kind: "withdrawn" },
+      stores: [{ brand: "chrome", outcome: { kind: "failed", reason: "perfil en uso" } }],
+    };
+    const onWithdraw = vi.fn().mockResolvedValue(partialReport);
+    const onClose = vi.fn();
+    renderDialog({ onWithdraw, onClose });
+
+    await user.keyboard("{Enter}");
+    await screen.findByRole("alertdialog", { name: "Retirado a medias" });
+    await user.keyboard("{Enter}");
+    expect(onWithdraw).toHaveBeenCalledTimes(2);
+    await screen.findByRole("alertdialog", { name: "Retirado a medias" });
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });
