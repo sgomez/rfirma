@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import { StatusView } from "./StatusView";
+import { StatusWindow } from "./StatusWindow";
 import { memoryStatus, type SignalRow, type StatusPort } from "./status";
 
 const stillChecking: SignalRow = {
@@ -15,7 +15,7 @@ const stillChecking: SignalRow = {
   restartFirefoxNotice: false,
 };
 
-describe("StatusView", () => {
+describe("StatusWindow", () => {
   it("opens the withdrawal dialog from Retirar…, and remeasures both signals when it closes", async () => {
     const user = userEvent.setup();
     const initialRows: SignalRow[] = [
@@ -92,7 +92,7 @@ describe("StatusView", () => {
       }),
     };
 
-    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+    renderWithCatalog(<StatusWindow statusPort={statusPort} onClose={() => {}} />);
 
     await screen.findAllByRole("status");
     await user.click(screen.getByRole("button", { name: "Retirar…" }));
@@ -127,7 +127,7 @@ describe("StatusView", () => {
       },
     ];
     const onClose = vi.fn();
-    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={onClose} />);
+    renderWithCatalog(<StatusWindow statusPort={memoryStatus(rows)} onClose={onClose} />);
 
     const row = await screen.findByRole("status");
     await user.click(within(row).getByRole("button", { name: "Retirar…" }));

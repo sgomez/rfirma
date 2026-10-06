@@ -1,10 +1,10 @@
-//! Las historias del panel de estado: cada señal en cada veredicto, con el detalle plegado y desplegado.
+//! Las historias de la vista del panel de estado: cada señal en cada veredicto, con el detalle plegado y desplegado.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { inStatusWindow } from "../../.storybook/decorators/statusWindow";
 import { StatusView, type StatusViewProps } from "./StatusView";
-import { memoryStatus, type SignalRow } from "./status";
+import type { SignalRow } from "./status";
 import {
   caChecking,
   caHalfInstalled,
@@ -23,11 +23,20 @@ import {
 } from "./testing/fixtures";
 
 const meta = {
-  title: "Pantallas/Estado/1 · Panel",
+  title: "Flujos/Estado/StatusView",
   component: StatusView,
   decorators: [inStatusWindow],
-  parameters: { layout: "centered" },
-  args: { onClose: fn() },
+  parameters: {
+    layout: "centered",
+    designSync: { cardMode: "single", primaryStory: "EverythingCorrect", viewport: "1240x760" },
+  },
+  args: {
+    onClose: fn(),
+    onRecheck: fn(),
+    onAction: fn(),
+    onChooseSiteSignatureHandler: fn(),
+    onWithdraw: fn(),
+  },
 } satisfies Meta<typeof StatusView>;
 
 export default meta;
@@ -38,7 +47,7 @@ const panel = (
   rows: SignalRow[],
   extra: Pick<StatusViewProps, "initiallyExpanded"> = {},
 ): Story => ({
-  args: { statusPort: memoryStatus(rows), ...extra },
+  args: { rows, ...extra },
 });
 
 export const EverythingCorrect = panel([

@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import { StatusView } from "./StatusView";
+import { StatusWindow } from "./StatusWindow";
 import { memoryStatus, type SignalRow, type StatusPort } from "./status";
 
 const stillChecking: SignalRow = {
@@ -15,7 +15,7 @@ const stillChecking: SignalRow = {
   restartFirefoxNotice: false,
 };
 
-describe("StatusView", () => {
+describe("StatusWindow", () => {
   it("notifies onRowsChange with the rows read at startup", async () => {
     const rows: SignalRow[] = [
       {
@@ -30,7 +30,11 @@ describe("StatusView", () => {
     ];
     const onRowsChange = vi.fn();
     renderWithCatalog(
-      <StatusView statusPort={memoryStatus(rows)} onClose={() => {}} onRowsChange={onRowsChange} />,
+      <StatusWindow
+        statusPort={memoryStatus(rows)}
+        onClose={() => {}}
+        onRowsChange={onRowsChange}
+      />,
     );
 
     await screen.findByRole("status");
@@ -55,7 +59,7 @@ describe("StatusView", () => {
     const recheckedRows: SignalRow[] = [{ ...initialRow, verdict: "attention", value: "0.5.0" }];
     const onRowsChange = vi.fn();
     renderWithCatalog(
-      <StatusView
+      <StatusWindow
         statusPort={memoryStatus(initialRows, recheckedRows)}
         onClose={() => {}}
         onRowsChange={onRowsChange}
@@ -104,7 +108,7 @@ describe("StatusView", () => {
     };
 
     renderWithCatalog(
-      <StatusView statusPort={statusPort} externalDestinations={{ open }} onClose={() => {}} />,
+      <StatusWindow statusPort={statusPort} externalDestinations={{ open }} onClose={() => {}} />,
     );
 
     const row = await screen.findByRole("status");
@@ -159,7 +163,7 @@ describe("StatusView", () => {
       withdrawRfirma: vi.fn(),
     };
 
-    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+    renderWithCatalog(<StatusWindow statusPort={statusPort} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
     expect(within(row).getByText("Comprobando")).toBeInTheDocument();
@@ -218,7 +222,7 @@ describe("StatusView", () => {
       withdrawRfirma: vi.fn(),
     };
 
-    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+    renderWithCatalog(<StatusWindow statusPort={statusPort} onClose={() => {}} />);
 
     await waitFor(() => {
       expect(statusPort.measureVersion).toHaveBeenCalled();
@@ -247,7 +251,7 @@ describe("StatusView", () => {
       withdrawRfirma: vi.fn(),
     };
 
-    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+    renderWithCatalog(<StatusWindow statusPort={statusPort} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
     expect(within(row).getByText("0.4.1")).toBeInTheDocument();
