@@ -76,6 +76,7 @@ export function SedeConsent({
   return (
     <SedeBody
       onEscape={onCancel}
+      primary={consentButton}
       footer={
         <>
           <div className="sede-window__spacer" />
