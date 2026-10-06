@@ -49,6 +49,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0042 | La lista de `-certtui` habla por `/dev/tty` y la pinta ratatui |
 | 0043 | La validez de una firma: tres valores, gana el peor problema y el sello de tiempo prueba la fecha |
 | 0045 | La verdad de una pantalla implementada es su código y sus historias de Storybook; Claude Design solo explora (sustituye al 0033) |
+| 0046 | El catálogo de historias se ordena por capas constructivas y la capa decide qué se publica en Claude Design |
 
 Los ADR que solo afectan a la suite de conformidad viven en `rfirma-conformance/docs/adr/` y
 comparten la numeración: el siguiente ADR, esté donde esté, toma el número libre más alto.

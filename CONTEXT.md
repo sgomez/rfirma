@@ -444,6 +444,32 @@ aplicación recuerda—. De una señal puede colgar una **reparación**, que la 
 vuelve a medirla; eso no es un ajuste, es la respuesta al diagnóstico.
 _Avoid_: estado de la aplicación, salud, healthcheck, autodiagnóstico
 
+### Sistema constructivo de la interfaz
+
+Las capas del catálogo de la interfaz, de la más atómica a la pantalla completa.
+Cada pieza del catálogo pertenece a exactamente una.
+
+**Primitivo** (`primitives`):
+Elemento de interfaz sin dominio: no sabe nada de firmas, certificados ni
+documentos, y sus props son genéricas. Se publica en el kit de diseño.
+_Avoid_: átomo, componente base, control
+
+**Dominio** (`domain`):
+Pieza que pinta una noción del dominio con props puras: recibe datos hechos y
+no carga nada por su cuenta. Se publica en el kit de diseño.
+_Avoid_: entidad, molécula, pieza a secas
+
+**Flujo** (`flows`):
+Composición autónoma con la que se arma un recorrido de la aplicación: un paso,
+un diálogo de un trayecto, una sección de un panel. Se publica en el kit de
+diseño: es el material para diseñar recorridos nuevos.
+_Avoid_: bloque —es el bloque trifásico—, widget, organismo
+
+**Pantalla** (`screens`):
+Ventana o página completa que compone flujos y piezas de dominio. Es referencia
+local: no se publica en el kit de diseño.
+_Avoid_: página, vista, layout
+
 ### Identidad del producto
 
 **rFirma**:
