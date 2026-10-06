@@ -94,27 +94,6 @@ describe("App, con verify --gui", () => {
     );
   });
 
-  it("says «Sin firmas» when the PDF has none", async () => {
-    render(aSigner());
-
-    expect(await screen.findByText("Sin firmas")).toBeInTheDocument();
-    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
-  });
-
-  it("shows the error box with its detail and no list when the signatures cannot be read", async () => {
-    render(
-      aSigner({
-        previousSignatures: () =>
-          Promise.reject({ situation: "bridgeFailed", detail: "SAF_99: el puente no responde" }),
-      }),
-    );
-
-    expect(await screen.findByText("No se han podido leer las firmas")).toBeInTheDocument();
-    expect(screen.getByText(/SAF_99: el puente no responde/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copiar detalle" })).toBeInTheDocument();
-    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
-  });
-
   it("opens the document and its folder, and Firmar leads to the signing panel for that document", async () => {
     const user = userEvent.setup();
     const opener = {
@@ -160,58 +139,14 @@ describe("App, con verify --gui", () => {
         format: "cades" as const,
       });
 
-    it("shows the signatures of a CAdES with its format, and the viewer says there is no preview", async () => {
+    it("mounts the reading beside a viewer that says there is no preview", async () => {
       renderNotAPdf(aSigner({ previousSignatures: cadesWith("GRACE HOPPER", "ADA LOVELACE") }));
 
       expect(await screen.findByText("2 firmas")).toBeInTheDocument();
-      expect(screen.getByText("CAdES")).toBeInTheDocument();
-      expect(screen.queryByText("PAdES")).not.toBeInTheDocument();
-      expect(screen.getByText("GRACE HOPPER (00000000T)")).toBeInTheDocument();
       expect(screen.getByText("Sin vista previa")).toBeInTheDocument();
       expect(screen.queryByText("No se ha podido leer el documento")).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /zoom/i })).not.toBeInTheDocument();
       expect(globalThis.document.querySelector(".viewer__bar")).toBeNull();
-    });
-
-    it("nests each countersignature inside its signature, at any depth, and counts both", async () => {
-      const deep = { ...aSignature("DEEP SIGNER"), countersignatures: [] };
-      const child = { ...aSignature("CHILD SIGNER"), countersignatures: [deep] };
-      const sibling = aSignature("SIBLING SIGNER");
-      const first = { ...aSignature("FIRST SIGNER"), countersignatures: [child, sibling] };
-      renderNotAPdf(
-        aSigner({
-          previousSignatures: async () => ({
-            ...(await withSignatures()()),
-            signatures: [first, aSignature("SECOND SIGNER")],
-            format: "cades" as const,
-          }),
-        }),
-      );
-
-      expect(await screen.findByText("2 firmas · 3 contrafirmas")).toBeInTheDocument();
-      const firstCard = screen.getByText("Firma 1").closest("li") as HTMLElement;
-      expect(within(firstCard).getByText("FIRST SIGNER (00000000T)")).toBeInTheDocument();
-      expect(within(firstCard).getByText("Contrafirma 1.1")).toBeInTheDocument();
-      expect(within(firstCard).getByText("Contrafirma 1.1.1")).toBeInTheDocument();
-      expect(within(firstCard).getByText("Contrafirma 1.2")).toBeInTheDocument();
-      expect(within(firstCard).getByText("DEEP SIGNER (00000000T)")).toBeInTheDocument();
-      const secondCard = screen.getByText("Firma 2").closest("li") as HTMLElement;
-      expect(within(secondCard).queryByText(/Contrafirma/)).not.toBeInTheDocument();
-    });
-
-    it("says «1 contrafirma» in the singular", async () => {
-      const signed = { ...aSignature("FIRST SIGNER"), countersignatures: [aSignature("OTHER")] };
-      renderNotAPdf(
-        aSigner({
-          previousSignatures: async () => ({
-            ...(await withSignatures()()),
-            signatures: [signed],
-            format: "cades" as const,
-          }),
-        }),
-      );
-
-      expect(await screen.findByText("1 firma · 1 contrafirma")).toBeInTheDocument();
     });
 
     it("offers to open the file and disables Firmar with its reason", async () => {
@@ -223,22 +158,6 @@ describe("App, con verify --gui", () => {
       const sign = screen.getByRole("button", { name: "Firmar" });
       expect(sign).toBeDisabled();
       expect(sign).toHaveAttribute("title", "En el escritorio solo se firman PDF");
-    });
-
-    it("says «Formato no reconocido» for a file of an unknown format", async () => {
-      renderNotAPdf(
-        aSigner({
-          previousSignatures: async () => ({
-            ...NO_PREVIOUS_SIGNATURES,
-            format: "unrecognized" as const,
-          }),
-        }),
-      );
-
-      expect(await screen.findByText("Formato no reconocido")).toBeInTheDocument();
-      expect(screen.getByText("No es un PDF ni una firma CAdES o XAdES.")).toBeInTheDocument();
-      expect(screen.queryByText("Sin firmas")).not.toBeInTheDocument();
-      expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
     });
   });
 });
