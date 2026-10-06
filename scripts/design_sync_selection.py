@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""La selección de Claude Design derivada de los títulos de las historias (ADR-0046): `write` y `check`."""
+"""La selección de Claude Design derivada de los títulos de las historias (ADR-0046): regenerada con `just design-sync-selection`."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -18,7 +17,6 @@ APP = "rfirma-app"
 STORIES = "rfirma-app/src"
 ENTRY = "rfirma-app/design-sync.entry.ts"
 CONFIG = ".design-sync/config.json"
-SEAL = ".design-sync/selection.lock"
 
 PUBLISHED_LAYERS = {"Primitivos": 2, "Dominio": 3, "Flujos": 3}
 LOCAL_LAYERS = {"Pantallas"}
@@ -71,24 +69,6 @@ class Selection:
     title_map: dict[str, str]
     overrides: dict[str, dict[str, str]]
     catalog: str
-
-    def digest(self) -> str:
-        return seal_of(self.entry, self.title_map, self.overrides, self.catalog)
-
-
-def seal_of(
-    entry: str,
-    title_map: dict[str, str],
-    overrides: dict[str, dict[str, str]],
-    catalog: str,
-) -> str:
-    canonical = (
-        entry
-        + json.dumps(title_map, sort_keys=True, ensure_ascii=False)
-        + json.dumps(overrides, sort_keys=True, ensure_ascii=False)
-        + catalog
-    )
-    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -270,15 +250,6 @@ def readme_header(root: Path, config: dict) -> Path | None:
     return root / header if header else None
 
 
-def committed_catalog(root: Path, config: dict) -> str:
-    header = readme_header(root, config)
-    if header is None:
-        return ""
-    text = header.read_text()
-    start, end = block_bounds(text, str(header.relative_to(root)))
-    return text[start:end].strip("\n") + "\n"
-
-
 def write_catalog(root: Path, config: dict, catalog: str) -> None:
     header = readme_header(root, config)
     if header is None:
@@ -328,57 +299,18 @@ def write(root: Path) -> None:
     config["overrides"] = selection.overrides
     write_catalog(root, config, selection.catalog)
     config_file.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n")
-    (root / SEAL).write_text(selection.digest() + "\n")
-
-
-def check(root: Path) -> list[str]:
-    seal_file = root / SEAL
-    if not seal_file.is_file():
-        return [f"falta {SEAL}"]
-    seal = seal_file.read_text().strip()
-    problems: list[str] = []
-    config = json.loads((root / CONFIG).read_text())
-    committed = seal_of(
-        (root / ENTRY).read_text(),
-        config.get("titleMap", {}),
-        config.get("overrides", {}),
-        committed_catalog(root, config),
-    )
-    if committed != seal:
-        problems.append(
-            f"{ENTRY}, el `titleMap` o los `overrides` de {CONFIG} o el catálogo de la cabecera "
-            f"no coinciden con {SEAL}: editados a mano"
-        )
-    if selection_of(root, config).digest() != seal:
-        problems.append(
-            "la selección derivada de las historias ha cambiado desde la última regeneración"
-        )
-    return problems
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("verb", choices=["write", "check"])
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
     args = parser.parse_args()
     try:
-        if args.verb == "write":
-            write(args.root)
-            print(f"regeneradas. Versiona {ENTRY}, {CONFIG} y {SEAL}.")
-            return 0
-        problems = check(args.root)
+        write(args.root)
     except SelectionError as error:
         print(error, file=sys.stderr)
         return 1
-    if problems:
-        for problem in problems:
-            print(problem, file=sys.stderr)
-        print(
-            "Ejecuta 'just design-sync-selection' y versiona lo que cambie.",
-            file=sys.stderr,
-        )
-        return 1
-    print("selección de Claude Design al día")
+    print(f"regeneradas. Versiona {ENTRY} y {CONFIG}.")
     return 0
 
 

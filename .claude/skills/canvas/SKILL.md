@@ -16,7 +16,7 @@ código.
 
 ## Antes de explorar
 
-Lanza `/design-sync`. Sube a «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`)
+Corre `just design-sync-selection` y versiona lo que cambie; después lanza `/design-sync`. Sube a «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`)
 los componentes y las historias tal como están en `main`; sin eso se explora
 sobre piezas viejas. Se explora allí, con los componentes reales, no dibujando
 HTML a mano.

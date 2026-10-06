@@ -19,7 +19,8 @@ se diseña un recorrido nuevo.
   las pantallas son referencia local. No se publican páginas: el kit es material para componer
   recorridos nuevos, no un archivo de pantalla ya decidida.
 - **La selección se deriva, no se copia.** Una receta regenera la entrada y el `titleMap` desde
-  los títulos, con sello verificado en el CI, como `just flatpak-sources`. Lo que una tarjeta
+  los títulos, y se corre antes de cada `/design-sync`; el CI no la verifica, porque solo
+  `/design-sync` consume esos ficheros. Lo que una tarjeta
   necesita saber de sí misma —viewport, modo de tarjeta, historia principal— se declara en su
   historia, y las tablas de catálogo de la cabecera que lee Claude Design se generan de la misma
   fuente. Un título sin mapear en una capa publicable es un rojo, no un descarte en silencio.

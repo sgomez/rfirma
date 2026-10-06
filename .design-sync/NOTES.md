@@ -4,7 +4,7 @@ Proyecto: «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`), forma 
 
 ## Forma del repositorio
 
-- rfirma-app es una aplicación, no una biblioteca: no hay `dist/`. Lo que se compila lo dice `rfirma-app/design-sync.entry.ts` (`cfg.entry` y `cfg.extraEntries`). La entrada y el `titleMap` los genera `just design-sync-selection` desde los títulos de las historias (ADR-0046), con sello en `selection.lock` que verifica `just check-repo`: un componente nuevo entra con su historia en una capa publicable y una regeneración.
+- rfirma-app es una aplicación, no una biblioteca: no hay `dist/`. Lo que se compila lo dice `rfirma-app/design-sync.entry.ts` (`cfg.entry` y `cfg.extraEntries`). La entrada y el `titleMap` los genera `just design-sync-selection` desde los títulos de las historias (ADR-0046), y se corre antes de cada `/design-sync`: un componente nuevo entra con su historia en una capa publicable y una regeneración.
 - El escaneo de exportaciones solo ve los nombres a través de `extraEntries`: con `entry` a secas sale «0/1 storybook components are public exports».
 - `titleMap` usa el último segmento del título sin espacios (`Marcarlafirma`), no el título entero.
 
