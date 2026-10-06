@@ -412,3 +412,9 @@ siguen en `.scratch/archive/`.
 2026-10-06 spec=#1660 sub=#1663 model=sonnet effort=medium pr=#1675 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
 2026-10-06 spec=#1660 sub=#1667 model=opus effort=medium pr=#1676 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=merged
 2026-10-06 spec=#1660 sub=#1668 model=sonnet effort=medium pr=#1677 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
+2026-10-06 spec=#1678 sub=#1680 model=sonnet effort=medium pr=#1685 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-10-06 spec=#1678 sub=#1679 model=sonnet effort=medium pr=#1686 verdict=CLEAN cycles=1 mergefix=1 wave=1 outcome=merged
+2026-10-06 spec=#1678 sub=#1682 model=opus effort=medium pr=#1687 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
+2026-10-06 spec=#1678 sub=#1681 model=sonnet effort=medium pr=#1688 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=merged
+2026-10-06 spec=#1678 sub=#1683 model=sonnet effort=medium pr=#1689 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
+2026-10-06 spec=#1678 sub=#1684 model=sonnet effort=medium pr=#1690 verdict=CLEAN cycles=0 mergefix=0 wave=5 outcome=merged
