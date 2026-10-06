@@ -29,8 +29,8 @@
   background: transparent;
   color: var(--rf-text);
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--rf-body-size);
+  font-weight: var(--rf-ui-strong-weight);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -54,7 +54,7 @@
 .panel__segment--chosen {
   background: var(--rf-primary);
   color: var(--rf-on-primary);
-  font-weight: 700;
+  font-weight: var(--rf-title-weight);
 }
 
 .panel__page-line {
@@ -67,15 +67,15 @@
 .panel__page-text {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
-  line-height: 1.35;
+  font-size: var(--rf-body-size);
+  line-height: var(--rf-body-leading);
 }
 
 .panel__page-button {
   flex: none;
   min-height: 30px;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: var(--rf-body-size);
 }
 
 .panel__range {
@@ -96,7 +96,7 @@
   flex: 1;
   min-width: 0;
   min-height: 36px;
-  font-size: 14px;
+  font-size: var(--rf-ui-size);
   border: 1px solid var(--rf-border-strong);
   border-radius: var(--rf-radius-sm);
 }
@@ -119,6 +119,6 @@
 
 .panel__range-error .rf-body {
   flex: 1;
-  line-height: 1.4;
-  font-weight: 700;
+  line-height: var(--rf-body-leading);
+  font-weight: var(--rf-title-weight);
 }

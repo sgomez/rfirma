@@ -7,7 +7,7 @@
 .signed-panel__signed-at {
   align-items: center;
   padding: 8px 12px;
-  font-weight: 700;
+  font-weight: var(--rf-title-weight);
   background: var(--rf-surface);
   border: 1px solid var(--rf-border-subtle);
   border-radius: var(--rf-radius-md);
@@ -16,6 +16,6 @@
 .signed-panel__title {
   align-items: center;
   margin: 0;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--rf-ui-size);
+  font-weight: var(--rf-title-weight);
 }

@@ -20,9 +20,9 @@
   padding: 9px 12px;
   border: 2px solid var(--rf-border-strong);
   border-radius: var(--rf-radius-md);
-  font-size: 13px;
-  line-height: 18px;
-  font-weight: 700;
+  font-size: var(--rf-body-size);
+  line-height: var(--rf-body-leading);
+  font-weight: var(--rf-title-weight);
 }
 
 .signature-cards__finding-icon {
@@ -65,12 +65,12 @@
   align-items: center;
   gap: 5px;
   color: var(--rf-text);
-  font-weight: 700;
+  font-weight: var(--rf-title-weight);
 }
 
 .signature-cards__validity--valid {
   color: var(--rf-text-muted);
-  font-weight: 400;
+  font-weight: var(--rf-body-weight);
 }
 
 .signature-cards__validity .rf-body {
@@ -86,21 +86,20 @@
 .signature-cards__field-label {
   flex: none;
   width: 104px;
-  line-height: 1.35;
 }
 
 .signature-cards__field-value {
-  font-size: 13px;
+  font-size: var(--rf-body-size);
   overflow-wrap: anywhere;
 }
 
 .signature-cards__field-value--signer {
-  font-weight: 600;
+  font-weight: var(--rf-ui-strong-weight);
 }
 
 .signature-cards__closes {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--rf-body-size);
+  font-weight: var(--rf-title-weight);
 }
 
 .signature-cards__countersignature {

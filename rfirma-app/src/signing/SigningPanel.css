@@ -74,8 +74,8 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  font-size: 13px;
-  line-height: 18px;
+  font-size: var(--rf-body-size);
+  line-height: var(--rf-body-leading);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -95,7 +95,7 @@
   padding: 8px 10px;
   border-top: 1px solid var(--rf-border-subtle);
   background: var(--rf-surface);
-  font-weight: 600;
+  font-weight: var(--rf-ui-strong-weight);
 }
 
 .panel__notice-icon {
@@ -112,7 +112,7 @@
 }
 
 .panel__notice-title > .rf-title {
-  font-size: 14px;
+  font-size: var(--rf-ui-size);
 }
 
 /* Sin caja ni borde: el triángulo y el título en una fila, el cuerpo debajo
@@ -251,8 +251,8 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 12px;
-  line-height: 1.2;
+  font-size: var(--rf-caption-size);
+  line-height: var(--rf-caption-leading);
   color: var(--rf-text);
 }
 
@@ -278,6 +278,7 @@
   justify-content: center;
   gap: 1px;
   min-width: 0;
+  /* Miniatura: 5.5px es dibujo del sello a escala, no un rol tipográfico. */
   font-size: 5.5px;
   line-height: 1.2;
   color: var(--rf-text);
@@ -391,7 +392,7 @@
 .panel__rubric-label {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--rf-body-size);
 }
 
 .panel__rubric-label--locked {
@@ -402,7 +403,7 @@
   flex: none;
   min-height: 30px;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: var(--rf-body-size);
 }
 
 /* 162 px en todos los estados (docs/design/panel-de-firma.md § Pie fijo): el
@@ -437,7 +438,7 @@
   flex: none;
   min-height: 24px;
   padding: 0 8px;
-  font-size: 13px;
+  font-size: var(--rf-body-size);
   color: var(--rf-text);
 }
 
@@ -455,18 +456,17 @@
 
 .panel__destination-folder {
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--rf-caption-size);
 }
 
 .panel__destination-name {
   min-width: 0;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--rf-body-size);
+  font-weight: var(--rf-title-weight);
 }
 
 .panel__destination-ellipsis {
   min-width: 0;
-  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -482,8 +482,8 @@
 .panel__destination-unwritable-text {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
-  line-height: 1.35;
+  font-size: var(--rf-body-size);
+  line-height: var(--rf-body-leading);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -522,5 +522,4 @@
 
 .panel__visible-hint {
   margin: 0;
-  line-height: 1.4;
 }
