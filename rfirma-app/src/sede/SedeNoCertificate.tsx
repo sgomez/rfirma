@@ -68,6 +68,7 @@ export function SedeNoCertificate({
   return (
     <SedeBody
       onEscape={onLeave}
+      primary={defaultButton}
       steadyFooter
       footer={
         <>

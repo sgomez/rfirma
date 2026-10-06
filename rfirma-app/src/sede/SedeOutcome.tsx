@@ -67,6 +67,7 @@ export function SedeOutcome({ origin, outcome, onClose, onOpenHelp }: SedeOutcom
   return (
     <SedeBody
       onEscape={onClose}
+      primary={closeButton}
       steadyFooter
       footer={
         <>
