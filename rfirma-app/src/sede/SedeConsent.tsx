@@ -8,7 +8,7 @@ import { CertificateSelect } from "../signing/CertificateSelect";
 import type { Certificate } from "../signing/certificate";
 import { sitePreselection } from "../signing/certificate";
 import { PreviousSignaturesNotice } from "../signing/PreviousSignaturesNotice";
-import { formatSize } from "../signing/SigningPanel";
+import { formatSize } from "../signing/panelFormat";
 // `PreviousSignaturesNotice` no trae su propia hoja: la sede no monta `SigningPanel.tsx`.
 import "../signing/SigningPanel.css";
 import { Button } from "../design-system/Button";

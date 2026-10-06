@@ -2,12 +2,11 @@
 
 import { useTranslation } from "react-i18next";
 import { Switch } from "../design-system/Switch";
-import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { PlacementBlock, type PlacementBlockState } from "../placement/PlacementBlock";
 import { CertificateNotice } from "./CertificateNotice";
 import { CertificateSelect } from "./CertificateSelect";
-import type { Certificate } from "./certificate";
+import type { Certificate, CertificateState } from "./certificate";
 import type { Destination } from "./destination";
 import type { SigningFailure } from "./failure";
 import { ModelFieldset } from "./ModelFieldset";
@@ -18,8 +17,6 @@ import type { Rubric, RubricFailure } from "./rubric";
 import "./SigningPanel.css";
 import type { VisibleSignature } from "./visibleSignature";
 
-export { formatSize } from "./panelFormat";
-
 /** El documento que se va a firmar, con lo que el panel enseña de él. */
 interface SigningDocument {
   /** Identifica el documento entre pestañas, para que un aviso no herede el estado del anterior. */
@@ -28,32 +25,6 @@ interface SigningDocument {
   /** El tamaño, o `null` mientras nadie lo sepa: no se inventa un cero. */
   sizeBytes: number | null;
 }
-
-/**
- * En qué punto está la elección del certificado. Son los estados de la ficha;
- * «Listo» es `chosen` con un certificado en vigor.
- *
- * `failed` es el aterrizaje del rechazo: sin él la búsqueda que falla
- * no tenía dónde caer y la ficha se quedaba en `loading` para siempre. No es lo
- * mismo que `empty` —«no hay ninguno» y «no he podido buscarlos» son cosas
- * distintas— y por eso son dos estados y no un booleano dentro de uno.
- */
-export type CertificateState =
-  | { kind: "loading" }
-  | { kind: "empty" }
-  | { kind: "failed"; failure: NamedFailure }
-  /**
-   * Hay certificados y **ninguno elegido**, que es lo que pasa la primera vez
-   * con varios: el selector dice «Elige un certificado» y el botón de firmar
-   * sigue apagado. Elegir con qué identidad se firma un documento con validez
-   * jurídica no lo hace la aplicación por su cuenta.
-   */
-  | { kind: "unchosen"; certificates: readonly Certificate[] }
-  /**
-   * Uno elegido, **y los demás al lado**: el desplegable los sigue listando,
-   * porque cambiar de certificado es abrirlo otra vez y no un botón aparte.
-   */
-  | { kind: "chosen"; certificate: Certificate; certificates: readonly Certificate[] };
 
 interface SigningPanelProps {
   document: SigningDocument;
