@@ -10,7 +10,7 @@ estado y el modal de confirmación), `PreferencesSections.tsx` (una pieza por
 sección) y los primitivos `design-system/Select.tsx` y `design-system/Switch.tsx`. La lista de certificados pinta cada fila
 con `CertificateCard` (`signing/CertificateCard.tsx`), la misma pieza del selector de
 certificado. Historias: `PreferencesView.stories.tsx`, en «Pantallas/Preferencias»,
-con los ajustes y los certificados de ejemplo de `preferencesFixtures.ts`.
+con los ajustes y los certificados de ejemplo de `preferences/testing/fixtures.ts`.
 
 ## Casos de uso que la usan
 
