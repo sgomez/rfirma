@@ -1,6 +1,6 @@
-//! El atajo común de teclado: Intro pulsa la acción primaria y Escape la secundaria, salvo que un control ya atienda la tecla o haya un diálogo delante.
+//! El atajo común de teclado: Intro pulsa la acción primaria y Escape la secundaria, salvo que un control ya atienda la tecla o haya un diálogo delante; entre pantallas anidadas, la interior primero.
 
-import { type RefObject, useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 
 /** La primaria y la secundaria de una pantalla o un diálogo, cada una opcional. */
 export type ActionKeys = {
@@ -78,18 +78,37 @@ function targetUsesEnter(event: KeyboardEvent): boolean {
   return event.target instanceof Element && event.target.closest(USES_ENTER) !== null;
 }
 
-/** El atajo de una pantalla completa: atiende el documento mientras no hay un diálogo delante. */
+type Registration = { order: number; actions: RefObject<ActionKeys> };
+
+const registrations: Registration[] = [];
+let renders = 0;
+
+function nextOrder(): number {
+  renders += 1;
+  return renders;
+}
+
+function answerInnermostFirst(event: KeyboardEvent) {
+  if (layers.length > 0) return;
+  for (const { actions } of [...registrations].sort((a, b) => b.order - a.order)) {
+    const { primary, onSecondary } = actions.current;
+    if (pressPrimaryOnEnter(event, primary) || pressSecondaryOnEscape(event, onSecondary)) return;
+  }
+}
+
+/** El atajo de una pantalla completa o de una confirmación dentro de ella: atiende el documento mientras no hay un diálogo delante, la más interior antes. */
 export function useActionKeys(actions: ActionKeys) {
   const latest = useRef(actions);
   latest.current = actions;
+  const [order] = useState(nextOrder);
 
   useEffect(() => {
-    const listener = (event: KeyboardEvent) => {
-      if (layers.length > 0) return;
-      const { primary, onSecondary } = latest.current;
-      if (!pressPrimaryOnEnter(event, primary)) pressSecondaryOnEscape(event, onSecondary);
+    const registration = { order, actions: latest };
+    registrations.push(registration);
+    if (registrations.length === 1) document.addEventListener("keydown", answerInnermostFirst);
+    return () => {
+      registrations.splice(registrations.indexOf(registration), 1);
+      if (registrations.length === 0) document.removeEventListener("keydown", answerInnermostFirst);
     };
-    document.addEventListener("keydown", listener);
-    return () => document.removeEventListener("keydown", listener);
-  }, []);
+  }, [order]);
 }

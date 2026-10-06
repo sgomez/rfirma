@@ -53,6 +53,11 @@ function Confirm({
   );
 }
 
+function InlineConfirm({ onCancel }: { onCancel: () => void }) {
+  useActionKeys({ onSecondary: onCancel });
+  return <p>¿Vaciar el almacén?</p>;
+}
+
 function Pair({ onOuter, onInner }: { onOuter: () => void; onInner: () => void }) {
   return (
     <>
@@ -313,5 +318,36 @@ describe("Dialog", () => {
   it("does not compile without a label", () => {
     // @ts-expect-error la etiqueta accesible es obligatoria
     render(<Dialog>x</Dialog>);
+  });
+
+  it("lets an inline confirmation opened later answer Escape before its screen", async () => {
+    const onSecondary = vi.fn();
+    const onCancel = vi.fn();
+    const { rerender } = render(<Screen onPrimary={() => {}} onSecondary={onSecondary} />);
+
+    rerender(
+      <Screen onPrimary={() => {}} onSecondary={onSecondary}>
+        <InlineConfirm onCancel={onCancel} />
+      </Screen>,
+    );
+    await userEvent.keyboard("{Escape}");
+
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onSecondary).not.toHaveBeenCalled();
+  });
+
+  it("lets an inline confirmation mounted with its screen answer Escape first", async () => {
+    const onSecondary = vi.fn();
+    const onCancel = vi.fn();
+    render(
+      <Screen onPrimary={() => {}} onSecondary={onSecondary}>
+        <InlineConfirm onCancel={onCancel} />
+      </Screen>,
+    );
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onSecondary).not.toHaveBeenCalled();
   });
 });
