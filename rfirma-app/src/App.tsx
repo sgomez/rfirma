@@ -8,7 +8,6 @@ import { useNativeTitlebar } from "./App.useNativeTitlebar";
 import { useOpenShortcut } from "./App.useOpenShortcut";
 import { usePreferencesState } from "./App.usePreferencesState";
 import { useStartupNotices } from "./App.useStartupNotices";
-import { useViewedSignatures } from "./App.useViewedSignatures";
 import { AboutDialog } from "./about/AboutDialog";
 import { DocumentTabs } from "./documents/DocumentTabs";
 import { isAPdf } from "./documents/document";
@@ -25,7 +24,7 @@ import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import { SignedPanel } from "./signing/SignedPanel";
 import { SigningPanel } from "./signing/SigningPanel";
 import { useCertificateListing } from "./signing/useCertificateListing";
-import { useSignedDocumentOpening } from "./signing/useSignedDocumentOpening";
+import { useSignatureReading } from "./signing/useSignatureReading";
 import type { VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
 import { InstallUpdateDialog } from "./updates/InstallUpdateDialog";
@@ -147,14 +146,18 @@ export function App({
   });
   const { stamp, acknowledgement } = journey;
 
-  const viewedSignatures = useViewedSignatures(signer, activeId);
-  const viewedOpening = useSignedDocumentOpening(opener);
+  const signatureReading = useSignatureReading(
+    signer,
+    opener,
+    documents.active,
+    visibleRecents.find((row) => row.id === activeId),
+  );
   const { dropNotice } = useDropNotices(
     drops,
     documents.accept,
     documents.enter,
     activeId,
-    viewedSignatures.view,
+    signatureReading.view,
   );
 
   const modalOpen = dialog !== null || journey.signals.dialogOpen;
@@ -307,32 +310,28 @@ export function App({
               failure={acknowledgement.openFailure}
               onOpenHelp={() => void externalDestinations.open("discussions")}
             />
-          ) : viewedSignatures.viewing && documents.active ? (
+          ) : signatureReading.reading ? (
             <SignedPanel
-              documentName={documents.active.name}
+              documentName={signatureReading.reading.documentName}
               signatures={
-                viewedSignatures.reading.kind === "read" ? viewedSignatures.reading.signatures : []
+                signatureReading.reading.kind === "read" ? signatureReading.reading.signatures : []
               }
               findings={
-                viewedSignatures.reading.kind === "read" ? viewedSignatures.reading.findings : []
+                signatureReading.reading.kind === "read" ? signatureReading.reading.findings : []
               }
               format={
-                viewedSignatures.reading.kind === "read" ? viewedSignatures.reading.format : "pades"
+                signatureReading.reading.kind === "read" ? signatureReading.reading.format : "pades"
               }
-              signable={isAPdf(documents.active)}
-              reading={viewedSignatures.reading.kind === "reading"}
+              signable={signatureReading.reading.signable}
+              reading={signatureReading.reading.kind === "reading"}
               readFailure={
-                viewedSignatures.reading.kind === "failed" ? viewedSignatures.reading.failure : null
+                signatureReading.reading.kind === "failed" ? signatureReading.reading.failure : null
               }
-              destination={{
-                folder: visibleRecents.find((row) => row.id === activeId)?.folder ?? "",
-                name: documents.active.name,
-                writable: true,
-              }}
-              onOpenDocument={() => viewedOpening.openDocument(documents.active?.id)}
-              onOpenFolder={() => viewedOpening.openFolder(documents.active?.id)}
-              onSign={viewedSignatures.stopViewing}
-              failure={viewedOpening.failure}
+              destination={signatureReading.reading.destination}
+              onOpenDocument={signatureReading.reading.openDocument}
+              onOpenFolder={signatureReading.reading.openFolder}
+              onSign={signatureReading.reading.signAgain}
+              failure={signatureReading.reading.openFailure}
               onOpenHelp={() => void externalDestinations.open("discussions")}
             />
           ) : pdf && documents.active ? (
