@@ -21,13 +21,13 @@ export function SignaturesDialog({ report, onClose }: SignaturesDialogProps) {
   const { t } = useTranslation();
   const format = report.format ?? "pades";
   const count = t("panel.signed.count", { count: report.signatures.length });
-  const close = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
 
   return (
     <Dialog
       label={t("panel.signed.title")}
       onClose={onClose}
-      primary={close}
+      primary={closeButton}
       className="signatures-dialog"
       scrimClassName="signatures-dialog__scrim"
     >
@@ -45,7 +45,7 @@ export function SignaturesDialog({ report, onClose }: SignaturesDialogProps) {
       <hr className="rf-divider" />
 
       <Row className="signatures-dialog__actions">
-        <Button variant="primary" ref={close} onClick={onClose}>
+        <Button variant="primary" ref={closeButton} onClick={onClose}>
           {t("actions.close")}
         </Button>
       </Row>

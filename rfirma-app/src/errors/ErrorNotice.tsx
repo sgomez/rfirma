@@ -53,10 +53,10 @@ export function ErrorNotice({
   const { t } = useTranslation();
   const notice = useRef<HTMLDivElement>(null);
   const [confirmingEmptyStore, setConfirmingEmptyStore] = useState(false);
-  const confirmEmptyStore = useDefaultButton(confirmingEmptyStore);
+  const confirmEmptyStoreButton = useDefaultButton(confirmingEmptyStore);
   useActionKeys(
     confirmingEmptyStore
-      ? { primary: confirmEmptyStore, onSecondary: () => setConfirmingEmptyStore(false) }
+      ? { primary: confirmEmptyStoreButton, onSecondary: () => setConfirmingEmptyStore(false) }
       : {},
   );
 
@@ -84,7 +84,7 @@ export function ErrorNotice({
         {t("actions.cancel")}
       </Button>
       <Button
-        ref={confirmEmptyStore}
+        ref={confirmEmptyStoreButton}
         variant="primary"
         onClick={() => {
           setConfirmingEmptyStore(false);

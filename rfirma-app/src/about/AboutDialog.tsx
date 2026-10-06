@@ -36,7 +36,7 @@ export function AboutDialog({
   const { t } = useTranslation();
   const [currentVersion, setCurrentVersion] = useState(newVersion);
   const [updating, setUpdating] = useState(false);
-  const close = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let current = true;
@@ -56,7 +56,7 @@ export function AboutDialog({
 
   return (
     <>
-      <Dialog label={t("app.name")} onClose={onClose} primary={close} className="about">
+      <Dialog label={t("app.name")} onClose={onClose} primary={closeButton} className="about">
         <div className="about__header">
           <div className="about__identity">
             <p className="rf-heading about__name">{t("app.name")}</p>
@@ -104,7 +104,7 @@ export function AboutDialog({
         </Row>
 
         <Row className="about__footer">
-          <Button ref={close} variant="primary" className="about__close" onClick={onClose}>
+          <Button ref={closeButton} variant="primary" className="about__close" onClick={onClose}>
             {t("actions.close")}
           </Button>
         </Row>
