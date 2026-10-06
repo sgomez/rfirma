@@ -3,14 +3,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { inDialogWindow } from "../../.storybook/decorators/dialogWindow";
+import { signingProblems } from "./previousSignatures";
+import { SignAnywayDialog } from "./SignAnywayDialog";
 import {
   EXPIRED_ONLY_REPORT,
   EXTREME_REPORT,
   MIXED_REPORT,
   UNRECOGNIZED_REPORT,
-} from "../../.storybook/fixtures/signing";
-import { signingProblems } from "./previousSignatures";
-import { SignAnywayDialog } from "./SignAnywayDialog";
+} from "./testing/storyReports";
 
 const meta = {
   title: "Flujos/Firma/SignAnywayDialog",

@@ -2,11 +2,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { storyRecents } from "../../.storybook/fixtures/documents";
-import { storyPdf } from "../../.storybook/fixtures/pdf";
 import { RecentsSection } from "../documents/RecentRows";
+import { storyRecents } from "../documents/testing/fixtures";
 import type { Placement } from "../placement/pageSets";
 import { DocumentViewer } from "./DocumentViewer";
+import { storyPdf } from "./testing/storyPdf";
 
 const meta = {
   title: "Flujos/Documentos/DocumentViewer",

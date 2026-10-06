@@ -2,9 +2,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { storyRecents } from "../../.storybook/fixtures/documents";
 import { DocumentTabs } from "../documents/DocumentTabs";
 import { RecentsSection } from "../documents/RecentRows";
+import { storyRecents } from "../documents/testing/fixtures";
 import { NewVersionStrip } from "../updates/NewVersionStrip";
 import { DocumentViewer } from "../viewer/DocumentViewer";
 import { MainWindow } from "./MainWindow";

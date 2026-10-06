@@ -2,7 +2,7 @@
 
 import type { Decorator } from "@storybook/react-vite";
 import { SedeView } from "../../src/sede/SedeView";
-import { sedeViewActions } from "../fixtures/sedeView";
+import { sedeViewActions } from "../../src/sede/testing/fixtures/sedeView";
 
 /** La ventana con borde y sombra; el `transform` hace del marco el bloque contenedor de su `position: fixed`. */
 const inSedeWindow =

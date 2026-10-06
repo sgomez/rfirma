@@ -1,8 +1,8 @@
 //! Los argumentos que comparten las historias de `SedeView`: un trámite de ejemplo y órdenes que son espías de Storybook.
 
 import { fn } from "storybook/test";
-import type { Errand, ErrandStage } from "../../src/sede/errand";
-import type { SedeViewProps } from "../../src/sede/SedeView";
+import type { Errand, ErrandStage } from "../../errand";
+import type { SedeViewProps } from "../../SedeView";
 
 /** Las órdenes de la vista, todas espías: una historia no habla con ningún puerto. */
 export const sedeViewActions = {

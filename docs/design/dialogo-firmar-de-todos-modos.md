@@ -6,7 +6,7 @@ paso de confirmación, no un bloqueo: las dos salidas están siempre.
 
 Componente: `rfirma-app/src/signing/SignAnywayDialog.tsx`. Historias:
 `SignAnywayDialog.stories.tsx`, en «Flujos/Firma/SignAnywayDialog». Los ejemplos de firmas previas que usan las historias están en
-`rfirma-app/.storybook/fixtures/signing.ts`.
+`rfirma-app/src/signing/testing/storyReports.ts`.
 
 ## Casos de uso que lo usan
 

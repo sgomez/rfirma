@@ -3,8 +3,8 @@
 import type {
   PreviousSignature,
   PreviousSignaturesReport,
-} from "../../src/signing/previousSignatures";
-import type { PdfDocument } from "../../src/viewer/pdf";
+} from "../../../signing/previousSignatures";
+import type { PdfDocument } from "../../../viewer/pdf";
 
 /** Una firma previa válida de la misma persona que firma. */
 export function previousSignature(overrides: Partial<PreviousSignature> = {}): PreviousSignature {
