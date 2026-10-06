@@ -9,6 +9,11 @@ const {
   JustSignedAfterChangedDocument,
   VerifyWithSignatures,
   VerifyWithProblems,
+  VerifyCadesWithCountersignatures,
+  VerifyCadesWithNestedCountersignatures,
+  VerifyWithoutSignatures,
+  VerifyUnrecognizedFormat,
+  VerifyReadFailed,
   OpenFailed,
 } = composeStories(stories);
 
@@ -114,6 +119,54 @@ describe("the signed panel, by state", () => {
       const reasonRow = within(invalid).getByText("Motivo").parentElement;
       expect(reasonRow).toHaveTextContent("ANA LOPEZ GARCIA");
       expect(reasonRow?.nextElementSibling).toBeNull();
+    });
+
+    it("says «Sin firmas» when the document has none", () => {
+      renderWithCatalog(<VerifyWithoutSignatures />);
+
+      expect(screen.getByText("Sin firmas")).toBeInTheDocument();
+      expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+    });
+
+    it("says «Formato no reconocido» for a file of an unknown format", () => {
+      renderWithCatalog(<VerifyUnrecognizedFormat />);
+
+      expect(screen.getByText("Formato no reconocido")).toBeInTheDocument();
+      expect(screen.getByText("No es un PDF ni una firma CAdES o XAdES.")).toBeInTheDocument();
+      expect(screen.queryByText("Sin firmas")).not.toBeInTheDocument();
+      expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+    });
+
+    it("shows the error box with its detail and no list when the signatures cannot be read", () => {
+      renderWithCatalog(<VerifyReadFailed />);
+
+      expect(screen.getByText("No se han podido leer las firmas")).toBeInTheDocument();
+      expect(screen.getByText(/bridge error: code 7/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Copiar detalle" })).toBeInTheDocument();
+      expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
+    });
+
+    it("heads a CAdES with its format and nests each countersignature in its signature", () => {
+      renderWithCatalog(<VerifyCadesWithCountersignatures />);
+
+      expect(screen.getByText("CAdES")).toBeInTheDocument();
+      expect(screen.queryByText("PAdES")).not.toBeInTheDocument();
+      expect(screen.getByText("1 firma · 1 contrafirma")).toBeInTheDocument();
+      const card = screen.getByText("Firma 1").closest("li") as HTMLElement;
+      expect(within(card).getByText("Contrafirma 1.1")).toBeInTheDocument();
+      expect(within(card).getByText("GRACE HOPPER (44444444A)")).toBeInTheDocument();
+    });
+
+    it("nests each countersignature inside its signature, at any depth, and counts both", () => {
+      renderWithCatalog(<VerifyCadesWithNestedCountersignatures />);
+
+      expect(screen.getByText("2 firmas · 3 contrafirmas")).toBeInTheDocument();
+      const [first, second] = cards() as [HTMLElement, HTMLElement];
+      expect(within(first).getByText("Contrafirma 1.1")).toBeInTheDocument();
+      expect(within(first).getByText("Contrafirma 1.1.1")).toBeInTheDocument();
+      expect(within(first).getByText("Contrafirma 1.2")).toBeInTheDocument();
+      expect(within(first).getByText(/^DEEP SIGNER/)).toBeInTheDocument();
+      expect(within(second).queryByText(/Contrafirma/)).not.toBeInTheDocument();
     });
 
     it("paints no field that is absent", () => {

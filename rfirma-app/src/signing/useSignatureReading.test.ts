@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { SignedDocumentOpener } from "./destination";
 import { type SigningBackend, unavailableSigningBackend } from "./flow";
-import type { PreviousSignaturesReport } from "./previousSignatures";
+import type { PreviousSignature, PreviousSignaturesReport } from "./previousSignatures";
 import { useSignatureReading } from "./useSignatureReading";
 
 const report: PreviousSignaturesReport = {
@@ -28,6 +28,20 @@ function anOpener(overrides: Partial<SignedDocumentOpener> = {}): SignedDocument
     ...overrides,
   };
 }
+
+const aSignature = (name: string): PreviousSignature => ({
+  name,
+  idNumber: "00000000T",
+  organizationIdentifier: null,
+  issuer: "AC FNMT Usuarios",
+  certificateSerialNumber: "1",
+  signingTime: "2026-09-14T10:32:05Z",
+  validity: "valid",
+  validityReason: null,
+  signingDate: null,
+  closesDocument: false,
+  countersignatures: [],
+});
 
 const contract = { id: "doc-1", name: "contrato.pdf" };
 const row = { folder: "Documentos" };
@@ -83,6 +97,49 @@ describe("useSignatureReading", () => {
     await waitFor(() => expect(result.current.reading).toMatchObject({ format: "pades" }));
   });
 
+  it("delivers a CAdES with its countersignatures inside each signature", async () => {
+    const countersigned = { ...aSignature("FIRST"), countersignatures: [aSignature("SECOND")] };
+    const { result } = mount({
+      signer: aSigner({
+        previousSignatures: async () => ({
+          ...report,
+          signatures: [countersigned],
+          format: "cades",
+        }),
+      }),
+    });
+
+    act(() => result.current.view("doc-1"));
+
+    await waitFor(() => expect(result.current.reading?.kind).toBe("read"));
+    expect(result.current.reading).toMatchObject({
+      format: "cades",
+      signatures: [{ name: "FIRST", countersignatures: [{ name: "SECOND" }] }],
+    });
+  });
+
+  it("delivers a file of an unknown format with no signatures", async () => {
+    const { result } = mount({
+      signer: aSigner({
+        previousSignatures: async () => ({ ...report, format: "unrecognized" }),
+      }),
+    });
+
+    act(() => result.current.view("doc-1"));
+
+    await waitFor(() => expect(result.current.reading?.kind).toBe("read"));
+    expect(result.current.reading).toMatchObject({ format: "unrecognized", signatures: [] });
+  });
+
+  it("delivers a document without signatures as read, not as failed", async () => {
+    const { result } = mount();
+
+    act(() => result.current.view("doc-1"));
+
+    await waitFor(() => expect(result.current.reading?.kind).toBe("read"));
+    expect(result.current.reading).toMatchObject({ signatures: [] });
+  });
+
   it("delivers the failure when reading is refused", async () => {
     const { result } = mount({
       signer: aSigner({ previousSignatures: () => Promise.reject(new Error("ilegible")) }),
@@ -91,6 +148,22 @@ describe("useSignatureReading", () => {
     act(() => result.current.view("doc-1"));
 
     await waitFor(() => expect(result.current.reading?.kind).toBe("failed"));
+  });
+
+  it("keeps the detail of the failure to read", async () => {
+    const { result } = mount({
+      signer: aSigner({
+        previousSignatures: () =>
+          Promise.reject({ situation: "bridgeFailed", detail: "SAF_99: el puente no responde" }),
+      }),
+    });
+
+    act(() => result.current.view("doc-1"));
+
+    await waitFor(() => expect(result.current.reading?.kind).toBe("failed"));
+    expect(result.current.reading).toMatchObject({
+      failure: { situation: "bridgeFailed", detail: "SAF_99: el puente no responde" },
+    });
   });
 
   it("takes the destination folder from the recents row of the document", () => {
