@@ -11,6 +11,8 @@ import {
   SignedMarkIcon,
 } from "../design-system/icons";
 import { Menu, MenuItem } from "../design-system/Menu";
+import { SplitButton } from "../design-system/SplitButton";
+import { Tab, Tabs } from "../design-system/Tabs";
 import type { DocumentInHand } from "./document";
 import "./DocumentTabs.css";
 import { RecentRows } from "./RecentRows";
@@ -67,7 +69,7 @@ export function DocumentTabs({
           onClearRecents={onClearRecents}
         />
       )}
-      <div className="document-tabs__list" role="tablist">
+      <Tabs className="document-tabs__list">
         {visible.map((tab) => {
           const active = tab.id === activeId;
           const locked = signingLocked && !active;
@@ -78,10 +80,8 @@ export function DocumentTabs({
               className={active ? "document-tab document-tab--active" : "document-tab"}
               title={locked ? t("tabs.lockedWhileSigning") : tab.name}
             >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={active}
+              <Tab
+                selected={active}
                 aria-disabled={locked}
                 className="document-tab__select"
                 disabled={locked}
@@ -96,7 +96,7 @@ export function DocumentTabs({
                     <SignedMarkIcon />
                   </span>
                 )}
-              </button>
+              </Tab>
               <button
                 type="button"
                 className="document-tab__close"
@@ -108,7 +108,7 @@ export function DocumentTabs({
             </div>
           );
         })}
-      </div>
+      </Tabs>
       {hidden.length > 0 && <HiddenTabsMenu hidden={hidden} onActivate={onActivate} />}
     </nav>
   );
@@ -192,78 +192,46 @@ function SplitOpenButton({
   onClearRecents,
 }: OpenMenuProps) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
   const [alignRight, setAlignRight] = useState(false);
-  const container = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const menuId = useId();
-  const hasRecents = recents.length > 0;
-  const close = useCallback(() => setOpen(false), []);
+  const anchor = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (!open || !container.current) return;
-    const { left } = container.current.getBoundingClientRect();
-    setAlignRight(left + MENU_WIDTH > window.innerWidth);
-  }, [open]);
+    const measure = () => {
+      if (!anchor.current) return;
+      const { left } = anchor.current.getBoundingClientRect();
+      setAlignRight(left + MENU_WIDTH > window.innerWidth);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
-  const choose = (action: () => void) => {
-    close();
-    action();
-  };
+  const items =
+    recents.length > 0 ? (
+      <>
+        <span className="rf-label open-menu__heading">{t("recents.heading")}</span>
+        <RecentRows recents={recents} openIds={openIds} inMenu onSelect={onSelectRecent} />
+        <hr className="rf-divider" />
+        <MenuItem className="open-menu__clear" onClick={onClearRecents}>
+          {t("recents.clear")}
+        </MenuItem>
+      </>
+    ) : undefined;
 
   return (
-    <div className="document-tabs__split" ref={container}>
-      <button
-        type="button"
-        className="document-tabs__split-open"
+    <div className="document-tabs__split-anchor" ref={anchor}>
+      <SplitButton
+        variant="ghost"
+        className="document-tabs__split"
+        menuClassName={alignRight ? "open-menu open-menu--right" : "open-menu"}
         title={t("tabs.openPdfShortcut")}
-        onClick={onOpen}
+        onAction={onOpen}
+        menuLabel={t("recents.heading")}
+        items={items}
       >
         <FolderIcon size={15} />
         {t("tabs.openPdf")}
-      </button>
-      {hasRecents && (
-        <>
-          <span className="document-tabs__split-divider" aria-hidden="true" />
-          <button
-            type="button"
-            ref={trigger}
-            className={
-              open
-                ? "document-tabs__split-arrow document-tabs__split-arrow--open"
-                : "document-tabs__split-arrow"
-            }
-            title={t("recents.heading")}
-            aria-label={t("recents.heading")}
-            aria-haspopup="menu"
-            aria-expanded={open}
-            aria-controls={open ? menuId : undefined}
-            onClick={() => setOpen((was) => !was)}
-          >
-            <ChevronDownIcon size={14} strokeWidth={2} />
-          </button>
-          <Menu
-            open={open}
-            onClose={close}
-            anchorRef={container}
-            returnFocusRef={trigger}
-            id={menuId}
-            className={alignRight ? "open-menu open-menu--right" : "open-menu"}
-          >
-            <span className="rf-label open-menu__heading">{t("recents.heading")}</span>
-            <RecentRows
-              recents={recents}
-              openIds={openIds}
-              inMenu
-              onSelect={(row) => choose(() => onSelectRecent(row))}
-            />
-            <hr className="rf-divider" />
-            <MenuItem className="open-menu__clear" onClick={() => choose(onClearRecents)}>
-              {t("recents.clear")}
-            </MenuItem>
-          </Menu>
-        </>
-      )}
+      </SplitButton>
     </div>
   );
 }

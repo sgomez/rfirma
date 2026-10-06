@@ -52,74 +52,60 @@
   transform: rotate(180deg);
 }
 
-.document-tabs__split {
+.document-tabs__split-anchor {
   position: relative;
   display: flex;
   flex: none;
-  align-items: stretch;
-  height: 32px;
   margin-bottom: 6px;
   margin-right: 12px;
+}
+
+.document-tabs__split {
+  height: 32px;
   border: 1px solid var(--rf-border-strong);
   border-radius: var(--rf-radius-md);
   background: var(--rf-bg);
 }
 
-.document-tabs__split-open {
-  display: flex;
-  align-items: center;
+.document-tabs__split .rf-split__action {
   gap: 7px;
+  min-height: 0;
   padding: 0 10px 0 9px;
   border: 0;
   border-radius: var(--rf-radius-md) 0 0 var(--rf-radius-md);
-  background: none;
-  font-family: inherit;
-  font-size: var(--rf-ui-size);
   font-weight: var(--rf-ui-strong-weight);
   color: var(--rf-text);
-  cursor: pointer;
 }
 
-.document-tabs__split-open:only-child {
+.document-tabs__split .rf-split__action:only-child {
   border-radius: var(--rf-radius-md);
 }
 
-.document-tabs__split-open:hover {
+.document-tabs__split .rf-split__action:hover {
   background: var(--rf-border-subtle);
 }
 
-.document-tabs__split-divider {
+.document-tabs__split .rf-split__divider {
   width: 1px;
   height: 16px;
   margin: auto 0;
-  background: var(--rf-border-subtle);
 }
 
-.document-tabs__split-arrow {
-  display: flex;
+.document-tabs__split .rf-split__arrow {
   flex: none;
-  align-items: center;
   justify-content: center;
   width: 30px;
+  min-height: 0;
+  padding: 0;
   border: 0;
   border-radius: 0 var(--rf-radius-md) var(--rf-radius-md) 0;
-  background: none;
   color: var(--rf-text);
-  cursor: pointer;
 }
 
-.document-tabs__split-arrow svg {
-  transition: transform var(--rf-duration-fast);
-}
-
-.document-tabs__split-arrow:hover,
-.document-tabs__split-arrow--open {
+.document-tabs__split .rf-split__arrow:hover,
+.document-tabs__split .rf-split__arrow[aria-expanded="true"] {
   background: var(--rf-surface);
   box-shadow: inset 0 0 0 1px var(--rf-border-subtle);
-}
-
-.document-tabs__split-arrow--open svg {
-  transform: rotate(180deg);
 }
 
 .document-tab {
@@ -158,12 +144,15 @@
   gap: 8px;
   min-width: 0;
   height: 100%;
+  min-height: 0;
   padding: 0;
   border: 0;
+  border-radius: 0;
   background: none;
   font: inherit;
   color: inherit;
   cursor: inherit;
+  opacity: 1;
 }
 
 .document-tab__icon,
