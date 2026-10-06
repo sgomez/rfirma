@@ -262,13 +262,13 @@ function LocalBatchItemsList({ items }: { items: readonly LocalBatchItem[] }) {
   const { t } = useTranslation();
 
   return (
-    <ul className="rf-stack sede-consent__batch-items">
+    <Stack as="ul" className="sede-consent__batch-items">
       {items.map((item) => (
         <li key={item.id} className="rf-body sede-consent__batch-item">
           {[item.id, batchItemLabel(t, item)].join(" — ")}
         </li>
       ))}
-    </ul>
+    </Stack>
   );
 }
 

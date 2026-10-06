@@ -1,6 +1,7 @@
 //! El cuerpo y el pie de cada momento (`SedeBody`), con su tecla Escape, y los hooks que comparten los momentos: el cierre solo del desenlace, la cuenta atrás de consentir y el botón por defecto.
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Row } from "../design-system/Row";
 import { CONSENT_COUNTDOWN_SECONDS, OUTCOME_CLOSE_MS } from "./errand";
 
 /**
@@ -30,13 +31,13 @@ export function SedeBody({
       <div className={`sede-window__body${flush ? " sede-window__body--flush" : ""}`}>
         {children}
       </div>
-      <footer
-        className={`rf-row rf-gap-xs sede-window__footer${
-          steadyFooter ? " sede-window__footer--steady" : ""
-        }`}
+      <Row
+        as="footer"
+        gap="xs"
+        className={`sede-window__footer${steadyFooter ? " sede-window__footer--steady" : ""}`}
       >
         {footer}
-      </footer>
+      </Row>
     </>
   );
 }
