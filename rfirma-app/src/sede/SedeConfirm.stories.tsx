@@ -8,6 +8,7 @@ import { momentStory, sedeErrand, sedeViewActions } from "./testing/fixtures/sed
 const meta = {
   title: "Flujos/Sede/Confirmar",
   ...sedeMomentMeta,
+  parameters: { ...sedeMomentMeta.parameters, designSync: { cardMode: "column" } },
   component: SedeConfirm,
   args: { onConfirm: sedeViewActions.onConfirmSignatures, onCancel: sedeViewActions.onCancel },
 } satisfies Meta<typeof SedeConfirm>;

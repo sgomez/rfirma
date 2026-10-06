@@ -1,0 +1,31 @@
+/* Especificidad 0 con `:where()`: quien usa el botón partido lo ajusta con una sola clase suya. */
+:where(.rf-split) {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+:where(.rf-split__action) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+:where(.rf-split__arrow) {
+  padding: 0 8px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+:where(.rf-split__arrow svg) {
+  transition: transform var(--rf-duration-fast);
+}
+
+:where(.rf-split__arrow[aria-expanded="true"] svg) {
+  transform: rotate(180deg);
+}
+
+:where(.rf-split__divider) {
+  width: 1px;
+  margin: 6px 0;
+  background: var(--rf-border-subtle);
+}

@@ -10,6 +10,7 @@ import { momentStory, sedeErrand, sedeViewActions } from "./testing/fixtures/sed
 const meta = {
   title: "Flujos/Sede/Sin certificado",
   ...sedeMomentMeta,
+  parameters: { ...sedeMomentMeta.parameters, designSync: { cardMode: "column" } },
   component: SedeNoCertificate,
   args: {
     origin: "sede.ejemplo.gob.es",

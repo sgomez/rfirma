@@ -21,7 +21,7 @@ const meta = {
   title: "Flujos/Firma/SignaturesPanel",
   component: SignaturesPanel,
   decorators: [inPanelColumn],
-  parameters: panelStoryParameters,
+  parameters: { ...panelStoryParameters, designSync: { cardMode: "column" } },
   args: {
     documentName: "contrato.pdf",
     destination: WRITABLE_DESTINATION,

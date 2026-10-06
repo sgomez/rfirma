@@ -97,8 +97,10 @@ Lo que hay en `window.RFirma`, por capa y título de historia.
 | Primitivos | ProgressBar | `ProgressBar` |
 | Primitivos | Row | `Row` |
 | Primitivos | Select | `Select` |
+| Primitivos | SplitButton | `SplitButton` |
 | Primitivos | Stack | `Stack` |
 | Primitivos | Switch | `Switch` |
+| Primitivos | Tabs | `Tabs` |
 <!-- design-sync:catalog:end -->
 
 ### Dónde mirar

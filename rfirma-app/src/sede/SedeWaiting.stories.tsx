@@ -8,6 +8,7 @@ import { momentStory, sedeErrand, sedeViewActions } from "./testing/fixtures/sed
 const meta = {
   title: "Flujos/Sede/Espera",
   ...sedeMomentMeta,
+  parameters: { ...sedeMomentMeta.parameters, designSync: { cardMode: "column" } },
   component: SedeWaiting,
   args: { onInstallLocalCa: sedeViewActions.onInstallLocalCa, onCancel: sedeViewActions.onCancel },
 } satisfies Meta<typeof SedeWaiting>;
