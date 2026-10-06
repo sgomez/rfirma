@@ -1,24 +1,32 @@
-//! Las historias de la sede antes de la petición: el aviso del cliente web antiguo y la espera del canal, con sus dos reparaciones.
+//! Las historias de la sede en la espera del canal, con sus dos reparaciones.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
-import type { SedeView } from "./SedeView";
-import { sedeErrand } from "./testing/fixtures/sedeView";
+import { sedeMomentMeta } from "../../.storybook/decorators/sedeWindow";
+import { SedeWaiting } from "./SedeWaiting";
+import { momentStory, sedeErrand, sedeViewActions } from "./testing/fixtures/sedeView";
 
-const meta = { title: "Flujos/Sede/Espera", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
+const meta = {
+  title: "Flujos/Sede/Espera",
+  ...sedeMomentMeta,
+  component: SedeWaiting,
+  args: { onInstallLocalCa: sedeViewActions.onInstallLocalCa, onCancel: sedeViewActions.onCancel },
+} satisfies Meta<typeof SedeWaiting>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const OldWebClient: Story = { args: { errand: sedeErrand({ kind: "oldWebClient" }) } };
+export const Waiting: Story = momentStory(
+  { moment: "connecting" },
+  sedeErrand({ kind: "waiting" }, { origin: null }),
+);
 
-export const Waiting: Story = {
-  args: { errand: sedeErrand({ kind: "waiting" }, { origin: null }) },
-};
+export const Unreachable: Story = momentStory(
+  { moment: "unreachable" },
+  sedeErrand({ kind: "unreachable" }),
+);
 
-export const Unreachable: Story = { args: { errand: sedeErrand({ kind: "unreachable" }) } };
-
-export const NoChannel: Story = {
-  args: { errand: sedeErrand({ kind: "noChannel", reason: "channelNotOpened" }) },
-};
+export const NoChannel: Story = momentStory(
+  { moment: "unreachable" },
+  sedeErrand({ kind: "noChannel", reason: "channelNotOpened" }),
+);

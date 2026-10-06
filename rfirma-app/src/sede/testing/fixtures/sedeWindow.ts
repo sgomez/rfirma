@@ -91,7 +91,10 @@ interface StoryArgs {
 }
 
 /** El trámite de una historia, para montar su estado en un test de comportamiento. */
-export function errandOf({ args }: { args: StoryArgs }): Errand {
+export function errandOf(story: { args: object; parameters?: object }): Errand {
+  const args: StoryArgs = story.args;
+  const parameters: { errand?: Errand } | undefined = story.parameters;
+  if (parameters?.errand !== undefined) return parameters.errand;
   if (args.errand !== undefined) return args.errand;
   const stage =
     args.outcome === undefined ? args.stage : { kind: "outcome" as const, outcome: args.outcome };
@@ -105,7 +108,7 @@ export function errandOf({ args }: { args: StoryArgs }): Errand {
 }
 
 /** Un puerto guionizado que arranca en el trámite de una historia. */
-export function scriptedFrom(story: { args: StoryArgs }) {
+export function scriptedFrom(story: { args: object; parameters?: object }) {
   const errand = errandOf(story);
   return scriptedErrand(errand.stage, errand);
 }

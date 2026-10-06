@@ -6,6 +6,7 @@ import * as confirmModule from "./SedeConfirm.stories";
 import * as consentModule from "./SedeConsent.stories";
 import * as markingModule from "./SedeMarking.stories";
 import * as noCertificateModule from "./SedeNoCertificate.stories";
+import * as oldWebClientModule from "./SedeOldWebClient.stories";
 import * as outcomeModule from "./SedeOutcome.stories";
 import * as signingModule from "./SedeSigning.stories";
 import * as waitingModule from "./SedeWaiting.stories";
@@ -14,7 +15,8 @@ import { scriptedFrom } from "./testing/fixtures/sedeWindow";
 
 /** Grada A: Escape es el botón de cancelar o cerrar de cada momento. */
 
-const { OldWebClient, Waiting, Unreachable } = composeStories(waitingModule);
+const { OldWebClient } = composeStories(oldWebClientModule);
+const { Waiting, Unreachable } = composeStories(waitingModule);
 const { Consent } = composeStories(consentModule);
 const { ShadowAttackSuspect } = composeStories(confirmModule);
 const { Signing, Returning } = composeStories(signingModule);

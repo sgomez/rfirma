@@ -50,7 +50,7 @@ Componentes `*Icon` con prop `size` en px: `CheckCircleIcon`, `CrossCircleIcon`,
 
 ### Pantallas
 
-`SedeView` es la ventana que abre una sede electrónica (520 × 420), con el momento del trámite en la prop `errand` y sus órdenes como props: no recibe ningún puerto. Úsala entera cuando el diseño sea esa ventana, con el `errand` del momento que toque; sus textos salen del catálogo. Las pantallas nuevas se componen con los primitivos de arriba, el texto con sus clases y los iconos.
+La ventana que abre una sede electrónica (520 × 420) se compone de momentos, cada uno un componente con props finas y sus órdenes como props, sin puertos: `SedeWaiting`, `SedeConsent`, `SedeMarking`, `SedeOutcome` y los demás `Sede*` del catálogo. Úsalos cuando el diseño sea uno de esos momentos; sus textos salen del catálogo. Las pantallas nuevas se componen con los primitivos de arriba, el texto con sus clases y los iconos.
 
 ### Catálogo publicado
 
@@ -76,13 +76,15 @@ Lo que hay en `window.RFirma`, por capa y título de historia.
 | Flujos | Firma / SigningProgressDialog | `SigningProgressDialog` |
 | Flujos | Firma / UnsealedPagesDialog | `UnsealedPagesDialog` |
 | Flujos | Firma / VisibleSignatureFieldset | `VisibleSignatureFieldset` |
-| Flujos | Sede / Confirmar | `SedeView` |
+| Flujos | Sede / Cliente antiguo | `SedeOldWebClient` |
+| Flujos | Sede / Confirmar | `SedeConfirm` |
 | Flujos | Sede / Consentimiento | `SedeConsent` |
 | Flujos | Sede / Desenlace | `SedeOutcome` |
-| Flujos | Sede / Espera | `SedeView` |
-| Flujos | Sede / Firmando | `SedeView` |
-| Flujos | Sede / Marcar la firma | `SedeView` |
-| Flujos | Sede / Sin certificado | `SedeView` |
+| Flujos | Sede / Espera | `SedeWaiting` |
+| Flujos | Sede / Firmando | `SedeSigning` |
+| Flujos | Sede / Guardar y cargar | `SedeTransfer` |
+| Flujos | Sede / Marcar la firma | `SedeMarking` |
+| Flujos | Sede / Sin certificado | `SedeNoCertificate` |
 | Flujos | Ventana principal / Header | `Header` |
 | Flujos | Ventana principal / MainWindow | `MainWindow` |
 | Primitivos | Badge | `Badge` |
@@ -102,7 +104,7 @@ Lo que hay en `window.RFirma`, por capa y título de historia.
 ### Dónde mirar
 
 - `styles.css` e `_ds_bundle.css`: todas las clases y tokens.
-- `components/sede/SedeView/SedeView.prompt.md`: los estados de la ventana de sede.
+- `components/sede/<Momento>/<Momento>.prompt.md`: los estados de cada momento de la ventana de sede.
 
 ### Ejemplo
 
