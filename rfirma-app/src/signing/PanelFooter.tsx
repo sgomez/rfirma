@@ -5,12 +5,11 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { AlertIcon, FileIcon, FolderIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
-import type { Certificate } from "./certificate";
+import type { Certificate, CertificateState } from "./certificate";
 import { isUsable } from "./certificate";
 import type { Destination } from "./destination";
 import { shortenDestination } from "./destination";
 import type { SigningFailure } from "./failure";
-import type { CertificateState } from "./SigningPanel";
 
 interface PanelFooterDestinationProps {
   destination: Destination;

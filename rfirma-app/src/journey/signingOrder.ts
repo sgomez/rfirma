@@ -1,11 +1,10 @@
 //! La geometría de la página y la orden de firma armada en un solo sitio, y el certificado que se elige de los encontrados. Sin React.
 
 import type { Placement } from "../placement/pageSets";
-import type { Certificate } from "../signing/certificate";
+import type { Certificate, CertificateState } from "../signing/certificate";
 import { isUsable } from "../signing/certificate";
 import type { SigningOrder } from "../signing/flow";
 import { base64Of, type Rubric } from "../signing/rubric";
-import type { CertificateState } from "../signing/SigningPanel";
 import type { VisibleSignature } from "../signing/visibleSignature";
 
 /**
