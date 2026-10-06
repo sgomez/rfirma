@@ -1,5 +1,6 @@
 import { composeStories } from "@storybook/react-vite";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import * as stories from "./SigningProgressDialog.stories";
@@ -49,4 +50,16 @@ describe("SigningProgressDialog", () => {
       expect(bar).toHaveAttribute("aria-valuemax", "3");
     },
   );
+
+  it("ignores Enter and Escape while the signature runs", async () => {
+    renderWithCatalog(<Sign />);
+
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.getByRole("dialog", { name: "Firmando el documento…" })).toHaveFocus();
+    expect(screen.getByRole("listitem", { current: "step" })).toHaveTextContent(
+      "Firmando en la tarjeta",
+    );
+  });
 });
