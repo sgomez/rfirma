@@ -2,6 +2,7 @@
 
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import {
   AlertIcon,
@@ -23,7 +24,7 @@ import {
   type SiteDocument,
   type SiteOutcome,
 } from "./errand";
-import { SedeBody, useDefaultButton, useOutcomeClock } from "./SedeFrame";
+import { SedeBody, useOutcomeClock } from "./SedeFrame";
 
 interface SedeOutcomeProps {
   origin: string | null;

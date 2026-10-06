@@ -1,4 +1,4 @@
-//! El cuerpo y el pie de cada momento (`SedeBody`), con su tecla Escape, y los hooks que comparten los momentos: el cierre solo del desenlace, la cuenta atrás de consentir y el botón por defecto.
+//! El cuerpo y el pie de cada momento (`SedeBody`), con su tecla Escape, y los hooks que comparten los momentos: el cierre solo del desenlace y la cuenta atrás de consentir.
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Row } from "../design-system/Row";
@@ -73,21 +73,6 @@ function useEscapeKey(onEscape: (() => void) | undefined) {
     document.addEventListener("keydown", listener);
     return () => document.removeEventListener("keydown", listener);
   }, []);
-}
-
-/** El botón por defecto del momento: el foco, en cuanto se puede pulsar y si nadie lo ha llevado a otro sitio. */
-export function useDefaultButton(enabled = true) {
-  const button = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (enabled && focusIsUnclaimed()) button.current?.focus();
-  }, [enabled]);
-
-  return button;
-}
-
-function focusIsUnclaimed(): boolean {
-  return document.activeElement === null || document.activeElement === document.body;
 }
 
 /** Los segundos que le faltan al botón de consentir para activarse; cero sin cuenta atrás. */

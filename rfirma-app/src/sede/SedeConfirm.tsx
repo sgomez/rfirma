@@ -3,11 +3,12 @@
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { AlertIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
-import { SedeBody, useDefaultButton } from "./SedeFrame";
+import { SedeBody } from "./SedeFrame";
 
 interface SedeConfirmProps {
   messageCode: string;

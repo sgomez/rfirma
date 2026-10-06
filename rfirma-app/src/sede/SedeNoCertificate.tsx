@@ -1,13 +1,14 @@
 //! 5 · Sin certificado utilizable, porque no hay ninguno o porque la sede los excluyó todos, con sus salidas: instalar otro, volver a buscar o cerrar.
 
 import { useTranslation } from "react-i18next";
+import { useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { NoCertificateReason } from "./errand";
-import { SedeBody, useDefaultButton } from "./SedeFrame";
+import { SedeBody } from "./SedeFrame";
 
 interface SedeNoCertificateProps {
   origin: string | null;

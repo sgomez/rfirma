@@ -11,6 +11,7 @@ import { PreviousSignaturesNotice } from "../signing/PreviousSignaturesNotice";
 import { formatSize } from "../signing/panelFormat";
 // `PreviousSignaturesNotice` no trae su propia hoja: la sede no monta `SigningPanel.tsx`.
 import "../signing/SigningPanel.css";
+import { useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
@@ -24,7 +25,7 @@ import type {
   TerminalOrder,
 } from "./errand";
 import { consentActionKey } from "./errand";
-import { SedeBody, useConsentCountdown, useDefaultButton } from "./SedeFrame";
+import { SedeBody, useConsentCountdown } from "./SedeFrame";
 
 interface SedeConsentProps {
   origin: string | null;
