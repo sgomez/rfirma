@@ -1,7 +1,7 @@
 //! Las historias del selector de certificado: cerrado con y sin elegido, buscando, deshabilitado y abierto con la lista agrupada.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { fn } from "storybook/test";
 import { CertificateSelect } from "./CertificateSelect";
 import {
   ENTITY_CERTIFICATE,
@@ -41,9 +41,4 @@ export const Searching: Story = { args: { certificates: [], chosen: null, search
 
 export const Disabled: Story = { args: { disabled: true } };
 
-export const Open: Story = {
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("combobox"));
-    await expect(within(canvasElement.ownerDocument.body).getByRole("listbox")).toBeVisible();
-  },
-};
+export const Open: Story = { args: { defaultOpen: true } };

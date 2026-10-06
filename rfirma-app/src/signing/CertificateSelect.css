@@ -1,57 +1,4 @@
-/* El selector de certificado: medidas de docs/design/panel-de-firma.md § Certificado. */
-
-.certificate-select {
-  gap: 6px;
-}
-
-.certificate-select__box,
-.certificate-select__search {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 52px;
-  border-radius: var(--rf-radius-md);
-  background: var(--rf-bg);
-  color: var(--rf-text);
-}
-
-.certificate-select__box {
-  gap: 10px;
-  padding: 6px 12px;
-  border: 1px solid var(--rf-border-strong);
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.certificate-select__search {
-  gap: 8px;
-  padding: 0 12px;
-  border: 2px solid var(--rf-primary);
-}
-
-.certificate-select__search input {
-  flex: 1;
-  min-width: 0;
-  padding: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--rf-text);
-  font-family: inherit;
-  font-size: var(--rf-ui-size);
-}
-
-.certificate-select__search input:focus-visible {
-  outline: none;
-}
-
-.certificate-select__search-icon,
-.certificate-select__arrow {
-  display: flex;
-  flex: none;
-  color: var(--rf-text-muted);
-}
+/* La caja cerrada del selector de certificado: medidas de docs/design/panel-de-firma.md § Certificado. */
 
 .certificate-select__text {
   display: flex;
@@ -79,10 +26,6 @@
   font-size: var(--rf-ui-size);
 }
 
-.certificate-select__box:disabled {
-  cursor: default;
-}
-
 .certificate-select__spinner {
   display: flex;
   flex: none;
@@ -100,70 +43,4 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-/* En un portal y con `position: fixed`: la columna que se desplaza no la recorta (design-system.md § Desplegable). */
-.certificate-select__layer {
-  position: fixed;
-  z-index: 6;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  box-sizing: border-box;
-  padding: 6px;
-  overflow-y: auto;
-  border: 1px solid var(--rf-border-subtle);
-  border-radius: var(--rf-radius-lg);
-  background: var(--rf-bg);
-  box-shadow: var(--rf-shadow-elevated);
-}
-
-.certificate-select__count {
-  padding: 8px 10px 6px;
-}
-
-.certificate-select__empty {
-  padding: 12px 10px;
-  line-height: var(--rf-body-leading);
-}
-
-.certificate-select__list,
-.certificate-select__group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.certificate-select__group-label {
-  padding: 8px 10px 4px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-}
-
-.certificate-select__option {
-  display: flex;
-  gap: 12px;
-  padding: 10px;
-  border-radius: var(--rf-radius-md);
-  cursor: pointer;
-}
-
-.certificate-select__option--active {
-  outline: 1px solid var(--rf-border-strong);
-  outline-offset: -1px;
-}
-
-.certificate-select__option--chosen {
-  background: var(--rf-surface);
-}
-
-/* Atenuada por color y no por opacidad: el motivo en negrita tiene que leerse entero. */
-.certificate-select__option--unusable {
-  cursor: not-allowed;
-}
-
-.certificate-select__check {
-  display: flex;
-  flex: none;
-  color: var(--rf-primary);
 }

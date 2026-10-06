@@ -111,14 +111,14 @@ describe("CertificateSelect", () => {
 
     it("always opens downwards, even with little room below the box", async () => {
       const { container } = renderSelect({ listMaxHeight: 300 });
-      const frame = container.querySelector(".certificate-select__frame") as HTMLElement;
+      const frame = container.querySelector(".combobox__frame") as HTMLElement;
       vi.spyOn(frame, "getBoundingClientRect").mockReturnValue(
         DOMRect.fromRect({ x: 20, y: 300, width: 480, height: 52 }),
       );
 
       await userEvent.click(box());
 
-      const layer = document.querySelector(".certificate-select__layer") as HTMLElement;
+      const layer = document.querySelector(".combobox__layer") as HTMLElement;
       expect(layer.style.top).toBe("356px");
       expect(layer.style.bottom).toBe("");
       expect(layer.style.width).toBe("480px");
@@ -127,14 +127,14 @@ describe("CertificateSelect", () => {
 
     it("keeps the list inside the window, which is its ceiling", async () => {
       const { container } = renderSelect();
-      const frame = container.querySelector(".certificate-select__frame") as HTMLElement;
+      const frame = container.querySelector(".combobox__frame") as HTMLElement;
       vi.spyOn(frame, "getBoundingClientRect").mockReturnValue(
         DOMRect.fromRect({ x: 20, y: window.innerHeight - 252, width: 332, height: 52 }),
       );
 
       await userEvent.click(box());
 
-      const layer = document.querySelector(".certificate-select__layer") as HTMLElement;
+      const layer = document.querySelector(".combobox__layer") as HTMLElement;
       expect(layer.style.maxHeight).toBe("188px");
     });
 
@@ -153,6 +153,22 @@ describe("CertificateSelect", () => {
         expect.stringMatching(/^Carlos Peña/),
       ]);
       expect(within(unusable).getAllByRole("option")).toHaveLength(2);
+    });
+
+    it("keeps the «Disponibles» header with several certificates that are all usable", async () => {
+      renderSelect({ certificates: [personal, representative] });
+
+      await userEvent.click(box());
+
+      expect(screen.getByRole("group", { name: "Disponibles" })).toBeInTheDocument();
+    });
+
+    it("keeps the «No se pueden usar» header when no certificate is usable", async () => {
+      renderSelect({ certificates: [expired, revoked] });
+
+      await userEvent.click(box());
+
+      expect(screen.getByRole("group", { name: "No se pueden usar" })).toBeInTheDocument();
     });
 
     it("shows no group header when there is a single certificate", async () => {

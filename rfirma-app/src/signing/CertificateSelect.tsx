@@ -1,11 +1,9 @@
-//! El selector de certificado: la caja de dos líneas que al abrirse es un buscador, primer bloque del panel de firma y el mismo en la sede.
+//! El selector de certificado: el `Combobox` con la tarjeta de certificado por opción, primer bloque del panel de firma y el mismo en la sede.
 
 import type { TFunction } from "i18next";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckIcon, ChevronDownIcon, SearchIcon, SpinnerIcon } from "../design-system/icons";
-import { Popover } from "../design-system/Popover";
-import { Stack } from "../design-system/Stack";
+import { Combobox, type ComboboxOption } from "../design-system/Combobox";
+import { SpinnerIcon } from "../design-system/icons";
 import { CertificateCard, shortStatusWarning, storeLabel } from "./CertificateCard";
 import type { Certificate } from "./certificate";
 import {
@@ -26,6 +24,7 @@ interface CertificateSelectProps {
   /** Mientras se listan los certificados: la caja lo dice y no se abre. */
   searching?: boolean;
   disabled?: boolean;
+  defaultOpen?: boolean;
 }
 
 /** Con qué certificado se firma: la caja de dos líneas que al abrirse es un buscador (docs/design/panel-de-firma.md). */
@@ -36,245 +35,83 @@ export function CertificateSelect({
   listMaxHeight = 480,
   searching = false,
   disabled = false,
+  defaultOpen = false,
 }: CertificateSelectProps) {
   const { t, i18n } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [active, setActive] = useState(0);
-  const frame = useRef<HTMLDivElement>(null);
-  const box = useRef<HTMLButtonElement>(null);
-  const search = useRef<HTMLInputElement>(null);
-  const labelId = useId();
-  const listId = useId();
-  const optionId = useId();
+  const grouped = groupCertificates(certificates);
+  const availableLabel = t("panel.certificate.groups.available");
+  const unusableLabel = t("panel.certificate.groups.cannotUse");
 
-  const groups = groupCertificates(certificates);
-  const all = [...groups.available, ...groups.unusable];
-  const shown = all.filter((certificate) => matches(certificate, query, t));
-  const shownAvailable = shown.filter((certificate) => isUsable(certificate.status));
-  const shownUnusable = shown.filter((certificate) => !isUsable(certificate.status));
-  const withHeaders = certificates.length > 1;
-
-  const close = useCallback(() => {
-    setOpen(false);
-    setQuery("");
-  }, []);
-
-  const show = () => {
-    const at = chosen === null ? -1 : all.findIndex((one) => one.id === chosen.id);
-    setActive(Math.max(at, 0));
-    setOpen(true);
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    document.getElementById(`${optionId}-${active}`)?.scrollIntoView?.({ block: "nearest" });
-  }, [open, active, optionId]);
-
-  const choose = (index: number) => {
-    const certificate = shown[index];
-    if (certificate === undefined || !isUsable(certificate.status)) return;
-    onChoose(certificate);
-    close();
-  };
-
-  const onSearchKeyDown = (event: React.KeyboardEvent) => {
-    switch (event.key) {
-      case "ArrowDown":
-        event.preventDefault();
-        setActive((cursor) => Math.min(cursor + 1, shown.length - 1));
-        return;
-      case "ArrowUp":
-        event.preventDefault();
-        setActive((cursor) => Math.max(cursor - 1, 0));
-        return;
-      case "Enter":
-        event.preventDefault();
-        choose(active);
-        return;
-      default:
-    }
-  };
-
-  const renderOption = (certificate: Certificate, index: number) => {
+  const optionOf = (certificate: Certificate, group: string): ComboboxOption<Certificate> => {
     const usable = isUsable(certificate.status);
-    const selected = certificate.id === chosen?.id;
-    return (
-      <div
-        key={certificate.id}
-        id={`${optionId}-${index}`}
-        role="option"
-        tabIndex={-1}
-        aria-selected={selected}
-        aria-disabled={!usable}
-        title={
-          usable
-            ? rowTooltip(certificate, i18n.language, t)
-            : shortStatusWarning(certificate.status, i18n.language, t)
-        }
-        className={[
-          "certificate-select__option",
-          index === active ? "certificate-select__option--active" : "",
-          selected ? "certificate-select__option--chosen" : "",
-          usable ? "" : "certificate-select__option--unusable",
-        ]
-          .filter((piece) => piece !== "")
-          .join(" ")}
-        // `onPointerDown` y no `onClick`: el oyente que cierra al pulsar fuera también es de `pointerdown`.
-        onPointerDown={(event) => {
-          event.preventDefault();
-          choose(index);
-        }}
-        onPointerEnter={() => setActive(index)}
-      >
-        <CertificateCard certificate={certificate} />
-        {selected && (
-          <span className="certificate-select__check">
-            <CheckIcon size={16} strokeWidth={2} />
-          </span>
-        )}
-      </div>
-    );
+    return {
+      id: certificate.id,
+      item: certificate,
+      keywords: keywordsOf(certificate, t),
+      group,
+      disabled: !usable,
+      title: usable
+        ? rowTooltip(certificate, i18n.language, t)
+        : shortStatusWarning(certificate.status, i18n.language, t),
+    };
   };
-
-  const renderGroup = (label: string, members: readonly Certificate[], offset: number) => {
-    if (members.length === 0) return null;
-    const options = members.map((certificate, index) => renderOption(certificate, offset + index));
-    if (!withHeaders) return options;
-    return (
-      // biome-ignore lint/a11y/useSemanticElements: dentro de un `listbox` el grupo de opciones es `role="group"`; un `<fieldset>` no.
-      <div role="group" aria-label={label} className="certificate-select__group">
-        <span className="rf-label certificate-select__group-label" aria-hidden="true">
-          {label}
-        </span>
-        {options}
-      </div>
-    );
-  };
+  const options = [
+    ...grouped.available.map((certificate) => optionOf(certificate, availableLabel)),
+    ...grouped.unusable.map((certificate) => optionOf(certificate, unusableLabel)),
+  ];
 
   return (
-    <Stack className="certificate-select">
-      <span className="rf-label" id={labelId}>
-        {t("panel.certificate.title")}
-      </span>
-      <div className="certificate-select__frame" ref={frame}>
-        {open ? (
-          <div className="certificate-select__search">
-            <span className="certificate-select__search-icon">
-              <SearchIcon />
-            </span>
-            <input
-              ref={search}
-              type="text"
-              role="combobox"
-              aria-labelledby={labelId}
-              aria-expanded="true"
-              aria-controls={listId}
-              aria-autocomplete="list"
-              aria-activedescendant={shown.length > 0 ? `${optionId}-${active}` : undefined}
-              placeholder={t("panel.certificate.search")}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setActive(0);
-              }}
-              onKeyDown={onSearchKeyDown}
-            />
-          </div>
-        ) : (
-          <button
-            ref={box}
-            type="button"
-            className="certificate-select__box"
-            role="combobox"
-            aria-labelledby={labelId}
-            aria-expanded="false"
-            aria-haspopup="listbox"
-            disabled={searching || disabled}
-            onClick={show}
-            onKeyDown={(event) => {
-              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                event.preventDefault();
-                show();
-              }
-            }}
-          >
-            {searching ? (
-              <>
-                <span className="certificate-select__spinner">
-                  <SpinnerIcon size={16} />
-                </span>
-                <span className="rf-text-muted certificate-select__unchosen">
-                  {t("panel.certificate.loading")}
-                </span>
-              </>
-            ) : chosen === null ? (
-              <span className="rf-text-muted certificate-select__unchosen">
-                {t("panel.certificate.chooseOne")}
-              </span>
-            ) : (
-              <span className="certificate-select__text">
-                <span className="certificate-select__chosen">{certificateHeadline(chosen)}</span>
-                <span className="rf-body rf-text-muted certificate-select__ellipsis">
-                  {certificateCompactSubtitle(chosen, t)}
-                </span>
-              </span>
-            )}
-            <span className="certificate-select__arrow">
-              <ChevronDownIcon strokeWidth={1.8} />
-            </span>
-          </button>
-        )}
-      </div>
-      <Popover
-        open={open}
-        onClose={close}
-        anchorRef={frame}
-        initialFocus={search}
-        returnFocusRef={box}
-        restoreFocus="always"
-        portal={{ maxHeight: listMaxHeight }}
-        className="certificate-select__layer"
-      >
-        {query.trim() !== "" && shown.length > 0 && (
-          <span className="rf-body rf-text-muted certificate-select__count">
-            {t("panel.certificate.matches", { shown: shown.length, total: all.length })}
-          </span>
-        )}
-        {shown.length === 0 && (
-          <span className="rf-body rf-text-muted certificate-select__empty">
-            {t("panel.certificate.noMatch")}
-          </span>
-        )}
-        <div
-          className="certificate-select__list"
-          id={listId}
-          role="listbox"
-          aria-labelledby={labelId}
-        >
-          {renderGroup(t("panel.certificate.groups.available"), shownAvailable, 0)}
-          {renderGroup(
-            t("panel.certificate.groups.cannotUse"),
-            shownUnusable,
-            shownAvailable.length,
-          )}
-        </div>
-      </Popover>
-    </Stack>
+    <Combobox
+      label={t("panel.certificate.title")}
+      options={options}
+      value={chosen?.id ?? null}
+      onChange={onChoose}
+      renderOption={(certificate) => <CertificateCard certificate={certificate} />}
+      searchPlaceholder={t("panel.certificate.search")}
+      emptyMessage={t("panel.certificate.noMatch")}
+      countLabel={(shown, total) => t("panel.certificate.matches", { shown, total })}
+      listMaxHeight={listMaxHeight}
+      alwaysGroupHeaders
+      disabled={searching || disabled}
+      defaultOpen={defaultOpen}
+    >
+      {closedBox(searching, chosen, t)}
+    </Combobox>
   );
 }
 
-function fold(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase();
+function closedBox(searching: boolean, chosen: Certificate | null, t: TFunction) {
+  if (searching) {
+    return (
+      <>
+        <span className="certificate-select__spinner">
+          <SpinnerIcon size={16} />
+        </span>
+        <span className="rf-text-muted certificate-select__unchosen">
+          {t("panel.certificate.loading")}
+        </span>
+      </>
+    );
+  }
+  if (chosen === null) {
+    return (
+      <span className="rf-text-muted certificate-select__unchosen">
+        {t("panel.certificate.chooseOne")}
+      </span>
+    );
+  }
+  return (
+    <span className="certificate-select__text">
+      <span className="certificate-select__chosen">{certificateHeadline(chosen)}</span>
+      <span className="rf-body rf-text-muted certificate-select__ellipsis">
+        {certificateCompactSubtitle(chosen, t)}
+      </span>
+    </span>
+  );
 }
 
-function matches(certificate: Certificate, query: string, t: TFunction): boolean {
-  const wanted = fold(query.trim());
-  if (wanted === "") return true;
-  const haystack = [
+function keywordsOf(certificate: Certificate, t: TFunction): string[] {
+  return [
     certificate.holderName,
     certificate.entityName ?? "",
     certificate.organizationIdentifier ?? "",
@@ -283,7 +120,6 @@ function matches(certificate: Certificate, query: string, t: TFunction): boolean
     ...certificate.stores.map((store) => storeLabel(store, t)),
     certificate.entityName === null ? t("panel.certificate.personalKeyword") : "",
   ];
-  return haystack.some((piece) => fold(piece).includes(wanted));
 }
 
 function rowTooltip(certificate: Certificate, locale: string, t: TFunction): string {
