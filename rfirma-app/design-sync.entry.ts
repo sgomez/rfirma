@@ -28,7 +28,7 @@ export { CertificateCard } from "./src/signing/CertificateCard";
 export { CertificateSelect } from "./src/signing/CertificateSelect";
 export { SignAnywayDialog } from "./src/signing/SignAnywayDialog";
 export { SignaturesDialog } from "./src/signing/SignaturesDialog";
-export { SignedPanel } from "./src/signing/SignedPanel";
+export { SignaturesPanel } from "./src/signing/SignaturesPanel";
 export { SigningProgressDialog } from "./src/signing/SigningProgressDialog";
 export { UnsealedPagesDialog } from "./src/signing/UnsealedPagesDialog";
 export { StatusView } from "./src/status/StatusView";

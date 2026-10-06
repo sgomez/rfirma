@@ -2,7 +2,7 @@ import { composeStories } from "@storybook/react-vite";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import * as stories from "./SignedPanel.stories";
+import * as stories from "./SignaturesPanel.stories";
 
 const {
   JustSigned,
@@ -22,8 +22,8 @@ const cards = () =>
     /Firma \d/.test(item.textContent ?? ""),
   );
 
-describe("the signed panel, by state", () => {
-  describe("just signed", () => {
+describe("the signatures panel, by moment", () => {
+  describe("the acknowledgement", () => {
     it("heads the summary with the format and the count, and says when it was signed above", () => {
       renderWithCatalog(<JustSigned />);
 
@@ -89,7 +89,7 @@ describe("the signed panel, by state", () => {
     });
   });
 
-  describe("only verifying", () => {
+  describe("the signature reading", () => {
     it("keeps the plain wording of a finding and has no «Cambiar»", () => {
       renderWithCatalog(<VerifyWithProblems />);
 

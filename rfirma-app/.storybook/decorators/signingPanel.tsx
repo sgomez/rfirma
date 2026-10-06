@@ -38,7 +38,6 @@ export const UNWRITABLE_DESTINATION: Destination = {
 };
 
 export const panelActions = {
-  onChangeDestination: fn(),
   onSign: fn(),
   onOpenHelp: fn(),
 };
