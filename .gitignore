@@ -28,8 +28,9 @@ rustc-ice-*.txt
 # Vive en rfirma-app/src/design-system/bundle/ desde el #85. Fuera quedan los
 # artefactos de la herramienta que lo transporta.
 rfirma-app/src/design-system/bundle/_ds_needs_recompile
-# /design-sync (#1483): se versionan config.json, conventions.md y NOTES.md; lo
-# demás es referencia, caché o salida que se regenera en cada sincronización.
+# /design-sync (#1483): se versionan config.json, conventions.md, NOTES.md y el
+# sello selection.lock; lo demás es referencia, caché o salida que se regenera
+# en cada sincronización.
 .design-sync/sb-reference/
 .design-sync/learnings/
 .design-sync/.cache/
