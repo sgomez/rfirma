@@ -299,11 +299,11 @@ export function App({
               signedAt={acknowledgement.signedAt}
               signatures={acknowledgement.signatures}
               findings={acknowledgement.findings}
-              destination={journey.destination.value}
+              destination={acknowledgement.destination}
               onOpenDocument={acknowledgement.openDocument}
               onOpenFolder={acknowledgement.openFolder}
               onSign={acknowledgement.signAgain}
-              onChangeDestination={() => void journey.destination.chooseSingle()}
+              onChangeDestination={() => void acknowledgement.changeDestination()}
               failure={acknowledgement.openFailure}
               onOpenHelp={() => void externalDestinations.open("discussions")}
             />

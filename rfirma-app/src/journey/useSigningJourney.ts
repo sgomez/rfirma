@@ -138,6 +138,8 @@ export function useSigningJourney({
             signedAt: signFlow.signingInstant,
             signatures: outcome.signatures,
             findings: outcome.findings,
+            destination,
+            changeDestination: chooseSingleDestination,
             openDocument: () => outcome.opening.openDocument(),
             openFolder: () => outcome.opening.openFolder(),
             signAgain: outcome.signAgain,
