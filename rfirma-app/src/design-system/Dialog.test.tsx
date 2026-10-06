@@ -63,6 +63,7 @@ describe("Dialog actions on the keyboard", () => {
     render(<Confirm onSign={onSign} />);
 
     expect(screen.getByRole("button", { name: "Firmar" })).toHaveFocus();
+    screen.getByRole("dialog").focus();
     await userEvent.keyboard("{Enter}");
 
     expect(onSign).toHaveBeenCalledOnce();
@@ -105,8 +106,27 @@ describe("Dialog actions on the keyboard", () => {
     screen.getByRole("button", { name: "Activar", hidden: true }).click();
 
     expect(await screen.findByRole("button", { name: "Firmar" })).toHaveFocus();
+    screen.getByRole("dialog").focus();
     await userEvent.keyboard("{Enter}");
     expect(onSign).toHaveBeenCalledOnce();
+  });
+
+  it("ignores Enter while the primary sits in a disabled fieldset", async () => {
+    const onSign = vi.fn();
+    const sign = { current: null as HTMLButtonElement | null };
+    render(
+      <Dialog label="¿Firmar?" primary={sign}>
+        <fieldset disabled>
+          <button type="button" ref={sign} onClick={onSign}>
+            Firmar
+          </button>
+        </fieldset>
+      </Dialog>,
+    );
+
+    await userEvent.keyboard("{Enter}");
+
+    expect(onSign).not.toHaveBeenCalled();
   });
 
   it("leaves Enter to the button with the focus", async () => {
@@ -150,6 +170,7 @@ describe("Dialog actions on the keyboard", () => {
       </>,
     );
 
+    screen.getByRole("dialog", { name: "Dentro" }).focus();
     await userEvent.keyboard("{Enter}");
 
     expect(onInner).toHaveBeenCalledOnce();

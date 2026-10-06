@@ -32,7 +32,11 @@ function targetUsesEnter(event: KeyboardEvent): boolean {
 }
 
 function isPressable(button: HTMLButtonElement): boolean {
-  return button.isConnected && !button.disabled && button.getAttribute("aria-disabled") !== "true";
+  return (
+    button.isConnected &&
+    !button.matches(":disabled") &&
+    button.getAttribute("aria-disabled") !== "true"
+  );
 }
 
 /** El botón por defecto: el foco, en cuanto se puede pulsar y si nadie lo ha llevado a otro sitio. */
