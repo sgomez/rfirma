@@ -26,8 +26,8 @@
   flex: 1;
   min-width: 0;
   padding: 2px 0;
-  font-size: 13px;
-  line-height: 1.8;
+  font-size: var(--rf-body-size);
+  line-height: var(--rf-body-prose-leading);
   color: var(--rf-text);
   cursor: text;
   outline: none;
@@ -52,7 +52,7 @@
   min-height: 28px;
   height: 28px;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: var(--rf-body-size);
   gap: 4px;
 }
 
@@ -73,14 +73,14 @@
 
 .panel__phrase-option-name {
   flex: none;
-  font-size: 13px;
+  font-size: var(--rf-body-size);
 }
 
 .panel__phrase-option-sample {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--rf-caption-size);
   color: var(--rf-text-muted);
   text-align: right;
   text-overflow: ellipsis;

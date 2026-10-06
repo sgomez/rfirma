@@ -39,7 +39,7 @@
   background: transparent;
   color: var(--rf-text);
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--rf-ui-size);
 }
 
 .certificate-select__search input:focus-visible {
@@ -64,19 +64,19 @@
 .certificate-select__chosen,
 .certificate-select__ellipsis {
   overflow: hidden;
-  line-height: 1.3;
+  line-height: var(--rf-caption-leading);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .certificate-select__chosen {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--rf-ui-size);
+  font-weight: var(--rf-ui-strong-weight);
 }
 
 .certificate-select__unchosen {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--rf-ui-size);
 }
 
 .certificate-select__box:disabled {
@@ -124,7 +124,7 @@
 
 .certificate-select__empty {
   padding: 12px 10px;
-  line-height: 1.4;
+  line-height: var(--rf-body-leading);
 }
 
 .certificate-select__list,

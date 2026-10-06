@@ -37,8 +37,8 @@
   align-items: center;
   gap: 8px;
   color: var(--rf-text);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--rf-body-size);
+  font-weight: var(--rf-title-weight);
 }
 
 .sign-anyway-dialog__reason {

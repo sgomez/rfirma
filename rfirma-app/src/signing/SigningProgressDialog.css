@@ -54,7 +54,7 @@
 }
 
 .progress-dialog__stage--running .rf-prose {
-  font-weight: 700;
+  font-weight: var(--rf-title-weight);
 }
 
 /* Pendiente: atenuada. Hecha se queda con el color del texto y su ✓. */
