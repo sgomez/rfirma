@@ -1,6 +1,7 @@
-//! El cuerpo y el pie de cada momento (`SedeBody`), con su tecla Escape, y los hooks que comparten los momentos: el cierre solo del desenlace y la cuenta atrás de consentir.
+//! El cuerpo y el pie de cada momento (`SedeBody`), con su Intro y su Escape, y los hooks que comparten los momentos: el cierre solo del desenlace y la cuenta atrás de consentir.
 
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
+import { useActionKeys } from "../design-system/actionKeys";
 import { Row } from "../design-system/Row";
 import { CONSENT_COUNTDOWN_SECONDS, OUTCOME_CLOSE_MS } from "./errand";
 
@@ -16,15 +17,17 @@ export function SedeBody({
   footer,
   steadyFooter = false,
   flush = false,
+  primary,
   onEscape,
 }: {
   children: ReactNode;
   footer: ReactNode;
   steadyFooter?: boolean;
   flush?: boolean;
+  primary?: RefObject<HTMLButtonElement | null>;
   onEscape?: () => void;
 }) {
-  useEscapeKey(onEscape);
+  useActionKeys({ primary, onSecondary: onEscape });
 
   return (
     <>
@@ -58,21 +61,6 @@ export function useOutcomeClock(onClose: () => void, enabled = true) {
     const timer = setTimeout(() => latest.current(), OUTCOME_CLOSE_MS);
     return () => clearTimeout(timer);
   }, [enabled]);
-}
-
-/** Escape pulsa el botón de cancelar o cerrar del momento, salvo que un control ya lo haya atendido. */
-function useEscapeKey(onEscape: (() => void) | undefined) {
-  const latest = useRef(onEscape);
-  latest.current = onEscape;
-
-  useEffect(() => {
-    const listener = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      latest.current?.();
-    };
-    document.addEventListener("keydown", listener);
-    return () => document.removeEventListener("keydown", listener);
-  }, []);
 }
 
 /** Los segundos que le faltan al botón de consentir para activarse; cero sin cuenta atrás. */
