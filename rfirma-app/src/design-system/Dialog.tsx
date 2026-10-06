@@ -1,7 +1,7 @@
 //! El diálogo modal `rf-dialog` sobre su velo: foco dentro, tabulador que no sale, Intro en su primaria si la tiene y, si se puede cerrar, Escape.
 
-import { type ComponentPropsWithoutRef, type RefObject, useEffect, useRef } from "react";
-import { enterLayer, isTopLayer, pressPrimaryOnEnter } from "./actionKeys";
+import { type ComponentPropsWithoutRef, useEffect, useRef } from "react";
+import { enterLayer, isTopLayer, type PrimaryButton, pressPrimaryOnEnter } from "./actionKeys";
 import { classNames } from "./classNames";
 import { claimUnclaimedFocus } from "./useDefaultButton";
 
@@ -16,7 +16,7 @@ export type DialogProps = Omit<
   /** Lo que hace Escape; sin él, el diálogo no se cierra con el teclado. */
   onClose?: () => void;
   /** El botón que pulsa Intro y que recibe el foco en cuanto se puede pulsar; sin él, Intro no hace nada. */
-  primary?: RefObject<HTMLButtonElement | null>;
+  primary?: PrimaryButton;
   role?: DialogRole;
   /** La clase del velo, para quien lo coloca distinto. */
   scrimClassName?: string;
@@ -52,6 +52,17 @@ function keepTabInside(event: KeyboardEvent, dialog: HTMLElement) {
   }
 }
 
+function useFocusEachPrimaryOnce(primary: PrimaryButton | undefined) {
+  const focused = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const button = primary?.current;
+    if (button === null || button === undefined || button.disabled || button === focused.current)
+      return;
+    focused.current = button;
+    claimUnclaimedFocus(primary);
+  });
+}
+
 /** El diálogo modal sobre su velo; el más reciente es el único que atiende el teclado. */
 export function Dialog({
   label,
@@ -76,9 +87,7 @@ export function Dialog({
     };
   }, []);
 
-  useEffect(() => {
-    claimUnclaimedFocus(primary);
-  });
+  useFocusEachPrimaryOnce(primary);
 
   useEffect(() => {
     const onEnter = (event: KeyboardEvent) => {

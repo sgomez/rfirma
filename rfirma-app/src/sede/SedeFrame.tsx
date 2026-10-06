@@ -1,7 +1,7 @@
 //! El cuerpo y el pie de cada momento (`SedeBody`), con su Intro y su Escape, y los hooks que comparten los momentos: el cierre solo del desenlace y la cuenta atrás de consentir.
 
-import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
-import { useActionKeys } from "../design-system/actionKeys";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type PrimaryButton, useActionKeys } from "../design-system/actionKeys";
 import { Row } from "../design-system/Row";
 import { CONSENT_COUNTDOWN_SECONDS, OUTCOME_CLOSE_MS } from "./errand";
 
@@ -24,7 +24,7 @@ export function SedeBody({
   footer: ReactNode;
   steadyFooter?: boolean;
   flush?: boolean;
-  primary?: RefObject<HTMLButtonElement | null>;
+  primary?: PrimaryButton;
   onEscape?: () => void;
 }) {
   useActionKeys({ primary, onSecondary: onEscape });

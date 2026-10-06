@@ -1,6 +1,7 @@
 //! El botón por defecto de una pantalla o un diálogo: recibe el foco en cuanto se puede pulsar, si nadie lo ha llevado a otro sitio.
 
-import { type RefObject, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import type { PrimaryButton } from "./actionKeys";
 
 /** El botón por defecto: el foco, en cuanto se puede pulsar y si nadie lo ha llevado a otro sitio. */
 export function useDefaultButton(enabled = true) {
@@ -14,7 +15,7 @@ export function useDefaultButton(enabled = true) {
 }
 
 /** Da el foco al botón si se puede pulsar y el foco está en el documento o en un contenedor suyo que no se tabula. */
-export function claimUnclaimedFocus(button: RefObject<HTMLButtonElement | null> | undefined) {
+export function claimUnclaimedFocus(button: PrimaryButton | undefined) {
   const target = button?.current;
   if (target === null || target === undefined || target.disabled) return;
   if (focusIsUnclaimed(target)) target.focus();

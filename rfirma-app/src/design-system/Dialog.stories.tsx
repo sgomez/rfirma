@@ -3,6 +3,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useRef } from "react";
 import { inDialogWindow } from "../../.storybook/decorators/dialogWindow";
+import type { PrimaryButton } from "./actionKeys";
 import { Button } from "./Button";
 import { Dialog, type DialogProps } from "./Dialog";
 import { Row } from "./Row";
@@ -21,36 +22,32 @@ const meta = {
 
 export default meta;
 
-export const Closable: StoryObj<typeof meta> = {
-  args: {
-    onClose: () => {},
-    children: (
-      <>
-        <p className="rf-title">¿Firmar de todos modos?</p>
-        <p className="rf-prose">El documento tiene firmas que no son válidas.</p>
-        <Row style={{ justifyContent: "flex-end" }}>
-          <Button variant="ghost">Cancelar</Button>
-          <Button variant="primary">Firmar</Button>
-        </Row>
-      </>
-    ),
-  },
-};
-
-function ConfirmWithPrimary(args: DialogProps) {
-  const primary = useRef<HTMLButtonElement>(null);
+function ConfirmBody({ primary, onCancel }: { primary?: PrimaryButton; onCancel?: () => void }) {
   return (
-    <Dialog {...args} primary={primary}>
+    <>
       <p className="rf-title">¿Firmar de todos modos?</p>
       <p className="rf-prose">El documento tiene firmas que no son válidas.</p>
       <Row style={{ justifyContent: "flex-end" }}>
-        <Button variant="ghost" onClick={args.onClose}>
+        <Button variant="ghost" onClick={onCancel}>
           Cancelar
         </Button>
         <Button variant="primary" ref={primary}>
           Firmar
         </Button>
       </Row>
+    </>
+  );
+}
+
+export const Closable: StoryObj<typeof meta> = {
+  args: { onClose: () => {}, children: <ConfirmBody /> },
+};
+
+function ConfirmWithPrimary(args: DialogProps) {
+  const primary = useRef<HTMLButtonElement>(null);
+  return (
+    <Dialog {...args} primary={primary}>
+      <ConfirmBody primary={primary} onCancel={args.onClose} />
     </Dialog>
   );
 }

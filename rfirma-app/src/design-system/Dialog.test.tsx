@@ -58,6 +58,31 @@ function InlineConfirm({ onCancel }: { onCancel: () => void }) {
   return <p>¿Vaciar el almacén?</p>;
 }
 
+function InlineConfirmWithPrimary({
+  onConfirm = () => {},
+  onCancel = () => {},
+  disabled = false,
+  rendered = true,
+}: {
+  onConfirm?: () => void;
+  onCancel?: () => void;
+  disabled?: boolean;
+  rendered?: boolean;
+}) {
+  const primary = useRef<HTMLButtonElement>(null);
+  useActionKeys({ primary, onSecondary: onCancel });
+  return (
+    <>
+      <p>¿Vaciar el almacén?</p>
+      {rendered && (
+        <Button ref={primary} variant="primary" disabled={disabled} onClick={onConfirm}>
+          Vaciar
+        </Button>
+      )}
+    </>
+  );
+}
+
 function Pair({ onOuter, onInner }: { onOuter: () => void; onInner: () => void }) {
   return (
     <>
@@ -229,6 +254,15 @@ describe("Dialog", () => {
     expect(screen.getByRole("button", { name: "Cancelar" })).toHaveFocus();
   });
 
+  it("keeps the focus off its primary when it re-renders after the person clicked its text", async () => {
+    const { rerender } = render(<Confirm>Versión 1.0</Confirm>);
+
+    await userEvent.click(screen.getByText("Versión 1.0"));
+    rerender(<Confirm>Versión 1.1</Confirm>);
+
+    expect(screen.getByRole("button", { name: "Firmar" })).not.toHaveFocus();
+  });
+
   it("leaves Enter to the focused button", async () => {
     const onSign = vi.fn();
     const onCancel = vi.fn();
@@ -349,5 +383,46 @@ describe("Dialog", () => {
 
     expect(onCancel).toHaveBeenCalledOnce();
     expect(onSecondary).not.toHaveBeenCalled();
+  });
+
+  it("keeps Enter from its screen while the inline confirmation's primary is disabled", async () => {
+    const onPrimary = vi.fn();
+    const onConfirm = vi.fn();
+    render(
+      <Screen onPrimary={onPrimary} onSecondary={() => {}}>
+        <InlineConfirmWithPrimary onConfirm={onConfirm} disabled />
+      </Screen>,
+    );
+
+    await userEvent.keyboard("{Enter}");
+
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onPrimary).not.toHaveBeenCalled();
+  });
+
+  it("keeps Enter from its screen while the inline confirmation's primary is not on screen", async () => {
+    const onPrimary = vi.fn();
+    render(
+      <Screen onPrimary={onPrimary} onSecondary={() => {}}>
+        <InlineConfirmWithPrimary rendered={false} />
+      </Screen>,
+    );
+
+    await userEvent.keyboard("{Enter}");
+
+    expect(onPrimary).not.toHaveBeenCalled();
+  });
+
+  it("lets Enter reach the screen through an inline confirmation without a primary", async () => {
+    const onPrimary = vi.fn();
+    render(
+      <Screen onPrimary={onPrimary} onSecondary={() => {}}>
+        <InlineConfirm onCancel={() => {}} />
+      </Screen>,
+    );
+
+    await userEvent.keyboard("{Enter}");
+
+    expect(onPrimary).toHaveBeenCalledOnce();
   });
 });

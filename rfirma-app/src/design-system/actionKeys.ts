@@ -2,9 +2,12 @@
 
 import { type RefObject, useEffect, useRef, useState } from "react";
 
+/** La referencia al botón primario de una pantalla o un diálogo. */
+export type PrimaryButton = RefObject<HTMLButtonElement | null>;
+
 /** La primaria y la secundaria de una pantalla o un diálogo, cada una opcional. */
 export type ActionKeys = {
-  primary?: RefObject<HTMLButtonElement | null>;
+  primary?: PrimaryButton;
   onSecondary?: () => void;
 };
 
@@ -53,7 +56,7 @@ export function isTopLayer(layer: HTMLElement): boolean {
 /** Intro pulsa la primaria si nadie ha atendido la tecla, el foco no está en un control que la use y la primaria está activa. */
 export function pressPrimaryOnEnter(
   event: KeyboardEvent,
-  primary: RefObject<HTMLButtonElement | null> | undefined,
+  primary: PrimaryButton | undefined,
 ): boolean {
   if (event.key !== "Enter" || event.defaultPrevented || targetUsesEnter(event)) return false;
   const button = primary?.current;
@@ -78,37 +81,48 @@ function targetUsesEnter(event: KeyboardEvent): boolean {
   return event.target instanceof Element && event.target.closest(USES_ENTER) !== null;
 }
 
-type Registration = { order: number; actions: RefObject<ActionKeys> };
+type Registration = { mountOrder: number; actions: RefObject<ActionKeys> };
 
 const registrations: Registration[] = [];
-let renders = 0;
+let mounted = 0;
 
-function nextOrder(): number {
-  renders += 1;
-  return renders;
+// Un padre se monta antes que sus hijos: el orden de montaje anida como el árbol.
+function nextMountOrder(): number {
+  mounted += 1;
+  return mounted;
 }
 
 function answerInnermostFirst(event: KeyboardEvent) {
   if (layers.length > 0) return;
-  for (const { actions } of [...registrations].sort((a, b) => b.order - a.order)) {
-    const { primary, onSecondary } = actions.current;
-    if (pressPrimaryOnEnter(event, primary) || pressSecondaryOnEscape(event, onSecondary)) return;
-  }
+  const innermost = [...registrations]
+    .sort((a, b) => b.mountOrder - a.mountOrder)
+    .find(({ actions }) => declaresKey(event, actions.current));
+  if (innermost === undefined) return;
+  const { primary, onSecondary } = innermost.actions.current;
+  if (event.key === "Enter") pressPrimaryOnEnter(event, primary);
+  else pressSecondaryOnEscape(event, onSecondary);
+}
+
+function declaresKey(event: KeyboardEvent, { primary, onSecondary }: ActionKeys): boolean {
+  return (
+    (event.key === "Enter" && primary !== undefined) ||
+    (event.key === "Escape" && onSecondary !== undefined)
+  );
 }
 
 /** El atajo de una pantalla completa o de una confirmación dentro de ella: atiende el documento mientras no hay un diálogo delante, la más interior antes. */
 export function useActionKeys(actions: ActionKeys) {
   const latest = useRef(actions);
   latest.current = actions;
-  const [order] = useState(nextOrder);
+  const [mountOrder] = useState(nextMountOrder);
 
   useEffect(() => {
-    const registration = { order, actions: latest };
+    const registration = { mountOrder, actions: latest };
     registrations.push(registration);
     if (registrations.length === 1) document.addEventListener("keydown", answerInnermostFirst);
     return () => {
       registrations.splice(registrations.indexOf(registration), 1);
       if (registrations.length === 0) document.removeEventListener("keydown", answerInnermostFirst);
     };
-  }, [order]);
+  }, [mountOrder]);
 }
