@@ -1,0 +1,134 @@
+/* La lista desplegable con buscador: la apariencia del selector de certificado (docs/design/panel-de-firma.md). */
+
+.combobox {
+  gap: 6px;
+}
+
+.combobox__box,
+.combobox__search {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-bg);
+  color: var(--rf-text);
+}
+
+.combobox__box {
+  gap: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--rf-border-strong);
+  font-family: inherit;
+  font-size: var(--rf-ui-size);
+  text-align: left;
+  cursor: pointer;
+}
+
+.combobox__box:disabled {
+  cursor: default;
+}
+
+.combobox__search {
+  gap: 8px;
+  padding: 0 12px;
+  border: 2px solid var(--rf-primary);
+}
+
+.combobox__search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--rf-text);
+  font-family: inherit;
+  font-size: var(--rf-ui-size);
+}
+
+.combobox__search input:focus-visible {
+  outline: none;
+}
+
+.combobox__value {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.combobox__icon {
+  display: flex;
+  flex: none;
+  color: var(--rf-text-muted);
+}
+
+/* En un portal y con `position: fixed`: la columna que se desplaza no la recorta (design-system.md § Desplegable). */
+.combobox__layer {
+  position: fixed;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-lg);
+  background: var(--rf-bg);
+  box-shadow: var(--rf-shadow-elevated);
+}
+
+.combobox__count {
+  padding: 8px 10px 6px;
+}
+
+.combobox__empty {
+  padding: 12px 10px;
+  line-height: var(--rf-body-leading);
+}
+
+.combobox__list,
+.combobox__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.combobox__group-label {
+  padding: 8px 10px 4px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.combobox__option {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border-radius: var(--rf-radius-md);
+  cursor: pointer;
+}
+
+.combobox__option--active {
+  outline: 1px solid var(--rf-border-strong);
+  outline-offset: -1px;
+}
+
+.combobox__option--chosen {
+  background: var(--rf-surface);
+}
+
+.combobox__option--disabled {
+  color: var(--rf-text-muted);
+  cursor: not-allowed;
+}
+
+.combobox__check {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  color: var(--rf-primary);
+}

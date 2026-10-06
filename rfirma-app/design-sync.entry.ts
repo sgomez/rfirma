@@ -6,6 +6,7 @@ import "./src/app.css";
 export { Badge } from "./src/design-system/Badge";
 export { Button } from "./src/design-system/Button";
 export { Card } from "./src/design-system/Card";
+export { Combobox } from "./src/design-system/Combobox";
 export { DesignRoot } from "./src/design-system/DesignRoot";
 export { Dialog } from "./src/design-system/Dialog";
 export { Field } from "./src/design-system/Field";
