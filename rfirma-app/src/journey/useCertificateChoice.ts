@@ -1,8 +1,7 @@
 //! El certificado elegido en el desplegable, que dura lo que dura el listado del que salió y no se recuerda hasta firmar.
 
 import { useCallback, useMemo, useState } from "react";
-import type { Certificate } from "../signing/certificate";
-import type { CertificateState } from "../signing/SigningPanel";
+import type { Certificate, CertificateState } from "../signing/certificate";
 import type { CertificateListing } from "../signing/useCertificateListing";
 import { chosenFrom } from "./signingOrder";
 

@@ -3,7 +3,7 @@
 import { useTranslation } from "react-i18next";
 import { AlertIcon } from "../design-system/icons";
 import { ErrorNotice } from "../errors/ErrorNotice";
-import type { CertificateState } from "./SigningPanel";
+import type { CertificateState } from "./certificate";
 
 /**
  * El aviso de «sin certificados», arriba de la zona que se desliza

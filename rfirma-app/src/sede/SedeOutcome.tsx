@@ -14,7 +14,7 @@ import {
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
 import { errorText } from "../errors/errorMessage";
-import { formatSize } from "../signing/SigningPanel";
+import { formatSize } from "../signing/panelFormat";
 import {
   isSedeRefusal,
   OUTCOME_CLOSE_MS,

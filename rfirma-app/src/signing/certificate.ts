@@ -7,6 +7,7 @@
  */
 
 import type { TFunction } from "i18next";
+import type { NamedFailure } from "../errors/classify";
 
 /**
  * En qué estado está el certificado, decidido **antes** de pedir el PIN.
@@ -264,3 +265,29 @@ export function installedCertificates(
     .filter((certificate) => certificate.stores.includes("installed"))
     .sort(byHeadlineThenStore);
 }
+
+/**
+ * En qué punto está la elección del certificado. Son los estados de la ficha;
+ * «Listo» es `chosen` con un certificado en vigor.
+ *
+ * `failed` es el aterrizaje del rechazo: sin él la búsqueda que falla
+ * no tenía dónde caer y la ficha se quedaba en `loading` para siempre. No es lo
+ * mismo que `empty` —«no hay ninguno» y «no he podido buscarlos» son cosas
+ * distintas— y por eso son dos estados y no un booleano dentro de uno.
+ */
+export type CertificateState =
+  | { kind: "loading" }
+  | { kind: "empty" }
+  | { kind: "failed"; failure: NamedFailure }
+  /**
+   * Hay certificados y **ninguno elegido**, que es lo que pasa la primera vez
+   * con varios: el selector dice «Elige un certificado» y el botón de firmar
+   * sigue apagado. Elegir con qué identidad se firma un documento con validez
+   * jurídica no lo hace la aplicación por su cuenta.
+   */
+  | { kind: "unchosen"; certificates: readonly Certificate[] }
+  /**
+   * Uno elegido, **y los demás al lado**: el desplegable los sigue listando,
+   * porque cambiar de certificado es abrirlo otra vez y no un botón aparte.
+   */
+  | { kind: "chosen"; certificate: Certificate; certificates: readonly Certificate[] };
