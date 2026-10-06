@@ -46,6 +46,14 @@ export const sitesUnavailable: SignalRow = {
   signal: "siteSignature",
   value: "",
   verdict: "notApplicable",
+  detail: { kind: "handlerDiagnosis", desktopFile: "me.sgomez.rfirma.desktop" },
+};
+
+export const sitesUnavailableOutsideFlatpak: SignalRow = {
+  ...base,
+  signal: "siteSignature",
+  value: "",
+  verdict: "notApplicable",
 };
 
 export const sitesWithTwoCandidates: SignalRow = {

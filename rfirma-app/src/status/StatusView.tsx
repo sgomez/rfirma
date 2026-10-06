@@ -107,14 +107,20 @@ export function StatusView({
                     : "status-view__cell-verdict--muted"
                 }`}
               >
-                <span className="status-view__verdict-icon">{renderVerdictIcon(row.verdict)}</span>
-                <span
-                  className={`rf-body status-view__verdict-text ${
-                    demandsAttention(row.verdict) ? "status-view__verdict-text--strong" : ""
-                  }`}
-                >
-                  {verdictLabel(t, row.verdict)}
-                </span>
+                {row.verdict !== "notApplicable" && (
+                  <>
+                    <span className="status-view__verdict-icon">
+                      {renderVerdictIcon(row.verdict)}
+                    </span>
+                    <span
+                      className={`rf-body status-view__verdict-text ${
+                        demandsAttention(row.verdict) ? "status-view__verdict-text--strong" : ""
+                      }`}
+                    >
+                      {verdictLabel(t, row.verdict)}
+                    </span>
+                  </>
+                )}
               </div>
 
               <div className="status-view__cell-action">
@@ -140,7 +146,15 @@ export function StatusView({
               </div>
             </div>
 
-            {row.detail && (
+            {row.detail?.kind === "handlerDiagnosis" && (
+              <SiteSignatureDiagnosis
+                desktopFile={row.detail.desktopFile}
+                expanded={expandedDetail.has(row.signal)}
+                onToggle={() => toggleDetail(row.signal)}
+              />
+            )}
+
+            {row.detail && row.detail.kind !== "handlerDiagnosis" && (
               <div className="status-view__detail">
                 <Button
                   variant="ghost"
@@ -206,6 +220,55 @@ export function StatusView({
         </Button>
       </div>
     </section>
+  );
+}
+
+function SiteSignatureDiagnosis({
+  desktopFile,
+  expanded,
+  onToggle,
+}: {
+  desktopFile: string;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="status-view__detail">
+      <Button
+        variant="ghost"
+        className="status-view__detail-toggle"
+        aria-expanded={expanded}
+        aria-controls="status-view__detail-siteSignature"
+        onClick={onToggle}
+      >
+        {expanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
+        {t("status.detail.diagnose")}
+      </Button>
+
+      {expanded && (
+        <ul id="status-view__detail-siteSignature" className="status-view__detail-list">
+          <li className="status-view__detail-item">
+            <span className="rf-prose">{t("status.detail.diagnoseIntro")}</span>
+          </li>
+          <li className="status-view__detail-item">
+            <code className="status-view__detail-command">
+              xdg-mime query default x-scheme-handler/afirma
+            </code>
+          </li>
+          <li className="status-view__detail-item">
+            <span className="rf-prose">
+              {t("status.detail.diagnoseFix", { file: desktopFile })}
+            </span>
+          </li>
+          <li className="status-view__detail-item">
+            <code className="status-view__detail-command">
+              xdg-mime default {desktopFile} x-scheme-handler/afirma
+            </code>
+          </li>
+        </ul>
+      )}
+    </div>
   );
 }
 

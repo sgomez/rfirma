@@ -39,10 +39,11 @@ interface StoreCertificates {
   certificates: number;
 }
 
-/** Lo que cuelga de una señal: dónde se confía en la CA, o cuántos certificados hay en cada sitio. */
+/** Lo que cuelga de una señal: dónde se confía en la CA, cuántos certificados hay en cada sitio o cómo diagnosticar las sedes. */
 export type SignalDetail =
   | { kind: "trust"; stores: StoreDetail[] }
-  | { kind: "certificates"; stores: StoreCertificates[] };
+  | { kind: "certificates"; stores: StoreCertificates[] }
+  | { kind: "handlerDiagnosis"; desktopFile: string };
 
 interface StatusAction {
   kind: ActionKind;

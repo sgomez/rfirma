@@ -15,6 +15,7 @@ import {
   sitesHandledByRfirma,
   sitesNotConfigured,
   sitesUnavailable,
+  sitesUnavailableOutsideFlatpak,
   sitesWithTwoCandidates,
   someUserCertificates,
   versionChecking,
@@ -75,6 +76,14 @@ export const SitesHandledByRfirma = panel([sitesHandledByRfirma]);
 export const SitesNotConfigured = panel([sitesNotConfigured]);
 
 export const SitesUnavailable = panel([sitesUnavailable]);
+
+export const SitesUnavailableDiagnosisExpanded = panel([sitesUnavailable], {
+  initiallyExpanded: ["siteSignature"],
+});
+
+export const SitesUnavailableOutsideFlatpak = panel([sitesUnavailableOutsideFlatpak], {
+  initiallyExpanded: ["siteSignature"],
+});
 
 export const SitesWithTwoCandidates = panel([sitesWithTwoCandidates]);
 

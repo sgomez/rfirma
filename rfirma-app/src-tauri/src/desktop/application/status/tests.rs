@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use super::*;
 use crate::desktop::domain::channel::Channel;
-use crate::desktop::domain::handlers::{UrlHandler, OUR_DESKTOP_FILE};
+use crate::desktop::domain::handlers::{UrlHandler, FLATPAK_DESKTOP_FILE, OUR_DESKTOP_FILE};
 use crate::desktop::domain::status::{
     ActionKind, Signal, SignalDetail, StoreBrand, StoreCertificates, Verdict,
 };
@@ -355,9 +355,14 @@ fn a_handler(id: &str, name: &str) -> UrlHandler {
     }
 }
 
+fn site_signature_on_native(handlers: UrlHandlers) -> SignalRow {
+    evaluate_site_signature_signal(handlers, Channel::Native)
+}
+
 #[test]
 fn site_signature_is_not_applicable_when_the_sandbox_hides_the_registry() {
-    let row = evaluate_site_signature_signal(a_url_handlers(false, Vec::new(), None));
+    let row =
+        evaluate_site_signature_signal(a_url_handlers(false, Vec::new(), None), Channel::Flatpak);
 
     assert_eq!(row.signal, Signal::SiteSignature);
     assert_eq!(row.value, "");
@@ -367,8 +372,29 @@ fn site_signature_is_not_applicable_when_the_sandbox_hides_the_registry() {
 }
 
 #[test]
+fn site_signature_inside_the_sandbox_carries_the_flatpak_desktop_file_to_diagnose() {
+    let row =
+        evaluate_site_signature_signal(a_url_handlers(false, Vec::new(), None), Channel::Flatpak);
+
+    assert_eq!(
+        row.detail,
+        Some(SignalDetail::HandlerDiagnosis {
+            desktop_file: FLATPAK_DESKTOP_FILE.to_owned(),
+        })
+    );
+}
+
+#[test]
+fn site_signature_unavailable_outside_the_sandbox_has_no_diagnosis() {
+    let row = site_signature_on_native(a_url_handlers(false, Vec::new(), None));
+
+    assert_eq!(row.verdict, Verdict::NotApplicable);
+    assert_eq!(row.detail, None);
+}
+
+#[test]
 fn site_signature_offers_to_use_rfirma_when_nothing_is_configured() {
-    let row = evaluate_site_signature_signal(a_url_handlers(
+    let row = site_signature_on_native(a_url_handlers(
         true,
         vec![a_handler("autofirma.desktop", "AutoFirma")],
         None,
@@ -388,7 +414,7 @@ fn site_signature_offers_to_use_rfirma_when_nothing_is_configured() {
 
 #[test]
 fn site_signature_is_correct_and_offers_no_action_when_rfirma_is_the_current_handler() {
-    let row = evaluate_site_signature_signal(a_url_handlers(
+    let row = site_signature_on_native(a_url_handlers(
         true,
         vec![
             a_handler(OUR_DESKTOP_FILE, "rFirma"),
@@ -405,7 +431,7 @@ fn site_signature_is_correct_and_offers_no_action_when_rfirma_is_the_current_han
 
 #[test]
 fn site_signature_needs_attention_and_offers_to_use_rfirma_when_another_program_is_current() {
-    let row = evaluate_site_signature_signal(a_url_handlers(
+    let row = site_signature_on_native(a_url_handlers(
         true,
         vec![
             a_handler(OUR_DESKTOP_FILE, "rFirma"),
@@ -428,8 +454,7 @@ fn site_signature_needs_attention_and_offers_to_use_rfirma_when_another_program_
 
 #[test]
 fn site_signature_falls_back_to_the_id_when_the_current_handler_is_unlisted() {
-    let row =
-        evaluate_site_signature_signal(a_url_handlers(true, Vec::new(), Some("unknown.desktop")));
+    let row = site_signature_on_native(a_url_handlers(true, Vec::new(), Some("unknown.desktop")));
 
     assert_eq!(row.value, "unknown.desktop");
     assert_eq!(row.verdict, Verdict::Attention);
@@ -437,7 +462,7 @@ fn site_signature_falls_back_to_the_id_when_the_current_handler_is_unlisted() {
 
 #[test]
 fn site_signature_has_no_candidates_with_a_single_registered_handler() {
-    let row = evaluate_site_signature_signal(a_url_handlers(
+    let row = site_signature_on_native(a_url_handlers(
         true,
         vec![a_handler(OUR_DESKTOP_FILE, "rFirma")],
         Some(OUR_DESKTOP_FILE),
@@ -448,7 +473,7 @@ fn site_signature_has_no_candidates_with_a_single_registered_handler() {
 
 #[test]
 fn site_signature_lists_every_registered_handler_as_a_candidate_marking_the_current_one() {
-    let row = evaluate_site_signature_signal(a_url_handlers(
+    let row = site_signature_on_native(a_url_handlers(
         true,
         vec![
             a_handler(OUR_DESKTOP_FILE, "rFirma"),

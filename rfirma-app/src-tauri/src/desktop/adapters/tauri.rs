@@ -233,7 +233,11 @@ pub fn choose_site_signature_handler(
 
     let handlers = crate::desktop::application::handlers::who_handles(registry.as_ref());
     Ok(vec![
-        crate::desktop::application::status::evaluate_site_signature_signal(handlers).into(),
+        crate::desktop::application::status::evaluate_site_signature_signal(
+            handlers,
+            crate::desktop::adapters::channel::Channel::detected(),
+        )
+        .into(),
         measured_local_ca_certificate_signal(&site, restart_firefox_notice).into(),
     ])
 }
@@ -250,7 +254,11 @@ pub fn read_status(
     );
     vec![
         crate::desktop::application::status::checking_version_signal().into(),
-        crate::desktop::application::status::evaluate_site_signature_signal(handlers).into(),
+        crate::desktop::application::status::evaluate_site_signature_signal(
+            handlers,
+            crate::desktop::adapters::channel::Channel::detected(),
+        )
+        .into(),
         local_ca_certificate_signal(&site, recheck).into(),
         crate::desktop::application::status::evaluate_user_certificates_signal(
             identity

@@ -158,12 +158,14 @@ impl From<StoreCertificates> for StoreCertificatesView {
 }
 
 crossing! {
-    /// Lo que cuelga de una señal: dónde se confía en la CA, o cuántos certificados hay en cada sitio.
+    /// Lo que cuelga de una señal: dónde se confía en la CA, cuántos certificados hay en cada sitio o cómo diagnosticar las sedes.
     #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
     #[serde(tag = "kind", rename_all = "camelCase")]
     pub enum SignalDetailView {
         Trust { stores: Vec<StoreDetailView> },
         Certificates { stores: Vec<StoreCertificatesView> },
+        #[serde(rename_all = "camelCase")]
+        HandlerDiagnosis { desktop_file: String },
     }
 }
 
@@ -179,6 +181,9 @@ impl From<SignalDetail> for SignalDetailView {
                     .map(StoreCertificatesView::from)
                     .collect(),
             },
+            SignalDetail::HandlerDiagnosis { desktop_file } => {
+                Self::HandlerDiagnosis { desktop_file }
+            }
         }
     }
 }

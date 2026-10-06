@@ -907,7 +907,7 @@ msgid "status.signals.version"
 msgstr "Bertsioa"
 
 msgid "status.signals.siteSignature"
-msgstr "Egoitzetako sinadura"
+msgstr "Egoitzetan sinatzeko aplikazio lehenetsia"
 
 msgid "status.signals.userCertificates"
 msgstr "Zure ziurtagiriak"
@@ -949,7 +949,7 @@ msgid "status.values.siteSignature.notConfigured"
 msgstr "Konfiguratu gabe"
 
 msgid "status.values.siteSignature.unavailable"
-msgstr "Ezin da kontsultatu"
+msgstr "Zure mahaigainak kudeatzen du"
 
 msgid "status.values.userCertificates.none"
 msgstr "Bat ere ez"
@@ -974,6 +974,18 @@ msgstr "Ikusi nabigatzaileak"
 #. El desplegable de la señal de los certificados propios: en qué sitio hay cuántos.
 msgid "status.detail.where"
 msgstr "Ikusi non"
+
+#. El desplegable de la señal de la aplicación de las sedes en Flatpak: cómo averiguar qué se abre.
+msgid "status.detail.diagnose"
+msgstr "Arazoak diagnostikatu"
+
+#. Antes de la orden que dice qué aplicación abre `afirma://`.
+msgid "status.detail.diagnoseIntro"
+msgstr "Egoitza batean sinatzean beste aplikazio bat galdetu gabe irekitzen bada, begiratu zein den lehenetsia:"
+
+#. {{file}} es el nombre del fichero de escritorio de rFirma; va antes de la orden que lo fija como predeterminado.
+msgid "status.detail.diagnoseFix"
+msgstr "{{file}} ez bada, aldatu:"
 
 #. Que el certificado de rFirma está puesto en ese navegador.
 msgid "status.detail.installed"

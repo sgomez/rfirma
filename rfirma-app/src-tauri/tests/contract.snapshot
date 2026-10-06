@@ -106,6 +106,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub enum SignalDetailView   (serde: etiqueta "kind")
       Trust { stores: Vec<StoreDetailView> }
       Certificates { stores: Vec<StoreCertificatesView> }
+      HandlerDiagnosis { desktopFile: String }
 
   pub struct StatusActionView
       kind: ActionKind
