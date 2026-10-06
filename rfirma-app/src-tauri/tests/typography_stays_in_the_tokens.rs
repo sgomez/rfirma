@@ -43,6 +43,7 @@ fn composition_of(property: &str) -> Option<&'static str> {
         "font-size" => Some("`var(--rf-<rol>-size)`"),
         "font-weight" => Some("`var(--rf-<rol>-weight)`"),
         "line-height" => Some("`var(--rf-<rol>-leading)`"),
+        "font" => Some("sus longhands con `var(--rf-<rol>-size|weight|leading)`"),
         _ => None,
     }
 }
@@ -79,7 +80,7 @@ fn offences_in(stylesheet: &str, source: &str) -> Vec<String> {
             }
             Some(format!(
                 "`{stylesheet}` declara `{property}: {}`: la tipografía se compone con un rol del \
-                 sistema, {composition}; un tamaño de dibujo va en una variable local del componente",
+                 sistema, {composition}",
                 value.trim()
             ))
         })
@@ -126,6 +127,7 @@ fn a_typography_literal_turns_red() {
         ".a { font-weight: 600 }",
         ".a { line-height: 1.4; }",
         ".a{font-size:8px}",
+        ".a { font: 600 13px/1.4 sans-serif; }",
         ".a {\n  font-weight:\n    700 !important;\n}",
     ] {
         assert_eq!(offences_in(stylesheet, source).len(), 1, "{source}");
