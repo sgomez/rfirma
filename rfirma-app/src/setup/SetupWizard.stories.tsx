@@ -3,7 +3,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { inMemoryPreferences } from "../preferences/preferences";
-import { defaults } from "../preferences/preferencesFixtures";
+import { defaults } from "../preferences/testing/fixtures";
 import { memoryStatus } from "../status/status";
 import { SetupWizard } from "./SetupWizard";
 import {
@@ -13,7 +13,7 @@ import {
   handlerNotOurs,
   handlerOurs,
   handlerWithoutAutoFirma,
-} from "./setupFixtures";
+} from "./testing/fixtures";
 
 const meta = {
   title: "Pantallas/Primer arranque",

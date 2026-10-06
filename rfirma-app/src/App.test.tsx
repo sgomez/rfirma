@@ -2,6 +2,10 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { inMemoryRecents } from "./documents/recents";
+import type { PreferencesStore } from "./preferences/preferences";
+import type { RubricPicker } from "./signing/rubric";
+import { DEFAULT_VISIBLE_SIGNATURE } from "./signing/visibleSignature";
 import {
   aCertificate,
   aDestination,
@@ -10,11 +14,7 @@ import {
   openPdf,
   pdfsOf,
   renderApp,
-} from "./App.testSupport";
-import { inMemoryRecents } from "./documents/recents";
-import type { PreferencesStore } from "./preferences/preferences";
-import type { RubricPicker } from "./signing/rubric";
-import { DEFAULT_VISIBLE_SIGNATURE } from "./signing/visibleSignature";
+} from "./testing/harness";
 import { aMainWindowDoubles } from "./testing/mainWindowDoubles";
 import { renderWithCatalog } from "./testing/render";
 import { unavailablePdfSource } from "./viewer/source";

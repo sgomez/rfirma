@@ -3,7 +3,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { PreferencesView } from "./PreferencesView";
-import { anInstalledCertificate, defaults, IN_2020 } from "./preferencesFixtures";
+import { anInstalledCertificate, defaults, IN_2020 } from "./testing/fixtures";
 
 const meta = {
   title: "Pantallas/Preferencias",

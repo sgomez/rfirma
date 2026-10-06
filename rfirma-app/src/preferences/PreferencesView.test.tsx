@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { defaults, openTab, renderView } from "./testSupport";
+import { defaults, openTab, renderView } from "./testing/harness";
 
 // Grada A: los ajustes son datos, y la vista no habla con nadie.
 describe("PreferencesView", () => {

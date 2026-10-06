@@ -370,7 +370,7 @@ recibe el trámite y sus órdenes por props y no conoce ningún puerto de Tauri;
 
 `src/stories.test.tsx` las pinta todas con axe, así que una historia nueva queda
 revisada sin escribir otro test. El momento de consentimiento, que comparten las
-pruebas, está en `sedeWindowFixtures.ts`; el resto de lo que usan las historias,
+pruebas, está en `sede/testing/fixtures/sedeWindow.ts`; el resto de lo que usan las historias,
 en `rfirma-app/.storybook/`: las firmas previas y el PDF en blanco en
 `fixtures/sede.ts`, los espías de las órdenes en `fixtures/sedeView.ts` y el
 marco de la ventana —520 × 420, y 1080 × 660 al marcar el área— en

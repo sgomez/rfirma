@@ -1,14 +1,14 @@
 //! El estado del bloque «Colocación» ya resuelto y sin gancho detrás, para las historias y las pruebas de las ventanas que lo montan.
 
-import type { PlacementBlockState } from "./PlacementBlock";
+import type { PlacementBlockState } from "../PlacementBlock";
 import {
   NO_PAGE_SETS,
   type PageMode,
   type PageSets,
   placementOf,
   type UserSpaceRect,
-} from "./pageSets";
-import { fieldTroubleOf, pageActionOf, typedTextOf } from "./placementField";
+} from "../pageSets";
+import { fieldTroubleOf, pageActionOf, typedTextOf } from "../placementField";
 
 interface Situation {
   rect?: UserSpaceRect | null;

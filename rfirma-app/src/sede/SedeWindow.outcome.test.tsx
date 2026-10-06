@@ -12,7 +12,7 @@ import {
 } from "./errand";
 import * as outcomeModule from "./SedeOutcome.stories";
 import { SedeWindow } from "./SedeWindow";
-import { scriptedErrand, scriptedFrom } from "./sedeWindowFixtures";
+import { scriptedErrand, scriptedFrom } from "./testing/fixtures/sedeWindow";
 
 const RETRY = "Vuelve a la sede e inténtalo de nuevo.";
 const CONTACT_SITE = "Contacta con la sede para terminar el trámite.";

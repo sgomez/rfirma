@@ -3,20 +3,20 @@
 import type { RenderResult } from "@testing-library/react";
 import { screen } from "@testing-library/react";
 import { expect } from "vitest";
-import { placementStateOf } from "../placement/placementFixtures";
-import { renderWithCatalog } from "../testing/render";
-import type { Certificate } from "./certificate";
-import type { PreviousSignature, PreviousSignaturesReport } from "./previousSignatures";
-import type { Rubric } from "./rubric";
-import { SigningPanel } from "./SigningPanel";
+import { placementStateOf } from "../../placement/testing/fixtures";
+import { renderWithCatalog } from "../../testing/render";
+import type { Certificate } from "../certificate";
+import type { PreviousSignature, PreviousSignaturesReport } from "../previousSignatures";
+import type { Rubric } from "../rubric";
+import { SigningPanel } from "../SigningPanel";
+import { DEFAULT_VISIBLE_SIGNATURE } from "../visibleSignature";
 import {
   aCertificateSection,
   aDestinationSection,
   aRubricSection,
   aSigningSection,
   aVisibleSignatureSection,
-} from "./signingSectionFixtures";
-import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
+} from "./fixtures";
 
 /** Una firma previa válida, lista para sobreescribir con `overrides`. */
 export function previousSignatureOf(overrides: Partial<PreviousSignature> = {}): PreviousSignature {

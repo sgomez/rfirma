@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { PdfSource } from "../viewer/source";
-import { recordingDocument } from "../viewer/testing/documentViewerFixtures";
+import { recordingDocument } from "../viewer/testing/fixtures";
 import type { DocumentInHand } from "./document";
 import type { Documents } from "./useDocuments";
 import { useOpenPdf } from "./useOpenPdf";

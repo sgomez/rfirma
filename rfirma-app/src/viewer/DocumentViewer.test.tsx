@@ -16,7 +16,7 @@ import {
   stubResizeObserver,
   surfaceOf,
   viewportAt,
-} from "./testing/documentViewerFixtures";
+} from "./testing/fixtures";
 
 /**
  * **Grada A** (`vitest`, carril rápido). Sub-issue #58.

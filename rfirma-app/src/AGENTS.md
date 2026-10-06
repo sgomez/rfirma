@@ -66,7 +66,7 @@ sus comentarios a las formas que admite la regla 6 de `CLAUDE.md`.
 | `updates/` | La versión nueva: la franja que la anuncia y su instalación. |
 | `about/` | El diálogo Acerca de. |
 | `setup/` | El asistente del primer arranque (`docs/design/primer-arranque.md`). Usa los casos de uso del panel de estado, no tiene los suyos propios. |
-| `testing/`, `test-setup.ts` | Andamiaje de las pruebas, como los `*.testSupport.tsx`, los `*Fixtures.ts` y `viewer/testing/`. No son la aplicación. |
+| `testing/`, `test-setup.ts` | Andamiaje de las pruebas. La `testing/` de la raíz guarda solo dobles transversales; el de cada zona vive en su propia `<zona>/testing/`, con `fixtures.ts` (datos) y `harness.tsx` (arneses de montaje). `testing_stays_out_of_production` impide que producción importe de ahí. No son la aplicación. |
 
 Dos módulos se leen antes que sus hermanos, porque cablean una ventana entera:
 **`main.tsx`** (la principal, `index.html`), por donde se empieza siempre, y
@@ -80,7 +80,7 @@ reglas:
 
 - **Nada fuera de la raíz importa de los `App.*`.** Lo que una zona necesita de
   la ventana principal vive en la zona y la raíz es la que lo importa. Quedan
-  exentos el andamiaje de pruebas (`testing/`, `*.testSupport.*`, `*Fixtures.*`)
+  exentos el andamiaje de pruebas (`testing/`)
   y los `*.test.*`: el juego de dobles de la ventana principal importa el tipo de
   sus puertos.
 - **`placement/` no importa de otra zona**, salvo `design-system/` e `i18n/`.

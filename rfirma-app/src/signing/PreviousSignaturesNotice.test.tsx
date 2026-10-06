@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
-import { certificate, previousSignatureOf, reportOf } from "./SigningPanel.testSupport";
+import { certificate, previousSignatureOf, reportOf } from "./testing/harness";
 
 const CLOSED = "El documento no admite más firmas.";
 

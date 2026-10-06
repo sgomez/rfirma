@@ -2,11 +2,11 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { inMemoryPreferences } from "../preferences/preferences";
-import { defaults } from "../preferences/preferencesFixtures";
+import { defaults } from "../preferences/testing/fixtures";
 import { memoryStatus, type SignalRow } from "../status/status";
 import { renderWithCatalog } from "../testing/render";
 import { SetupWizard } from "./SetupWizard";
-import { aVersionRow, certificateNotInstalled, handlerNotOurs } from "./setupFixtures";
+import { aVersionRow, certificateNotInstalled, handlerNotOurs } from "./testing/fixtures";
 
 // Grada A: el asistente solo habla con `StatusPort`, sin puerto propio.
 describe("SetupWizard", () => {

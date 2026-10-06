@@ -10,7 +10,7 @@ import { OUTCOME_CLOSE_MS } from "./errand";
 import * as noCertificateModule from "./SedeNoCertificate.stories";
 import * as outcomeModule from "./SedeOutcome.stories";
 import { SedeWindow } from "./SedeWindow";
-import { scriptedErrand, scriptedFrom } from "./sedeWindowFixtures";
+import { scriptedErrand, scriptedFrom } from "./testing/fixtures/sedeWindow";
 
 /** Grada A: el momento 5 (sin certificado utilizable), el fallo de un hijo y la forma de la ventana. */
 

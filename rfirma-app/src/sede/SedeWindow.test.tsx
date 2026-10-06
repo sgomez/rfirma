@@ -5,7 +5,7 @@ import { renderWithCatalog } from "../testing/render";
 import { CHROME_LOCAL_NETWORK_SETTINGS, noErrand } from "./errand";
 import * as waitingModule from "./SedeWaiting.stories";
 import { SedeWindow } from "./SedeWindow";
-import { scriptedFrom } from "./sedeWindowFixtures";
+import { scriptedFrom } from "./testing/fixtures/sedeWindow";
 
 /**
  * Grada A: la ventana de sede entera, **por su puerto**, en los momentos de antes

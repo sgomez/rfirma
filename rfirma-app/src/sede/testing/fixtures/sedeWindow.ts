@@ -2,10 +2,10 @@
 
 import type { Mock } from "storybook/test";
 import { fn } from "storybook/test";
-import type { Certificate } from "../signing/certificate";
-import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
-import type { Errand, ErrandStage, SiteDocument, SiteErrandPort } from "./errand";
-import { noErrand } from "./errand";
+import type { Certificate } from "../../../signing/certificate";
+import { NO_PREVIOUS_SIGNATURES } from "../../../signing/previousSignatures";
+import type { Errand, ErrandStage, SiteDocument, SiteErrandPort } from "../../errand";
+import { noErrand } from "../../errand";
 
 /** Los dobles y auxiliares que comparten las pruebas de `SedeWindow`. */
 

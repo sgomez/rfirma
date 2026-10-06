@@ -1,13 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import {
-  aCertificate,
-  aDestination,
-  destinationOfferingSingleChoice,
-  document,
-  failingCertificateStore,
-} from "../App.testSupport";
 import type { Placement } from "../placement/pageSets";
 import { usePlacement } from "../placement/usePlacement";
 import {
@@ -21,9 +14,16 @@ import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import { unavailableStampComposer } from "../signing/stampPreview";
 import { useCertificateListing } from "../signing/useCertificateListing";
 import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "../signing/visibleSignature";
+import {
+  aCertificate,
+  aDestination,
+  destinationOfferingSingleChoice,
+  document,
+  failingCertificateStore,
+} from "../testing/harness";
 import { CatalogProvider } from "../testing/render";
 import { standardRectOnPageOf } from "../viewer/signatureBox";
-import { recordingDocument } from "../viewer/testing/documentViewerFixtures";
+import { recordingDocument } from "../viewer/testing/fixtures";
 import { useSigningJourney } from "./useSigningJourney";
 
 const withCatalog = ({ children }: { children: ReactNode }) => (
