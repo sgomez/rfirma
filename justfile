@@ -487,13 +487,15 @@ verify-packages dir *options:
 check-glibc lib=native_lib:
     {{ root }}/scripts/check-glibc.sh {{ lib }}
 
-# Construye el flatpak, uno de los tres canales junto al .deb y el .rpm (ADR-0015).
+# Construye el flatpak, uno de los tres canales junto al .deb y el .rpm (ADR-0015); install="true" lo instala ademas en el usuario.
 [group('ci')]
 [script('bash')]
-flatpak: check-native build-ts
+flatpak install="false": check-native build-ts
     set -euo pipefail
     cd "{{ root }}/packaging/flatpak"
-    flatpak-builder --force-clean --user --install --repo=repo \
+    install_flag=""
+    if [ "{{ install }}" = "true" ]; then install_flag="--install"; fi
+    flatpak-builder --force-clean --user $install_flag --repo=repo \
         build-dir me.sgomez.rfirma.yml
     flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
         repo me.sgomez.rfirma.flatpak me.sgomez.rfirma stable
