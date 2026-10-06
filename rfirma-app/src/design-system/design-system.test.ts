@@ -293,7 +293,36 @@ describe("los tokens sin tema", () => {
   });
 });
 
+const typographicRoles = [
+  "display",
+  "heading",
+  "headline",
+  "title",
+  "subtitle",
+  "ui",
+  "body",
+  "caption",
+] as const;
+
 describe("la tipografía", () => {
+  it("define los ocho roles, cada uno con tamaño, peso e interlínea", () => {
+    const declared = themelessDeclarations(tokens);
+
+    for (const role of typographicRoles) {
+      for (const facet of ["size", "weight", "leading"]) {
+        expect(declared.get(`--rf-${role}-${facet}`), `falta --rf-${role}-${facet}`).toBeDefined();
+      }
+    }
+  });
+
+  it("toma 13px como cuerpo base", () => {
+    expect(themelessDeclarations(tokens).get("--rf-body-size")).toBe("13px");
+  });
+
+  it("da a la prosa la interlínea de lectura como variante del cuerpo", () => {
+    expect(themelessDeclarations(tokens).get("--rf-body-prose-leading")).toBe("1.6");
+  });
+
   const faces = [...fonts.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(
     ([, block]) => block as string,
   );
@@ -356,8 +385,13 @@ describe("el vocabulario de clases", () => {
     "rf-on-light",
     "rf-display",
     "rf-heading",
+    "rf-headline",
     "rf-title",
+    "rf-subtitle",
+    "rf-ui",
+    "rf-ui--strong",
     "rf-body",
+    "rf-caption",
     "rf-prose",
     "rf-text-muted",
     "rf-text-primary",
@@ -404,6 +438,24 @@ describe("el vocabulario de clases", () => {
     for (const className of declared) {
       expect(vocabulary.has(className), `.${className} no está en la sección 9`).toBe(true);
     }
+  });
+
+  it("da a cada rol tipográfico una clase que bebe de sus tokens", () => {
+    for (const role of typographicRoles) {
+      const rule = new RegExp(`\\.rf-${role}\\s*\\{([^}]*)\\}`).exec(components)?.[1] ?? "";
+
+      expect(rule, `.rf-${role}`).toContain(`font-size: var(--rf-${role}-size)`);
+      expect(rule, `.rf-${role}`).toContain(`font-weight: var(--rf-${role}-weight)`);
+      expect(rule, `.rf-${role}`).toContain(`line-height: var(--rf-${role}-leading)`);
+    }
+  });
+
+  it("no fija ningún tamaño, peso ni interlínea a mano: todo sale de los tokens", () => {
+    const literals = components.match(
+      /(font-size|font-weight|line-height)\s*:\s*(?!\s|var\()[^;]+/g,
+    );
+
+    expect(literals ?? []).toEqual([]);
   });
 
   it("no fija ningún color a mano: todo sale de los roles", () => {
