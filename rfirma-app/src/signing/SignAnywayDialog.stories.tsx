@@ -15,7 +15,7 @@ import {
 const meta = {
   title: "Flujos/Firma/SignAnywayDialog",
   component: SignAnywayDialog,
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "single", viewport: "1340x780" } },
   decorators: [inDialogWindow],
   args: {
     problems: signingProblems(MIXED_REPORT),

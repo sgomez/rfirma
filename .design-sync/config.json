@@ -58,22 +58,35 @@
     "src/design-system/bundle/fonts/fonts.css"
   ],
   "overrides": {
-    "SedeView": {
+    "CertificateSelect": {
       "cardMode": "single",
-      "primaryStory": "Consent"
+      "primaryStory": "Open"
     },
     "Dialog": {
       "cardMode": "single",
       "primaryStory": "Closable",
       "viewport": "1340x780"
     },
+    "DocumentViewer": {
+      "cardMode": "column"
+    },
+    "ErrorNotice": {
+      "cardMode": "column"
+    },
+    "MainWindow": {
+      "cardMode": "column",
+      "viewport": "1160x620"
+    },
     "Popover": {
       "cardMode": "single",
       "primaryStory": "Open"
     },
-    "UnsealedPagesDialog": {
+    "RecentsSection": {
+      "cardMode": "column"
+    },
+    "SedeView": {
       "cardMode": "single",
-      "viewport": "1340x780"
+      "primaryStory": "Consent"
     },
     "SignAnywayDialog": {
       "cardMode": "single",
@@ -87,26 +100,9 @@
       "cardMode": "single",
       "viewport": "1340x780"
     },
-    "StatusView": {
-      "cardMode": "column",
-      "viewport": "1240x760"
-    },
-    "DocumentViewer": {
-      "cardMode": "column"
-    },
-    "CertificateSelect": {
+    "UnsealedPagesDialog": {
       "cardMode": "single",
-      "primaryStory": "Open"
-    },
-    "ErrorNotice": {
-      "cardMode": "column"
-    },
-    "MainWindow": {
-      "cardMode": "column",
-      "viewport": "1160x620"
-    },
-    "RecentsSection": {
-      "cardMode": "column"
+      "viewport": "1340x780"
     },
     "WithdrawCertificateView": {
       "cardMode": "single",

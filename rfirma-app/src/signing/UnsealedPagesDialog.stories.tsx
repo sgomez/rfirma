@@ -8,7 +8,7 @@ import { UnsealedPagesDialog } from "./UnsealedPagesDialog";
 const meta = {
   title: "Flujos/Firma/UnsealedPagesDialog",
   component: UnsealedPagesDialog,
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "single", viewport: "1340x780" } },
   decorators: [inDialogWindow],
   args: { fallen: 3, onConfirm: fn(), onCancel: fn() },
 } satisfies Meta<typeof UnsealedPagesDialog>;

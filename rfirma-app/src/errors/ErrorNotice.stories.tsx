@@ -7,7 +7,7 @@ import { ErrorNotice } from "./ErrorNotice";
 const meta = {
   title: "Dominio/Errores/ErrorNotice",
   component: ErrorNotice,
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "column" } },
   decorators: [
     (Story) => (
       <div style={{ width: 380 }}>

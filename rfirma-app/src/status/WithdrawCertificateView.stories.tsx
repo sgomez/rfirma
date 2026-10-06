@@ -34,7 +34,10 @@ const meta = {
     ),
     inStatusWindow,
   ],
-  parameters: { layout: "centered" },
+  parameters: {
+    layout: "centered",
+    designSync: { cardMode: "single", primaryStory: "Question", viewport: "1240x760" },
+  },
   args: {
     stores: withdrawalStores,
     report: null,

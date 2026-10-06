@@ -11,7 +11,7 @@ import { storyPdf } from "./testing/storyPdf";
 const meta = {
   title: "Flujos/Documentos/DocumentViewer",
   component: DocumentViewer,
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "column" } },
   decorators: [
     (Story) => (
       <div style={{ width: 800, height: 560, display: "grid" }}>

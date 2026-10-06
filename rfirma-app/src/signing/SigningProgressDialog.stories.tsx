@@ -7,7 +7,7 @@ import { SigningProgressDialog } from "./SigningProgressDialog";
 const meta = {
   title: "Flujos/Firma/SigningProgressDialog",
   component: SigningProgressDialog,
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "single", viewport: "1340x780" } },
   decorators: [inDialogWindow],
   args: { stage: "presign" },
 } satisfies Meta<typeof SigningProgressDialog>;

@@ -50,6 +50,51 @@ Componentes `*Icon` con prop `size` en px: `CheckCircleIcon`, `CrossCircleIcon`,
 
 `SedeView` es la ventana que abre una sede electrónica (520 × 420), con el momento del trámite en la prop `errand` y sus órdenes como props: no recibe ningún puerto. Úsala entera cuando el diseño sea esa ventana, con el `errand` del momento que toque; sus textos salen del catálogo. Las pantallas nuevas se componen con los primitivos de arriba, el texto con sus clases y los iconos.
 
+### Catálogo publicado
+
+Lo que hay en `window.RFirma`, por capa y título de historia.
+
+<!-- design-sync:catalog:start -->
+| Capa | Título | Componente |
+| --- | --- | --- |
+| Dominio | Actualizaciones / NewVersionStrip | `NewVersionStrip` |
+| Dominio | Documentos / DocumentTabs | `DocumentTabs` |
+| Dominio | Documentos / RecentRows | `RecentsSection` |
+| Dominio | Errores / ErrorNotice | `ErrorNotice` |
+| Dominio | Firma / CertificateCard | `CertificateCard` |
+| Dominio | Firma / CertificateSelect | `CertificateSelect` |
+| Flujos | Documentos / DocumentViewer | `DocumentViewer` |
+| Flujos | Estado / WithdrawCertificateView | `WithdrawCertificateView` |
+| Flujos | Firma / PlacementBlock | `PlacementBlock` |
+| Flujos | Firma / SignAnywayDialog | `SignAnywayDialog` |
+| Flujos | Firma / SignaturesDialog | `SignaturesDialog` |
+| Flujos | Firma / SignaturesPanel | `SignaturesPanel` |
+| Flujos | Firma / SigningPanel | `SigningPanel` |
+| Flujos | Firma / SigningProgressDialog | `SigningProgressDialog` |
+| Flujos | Firma / UnsealedPagesDialog | `UnsealedPagesDialog` |
+| Flujos | Sede / Confirmar | `SedeView` |
+| Flujos | Sede / Consentimiento | `SedeView` |
+| Flujos | Sede / Desenlace | `SedeView` |
+| Flujos | Sede / Espera | `SedeView` |
+| Flujos | Sede / Firmando | `SedeView` |
+| Flujos | Sede / Marcar la firma | `SedeView` |
+| Flujos | Sede / Sin certificado | `SedeView` |
+| Flujos | Ventana principal / Header | `Header` |
+| Flujos | Ventana principal / MainWindow | `MainWindow` |
+| Primitivos | Badge | `Badge` |
+| Primitivos | Button | `Button` |
+| Primitivos | Card | `Card` |
+| Primitivos | Dialog | `Dialog` |
+| Primitivos | Field | `Field` |
+| Primitivos | Menu | `Menu` |
+| Primitivos | Popover | `Popover` |
+| Primitivos | ProgressBar | `ProgressBar` |
+| Primitivos | Row | `Row` |
+| Primitivos | Select | `Select` |
+| Primitivos | Stack | `Stack` |
+| Primitivos | Switch | `Switch` |
+<!-- design-sync:catalog:end -->
+
 ### Dónde mirar
 
 - `styles.css` e `_ds_bundle.css`: todas las clases y tokens.

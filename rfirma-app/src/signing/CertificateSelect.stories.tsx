@@ -12,7 +12,7 @@ import {
 const meta = {
   title: "Dominio/Firma/CertificateSelect",
   component: CertificateSelect,
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "single", primaryStory: "Open" } },
   decorators: [
     (Story) => (
       <div style={{ width: 332, minHeight: 360 }}>

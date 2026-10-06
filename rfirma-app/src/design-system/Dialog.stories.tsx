@@ -9,7 +9,10 @@ import { Row } from "./Row";
 const meta = {
   title: "Primitivos/Dialog",
   component: Dialog,
-  parameters: { layout: "centered" },
+  parameters: {
+    layout: "centered",
+    designSync: { cardMode: "single", primaryStory: "Closable", viewport: "1340x780" },
+  },
   decorators: [inDialogWindow],
   argTypes: { role: { control: "select", options: ["dialog", "alertdialog"] } },
   args: { label: "¿Firmar de todos modos?" },

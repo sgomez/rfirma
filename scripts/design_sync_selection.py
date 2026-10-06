@@ -22,10 +22,15 @@ SEAL = ".design-sync/selection.lock"
 
 PUBLISHED_LAYERS = {"Primitivos": 2, "Dominio": 3, "Flujos": 3}
 LOCAL_LAYERS = {"Pantallas"}
+OVERRIDE_KEYS = ("cardMode", "primaryStory", "viewport")
+CATALOG_START = "<!-- design-sync:catalog:start -->"
+CATALOG_END = "<!-- design-sync:catalog:end -->"
 WALK_NUMBER = re.compile(r"^\d+\s*·")
 
 META_START = re.compile(r"\bconst\s+meta\s*=")
 TITLE = re.compile(r'\btitle:\s*"([^"]+)"')
+DESIGN_SYNC = re.compile(r"\bdesignSync:\s*\{([^}]*)\}")
+OVERRIDE_PAIR = re.compile(r'(\w+):\s*"([^"]*)"')
 META_COMPONENT = re.compile(r"Meta<\s*typeof\s+(\w+)\s*>")
 NAMED_IMPORT = re.compile(
     r'import\s+(type\s+)?\{([^}]*)\}\s*from\s*"([^"]+)"', re.DOTALL
@@ -52,23 +57,37 @@ class SelectionError(Exception):
 @dataclass(frozen=True)
 class Piece:
     story: str
+    title: str
     key: str
     component: str
     module: str
     exports: tuple[str, ...]
+    overrides: tuple[tuple[str, str], ...]
 
 
 @dataclass(frozen=True)
 class Selection:
     entry: str
     title_map: dict[str, str]
+    overrides: dict[str, dict[str, str]]
+    catalog: str
 
     def digest(self) -> str:
-        return seal_of(self.entry, self.title_map)
+        return seal_of(self.entry, self.title_map, self.overrides, self.catalog)
 
 
-def seal_of(entry: str, title_map: dict[str, str]) -> str:
-    canonical = entry + json.dumps(title_map, sort_keys=True, ensure_ascii=False)
+def seal_of(
+    entry: str,
+    title_map: dict[str, str],
+    overrides: dict[str, dict[str, str]],
+    catalog: str,
+) -> str:
+    canonical = (
+        entry
+        + json.dumps(title_map, sort_keys=True, ensure_ascii=False)
+        + json.dumps(overrides, sort_keys=True, ensure_ascii=False)
+        + catalog
+    )
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
@@ -101,6 +120,20 @@ def title_of(source: str, story: str) -> str:
     if not title:
         raise SelectionError(f"{story}: la historia no declara `title` en su `meta`")
     return title.group(1)
+
+
+def overrides_of(source: str, story: str) -> tuple[tuple[str, str], ...]:
+    declared = DESIGN_SYNC.search(source)
+    if not declared:
+        return ()
+    pairs = OVERRIDE_PAIR.findall(declared.group(1))
+    unknown = sorted({key for key, _ in pairs} - set(OVERRIDE_KEYS))
+    if unknown:
+        raise SelectionError(
+            f"{story}: `designSync` declara «{', '.join(unknown)}», "
+            f"que no es ninguno de {', '.join(OVERRIDE_KEYS)}"
+        )
+    return tuple(sorted(pairs))
 
 
 def publishable_piece(title: str, story: str) -> str | None:
@@ -137,8 +170,14 @@ def entry_module(story_file: Path, specifier: str, app: Path, story: str) -> str
 def piece_of(story_file: Path, root: Path) -> Piece | None:
     story = story_file.relative_to(root / STORIES).as_posix()
     source = story_file.read_text()
-    piece = publishable_piece(title_of(source, story), story)
+    title = title_of(source, story)
+    piece = publishable_piece(title, story)
+    overrides = overrides_of(source, story)
     if piece is None:
+        if overrides:
+            raise SelectionError(
+                f"{story}: `designSync` en una historia no publicable «{title}»"
+            )
         return None
     imports = imports_of(source)
     meta_component = META_COMPONENT.search(source)
@@ -162,10 +201,12 @@ def piece_of(story_file: Path, root: Path) -> Piece | None:
     }
     return Piece(
         story=story,
+        title=title,
         key=title_piece,
         component=imports[component].exported,
         module=entry_module(story_file, source_module, root / APP, story),
         exports=tuple(sorted(imports[name].exported for name in exports)),
+        overrides=overrides,
     )
 
 
@@ -188,16 +229,70 @@ def pieces_of(root: Path) -> list[Piece]:
                 "y el `titleMap` no puede distinguirlas"
             )
         owners.setdefault(piece.key, piece.story)
+    declared: dict[str, Piece] = {}
+    for piece in pieces:
+        if not piece.overrides:
+            continue
+        other = declared.setdefault(piece.component, piece)
+        if other.overrides != piece.overrides:
+            errors.append(
+                f"{other.story} y {piece.story}: declaran `designSync` distinto "
+                f"para «{piece.component}»"
+            )
     if errors:
         raise SelectionError("\n".join(errors))
     return pieces
+
+
+def catalog_of(pieces: list[Piece]) -> str:
+    rows = [
+        "| Capa | Título | Componente |",
+        "| --- | --- | --- |",
+    ]
+    for piece in sorted(pieces, key=lambda p: p.title.lower()):
+        layer, _, rest = piece.title.partition("/")
+        label = " / ".join(segment.strip() for segment in rest.split("/"))
+        rows.append(f"| {layer.strip()} | {label} | `{piece.component}` |")
+    return "\n".join(rows) + "\n"
+
+
+def block_bounds(text: str, file: str) -> tuple[int, int]:
+    start, end = text.find(CATALOG_START), text.find(CATALOG_END)
+    if start < 0 or end < start:
+        raise SelectionError(
+            f"{file}: faltan los marcadores {CATALOG_START} y {CATALOG_END}"
+        )
+    return start + len(CATALOG_START), end
+
+
+def readme_header(root: Path, config: dict) -> Path | None:
+    header = config.get("readmeHeader")
+    return root / header if header else None
+
+
+def committed_catalog(root: Path, config: dict) -> str:
+    header = readme_header(root, config)
+    if header is None:
+        return ""
+    text = header.read_text()
+    start, end = block_bounds(text, str(header.relative_to(root)))
+    return text[start:end].strip("\n") + "\n"
+
+
+def write_catalog(root: Path, config: dict, catalog: str) -> None:
+    header = readme_header(root, config)
+    if header is None:
+        return
+    text = header.read_text()
+    start, end = block_bounds(text, str(header.relative_to(root)))
+    header.write_text(f"{text[:start]}\n{catalog}{text[end:]}")
 
 
 def natural(text: str) -> str:
     return text.lower()
 
 
-def selection_of(root: Path) -> Selection:
+def selection_of(root: Path, config: dict) -> Selection:
     pieces = pieces_of(root)
     by_module: dict[str, set[str]] = {}
     for piece in pieces:
@@ -211,15 +306,27 @@ def selection_of(root: Path) -> Selection:
     title_map = {
         piece.key: piece.component for piece in sorted(pieces, key=lambda p: p.key)
     }
-    return Selection(entry=ENTRY_HEADER + body, title_map=title_map)
+    overrides = {
+        piece.component: dict(piece.overrides)
+        for piece in sorted(pieces, key=lambda p: p.component)
+        if piece.overrides
+    }
+    return Selection(
+        entry=ENTRY_HEADER + body,
+        title_map=title_map,
+        overrides=overrides,
+        catalog=catalog_of(pieces) if readme_header(root, config) else "",
+    )
 
 
 def write(root: Path) -> None:
-    selection = selection_of(root)
-    (root / ENTRY).write_text(selection.entry)
     config_file = root / CONFIG
     config = json.loads(config_file.read_text())
+    selection = selection_of(root, config)
+    (root / ENTRY).write_text(selection.entry)
     config["titleMap"] = selection.title_map
+    config["overrides"] = selection.overrides
+    write_catalog(root, config, selection.catalog)
     config_file.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n")
     (root / SEAL).write_text(selection.digest() + "\n")
 
@@ -230,12 +337,19 @@ def check(root: Path) -> list[str]:
         return [f"falta {SEAL}"]
     seal = seal_file.read_text().strip()
     problems: list[str] = []
-    committed_map = json.loads((root / CONFIG).read_text()).get("titleMap", {})
-    if seal_of((root / ENTRY).read_text(), committed_map) != seal:
+    config = json.loads((root / CONFIG).read_text())
+    committed = seal_of(
+        (root / ENTRY).read_text(),
+        config.get("titleMap", {}),
+        config.get("overrides", {}),
+        committed_catalog(root, config),
+    )
+    if committed != seal:
         problems.append(
-            f"{ENTRY} o el `titleMap` de {CONFIG} no coinciden con {SEAL}: editados a mano"
+            f"{ENTRY}, el `titleMap` o los `overrides` de {CONFIG} o el catálogo de la cabecera "
+            f"no coinciden con {SEAL}: editados a mano"
         )
-    if selection_of(root).digest() != seal:
+    if selection_of(root, config).digest() != seal:
         problems.append(
             "la selección derivada de las historias ha cambiado desde la última regeneración"
         )
