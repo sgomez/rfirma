@@ -27,6 +27,20 @@ fn a_credential_manager_without_the_item_yet_has_no_pin() {
 }
 
 #[test]
+fn a_credential_without_a_secret_has_no_pin() {
+    let scratch = ScratchCredential::new("blank");
+    let credential = CREDENTIALW {
+        Type: CRED_TYPE_GENERIC,
+        TargetName: scratch.0.target.as_ptr().cast_mut(),
+        Persist: CRED_PERSIST_LOCAL_MACHINE,
+        ..CREDENTIALW::default()
+    };
+    assert_ne!(unsafe { CredWriteW(&credential, 0) }, 0, "se guarda");
+
+    assert_eq!(scratch.0.pin(), Err(KeyringError::PinMissing));
+}
+
+#[test]
 fn create_pin_can_be_read_back() {
     let scratch = ScratchCredential::new("round-trip");
 

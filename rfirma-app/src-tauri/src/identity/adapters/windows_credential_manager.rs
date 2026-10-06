@@ -44,8 +44,11 @@ impl Keyring for WindowsCredentialManager {
         }
         let secret = unsafe {
             let read = &*credential;
-            let blob =
-                std::slice::from_raw_parts(read.CredentialBlob, read.CredentialBlobSize as usize);
+            let blob: &[u8] = if read.CredentialBlob.is_null() {
+                &[]
+            } else {
+                std::slice::from_raw_parts(read.CredentialBlob, read.CredentialBlobSize as usize)
+            };
             let secret = ProtectedSecret::new(blob);
             CredFree(credential.cast());
             secret
