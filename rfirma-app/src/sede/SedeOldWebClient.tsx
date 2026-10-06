@@ -15,6 +15,7 @@ export function SedeOldWebClient({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <SedeBody
+      primary={dismissButton}
       steadyFooter
       footer={
         <>
