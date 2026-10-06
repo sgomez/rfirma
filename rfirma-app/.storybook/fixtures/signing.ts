@@ -1,13 +1,14 @@
 //! Las firmas previas, los certificados y la rúbrica de ejemplo que comparten las historias de firma. Sin React.
 
-import type { Certificate } from "../../src/signing/certificate";
+import { fn } from "storybook/test";
+import type { Certificate, CertificateSection } from "../../src/signing/certificate";
 import type {
   DocumentFinding,
   PreviousSignature,
   PreviousSignaturesReport,
   ValidityReason,
 } from "../../src/signing/previousSignatures";
-import type { Rubric } from "../../src/signing/rubric";
+import type { Rubric, RubricSection } from "../../src/signing/rubric";
 
 export function aSignature(overrides: Partial<PreviousSignature>): PreviousSignature {
   return {
@@ -191,3 +192,16 @@ export const STORY_RUBRIC: Rubric = {
   width: 240,
   height: 80,
 };
+
+/** La sección del certificado con espías en sus dos acciones, salvo las que se pasen. */
+export function aCertificateSection(
+  state: CertificateSection["state"],
+  actions: Partial<Omit<CertificateSection, "state">> = {},
+): CertificateSection {
+  return { state, choose: fn(), lookAgain: fn(), ...actions };
+}
+
+/** La sección de la rúbrica con espía al elegirla, salvo lo que se pase. */
+export function aRubricSection(overrides: Partial<RubricSection> = {}): RubricSection {
+  return { value: null, failure: null, choose: fn(), ...overrides };
+}

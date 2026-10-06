@@ -52,6 +52,14 @@ export interface RubricFailure {
   detail: string;
 }
 
+/** La sección de la rúbrica: su valor, su último fallo y cómo elegirla. */
+export interface RubricSection {
+  value: Rubric | null;
+  /** El último fallo al elegirla, que se cuenta en el panel y no al firmar. */
+  failure: RubricFailure | null;
+  choose: () => void;
+}
+
 /** Lo que devuelve elegir una rúbrica: la imagen, un fallo, o una cancelación. */
 type RubricChoice = { rubric: Rubric } | { failure: RubricFailure } | null;
 

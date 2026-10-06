@@ -10,7 +10,9 @@ import {
   WRITABLE_DESTINATION,
 } from "../../.storybook/decorators/signingPanel";
 import {
+  aCertificateSection,
   aReport,
+  aRubricSection,
   aSignature,
   aSignatureBy,
   ENTITY_CERTIFICATE,
@@ -43,20 +45,15 @@ const meta = {
   args: {
     document: { id: "doc-1", name: "contrato.pdf", sizeBytes: 2_400_000 },
     previousSignatures: aReport([]),
-    certificate: {
+    certificate: aCertificateSection({
       kind: "chosen",
       certificate: PERSONAL_CERTIFICATE,
       certificates: [PERSONAL_CERTIFICATE],
-    },
-    onChooseCertificate: fn(),
-    onRetryCertificates: fn(),
-    onChooseModule: fn(),
+    }),
     signature: DEFAULT_VISIBLE_SIGNATURE,
     onChangeSignature: fn(),
     placementState: placementStateOf({ viewedPage: 3, pageCount: 27 }),
-    rubric: null,
-    rubricFailure: null,
-    onChooseRubric: fn(),
+    rubric: aRubricSection(),
     destination: WRITABLE_DESTINATION,
     signing: false,
     failure: null,
@@ -79,23 +76,29 @@ const singlePageSeal = {
 export const Ready: Story = {};
 
 export const Unchosen: Story = {
-  args: { certificate: { kind: "unchosen", certificates: STORY_CERTIFICATES } },
-};
-
-export const Searching: Story = { args: { certificate: { kind: "loading" } } };
-
-export const NoCertificates: Story = { args: { certificate: { kind: "empty" } } };
-
-export const SearchFailed: Story = {
   args: {
-    certificate: {
-      kind: "failed",
-      failure: { situation: "tokenAbsent", detail: "CKR_TOKEN_NOT_PRESENT", attemptsLeft: null },
-    },
+    certificate: aCertificateSection({ kind: "unchosen", certificates: STORY_CERTIFICATES }),
   },
 };
 
-export const SeveralCertificates: Story = { args: { certificate: entityChosen } };
+export const Searching: Story = { args: { certificate: aCertificateSection({ kind: "loading" }) } };
+
+export const NoCertificates: Story = {
+  args: { certificate: aCertificateSection({ kind: "empty" }) },
+};
+
+export const SearchFailed: Story = {
+  args: {
+    certificate: aCertificateSection({
+      kind: "failed",
+      failure: { situation: "tokenAbsent", detail: "CKR_TOKEN_NOT_PRESENT", attemptsLeft: null },
+    }),
+  },
+};
+
+export const SeveralCertificates: Story = {
+  args: { certificate: aCertificateSection(entityChosen) },
+};
 
 export const VisibleSignatureOnePage: Story = { args: singlePageSeal };
 
@@ -136,14 +139,18 @@ export const RangeOutOfDocument: Story = {
 };
 
 export const CompleteModelWithRubric: Story = {
-  args: { ...singlePageSeal, signature: { ...visible, withRubric: true }, rubric: STORY_RUBRIC },
+  args: {
+    ...singlePageSeal,
+    signature: { ...visible, withRubric: true },
+    rubric: aRubricSection({ value: STORY_RUBRIC }),
+  },
 };
 
 export const RubricOnlyModel: Story = {
   args: {
     ...singlePageSeal,
     signature: { ...visible, withRubric: true, content: { model: "rubricOnly" } },
-    rubric: STORY_RUBRIC,
+    rubric: aRubricSection({ value: STORY_RUBRIC }),
   },
 };
 
@@ -154,7 +161,9 @@ export const RubricWithoutImage: Story = {
 export const RubricFailed: Story = {
   args: {
     ...singlePageSeal,
-    rubricFailure: { situation: "notAnAcceptedImage", detail: "formato no admitido" },
+    rubric: aRubricSection({
+      failure: { situation: "notAnAcceptedImage", detail: "formato no admitido" },
+    }),
   },
 };
 
@@ -194,7 +203,7 @@ export const PreviousSignaturesSameCertificate: Story = {
 
 export const PreviousSignaturesOtherCertificate: Story = {
   args: {
-    certificate: entityChosen,
+    certificate: aCertificateSection(entityChosen),
     previousSignatures: aReport([
       aSignatureBy(ENTITY_CERTIFICATE, { certificateSerialNumber: "renewed" }),
     ]),
@@ -225,7 +234,10 @@ export const ClosedDocument: Story = {
 };
 
 export const VisibleSignatureWithoutCertificate: Story = {
-  args: { signature: visible, certificate: { kind: "unchosen", certificates: STORY_CERTIFICATES } },
+  args: {
+    signature: visible,
+    certificate: aCertificateSection({ kind: "unchosen", certificates: STORY_CERTIFICATES }),
+  },
 };
 
 export const LongDestinationName: Story = {

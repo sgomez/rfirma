@@ -1,7 +1,13 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { certificate, renderPanel, rubric } from "./SigningPanel.testSupport";
+import {
+  aCertificateSection,
+  aRubricSection,
+  certificate,
+  renderPanel,
+  rubric,
+} from "./SigningPanel.testSupport";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 // Grada A: el modelo y la rúbrica (docs/design/panel-de-firma.md § El modelo, § La rúbrica).
@@ -16,7 +22,7 @@ describe("SigningPanel · Modelo y rúbrica", () => {
         withRubric: true,
         content: { model: "rubricOnly" },
       },
-      rubric,
+      rubric: aRubricSection({ value: rubric }),
       onChangeSignature,
     });
 
@@ -32,7 +38,7 @@ describe("SigningPanel · Modelo y rúbrica", () => {
     const onChangeSignature = vi.fn();
     renderPanel({
       signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true, withRubric: true },
-      rubric,
+      rubric: aRubricSection({ value: rubric }),
       onChangeSignature,
     });
 
@@ -73,7 +79,11 @@ describe("SigningPanel · Modelo y rúbrica", () => {
       stampedSigner: "EIDAS CERTIFICADO PRUEBAS - ***9999**",
     };
     const { container } = renderPanel({
-      certificate: { kind: "chosen", certificate: fnmtTest, certificates: [fnmtTest] },
+      certificate: aCertificateSection({
+        kind: "chosen",
+        certificate: fnmtTest,
+        certificates: [fnmtTest],
+      }),
       signature: {
         ...DEFAULT_VISIBLE_SIGNATURE,
         enabled: true,
@@ -97,7 +107,7 @@ describe("SigningPanel · Modelo y rúbrica", () => {
     const onChangeSignature = vi.fn();
     renderPanel({
       signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true, withRubric: true },
-      rubric,
+      rubric: aRubricSection({ value: rubric }),
       onChangeSignature,
     });
 

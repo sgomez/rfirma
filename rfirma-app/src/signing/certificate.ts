@@ -291,3 +291,12 @@ export type CertificateState =
    * porque cambiar de certificado es abrirlo otra vez y no un botón aparte.
    */
   | { kind: "chosen"; certificate: Certificate; certificates: readonly Certificate[] };
+
+/** La sección del certificado: su estado y las dos cosas que se hacen con él. */
+export interface CertificateSection {
+  state: CertificateState;
+  /** Cuál se elige en el desplegable. */
+  choose: (certificate: Certificate) => void;
+  /** Vuelve a buscar los certificados, que es también cambiar de módulo. */
+  lookAgain: () => void | Promise<void>;
+}

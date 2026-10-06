@@ -3,6 +3,7 @@
 import type { RenderResult } from "@testing-library/react";
 import { screen } from "@testing-library/react";
 import { expect } from "vitest";
+import { aCertificateSection, aRubricSection } from "../../.storybook/fixtures/signing";
 import { placementStateOf } from "../placement/placementFixtures";
 import { renderWithCatalog } from "../testing/render";
 import type { Certificate } from "./certificate";
@@ -44,6 +45,8 @@ export function reportOf(
   };
 }
 
+export { aCertificateSection, aRubricSection };
+
 export const certificate: Certificate = {
   id: "0123456789abcdef0123456789abcdef",
   label: "Firma",
@@ -79,10 +82,11 @@ function panelWith(props: PanelProps) {
     <SigningPanel
       document={{ id: "doc-1", name: "contrato.pdf", sizeBytes: 2_400_000 }}
       previousSignatures={reportOf([])}
-      certificate={{ kind: "chosen", certificate, certificates: [certificate] }}
-      onChooseCertificate={noop}
-      onRetryCertificates={noop}
-      onChooseModule={noop}
+      certificate={aCertificateSection({
+        kind: "chosen",
+        certificate,
+        certificates: [certificate],
+      })}
       signature={{ ...DEFAULT_VISIBLE_SIGNATURE, enabled: true }}
       onChangeSignature={noop}
       placementState={placementStateOf({
@@ -91,9 +95,7 @@ function panelWith(props: PanelProps) {
         viewedPage: 3,
         pageCount: 27,
       })}
-      rubric={null}
-      rubricFailure={null}
-      onChooseRubric={noop}
+      rubric={aRubricSection()}
       destination={{ folder: "Documentos", name: "contrato-firmado.pdf", writable: true }}
       onChangeDestination={noop}
       onSign={noop}
