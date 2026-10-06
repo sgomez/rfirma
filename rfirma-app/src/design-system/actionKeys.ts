@@ -39,7 +39,7 @@ function isPressable(button: HTMLButtonElement): boolean {
   );
 }
 
-/** El atajo común de una pantalla sin diálogo propio: atiende el teclado del documento mientras `enabled`. */
+/** El atajo común de una pantalla sin diálogo propio: atiende el teclado del documento mientras `enabled` y no haya un diálogo modal abierto. */
 export function useActionKeys(actions: Actions, enabled = true) {
   const latest = useRef(actions);
   latest.current = actions;
@@ -47,6 +47,7 @@ export function useActionKeys(actions: Actions, enabled = true) {
   useEffect(() => {
     if (!enabled) return;
     const onKeyDown = (event: KeyboardEvent) => {
+      if (document.querySelector('[aria-modal="true"]') !== null) return;
       answerActionKey(event, latest.current);
     };
     window.addEventListener("keydown", onKeyDown);
@@ -69,20 +70,4 @@ export function useDefaultButton(enabled = true) {
 function focusIsUnclaimed(button: HTMLElement): boolean {
   const active = document.activeElement;
   return active === null || active === document.body || active.contains(button);
-}
-
-/** Atiende Intro y Escape en el documento mientras `enabled`, para lo que no es un diálogo modal. */
-export function useActionKeys(actions: Actions, enabled = true) {
-  const latest = useRef(actions);
-  latest.current = actions;
-
-  useEffect(() => {
-    if (!enabled) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (document.querySelector('[aria-modal="true"]') !== null) return;
-      answerActionKey(event, latest.current);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [enabled]);
 }
