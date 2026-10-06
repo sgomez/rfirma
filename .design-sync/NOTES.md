@@ -4,9 +4,9 @@ Proyecto: «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`), forma 
 
 ## Forma del repositorio
 
-- rfirma-app es una aplicación, no una biblioteca: no hay `dist/`. Lo que se compila lo dice `rfirma-app/design-sync.entry.ts` (`cfg.entry` y `cfg.extraEntries`). Un componente nuevo para Claude Design se exporta ahí y lleva su historia.
+- rfirma-app es una aplicación, no una biblioteca: no hay `dist/`. Lo que se compila lo dice `rfirma-app/design-sync.entry.ts` (`cfg.entry` y `cfg.extraEntries`). La entrada y el `titleMap` los genera `just design-sync-selection` desde los títulos de las historias (ADR-0046), con sello en `selection.lock` que verifica `just check-repo`: un componente nuevo entra con su historia en una capa publicable y una regeneración.
 - El escaneo de exportaciones solo ve los nombres a través de `extraEntries`: con `entry` a secas sale «0/1 storybook components are public exports».
-- `titleMap` usa el último segmento del título sin espacios (`1·Espera`), no el título entero.
+- `titleMap` usa el último segmento del título sin espacios (`Marcarlafirma`), no el título entero.
 
 ## Arreglos
 
@@ -14,7 +14,7 @@ Proyecto: «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`), forma 
 - [GENERAL] Ni los tokens ni las clases `rf-*` llegaban a `_ds_bundle.css`. El convertidor solo toma el CSS que importan los componentes de la entrada, y `index.css` lo importa el preview de Storybook, no un componente. Ahora la entrada importa `index.css` y `app.css`. `cfg.tokensGlob` no sirve sin `cfg.tokensPkg`.
 - [GENERAL] La ventana de sede usa `position: fixed; inset: 0` y en Storybook medía 0 px (`sb-error`: «no storybook root content»). Las historias de sede llevan el decorador `inSedeWindow` (520 × 420, el `DIALOG_SIZE` de Tauri), y `SedeView` va con `cardMode: "single"`.
 
-- [GENERAL] Las piezas de dominio que exporta la entrada solo llegan con su `titleMap`: sin él salen como `[TITLE_UNMAPPED]` y se descartan. `Dominio/Documentos/RecentRows` va a `RecentsSection`, el `component` de su historia, no a `RecentRows`.
+- [GENERAL] Las piezas de dominio que exporta la entrada solo llegan con su `titleMap`: sin él salen como `[TITLE_UNMAPPED]` y se descartan. El generador falla antes de dejar una sin mapear. `Dominio/Documentos/RecentRows` va a `RecentsSection`, el `component` de su historia, no a `RecentRows`.
 - [GENERAL] `Dialog` y los cuatro diálogos de firma son `position: fixed` y daban `sb-error` (raíz de 0 px). Sus historias llevan el decorador `inDialogWindow` (`.storybook/decorators/dialogWindow.tsx`, 1280 × 720, el tamaño inicial de la ventana principal).
 - [GENERAL] La captura es de 900 × 700. Los marcos más anchos se cortaban por la derecha en la vista previa, mientras que la referencia captura el desbordamiento. Por eso los diálogos llevan `viewport: "1340x780"`; `StatusView` y `WithdrawCertificateView`, `"1240x760"`; y `MainWindow`, `"1160x620"`.
 - `cardMode`: `single` en `Dialog`, `Popover`, los diálogos de firma y `WithdrawCertificateView`; `column` en `StatusView`, `DocumentViewer`, `ErrorNotice`, `MainWindow` y `RecentsSection` (`[GRID_OVERFLOW]`).
@@ -32,7 +32,7 @@ Proyecto: «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`), forma 
 
 - Hay que recompilar la referencia (`npx storybook build -c .storybook -o ../.design-sync/sb-reference` desde rfirma-app) cuando cambien historias, componentes o CSS.
 - Si una pantalla nueva también usa `position: fixed`, necesita un marco como `inSedeWindow`.
-- Las piezas componibles son los primitivos que exporta `design-sync.entry.ts`, y las convenciones enseñan a componer con ellos. Un primitivo nuevo se exporta en la entrada, lleva historia y entra en la tabla de las convenciones.
+- Las piezas componibles son los primitivos que exporta `design-sync.entry.ts`, y las convenciones enseñan a componer con ellos. Un primitivo nuevo lleva historia en «Primitivos», se regenera la selección y entra en la tabla de las convenciones.
 - El `_ds_bundle.css` pesa unos 310 KB porque incluye `app.css` entero.
 - Herramientas probadas: Storybook 10.6.1, Vite 8, React 19.3 y Node 24.
 
