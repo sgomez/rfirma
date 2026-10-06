@@ -304,4 +304,34 @@ describe("el aviso de error", () => {
 
     expect(onEmptyStore).toHaveBeenCalledOnce();
   });
+
+  it("empties the store with Enter while the confirmation is open, with its primary focused", async () => {
+    const user = userEvent.setup();
+    const onEmptyStore = vi.fn();
+    renderIn("es", <ErrorNotice situation="keyringPinMissing" onEmptyStore={onEmptyStore} />);
+
+    await user.keyboard("{Enter}");
+    expect(onEmptyStore).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
+    expect(screen.getByRole("button", { name: "Vaciar el almacén" })).toHaveFocus();
+    (document.activeElement as HTMLElement).blur();
+    await user.keyboard("{Enter}");
+
+    expect(onEmptyStore).toHaveBeenCalledOnce();
+  });
+
+  it("cancels the confirmation with Escape, and ignores Escape once it is closed", async () => {
+    const user = userEvent.setup();
+    const onEmptyStore = vi.fn();
+    renderIn("es", <ErrorNotice situation="keyringPinMissing" onEmptyStore={onEmptyStore} />);
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByText(/¿Seguro\? Se perderán/)).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await user.keyboard("{Enter}");
+    expect(onEmptyStore).not.toHaveBeenCalled();
+  });
 });
