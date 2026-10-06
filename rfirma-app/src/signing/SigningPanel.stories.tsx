@@ -10,9 +10,7 @@ import {
   WRITABLE_DESTINATION,
 } from "../../.storybook/decorators/signingPanel";
 import {
-  aCertificateSection,
   aReport,
-  aRubricSection,
   aSignature,
   aSignatureBy,
   ENTITY_CERTIFICATE,
@@ -25,6 +23,7 @@ import {
 } from "../../.storybook/fixtures/signing";
 import { placementStateOf } from "../placement/placementFixtures";
 import { SigningPanel } from "./SigningPanel";
+import { aCertificateSection, aRubricSection } from "./signingSectionFixtures";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 const RECT = { x0: 100, y0: 100, x1: 300, y1: 180 };
