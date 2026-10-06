@@ -88,23 +88,30 @@ matiz (ver sección 8).
 ## 3. Tipografía
 
 Familia única: **Inter**, licencia OFL. Los roles se distinguen por tamaño,
-peso y tracking, nunca por familia.
+peso, interlínea y tracking, nunca por familia. El texto elige **rol**, no
+números: cada rol cierra tamaño, peso e interlínea juntos en
+`tokens/typography.css` (`--rf-<rol>-size`, `-weight`, `-leading`), y su clase
+`.rf-<rol>` los aplica.
 
 | Clase | Tamaño / interlineado | Peso | Tracking | Uso |
 | --- | --- | --- | --- | --- |
 | `.rf-display` | 96 / 1.0 | 700 | −2.4px | portada, héroe |
 | `.rf-heading` | 48 / 1.15 | 700 | 0 | título de sección mayor |
+| `.rf-headline` | 32 / 1.2 | 700 | 0 | titular de pantalla |
 | `.rf-title` | 20 / 1.3 | 700 | 0 | título de tarjeta, diálogo, panel |
-| `.rf-body` | 12 / 1.0 | 400 | 0 | etiquetas, ayuda, metadatos |
-| `.rf-prose` | 14 / 1.6 | 400 | 0 | texto corrido |
+| `.rf-subtitle` | 16 / 1.35 | 600 | 0 | subtítulo, cabecera de bloque |
+| `.rf-ui` | 14 / 1.4 | 400 (600 con `.rf-ui--strong`) | 0 | controles: botón, campo, etiqueta |
+| `.rf-body` | 13 / 1.4 | 400 | 0 | cuerpo base, el de `.rf-root` |
+| `.rf-prose` | 13 / 1.6 | 400 | 0 | texto corrido: `body` con interlínea de lectura |
+| `.rf-caption` | 12 / 1.3 | 400 | 0 | ayuda, metadatos, insignia |
 
 `--rf-font-display` y `--rf-font-body` existen como puntos de extensión pero
 hoy resuelven a la misma pila. Ambas declaran fallbacks del sistema, de modo
 que un fallo de carga degrada a la sans nativa, no a serif.
 
-**`.rf-body` es una medida de etiqueta**, no de lectura: 12px con interlineado
-1.0 apelmaza cualquier párrafo. En cuanto un texto pueda ocupar más de una
-línea, `.rf-prose`.
+**`.rf-prose` no es un rol aparte**: es `body` con la interlínea de lectura
+(`--rf-body-prose-leading`). En cuanto un texto pueda ocupar más de una línea,
+`.rf-prose`.
 
 Nota de despliegue: Inter **está autoalojada**, no servida desde una CDN. Los
 woff2 (subconjuntos `latin` y `latin-ext`) y su OFL viven junto al bundle y
@@ -244,7 +251,7 @@ CSS con `var(--rf-*)`.
 | Familia | Clases |
 | --- | --- |
 | Raíz y tema | `.rf-root`, `.rf-on-light`, `[data-theme]` |
-| Texto | `.rf-display`, `.rf-heading`, `.rf-title`, `.rf-body`, `.rf-prose`, `.rf-text-muted`, `.rf-text-primary` |
+| Texto | `.rf-display`, `.rf-heading`, `.rf-headline`, `.rf-title`, `.rf-subtitle`, `.rf-ui`, `.rf-ui--strong`, `.rf-body`, `.rf-prose`, `.rf-caption`, `.rf-text-muted`, `.rf-text-primary` |
 | Disposición | `.rf-stack`, `.rf-row`, `.rf-section`, `.rf-divider`, `.rf-gap-xs\|sm\|md\|lg` |
 | Superficies | `.rf-surface`, `.rf-card`, `.rf-card--elevated`, `.rf-card--interactive` |
 | Botones | `.rf-btn` + `--primary\|--secondary\|--ghost\|--pill\|--disabled` |
@@ -500,10 +507,10 @@ alguien los "arreglará" de vuelta.
    tema y que no exista forma de escribir un color de texto literal sin romper
    algo.
 
-4. **`.rf-title` y `.rf-prose` existen porque la escala tenía un hueco.** Entre
-   `heading` (48px) y `body` (12px/1.0) no había nada, y ninguno de los dos
-   sirve para un título de tarjeta ni para un párrafo. No los sustituyas por
-   tamaños inventados sobre la marcha.
+4. **La escala son roles cerrados porque los números sueltos divergen.** Con
+   solo `display`, `heading` y `body`, cada zona inventaba sus tamaños
+   intermedios. No sustituyas un rol por un tamaño inventado sobre la marcha:
+   elige el rol más cercano.
 
 Nota menor: `--rf-duration-slow` vale lo mismo que `--rf-duration-base`. El
 token se conserva por compatibilidad, pero **hay dos escalones de movimiento,

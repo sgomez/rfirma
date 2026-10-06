@@ -75,7 +75,7 @@ cumple el 3:1 de WCAG 1.4.11 en ambos temas: no lo cambies por el sutil.
 | Familia | Clases |
 | --- | --- |
 | Raíz y tema | `.rf-root`, `.rf-on-light`, `[data-theme]` |
-| Texto | `.rf-display`, `.rf-heading`, `.rf-title`, `.rf-body`, `.rf-prose`, `.rf-text-muted`, `.rf-text-primary` |
+| Texto | `.rf-display`, `.rf-heading`, `.rf-headline`, `.rf-title`, `.rf-subtitle`, `.rf-ui`, `.rf-ui--strong`, `.rf-body`, `.rf-prose`, `.rf-caption`, `.rf-text-muted`, `.rf-text-primary` |
 | Disposición | `.rf-stack`, `.rf-row`, `.rf-section`, `.rf-divider`, `.rf-gap-xs\|sm\|md\|lg` |
 | Superficies | `.rf-surface`, `.rf-card`, `.rf-card--elevated`, `.rf-card--interactive` |
 | Botones | `.rf-btn` + `--primary\|--secondary\|--ghost\|--pill` |
@@ -84,7 +84,7 @@ cumple el 3:1 de WCAG 1.4.11 en ambos temas: no lo cambies por el sutil.
 
 Fuera de esta tabla no hay clases. Para la maquetación propia usa CSS con
 `var(--rf-*)`; **nunca escribas un valor literal** de color, espacio, radio,
-sombra ni duración.
+sombra, duración ni tipografía.
 
 ## Tres cosas que no son evidentes
 
@@ -96,9 +96,9 @@ sombra ni duración.
 2. **`text` y `text-muted` no son roles de tema.** `text: #000000` sobre el
    lienzo oscuro da 1,17:1 y `text-muted: #ffffff` es más brillante que el texto
    principal. Usa `--rf-text` y `--rf-text-muted`.
-3. **Interlineado.** `body` es 12px/1.0, una medida de etiqueta. Para texto de
-   más de una línea usa `.rf-prose` (14/1.6). `.rf-title` (20/1.3) cubre el
-   hueco entre `heading` (48px) y `body` (12px), que en el documento no existe.
+3. **El texto elige rol, no números.** Cada clase de rol fija tamaño, peso e
+   interlínea juntos, desde `tokens/typography.css`. `.rf-prose` es el rol
+   `body` con la interlínea de lectura, para texto de más de una línea.
 
 ## Reglas de accesibilidad
 

@@ -35,15 +35,35 @@
   line-height: var(--rf-heading-leading);
   margin: 0;
 }
-/* Section title: the heading scale jumps 48px -> 12px with nothing between,
- * so this is the intermediate step real UI needs. Same family and weight. */
-.rf-title {
+.rf-headline {
   font-family: var(--rf-font-display);
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: var(--rf-headline-size);
+  font-weight: var(--rf-headline-weight);
+  line-height: var(--rf-headline-leading);
   margin: 0;
 }
+.rf-title {
+  font-family: var(--rf-font-display);
+  font-size: var(--rf-title-size);
+  font-weight: var(--rf-title-weight);
+  line-height: var(--rf-title-leading);
+  margin: 0;
+}
+.rf-subtitle {
+  font-family: var(--rf-font-display);
+  font-size: var(--rf-subtitle-size);
+  font-weight: var(--rf-subtitle-weight);
+  line-height: var(--rf-subtitle-leading);
+  margin: 0;
+}
+.rf-ui {
+  font-family: var(--rf-font-body);
+  font-size: var(--rf-ui-size);
+  font-weight: var(--rf-ui-weight);
+  line-height: var(--rf-ui-leading);
+  margin: 0;
+}
+.rf-ui--strong { font-weight: var(--rf-ui-strong-weight); }
 .rf-body {
   font-family: var(--rf-font-body);
   font-size: var(--rf-body-size);
@@ -51,12 +71,20 @@
   line-height: var(--rf-body-leading);
   margin: 0;
 }
-/* Reading copy: 12px/1.0 is a UI-label setting; it clumps any paragraph.
- * This is the override for anything longer than one line. */
+/* Reading copy: the body role with the reading leading, for anything longer
+ * than one line. A variant of body, not a role of its own. */
 .rf-prose {
   font-family: var(--rf-font-body);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--rf-body-size);
+  font-weight: var(--rf-body-weight);
+  line-height: var(--rf-body-prose-leading);
+  margin: 0;
+}
+.rf-caption {
+  font-family: var(--rf-font-body);
+  font-size: var(--rf-caption-size);
+  font-weight: var(--rf-caption-weight);
+  line-height: var(--rf-caption-leading);
   margin: 0;
 }
 .rf-text-muted { color: var(--rf-text-muted); }
@@ -111,9 +139,9 @@
   border-radius: var(--rf-radius-md);
   border: 1px solid transparent;
   font-family: var(--rf-font-body);
-  font-size: var(--rf-body-size);
-  font-weight: 600;
-  line-height: 1;
+  font-size: var(--rf-ui-size);
+  font-weight: var(--rf-ui-strong-weight);
+  line-height: var(--rf-ui-leading);
   cursor: pointer;
   text-decoration: none;
   transition: background-color var(--rf-duration-fast) var(--rf-easing),
@@ -146,9 +174,9 @@
 .rf-field { display: flex; flex-direction: column; gap: var(--rf-space-1); }
 .rf-label {
   font-family: var(--rf-font-body);
-  font-size: var(--rf-body-size);
-  font-weight: 600;
-  line-height: 1;
+  font-size: var(--rf-ui-size);
+  font-weight: var(--rf-ui-strong-weight);
+  line-height: var(--rf-ui-leading);
   color: var(--rf-text-muted);
 }
 .rf-input {
@@ -159,18 +187,25 @@
   border: 1px solid var(--rf-border-strong);
   border-radius: var(--rf-radius-md);
   font-family: var(--rf-font-body);
-  font-size: var(--rf-body-size);
+  font-size: var(--rf-ui-size);
+  font-weight: var(--rf-ui-weight);
+  line-height: var(--rf-ui-leading);
   transition: border-color var(--rf-duration-fast) var(--rf-easing);
 }
 .rf-input::placeholder { color: var(--rf-text-muted); }
 .rf-input:hover { border-color: var(--rf-primary); }
 .rf-input[disabled] { opacity: 0.45; cursor: not-allowed; }
-.rf-hint { font-size: var(--rf-body-size); color: var(--rf-text-muted); }
+.rf-hint {
+  font-size: var(--rf-caption-size);
+  font-weight: var(--rf-caption-weight);
+  line-height: var(--rf-caption-leading);
+  color: var(--rf-text-muted);
+}
 .rf-field--error .rf-input { border-color: var(--rf-text); }
 /* Errors are marked by a border change AND a "!" glyph, never by color alone.
  * The palette has no error hue by design, so the signal is weight + glyph +
  * border on the highest-contrast text color - which works in both themes. */
-.rf-field--error .rf-hint { color: var(--rf-text); font-weight: 600; }
+.rf-field--error .rf-hint { color: var(--rf-text); font-weight: var(--rf-ui-strong-weight); }
 
 /* ---------------------------------------------------------------- 7. Misc */
 .rf-badge {
@@ -180,10 +215,10 @@
   border-radius: var(--rf-radius-pill);
   border: 1px solid var(--rf-border-strong);
   font-family: var(--rf-font-body);
-  font-size: var(--rf-body-size);
-  font-weight: 600;
+  font-size: var(--rf-caption-size);
+  font-weight: var(--rf-ui-strong-weight);
+  line-height: var(--rf-caption-leading);
   color: var(--rf-text-muted);
-  line-height: 1;
 }
 .rf-badge--primary {
   background: var(--rf-primary);
