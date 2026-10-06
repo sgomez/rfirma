@@ -279,8 +279,10 @@
   gap: 1px;
   min-width: 0;
   /* Miniatura: 5.5px es dibujo del sello a escala, no un rol tipográfico. */
-  font-size: 5.5px;
-  line-height: 1.2;
+  --thumbnail-size: 5.5px;
+  --thumbnail-leading: 1.2;
+  font-size: var(--thumbnail-size);
+  line-height: var(--thumbnail-leading);
   color: var(--rf-text);
 }
 
