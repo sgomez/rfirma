@@ -39,6 +39,21 @@ function isPressable(button: HTMLButtonElement): boolean {
   );
 }
 
+/** El atajo común de una pantalla sin diálogo propio: atiende el teclado del documento mientras `enabled`. */
+export function useActionKeys(actions: Actions, enabled = true) {
+  const latest = useRef(actions);
+  latest.current = actions;
+
+  useEffect(() => {
+    if (!enabled) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      answerActionKey(event, latest.current);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [enabled]);
+}
+
 /** El botón por defecto: el foco, en cuanto se puede pulsar y si nadie lo ha llevado a otro sitio. */
 export function useDefaultButton(enabled = true) {
   const button = useRef<HTMLButtonElement>(null);
