@@ -118,6 +118,45 @@ describe("SetupWizard", () => {
     expect(screen.getByText("rFirma certificate")).toBeInTheDocument();
   });
 
+  it("continues and finishes with Intro, each button already focused", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
+        onFinish={onFinish}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Continuar" })).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Terminar" })).toHaveFocus());
+    expect(onFinish).not.toHaveBeenCalled();
+    await user.keyboard("{Enter}");
+    expect(onFinish).toHaveBeenCalledOnce();
+  });
+
+  it("does nothing with Escape", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={memoryStatus()}
+        onFinish={onFinish}
+      />,
+    );
+
+    await user.keyboard("{Escape}");
+
+    expect(onFinish).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeInTheDocument();
+  });
+
   it("can be skipped from the welcome screen without touching the computer", async () => {
     const user = userEvent.setup();
     const onFinish = vi.fn();
