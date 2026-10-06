@@ -9,6 +9,7 @@ import { momentStory, sedeErrand, sedeViewActions } from "./testing/fixtures/sed
 const meta = {
   title: "Flujos/Sede/Marcar la firma",
   ...sedeAreaMomentMeta,
+  parameters: { ...sedeAreaMomentMeta.parameters, designSync: { cardMode: "column" } },
   component: SedeMarking,
   args: { onMark: sedeViewActions.onMarkArea, onCancel: sedeViewActions.onCancel },
 } satisfies Meta<typeof SedeMarking>;

@@ -93,9 +93,30 @@
     "RecentsSection": {
       "cardMode": "column"
     },
+    "SedeConfirm": {
+      "cardMode": "column"
+    },
     "SedeConsent": {
       "cardMode": "single",
       "primaryStory": "Consent"
+    },
+    "SedeMarking": {
+      "cardMode": "column"
+    },
+    "SedeNoCertificate": {
+      "cardMode": "column"
+    },
+    "SedeOutcome": {
+      "cardMode": "column"
+    },
+    "SedeSigning": {
+      "cardMode": "column"
+    },
+    "SedeTransfer": {
+      "cardMode": "column"
+    },
+    "SedeWaiting": {
+      "cardMode": "column"
     },
     "SignAnywayDialog": {
       "cardMode": "single",
@@ -104,6 +125,12 @@
     "SignaturesDialog": {
       "cardMode": "single",
       "viewport": "1340x780"
+    },
+    "SignaturesPanel": {
+      "cardMode": "column"
+    },
+    "SigningPanel": {
+      "cardMode": "column"
     },
     "SigningProgressDialog": {
       "cardMode": "single",

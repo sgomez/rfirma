@@ -10,6 +10,7 @@ import { signedDocument } from "./testing/fixtures/sedeWindow";
 const meta = {
   title: "Flujos/Sede/Desenlace",
   ...sedeMomentMeta,
+  parameters: { ...sedeMomentMeta.parameters, designSync: { cardMode: "column" } },
   component: SedeOutcome,
   args: { onClose: sedeViewActions.onClose, onOpenHelp: sedeViewActions.onOpenHelp },
 } satisfies Meta<typeof SedeOutcome>;

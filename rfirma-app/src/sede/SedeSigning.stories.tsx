@@ -9,6 +9,7 @@ import { certificate } from "./testing/fixtures/sedeWindow";
 const meta = {
   title: "Flujos/Sede/Firmando",
   ...sedeMomentMeta,
+  parameters: { ...sedeMomentMeta.parameters, designSync: { cardMode: "column" } },
   component: SedeSigning,
   args: { origin: "sede.ejemplo.gob.es", onCancel: sedeViewActions.onCancel },
 } satisfies Meta<typeof SedeSigning>;
