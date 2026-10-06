@@ -1,4 +1,4 @@
-//! El cuerpo y el pie de cada momento (`SedeBody`), con sus teclas Intro y Escape, y los hooks que comparten los momentos: el cierre solo del desenlace y la cuenta atrás de consentir.
+//! El cuerpo y el pie de cada momento (`SedeBody`), con el atajo común de Intro y Escape, y los hooks que comparten los momentos: el cierre solo del desenlace y la cuenta atrás de consentir.
 
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { answerActionKey } from "../design-system/actionKeys";
@@ -63,22 +63,21 @@ export function useOutcomeClock(onClose: () => void, enabled = true) {
   }, [enabled]);
 }
 
-/** Escape pulsa el botón de cancelar o cerrar del momento e Intro el primario, salvo que un control ya lo haya atendido. */
+/** Intro pulsa la primaria del momento y Escape su salida, salvo que un control ya lo haya atendido. */
 function useActionKeys(
   primary: RefObject<HTMLButtonElement | null> | undefined,
   onEscape: (() => void) | undefined,
 ) {
-  const latest = useRef(onEscape);
-  latest.current = onEscape;
+  const latest = useRef({ primary, secondary: onEscape });
+  latest.current = { primary, secondary: onEscape };
 
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
-      const cancel = latest.current;
-      answerActionKey(event, { primary, secondary: cancel && (() => cancel()) });
+      answerActionKey(event, latest.current);
     };
     document.addEventListener("keydown", listener);
     return () => document.removeEventListener("keydown", listener);
-  }, [primary]);
+  }, []);
 }
 
 /** Los segundos que le faltan al botón de consentir para activarse; cero sin cuenta atrás. */
