@@ -14,7 +14,7 @@ const { ShadowAttackSuspect } = composeStories(confirmModule);
 const { Signing, Returning } = composeStories(signingModule);
 
 describe("2b · confirming what the validator flags", () => {
-  it("focuses Continuar, so Enter goes on: the person already consented", () => {
+  it("focuses Continuar, so Enter goes on to consent: the person has not consented yet", () => {
     const { port } = scriptedFrom(ShadowAttackSuspect);
     renderWithCatalog(<SedeWindow errands={port} />);
 

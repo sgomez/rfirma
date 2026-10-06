@@ -1,6 +1,6 @@
 //! 1 · La espera del canal y, cuando ya no va a abrirse, la instalación de la CA local y las dos recetas de navegador, que no diagnostican.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { CopyIcon } from "../design-system/icons";
@@ -40,6 +40,7 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
   const { t } = useTranslation();
   const [browser, setBrowser] = useState<Browser>("chrome");
   const unreachable = moment === "unreachable";
+  const installLocalCa = useRef<HTMLButtonElement>(null);
 
   const localCa = (
     <Row gap="xs" className="sede-waiting__ca">
@@ -47,7 +48,7 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
       {/* `--primary`, y es el único de la pantalla: la tabla «Estados» de la
           ficha da instalar la CA como la **acción principal** de este estado.
           Sin ella el navegador ni llega a preguntar por el permiso. */}
-      <Button variant="primary" onClick={onInstallLocalCa}>
+      <Button ref={installLocalCa} variant="primary" onClick={onInstallLocalCa}>
         {t("status.actions.install")}
       </Button>
     </Row>
@@ -55,6 +56,7 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
 
   return (
     <SedeBody
+      primary={installLocalCa}
       onEscape={onCancel}
       footer={
         <>

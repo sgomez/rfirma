@@ -75,6 +75,7 @@ export function SedeConsent({
 
   return (
     <SedeBody
+      primary={consentButton}
       onEscape={onCancel}
       footer={
         <>

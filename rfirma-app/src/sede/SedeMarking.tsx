@@ -11,7 +11,6 @@ import { standardRectOnPageOf } from "../viewer/signatureBox";
 import type { MarkedArea } from "./errand";
 import { SedeBody } from "./SedeFrame";
 import "../signing/SigningPanel.css";
-import { useActionKeys } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 
 interface SedeMarkingProps {
@@ -36,7 +35,6 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   const { placement, rangeError, viewPage, moveBox, sealPage } = placementState;
   const [handing, setHanding] = useState(false);
   const continueButton = useRef<HTMLButtonElement>(null);
-  useActionKeys({ primary: continueButton });
 
   const accept = async () => {
     if (pdf === null || placement === null) return;
@@ -51,6 +49,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   return (
     <SedeBody
       flush
+      primary={continueButton}
       onEscape={onCancel}
       footer={
         <>
