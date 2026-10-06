@@ -66,8 +66,8 @@
   min-height: 0;
   padding: 9px 10px;
   border-radius: var(--rf-radius-sm);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--rf-ui-size);
+  line-height: var(--rf-body-prose-leading);
 }
 
 .header__entryLabel {

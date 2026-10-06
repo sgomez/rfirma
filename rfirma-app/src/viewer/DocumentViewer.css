@@ -60,7 +60,7 @@
 }
 
 .viewer__drop-title {
-  font-size: 16px;
+  font-size: var(--rf-subtitle-size);
   text-align: center;
 }
 
@@ -181,8 +181,9 @@
   border-radius: var(--rf-radius-sm);
   background: var(--rf-primary);
   color: var(--rf-on-primary);
+  /* Miniatura: 8px es dibujo, no un rol tipográfico (#1691). */
   font-size: 8px;
-  font-weight: 700;
+  font-weight: var(--rf-title-weight);
   white-space: nowrap;
 }
 
@@ -345,8 +346,8 @@
   min-height: 30px;
   padding: 0 4px;
   border-radius: var(--rf-radius-sm);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--rf-body-size);
+  font-weight: var(--rf-title-weight);
   text-align: center;
   /* Las flechas de la plataforma no caben en una pastilla de 30 px y el
      artboard la dibuja lisa: se sube y se baja de página con los cuatro
@@ -376,7 +377,7 @@
 .viewer__zoom {
   width: 60px;
   padding-inline: var(--rf-space-xs);
-  font-weight: 700;
+  font-weight: var(--rf-title-weight);
   text-align: center;
 }
 
