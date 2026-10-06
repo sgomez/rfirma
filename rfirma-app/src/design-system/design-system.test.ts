@@ -406,7 +406,6 @@ describe("el vocabulario de clases", () => {
     "rf-surface",
     "rf-card",
     "rf-card--elevated",
-    "rf-card--interactive",
     "rf-btn",
     "rf-btn--primary",
     "rf-btn--secondary",

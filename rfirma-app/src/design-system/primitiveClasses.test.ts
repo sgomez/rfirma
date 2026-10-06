@@ -30,29 +30,11 @@ const primitiveOf: Record<string, string> = {
   gap: "Stack o Row",
 };
 
-const NOT_A_DIV = "el primitivo pinta un div y aquí el elemento es otro";
-
 /**
  * Lo que las tandas dejaron escrito a mano, con su motivo. Es por fichero y
  * por clase: un `rf-btn` nuevo en uno de estos ficheros sigue fallando.
  */
-const exceptions: Record<string, { classes: string[]; reason: string }> = {
-  "signing/PanelFooter.tsx": { classes: ["rf-row", "rf-gap-xs"], reason: NOT_A_DIV },
-  "signing/SignaturesPanel.tsx": { classes: ["rf-row", "rf-gap-xs"], reason: NOT_A_DIV },
-  "signing/SignatureCards.tsx": { classes: ["rf-card"], reason: NOT_A_DIV },
-  "setup/SetupWizard.tsx": { classes: ["rf-stack", "rf-row", "rf-gap-xs"], reason: NOT_A_DIV },
-  "sede/SedeFrame.tsx": { classes: ["rf-row", "rf-gap-xs"], reason: NOT_A_DIV },
-  "sede/SedeConsent.tsx": { classes: ["rf-stack"], reason: NOT_A_DIV },
-  "sede/SedeWaiting.tsx": { classes: ["rf-stack", "rf-row", "rf-gap-xs"], reason: NOT_A_DIV },
-  "preferences/PreferencesSections.tsx": {
-    classes: ["rf-row", "rf-gap-xs"],
-    reason: NOT_A_DIV,
-  },
-  "status/WithdrawCertificateView.tsx": {
-    classes: ["rf-stack", "rf-row", "rf-gap-xs"],
-    reason: NOT_A_DIV,
-  },
-};
+const exceptions: Record<string, { classes: string[]; reason: string }> = {};
 
 function sourcesOutsideTheDesignSystem(): string[] {
   const listed = execFileSync("git", ["ls-files", "--", "*.tsx"], {

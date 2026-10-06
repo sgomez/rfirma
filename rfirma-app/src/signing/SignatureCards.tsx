@@ -4,6 +4,7 @@ import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../design-system/Badge";
+import { Card } from "../design-system/Card";
 import { AlertIcon, CheckCircleIcon, CrossCircleIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import type {
@@ -42,8 +43,9 @@ export function SignatureCards({ signatures, findings, justSigned = false }: Sig
       )}
       <ol className="signature-cards">
         {signatures.map((signature, index) => (
-          <li
-            className="rf-card signature-cards__card"
+          <Card
+            as="li"
+            className="signature-cards__card"
             // biome-ignore lint/suspicious/noArrayIndexKey: el orden es la identidad de la firma.
             key={index}
           >
@@ -58,7 +60,7 @@ export function SignatureCards({ signatures, findings, justSigned = false }: Sig
               numbering={String(index + 1)}
               locale={locale}
             />
-          </li>
+          </Card>
         ))}
       </ol>
     </>

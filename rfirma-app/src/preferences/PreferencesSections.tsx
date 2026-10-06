@@ -174,7 +174,7 @@ function DestinationField({
       </p>
       {preferences.offersOriginalFolder ? (
         <Stack gap="xs" role="radiogroup" aria-labelledby={labelId}>
-          <label className="rf-row rf-gap-xs preferences__destination-radio">
+          <Row as="label" gap="xs" className="preferences__destination-radio">
             <input
               type="radio"
               name={destinationName}
@@ -182,9 +182,9 @@ function DestinationField({
               onChange={() => onDestinationModeChange("next_to_the_original")}
             />
             <span className="rf-prose">{t("preferences.destination.nextToOriginal")}</span>
-          </label>
+          </Row>
           <div className="preferences__destination-option">
-            <label className="rf-row rf-gap-xs preferences__destination-radio">
+            <Row as="label" gap="xs" className="preferences__destination-radio">
               <input
                 type="radio"
                 name={destinationName}
@@ -192,7 +192,7 @@ function DestinationField({
                 onChange={() => onDestinationModeChange("in_the_destination_folder")}
               />
               <span className="rf-prose">{t("preferences.destination.inThisFolder")}</span>
-            </label>
+            </Row>
             <div className="preferences__destination-suboption">{folderRow}</div>
           </div>
         </Stack>
@@ -318,7 +318,7 @@ export function CertificatesSection({
       ) : (
         <ul className="preferences__certificates">
           {installedCertificates.map((certificate) => (
-            <li className="rf-row preferences__certificate" key={certificate.id}>
+            <Row as="li" className="preferences__certificate" key={certificate.id}>
               <CertificateCard certificate={certificate} />
               <Button
                 variant="ghost"
@@ -330,7 +330,7 @@ export function CertificatesSection({
               >
                 {t("actions.remove")}
               </Button>
-            </li>
+            </Row>
           ))}
         </ul>
       )}

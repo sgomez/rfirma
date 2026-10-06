@@ -72,18 +72,18 @@ export function WithdrawCertificateView({
       )}
 
       {moment === "working" && (
-        <ul className="rf-stack rf-gap-xs withdraw-certificate-dialog__list">
+        <Stack as="ul" gap="xs" className="withdraw-certificate-dialog__list">
           {stores.map((store) => (
             <StoreLine key={store.brand} brand={store.brand} icon={<CheckingIcon size={14} />}>
               {t("status.withdrawal.waiting")}
             </StoreLine>
           ))}
-        </ul>
+        </Stack>
       )}
 
       {moment === "result" && report && (
         <>
-          <ul className="rf-stack rf-gap-xs withdraw-certificate-dialog__list">
+          <Stack as="ul" gap="xs" className="withdraw-certificate-dialog__list">
             {report.stores.map((store) => (
               <StoreLine
                 key={store.brand}
@@ -101,7 +101,7 @@ export function WithdrawCertificateView({
                   : t("status.withdrawal.outcome.withdrawn")}
               </StoreLine>
             ))}
-            <li className="rf-row rf-gap-xs">
+            <Row as="li" gap="xs">
               {failed(report.handler) ? (
                 <CrossCircleIcon size={14} />
               ) : (
@@ -113,8 +113,8 @@ export function WithdrawCertificateView({
                   ? report.handler.reason
                   : t("status.withdrawal.outcome.withdrawn")}
               </span>
-            </li>
-          </ul>
+            </Row>
+          </Stack>
           <p className="rf-body">{t("status.withdrawal.restartBrowserNotice")}</p>
         </>
       )}
@@ -161,10 +161,10 @@ interface StoreLineProps {
 function StoreLine({ brand, icon, children }: StoreLineProps) {
   const { t } = useTranslation();
   return (
-    <li className="rf-row rf-gap-xs">
+    <Row as="li" gap="xs">
       <span aria-hidden="true">{icon}</span>
       <span className="rf-prose">{storeBrandLabel(t, brand)}</span>
       <span className="rf-body rf-text-muted">{children}</span>
-    </li>
+    </Row>
   );
 }
