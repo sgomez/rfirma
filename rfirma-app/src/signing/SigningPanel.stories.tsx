@@ -8,6 +8,15 @@ import {
   UNWRITABLE_DESTINATION,
   WRITABLE_DESTINATION,
 } from "../../.storybook/decorators/signingPanel";
+import { placementStateOf } from "../placement/testing/fixtures";
+import { SigningPanel } from "./SigningPanel";
+import {
+  aCertificateSection,
+  aDestinationSection,
+  aRubricSection,
+  aSigningSection,
+  aVisibleSignatureSection,
+} from "./testing/fixtures";
 import {
   aReport,
   aSignature,
@@ -19,16 +28,7 @@ import {
   STORY_CERTIFICATES,
   STORY_RUBRIC,
   VALID_CLOSING,
-} from "../../.storybook/fixtures/signing";
-import { placementStateOf } from "../placement/testing/fixtures";
-import { SigningPanel } from "./SigningPanel";
-import {
-  aCertificateSection,
-  aDestinationSection,
-  aRubricSection,
-  aSigningSection,
-  aVisibleSignatureSection,
-} from "./testing/fixtures";
+} from "./testing/storyReports";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 const RECT = { x0: 100, y0: 100, x1: 300, y1: 180 };

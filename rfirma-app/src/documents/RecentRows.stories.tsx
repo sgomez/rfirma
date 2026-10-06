@@ -2,8 +2,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { storyRecents } from "../../.storybook/fixtures/documents";
 import { RecentRows, RecentsSection } from "./RecentRows";
+import { storyRecents } from "./testing/fixtures";
 
 const meta = {
   title: "Dominio/Documentos/RecentRows",

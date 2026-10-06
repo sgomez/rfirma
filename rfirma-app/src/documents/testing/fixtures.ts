@@ -1,7 +1,7 @@
 //! Los documentos y recientes de ejemplo que comparten las historias de la ventana principal.
 
-import type { DocumentInHand } from "../../src/documents/document";
-import type { RecentDocument } from "../../src/documents/recents";
+import type { DocumentInHand } from "../document";
+import type { RecentDocument } from "../recents";
 
 const NOW = Math.floor(Date.now() / 1000);
 

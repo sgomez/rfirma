@@ -140,8 +140,8 @@ capacidad nueva, el orden es: el puerto en su módulo de dominio → `tauri.ts` 
 
 Las historias viven junto a su componente, como `*.stories.tsx`, y es lo único
 de Storybook que entra en `src/`. Sus marcos van a `.storybook/decorators/` y
-sus datos y espías a `.storybook/fixtures/`; un dato que también usa un test es
-una fixture de la app y vive en `src/`, junto a su zona. `just storybook`
+sus datos y espías a la `testing/` de su zona, bajo `src/`, donde también los usa
+un test. `just storybook`
 las abre en local; `src/stories.test.tsx` las pinta todas en jsdom con axe, sin
 contraste, y una historia nueva queda cubierta sin escribir un test.
 `just storybook-a11y` corre axe en navegador con contraste, en claro y en oscuro,

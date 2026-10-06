@@ -2,9 +2,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
-import { previousSignature, previousSignaturesReport } from "../../.storybook/fixtures/sede";
-import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
+import { previousSignature, previousSignaturesReport } from "./testing/fixtures/previousSignatures";
+import { sedeErrand } from "./testing/fixtures/sedeView";
 import { certificate, consentStage, signedDocument } from "./testing/fixtures/sedeWindow";
 
 const meta = {

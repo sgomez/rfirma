@@ -3,13 +3,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { inDialogWindow } from "../../.storybook/decorators/dialogWindow";
+import { SignaturesDialog } from "./SignaturesDialog";
 import {
   ALL_VALID_REPORT,
   EXTREME_REPORT,
   MIXED_REPORT,
   UNRECOGNIZED_REPORT,
-} from "../../.storybook/fixtures/signing";
-import { SignaturesDialog } from "./SignaturesDialog";
+} from "./testing/storyReports";
 
 const meta = {
   title: "Flujos/Firma/SignaturesDialog",

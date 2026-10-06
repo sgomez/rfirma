@@ -2,8 +2,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
-import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
+import { sedeErrand } from "./testing/fixtures/sedeView";
 
 const meta = { title: "Flujos/Sede/Confirmar", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
 
