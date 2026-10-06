@@ -155,6 +155,22 @@ describe("CertificateSelect", () => {
       expect(within(unusable).getAllByRole("option")).toHaveLength(2);
     });
 
+    it("keeps the «Disponibles» header with several certificates that are all usable", async () => {
+      renderSelect({ certificates: [personal, representative] });
+
+      await userEvent.click(box());
+
+      expect(screen.getByRole("group", { name: "Disponibles" })).toBeInTheDocument();
+    });
+
+    it("keeps the «No se pueden usar» header when no certificate is usable", async () => {
+      renderSelect({ certificates: [expired, revoked] });
+
+      await userEvent.click(box());
+
+      expect(screen.getByRole("group", { name: "No se pueden usar" })).toBeInTheDocument();
+    });
+
     it("shows no group header when there is a single certificate", async () => {
       renderSelect({ certificates: [personal] });
 

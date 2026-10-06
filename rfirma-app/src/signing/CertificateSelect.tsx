@@ -71,6 +71,7 @@ export function CertificateSelect({
       emptyMessage={t("panel.certificate.noMatch")}
       countLabel={(shown, total) => t("panel.certificate.matches", { shown, total })}
       listMaxHeight={listMaxHeight}
+      alwaysGroupHeaders
       disabled={searching || disabled}
       defaultOpen={defaultOpen}
     >

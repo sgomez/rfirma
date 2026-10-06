@@ -31,6 +31,8 @@ interface ComboboxProps<T> {
   countLabel: (shown: number, total: number) => string;
   /** El alto máximo de la lista abierta, en px; la ventana lo recorta si no cabe. */
   listMaxHeight?: number;
+  /** Pinta las cabeceras con más de una opción aunque todas sean de un mismo grupo. */
+  alwaysGroupHeaders?: boolean;
   disabled?: boolean;
   defaultOpen?: boolean;
 }
@@ -52,6 +54,7 @@ export function Combobox<T>({
   emptyMessage,
   countLabel,
   listMaxHeight = 480,
+  alwaysGroupHeaders = false,
   disabled = false,
   defaultOpen = false,
 }: ComboboxProps<T>) {
@@ -68,7 +71,9 @@ export function Combobox<T>({
   const wanted = fold(query.trim());
   const shown = options.filter((option) => matches(option, wanted));
   const groups = groupsOf(shown);
-  const withHeaders = groupsOf(options).length > 1;
+  const withHeaders =
+    groupsOf(options).length > 1 ||
+    (alwaysGroupHeaders && options.length > 1 && options.some((option) => option.group));
   const ordered = groups.flatMap((group) => group.options);
   const last = ordered.length - 1;
 
