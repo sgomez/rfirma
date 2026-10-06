@@ -172,6 +172,19 @@ describe("PreferencesView", () => {
     expect(onForgetActivity).toHaveBeenCalledOnce();
   });
 
+  it("erases what was remembered when the purge is accepted with Enter", async () => {
+    const user = userEvent.setup();
+    const onForgetActivity = vi.fn();
+    const onClose = vi.fn();
+    renderView({ onForgetActivity, onClose });
+
+    await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
+    await user.keyboard("{Enter}");
+
+    expect(onForgetActivity).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("keeps what was remembered when the purge is called off", async () => {
     const user = userEvent.setup();
     const onForgetActivity = vi.fn();
@@ -280,6 +293,16 @@ describe("PreferencesView", () => {
     await user.keyboard("{Escape}");
 
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("does not close on Enter", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderView({ onClose });
+
+    await user.keyboard("{Enter}");
+
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("does not call onClose when Escape was default-prevented", () => {

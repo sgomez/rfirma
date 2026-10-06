@@ -1,7 +1,8 @@
 //! La vista del cuerpo con los ajustes: el índice de cuatro secciones, el guardado al momento y el aviso del ajuste que el disco rechaza, en su sección.
 
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useActionKeys, useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
 import { Row } from "../design-system/Row";
@@ -141,20 +142,8 @@ export function PreferencesView({
   const panel = useRef<HTMLDivElement>(null);
   const tabs = useRef(new Map<Section, HTMLElement | null>());
 
-  // `Escape` cierra Preferencias desde cualquier sitio, tenga el foco donde lo
-  // tenga: como `StatusWindow`, no depende de que el foco esté dentro de la
-  // pantalla. Un `Escape` que ya haya cerrado el menú de la cabecera llega
-  // aquí con `defaultPrevented`, así que cerrar el menú no cierra además
-  // Preferencias.
-  useEffect(() => {
-    const onWindowKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented || confirmingPurge) return;
-      event.preventDefault();
-      onClose();
-    };
-    window.addEventListener("keydown", onWindowKeyDown);
-    return () => window.removeEventListener("keydown", onWindowKeyDown);
-  }, [confirmingPurge, onClose]);
+  useActionKeys({ secondary: onClose }, !confirmingPurge);
+  const purgePrimary = useDefaultButton(confirmingPurge);
 
   /**
    * Guarda un ajuste y, si el disco lo rechaza, deja el aviso **en la sección
@@ -391,6 +380,7 @@ export function PreferencesView({
         <Dialog
           label={t("preferences.rememberActivity.confirm.body")}
           onClose={() => setConfirmingPurge(false)}
+          primary={purgePrimary}
           className="preferences__confirm"
         >
           <p className="rf-prose">{t("preferences.rememberActivity.confirm.body")}</p>
@@ -398,7 +388,7 @@ export function PreferencesView({
             <Button variant="ghost" onClick={() => setConfirmingPurge(false)}>
               {t("actions.cancel")}
             </Button>
-            <Button variant="primary" onClick={() => void purge()}>
+            <Button variant="primary" onClick={() => void purge()} ref={purgePrimary}>
               {t("preferences.rememberActivity.confirm.accept")}
             </Button>
           </Row>
