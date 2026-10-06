@@ -27,7 +27,7 @@ export const Closable: StoryObj<typeof meta> = {
       <>
         <p className="rf-title">¿Firmar de todos modos?</p>
         <p className="rf-prose">El documento tiene firmas que no son válidas.</p>
-        <Row>
+        <Row style={{ justifyContent: "flex-end" }}>
           <Button variant="ghost">Cancelar</Button>
           <Button variant="primary">Firmar</Button>
         </Row>

@@ -43,7 +43,7 @@ const onSedeSurface =
 /** Lo que toda historia de un momento de sede comparte: el fondo de superficie y el centrado. */
 export const sedeMomentMeta = {
   decorators: [onSedeSurface(520, 420)],
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "column" } },
 };
 
 /** El momento de marcar el área, que ocupa la ventana ampliada. */

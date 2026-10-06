@@ -65,7 +65,7 @@
 }
 
 .error-notice__help {
-  align-self: flex-start;
+  align-self: center;
   padding-left: 0;
   min-height: 30px;
   font-size: var(--rf-caption-size);

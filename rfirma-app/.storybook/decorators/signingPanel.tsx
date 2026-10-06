@@ -23,7 +23,10 @@ export const inPanelColumn: Decorator = (Story) => (
   </div>
 );
 
-export const panelStoryParameters = { layout: "centered" } as const;
+export const panelStoryParameters = {
+  layout: "centered",
+  designSync: { cardMode: "column" },
+} as const;
 
 export const WRITABLE_DESTINATION: Destination = {
   folder: "Documentos",

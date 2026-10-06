@@ -81,6 +81,9 @@
       "cardMode": "column",
       "viewport": "1160x620"
     },
+    "PlacementBlock": {
+      "cardMode": "column"
+    },
     "Popover": {
       "cardMode": "single",
       "primaryStory": "Open"
@@ -113,43 +116,13 @@
       "cardMode": "single",
       "viewport": "1340x780"
     },
+    "VisibleSignatureFieldset": {
+      "cardMode": "column"
+    },
     "WithdrawCertificateView": {
       "cardMode": "single",
       "primaryStory": "Question",
       "viewport": "1240x760"
-    },
-    "PlacementBlock": {
-      "cardMode": "column"
-    },
-    "SignaturesPanel": {
-      "cardMode": "column"
-    },
-    "SigningPanel": {
-      "cardMode": "column"
-    },
-    "VisibleSignatureFieldset": {
-      "cardMode": "column"
-    },
-    "SedeConfirm": {
-      "cardMode": "column"
-    },
-    "SedeMarking": {
-      "cardMode": "column"
-    },
-    "SedeNoCertificate": {
-      "cardMode": "column"
-    },
-    "SedeOutcome": {
-      "cardMode": "column"
-    },
-    "SedeSigning": {
-      "cardMode": "column"
-    },
-    "SedeTransfer": {
-      "cardMode": "column"
-    },
-    "SedeWaiting": {
-      "cardMode": "column"
     }
   },
   "readmeHeader": ".design-sync/conventions.md"

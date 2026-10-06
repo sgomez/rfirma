@@ -6,7 +6,7 @@ import { RecentsSection } from "../documents/RecentRows";
 import { storyRecents } from "../documents/testing/fixtures";
 import type { Placement } from "../placement/pageSets";
 import { DocumentViewer } from "./DocumentViewer";
-import { storyPdf } from "./testing/storyPdf";
+import { storyPdf, storyStampedPdf } from "./testing/storyPdf";
 
 const meta = {
   title: "Flujos/Documentos/DocumentViewer",
@@ -79,7 +79,12 @@ export const StampNoCertificate: Story = {
 };
 
 export const StampComposed: Story = {
-  args: { pdf: storyPdf(), placement: sealed, stamp: { kind: "composed" } },
+  args: {
+    pdf: storyPdf(),
+    stamped: storyStampedPdf(sealed.rect),
+    placement: sealed,
+    stamp: { kind: "composed" },
+  },
 };
 
 export const StampFrozen: Story = {
