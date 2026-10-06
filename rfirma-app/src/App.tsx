@@ -171,6 +171,20 @@ export function App({
   const anchor = menuAnchor ?? menuAnchorFor(navigator.userAgent);
   const warningVisible = hasAttention && view !== "status";
   const openHelp = () => void externalDestinations.open("discussions");
+  const signaturesShown = acknowledgement ?? signatureReading.reading;
+  const acknowledgementMoment = acknowledgement && {
+    kind: "acknowledgement" as const,
+    signedAt: acknowledgement.signedAt,
+    signatures: acknowledgement.signatures,
+    findings: acknowledgement.findings,
+    onChangeDestination: () => void acknowledgement.changeDestination(),
+  };
+  const readingMoment = signatureReading.reading && {
+    kind: "reading" as const,
+    state: signatureReading.reading,
+    signable: signatureReading.reading.signable,
+  };
+  const signaturesMoment = acknowledgementMoment ?? readingMoment;
   const unlessModal = (action: () => void) => () => {
     if (!modalOpen) action();
   };
@@ -288,11 +302,11 @@ export function App({
             stamp={stamp.state}
             rubricGap={stamp.rubricGap}
             onComposeStamp={stamp.compose}
-            onOpenHelp={() => void externalDestinations.open("discussions")}
+            onOpenHelp={openHelp}
           />
         }
         panel={
-          acknowledgement !== null ? (
+          signaturesShown !== null && signaturesMoment !== null ? (
             // Firmado: la columna derecha cambia de contenido, no de sitio. Es
             // el único acuse de recibo que recibe quien firma, así que se monta
             // en cuanto la postfirma devuelve el documento.
@@ -302,35 +316,14 @@ export function App({
             // activo tampoco se monta, o quedaría una tercera columna al lado
             // del visor vacío.
             <SignaturesPanel
-              documentName={acknowledgement.documentName}
-              destination={acknowledgement.destination}
-              moment={{
-                kind: "acknowledgement",
-                signedAt: acknowledgement.signedAt,
-                signatures: acknowledgement.signatures,
-                findings: acknowledgement.findings,
-                onChangeDestination: () => void acknowledgement.changeDestination(),
-              }}
-              onOpenDocument={acknowledgement.openDocument}
-              onOpenFolder={acknowledgement.openFolder}
-              onSign={acknowledgement.signAgain}
-              failure={acknowledgement.openFailure}
-              onOpenHelp={() => void externalDestinations.open("discussions")}
-            />
-          ) : signatureReading.reading ? (
-            <SignaturesPanel
-              documentName={signatureReading.reading.documentName}
-              destination={signatureReading.reading.destination}
-              moment={{
-                kind: "reading",
-                state: signatureReading.reading,
-                signable: signatureReading.reading.signable,
-              }}
-              onOpenDocument={signatureReading.reading.openDocument}
-              onOpenFolder={signatureReading.reading.openFolder}
-              onSign={signatureReading.reading.signAgain}
-              failure={signatureReading.reading.openFailure}
-              onOpenHelp={() => void externalDestinations.open("discussions")}
+              documentName={signaturesShown.documentName}
+              destination={signaturesShown.destination}
+              moment={signaturesMoment}
+              onOpenDocument={signaturesShown.openDocument}
+              onOpenFolder={signaturesShown.openFolder}
+              onSign={signaturesShown.signAgain}
+              failure={signaturesShown.openFailure}
+              onOpenHelp={openHelp}
             />
           ) : pdf && documents.active ? (
             <SigningPanel
@@ -346,7 +339,7 @@ export function App({
               rubric={rubricSection}
               destination={journey.destination}
               signing={journey.signing}
-              onOpenHelp={() => void externalDestinations.open("discussions")}
+              onOpenHelp={openHelp}
               failure={journey.failure}
               onEmptyStore={() => void certificateListing.emptyStore()}
             />
