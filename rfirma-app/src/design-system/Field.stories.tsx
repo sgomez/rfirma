@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Field } from "./Field";
 
 const meta = {
-  title: "Sistema de diseño/Field",
+  title: "Primitivos/Field",
   component: Field,
   render: (args) => (
     <Field {...args}>

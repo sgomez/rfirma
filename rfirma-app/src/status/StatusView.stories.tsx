@@ -23,7 +23,7 @@ import { StatusView, type StatusViewProps } from "./StatusView";
 import { memoryStatus, type SignalRow } from "./status";
 
 const meta = {
-  title: "Estado/1 · Panel",
+  title: "Pantallas/Estado/1 · Panel",
   component: StatusView,
   decorators: [inStatusWindow],
   parameters: { layout: "centered" },

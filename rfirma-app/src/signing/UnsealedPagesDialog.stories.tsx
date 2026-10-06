@@ -6,7 +6,7 @@ import { inDialogWindow } from "../../.storybook/decorators/dialogWindow";
 import { UnsealedPagesDialog } from "./UnsealedPagesDialog";
 
 const meta = {
-  title: "Diálogos de firma/1 · Páginas sin firma visible",
+  title: "Flujos/Firma/UnsealedPagesDialog",
   component: UnsealedPagesDialog,
   parameters: { layout: "centered" },
   decorators: [inDialogWindow],

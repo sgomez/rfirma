@@ -6,7 +6,7 @@ import { blankPdf } from "../../.storybook/fixtures/sede";
 import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
 
-const meta = { title: "Sede/1c · Marcar la firma", ...sedeAreaStoryMeta } satisfies Meta<
+const meta = { title: "Flujos/Sede/Marcar la firma", ...sedeAreaStoryMeta } satisfies Meta<
   typeof SedeView
 >;
 

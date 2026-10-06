@@ -11,11 +11,11 @@ citan sus claves.
 
 | Pieza | Componente | Historias |
 | --- | --- | --- |
-| Panel antes de firmar | `signing/SigningPanel.tsx` | «Panel de firma/1 · Antes de firmar» |
-| Panel de firmas: acuse y lectura de firmas | `signing/SignaturesPanel.tsx` | «Panel de firma/2 · Firmado» |
-| Selector de certificado | `signing/CertificateSelect.tsx` | «Firma/CertificateSelect» |
-| Tarjeta de certificado | `signing/CertificateCard.tsx` | «Firma/CertificateCard» |
-| Aviso de firmas previas | `signing/PreviousSignaturesNotice.tsx` | las de «Antes de firmar» que empiezan por `PreviousSignatures` |
+| Panel antes de firmar | `signing/SigningPanel.tsx` | «Flujos/Firma/SigningPanel» |
+| Panel de firmas: acuse y lectura de firmas | `signing/SignaturesPanel.tsx` | «Flujos/Firma/SignaturesPanel» |
+| Selector de certificado | `signing/CertificateSelect.tsx` | «Dominio/Firma/CertificateSelect» |
+| Tarjeta de certificado | `signing/CertificateCard.tsx` | «Dominio/Firma/CertificateCard» |
+| Aviso de firmas previas | `signing/PreviousSignaturesNotice.tsx` | las de «Flujos/Firma/SigningPanel» que empiezan por `PreviousSignatures` |
 | Pie fijo | `signing/PanelFooter.tsx` | las dos carpetas de arriba |
 
 `SignaturesPanel` y `CertificateSelect` se exportan en la entrada de `/design-sync`:
@@ -70,7 +70,7 @@ Pie fijo: **el destino** con su `Cambiar` y **el botón de firmar**, a secas.
 
 ## Estados
 
-Cada uno tiene su historia en «Antes de firmar», salvo que se diga otra cosa:
+Cada uno tiene su historia en «Flujos/Firma/SigningPanel», salvo que se diga otra cosa:
 
 | Estado | Historia | Qué cambia |
 | --- | --- | --- |
@@ -80,7 +80,7 @@ Cada uno tiene su historia en «Antes de firmar», salvo que se diga otra cosa:
 | Sin certificados | `NoCertificates` | Aviso arriba; el pie ofrece añadir un certificado y volver a buscar. No hay selector |
 | Búsqueda fallida | `SearchFailed` | El aviso cuenta que no se pudo buscar, no que no haya ninguno |
 | Varios certificados | `SeveralCertificates` | El desplegable los lista todos al abrirse |
-| Certificados abiertos | `Open` de «Firma/CertificateSelect» | El buscador en lugar de la caja y la lista flotando |
+| Certificados abiertos | `Open` de «Dominio/Firma/CertificateSelect» | El buscador en lugar de la caja y la lista flotando |
 | Firma visible | `VisibleSignature*` | Una página, varias, todas, otra página a la vista y sin colocar |
 | Rango con error | `RangeOutOfDocument` | Campo en error y firmar al 55 %. Es lo único que apaga firmar |
 | Modelos y rúbrica | `CompleteModelWithRubric`, `RubricOnlyModel`, `RubricWithoutImage`, `RubricFailed`, `CustomModel` | Ver «El modelo» y «La rúbrica» |
@@ -261,7 +261,7 @@ con elipsis y entera en el `title`. Claves: `panel.footer.*`.
 
 **El primer bloque del panel.** Es **el mismo componente** que el de la
 [ventana de sede](ventana-de-sede.md), y se describe solo aquí. Historias:
-«Firma/CertificateSelect». Cada fila es una
+«Dominio/Firma/CertificateSelect». Cada fila es una
 [`CertificateCard`](#componentes-y-tokens), la misma que usa la lista de
 certificados de [Preferencias](preferencias.md).
 
@@ -309,7 +309,7 @@ Un solo resumen, y se ve igual llegues como llegues: después de firmar, o
 abierto por `rfirma verify -i <doc> -gui`. Lista **todas las firmas del
 documento tal como ha quedado**, con lo mismo que `rfirma verify -v` y nada más.
 Sustituye a la zona que se desliza: no hay selector, ni aviso de firmas
-previas, ni firma visible, ni modelo. Historias: «Panel de firma/2 · Firmado».
+previas, ni firma visible, ni modelo. Historias: «Flujos/Firma/SignaturesPanel».
 
 | Situación | Historia |
 | --- | --- |

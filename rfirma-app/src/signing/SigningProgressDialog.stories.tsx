@@ -5,7 +5,7 @@ import { inDialogWindow } from "../../.storybook/decorators/dialogWindow";
 import { SigningProgressDialog } from "./SigningProgressDialog";
 
 const meta = {
-  title: "Diálogos de firma/4 · Progreso de firma",
+  title: "Flujos/Firma/SigningProgressDialog",
   component: SigningProgressDialog,
   parameters: { layout: "centered" },
   decorators: [inDialogWindow],

@@ -7,7 +7,7 @@ import { Dialog } from "./Dialog";
 import { Row } from "./Row";
 
 const meta = {
-  title: "Sistema de diseño/Dialog",
+  title: "Primitivos/Dialog",
   component: Dialog,
   parameters: { layout: "centered" },
   decorators: [inDialogWindow],

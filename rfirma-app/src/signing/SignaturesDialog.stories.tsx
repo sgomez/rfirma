@@ -12,7 +12,7 @@ import {
 import { SignaturesDialog } from "./SignaturesDialog";
 
 const meta = {
-  title: "Diálogos de firma/3 · Ver firmas",
+  title: "Flujos/Firma/SignaturesDialog",
   component: SignaturesDialog,
   parameters: { layout: "centered" },
   decorators: [inDialogWindow],

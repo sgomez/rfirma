@@ -9,7 +9,7 @@ import type { Placement } from "../placement/pageSets";
 import { DocumentViewer } from "./DocumentViewer";
 
 const meta = {
-  title: "Ventana principal/5 · Visor",
+  title: "Flujos/Documentos/DocumentViewer",
   component: DocumentViewer,
   parameters: { layout: "centered" },
   decorators: [

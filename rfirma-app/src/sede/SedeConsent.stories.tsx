@@ -7,7 +7,9 @@ import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
 import { certificate, consentStage, signedDocument } from "./sedeWindowFixtures";
 
-const meta = { title: "Sede/2 · Consentimiento", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
+const meta = { title: "Flujos/Sede/Consentimiento", ...sedeStoryMeta } satisfies Meta<
+  typeof SedeView
+>;
 
 export default meta;
 

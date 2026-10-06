@@ -29,7 +29,7 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
 }
 
 const meta = {
-  title: "Firma/CertificateCard",
+  title: "Dominio/Firma/CertificateCard",
   component: CertificateCard,
   args: { certificate: aCertificate() },
 } satisfies Meta<typeof CertificateCard>;

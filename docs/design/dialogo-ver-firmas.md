@@ -4,8 +4,7 @@ Enseña las firmas que ya trae el documento, con su validez, **antes de
 firmar**. Se mira y se cierra: no firma ni pregunta nada.
 
 Componente: `rfirma-app/src/signing/SignaturesDialog.tsx`, con las fichas de
-`SignatureCards.tsx`. Historias: `SignaturesDialog.stories.tsx`, en «Diálogos de
-firma/3 · Ver firmas».
+`SignatureCards.tsx`. Historias: `SignaturesDialog.stories.tsx`, en «Flujos/Firma/SignaturesDialog».
 
 ## Casos de uso que lo usan
 

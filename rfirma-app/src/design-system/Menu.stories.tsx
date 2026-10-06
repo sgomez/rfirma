@@ -47,7 +47,7 @@ function MenuDemo({ startsOpen }: { startsOpen: boolean }) {
 }
 
 const meta = {
-  title: "Sistema de diseño/Menu",
+  title: "Primitivos/Menu",
   component: MenuDemo,
   args: { startsOpen: true },
   argTypes: { startsOpen: { control: "boolean" } },

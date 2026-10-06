@@ -10,7 +10,7 @@ import {
 import { CertificateSelect } from "./CertificateSelect";
 
 const meta = {
-  title: "Firma/CertificateSelect",
+  title: "Dominio/Firma/CertificateSelect",
   component: CertificateSelect,
   parameters: { layout: "centered" },
   decorators: [

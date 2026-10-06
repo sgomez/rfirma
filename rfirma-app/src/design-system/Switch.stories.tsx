@@ -49,7 +49,7 @@ function SwitchDemo({
 }
 
 const meta = {
-  title: "Sistema de diseño/Switch",
+  title: "Primitivos/Switch",
   component: SwitchDemo,
   args: { initial: false, disabled: false, wide: false, trailing: false, hint: false, bare: false },
   argTypes: {

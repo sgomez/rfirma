@@ -5,8 +5,7 @@ problema: una firma caducada, una no válida o un hallazgo del documento. Es un
 paso de confirmación, no un bloqueo: las dos salidas están siempre.
 
 Componente: `rfirma-app/src/signing/SignAnywayDialog.tsx`. Historias:
-`SignAnywayDialog.stories.tsx`, en «Diálogos de firma/2 · Firmar de todos
-modos». Los ejemplos de firmas previas que usan las historias están en
+`SignAnywayDialog.stories.tsx`, en «Flujos/Firma/SignAnywayDialog». Los ejemplos de firmas previas que usan las historias están en
 `rfirma-app/.storybook/fixtures/signing.ts`.
 
 ## Casos de uso que lo usan

@@ -6,7 +6,7 @@ import { PreferencesView } from "./PreferencesView";
 import { anInstalledCertificate, defaults, IN_2020 } from "./preferencesFixtures";
 
 const meta = {
-  title: "Preferencias/Pantalla",
+  title: "Pantallas/Preferencias",
   component: PreferencesView,
   parameters: { layout: "centered" },
   decorators: [

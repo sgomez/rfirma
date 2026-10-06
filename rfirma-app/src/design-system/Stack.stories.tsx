@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Stack } from "./Stack";
 
 const meta = {
-  title: "Sistema de diseño/Stack",
+  title: "Primitivos/Stack",
   component: Stack,
   argTypes: { gap: { control: "select", options: [undefined, "xs", "md"] } },
   render: (args) => (

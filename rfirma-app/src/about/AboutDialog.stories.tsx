@@ -9,7 +9,7 @@ const installable: NewVersion = { version: "0.4.1", installable: true };
 const announcedOnly: NewVersion = { version: "0.4.1", installable: false };
 
 const meta = {
-  title: "Acerca de/1 · Diálogo",
+  title: "Pantallas/Acerca de/1 · Diálogo",
   component: AboutDialog,
   parameters: { layout: "fullscreen" },
   args: {

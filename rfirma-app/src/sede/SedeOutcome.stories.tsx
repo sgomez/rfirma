@@ -7,7 +7,7 @@ import type { SiteOutcome } from "./errand";
 import type { SedeView } from "./SedeView";
 import { signedDocument } from "./sedeWindowFixtures";
 
-const meta = { title: "Sede/4 · Desenlace", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
+const meta = { title: "Flujos/Sede/Desenlace", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
 
 export default meta;
 

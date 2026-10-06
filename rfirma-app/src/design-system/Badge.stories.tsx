@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Badge } from "./Badge";
 
 const meta = {
-  title: "Sistema de diseño/Badge",
+  title: "Primitivos/Badge",
   component: Badge,
   args: { children: "v1.2.3" },
   argTypes: { variant: { control: "select", options: [undefined, "primary"] } },

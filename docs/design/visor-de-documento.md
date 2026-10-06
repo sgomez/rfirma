@@ -5,7 +5,7 @@ firma visible. Responde a «cómo va a quedar». Sin documento, es la zona de
 soltar.
 
 **La verdad del dibujo es el código y sus historias:**
-`viewer/DocumentViewer.stories.tsx` («Ventana principal/5 · Visor»). Esta ficha
+`viewer/DocumentViewer.stories.tsx` («Flujos/Documentos/DocumentViewer»). Esta ficha
 cuenta el flujo y el porqué; los textos salen del catálogo (`viewer.*` en
 `po/messages.pot`) y no se copian aquí. Las historias pintan una hoja de
 mentira (`.storybook/fixtures/pdf.ts`): no hay `pdf.js` en Storybook, y lo que se ve

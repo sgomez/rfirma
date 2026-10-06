@@ -32,7 +32,7 @@ const emptyViewer = (
 );
 
 const meta = {
-  title: "Ventana principal/1 · Ventana",
+  title: "Flujos/Ventana principal/MainWindow",
   component: MainWindow,
   parameters: { layout: "centered" },
   decorators: [

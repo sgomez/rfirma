@@ -7,7 +7,7 @@ import { placementStateOf } from "./placementFixtures";
 const RECT = { x0: 100, y0: 100, x1: 300, y1: 180 };
 
 const meta = {
-  title: "Firma/Colocación",
+  title: "Flujos/Firma/PlacementBlock",
   component: PlacementBlock,
   parameters: { layout: "centered" },
   decorators: [

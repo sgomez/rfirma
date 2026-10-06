@@ -5,8 +5,7 @@ en algunas de las páginas elegidas y que esas se quedarán sin él. Es el únic
 aviso que hay de una degradación que, sin él, ocurriría en silencio.
 
 Componente: `rfirma-app/src/signing/UnsealedPagesDialog.tsx`. Historias:
-`UnsealedPagesDialog.stories.tsx`, en «Diálogos de firma/1 · Páginas sin firma
-visible».
+`UnsealedPagesDialog.stories.tsx`, en «Flujos/Firma/UnsealedPagesDialog».
 
 ## Casos de uso que lo usan
 

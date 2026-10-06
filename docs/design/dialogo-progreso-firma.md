@@ -5,8 +5,7 @@ ventana porque no hay nada que hacer hasta que termine, y porque interrumpir a
 mitad rompe la firma.
 
 Componente: `rfirma-app/src/signing/SigningProgressDialog.tsx`. Historias:
-`SigningProgressDialog.stories.tsx`, en «Diálogos de firma/4 · Progreso de
-firma», una por etapa en curso.
+`SigningProgressDialog.stories.tsx`, en «Flujos/Firma/SigningProgressDialog», una por etapa en curso.
 
 ## Casos de uso que lo usan
 

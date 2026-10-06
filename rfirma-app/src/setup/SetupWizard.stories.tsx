@@ -16,7 +16,7 @@ import {
 } from "./setupFixtures";
 
 const meta = {
-  title: "Primer arranque",
+  title: "Pantallas/Primer arranque",
   component: SetupWizard,
   parameters: { layout: "centered" },
   decorators: [
