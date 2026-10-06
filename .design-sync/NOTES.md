@@ -44,3 +44,10 @@ Proyecto: «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`), forma 
 - `Header`: las pestañas se truncan algo antes que en la referencia porque el marco del preview lleva 24 px de margen de cuerpo. Aceptado.
 - Títulos sin mapear (`TITLE_UNMAPPED`), fuera de la sincronización a propósito: los que imprime el build.
 - `conventions.md` no menciona `CertificateSelect`.
+
+## Re-sync del 6 de octubre de 2026
+
+- `SedeView` ya no existe: son nueve componentes `Sede*` (`SedeConfirm`, `SedeConsent`, `SedeMarking`, `SedeNoCertificate`, `SedeOldWebClient`, `SedeOutcome`, `SedeSigning`, `SedeTransfer`, `SedeWaiting`), todos con `cardMode: "column"` salvo `SedeConsent` (`single`). Entran también `PlacementBlock`, `SignaturesPanel`, `SigningPanel` y `VisibleSignatureFieldset`, con `column`. El `--max-stories 63` de arriba ya no hace falta: el mayor es `SedeConsent` (25).
+- En las hojas de comparación la vista previa sale más pequeña que la referencia: la referencia se recorta a la raíz de la historia y la captura es de 900 × 700. Se gradúa con los PNG de `raw/`, no con la hoja.
+- `SedeMarking` (`Marking` y `Unreadable Document`) sigue en `close` por el marco de 1080 × 660; `Popover` › `In Portal`, igual que antes.
+- Títulos sin mapear a propósito: `1·Diálogo`, `2·Instalaractualización`, `1·Panel`, `Preferencias`, `Primerarranque`, `Ventanadesede`.
