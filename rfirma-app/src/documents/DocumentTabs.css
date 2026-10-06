@@ -35,8 +35,8 @@
   gap: 4px;
   min-height: 30px;
   padding: 0 6px 0 8px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--rf-ui-size);
+  font-weight: var(--rf-ui-strong-weight);
 }
 
 .document-tabs__more--open {
@@ -74,8 +74,8 @@
   border-radius: var(--rf-radius-md) 0 0 var(--rf-radius-md);
   background: none;
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--rf-ui-size);
+  font-weight: var(--rf-ui-strong-weight);
   color: var(--rf-text);
   cursor: pointer;
 }
@@ -134,7 +134,7 @@
   margin-bottom: -1px;
   border: 0;
   border-bottom: 2px solid transparent;
-  font-size: 13px;
+  font-size: var(--rf-body-size);
   color: var(--rf-text-muted);
   cursor: pointer;
 }
@@ -147,7 +147,7 @@
 .document-tab--active:hover {
   border-bottom-color: var(--rf-text);
   color: var(--rf-text);
-  font-weight: 600;
+  font-weight: var(--rf-ui-strong-weight);
   cursor: default;
 }
 
@@ -260,8 +260,8 @@
 
 .recent-row {
   min-height: 0;
-  font-weight: 400;
-  line-height: normal;
+  font-weight: var(--rf-body-weight);
+  line-height: var(--rf-body-leading);
   justify-content: flex-start;
   display: flex;
   align-items: center;
@@ -301,18 +301,18 @@
 .recent-row__folder {
   min-width: 0;
   overflow: hidden;
-  line-height: 1.3;
+  line-height: var(--rf-caption-leading);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .recent-row__name {
-  font-size: 13px;
+  font-size: var(--rf-body-size);
 }
 
 .recent-row__folder,
 .recent-row__when {
-  font-size: 12px;
+  font-size: var(--rf-caption-size);
   color: var(--rf-text-muted);
 }
 
@@ -351,5 +351,5 @@
 .recents-heading__clear {
   min-height: 24px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: var(--rf-caption-size);
 }

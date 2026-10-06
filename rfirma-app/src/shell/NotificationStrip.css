@@ -39,12 +39,12 @@
 .notification-strip__dismiss {
   min-height: 29px;
   padding: 0 var(--rf-space-xs);
-  font-size: 13px;
+  font-size: var(--rf-body-size);
 }
 
 .notification-strip__dismiss {
   min-width: 29px;
   padding: 0;
-  font-size: 18px;
-  line-height: 1;
+  font-size: var(--rf-title-size);
+  line-height: var(--rf-title-leading);
 }
