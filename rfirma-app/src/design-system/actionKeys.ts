@@ -64,6 +64,7 @@ export function useActionKeys(actions: Actions, enabled = true) {
   useEffect(() => {
     if (!enabled) return;
     const onKeyDown = (event: KeyboardEvent) => {
+      if (document.querySelector('[aria-modal="true"]') !== null) return;
       answerActionKey(event, latest.current);
     };
     document.addEventListener("keydown", onKeyDown);
