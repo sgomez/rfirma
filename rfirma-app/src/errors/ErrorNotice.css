@@ -24,7 +24,7 @@
 }
 
 .error-notice__title > .rf-title {
-  font-size: 14px;
+  font-size: var(--rf-ui-size);
 }
 
 .error-notice__detail {
@@ -46,8 +46,8 @@
   background: var(--rf-bg);
   color: var(--rf-text-muted);
   font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: var(--rf-caption-size);
+  line-height: var(--rf-caption-leading);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -56,7 +56,7 @@
   align-self: flex-start;
   padding-left: 0;
   min-height: 28px;
-  font-size: 12px;
+  font-size: var(--rf-caption-size);
 }
 
 .error-notice__actions {
@@ -68,5 +68,5 @@
   align-self: flex-start;
   padding-left: 0;
   min-height: 30px;
-  font-size: 12px;
+  font-size: var(--rf-caption-size);
 }
