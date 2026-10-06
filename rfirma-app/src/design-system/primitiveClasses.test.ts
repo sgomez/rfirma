@@ -38,7 +38,7 @@ const NOT_A_DIV = "el primitivo pinta un div y aquí el elemento es otro";
  */
 const exceptions: Record<string, { classes: string[]; reason: string }> = {
   "signing/PanelFooter.tsx": { classes: ["rf-row", "rf-gap-xs"], reason: NOT_A_DIV },
-  "signing/SignedPanel.tsx": { classes: ["rf-row", "rf-gap-xs"], reason: NOT_A_DIV },
+  "signing/SignaturesPanel.tsx": { classes: ["rf-row", "rf-gap-xs"], reason: NOT_A_DIV },
   "signing/SignatureCards.tsx": { classes: ["rf-card"], reason: NOT_A_DIV },
   "setup/SetupWizard.tsx": { classes: ["rf-stack", "rf-row", "rf-gap-xs"], reason: NOT_A_DIV },
   "sede/SedeFrame.tsx": { classes: ["rf-row", "rf-gap-xs"], reason: NOT_A_DIV },

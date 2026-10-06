@@ -9,7 +9,8 @@ import type { SigningBackend } from "./flow";
 import type { DocumentFinding, PreviousSignature, SignatureFormat } from "./previousSignatures";
 import { useSignedDocumentOpening } from "./useSignedDocumentOpening";
 
-type ReadingState =
+/** El estado de la lectura de firmas: leyendo, leído o fallido. */
+export type ReadingState =
   | { kind: "reading" }
   | {
       kind: "read";

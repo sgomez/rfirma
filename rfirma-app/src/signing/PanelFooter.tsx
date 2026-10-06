@@ -17,7 +17,7 @@ interface PanelFooterDestinationProps {
 }
 
 interface PanelFooterSigningProps extends PanelFooterDestinationProps {
-  signed?: false;
+  moment?: undefined;
   failure: SigningFailure | null;
   onChangeDestination: () => void;
   signing: boolean;
@@ -32,21 +32,32 @@ interface PanelFooterSigningProps extends PanelFooterDestinationProps {
   onBack: () => void;
 }
 
-interface PanelFooterSignedProps extends PanelFooterDestinationProps {
-  signed: true;
-  /** Abre el PDF firmado con el visor del sistema. */
+interface PanelFooterExitsProps extends PanelFooterDestinationProps {
+  /** Abre el documento con el visor del sistema. */
   onOpenDocument: () => void;
-  /** Abre la carpeta donde quedó, con las firmas anteriores dentro. */
+  /** Abre la carpeta donde está, con las firmas anteriores dentro. */
   onOpenFolder: () => void;
   /** Vuelve al panel de firma con el original releído del disco. */
   onSign: () => void;
-  /** Mueve el destino del documento (ADR-0011); ausente, el pie no ofrece «Cambiar». */
-  onChangeDestination?: () => void;
-  /** Si el documento se puede firmar en el escritorio, que solo firma PDF. */
-  signable?: boolean;
 }
 
-type PanelFooterProps = PanelFooterSigningProps | PanelFooterSignedProps;
+interface PanelFooterAcknowledgementProps extends PanelFooterExitsProps {
+  moment: "acknowledgement";
+  /** Mueve el destino del documento firmado (ADR-0011). */
+  onChangeDestination: () => void;
+}
+
+interface PanelFooterReadingProps extends PanelFooterExitsProps {
+  moment: "reading";
+  /** Si el documento se puede firmar en el escritorio, que solo firma PDF. */
+  signable: boolean;
+  onChangeDestination?: never;
+}
+
+type PanelFooterProps =
+  | PanelFooterSigningProps
+  | PanelFooterAcknowledgementProps
+  | PanelFooterReadingProps;
 
 /** El mensaje de destino no escribible, con la carpeta en negrita. */
 function unwritableMessage(message: string, folder: string) {
@@ -72,8 +83,10 @@ function unwritableMessage(message: string, folder: string) {
  */
 export function PanelFooter(props: PanelFooterProps) {
   const { t } = useTranslation();
-  const { destination, documentName, signed = false } = props;
-  const signing = !props.signed && props.signing;
+  const { destination, documentName } = props;
+  const signed = props.moment !== undefined;
+  const signing = props.moment === undefined && props.signing;
+  const signable = props.moment !== "reading" || props.signable;
   const fullName = destination.name ?? documentName;
   const shortened = shortenDestination({ folder: destination.folder, name: fullName });
   const writable = signed || destination.writable;
@@ -123,10 +136,10 @@ export function PanelFooter(props: PanelFooterProps) {
           </Row>
         )}
       </div>
-      {props.signed ? (
+      {props.moment !== undefined ? (
         <Row gap="xs" className="panel__signed-actions">
           <Button variant="primary" className="panel__signed-open" onClick={props.onOpenDocument}>
-            {t(props.signable === false ? "panel.signed.openFile" : "panel.signed.openDocument")}
+            {t(signable ? "panel.signed.openDocument" : "panel.signed.openFile")}
           </Button>
           <Button
             variant="secondary"
@@ -139,8 +152,8 @@ export function PanelFooter(props: PanelFooterProps) {
           <Button
             variant="ghost"
             className="panel__signed-sign"
-            title={props.signable === false ? t("panel.signed.onlyPdfs") : undefined}
-            disabled={props.signable === false}
+            title={signable ? undefined : t("panel.signed.onlyPdfs")}
+            disabled={!signable}
             onClick={props.onSign}
           >
             {t("actions.sign")}

@@ -21,7 +21,7 @@ import { usePlacement } from "./placement/usePlacement";
 import { PreferencesView } from "./preferences/PreferencesView";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
-import { SignedPanel } from "./signing/SignedPanel";
+import { SignaturesPanel } from "./signing/SignaturesPanel";
 import { SigningPanel } from "./signing/SigningPanel";
 import { useCertificateListing } from "./signing/useCertificateListing";
 import { useSignatureReading } from "./signing/useSignatureReading";
@@ -301,37 +301,31 @@ export function App({
             // el nombre de un fichero con las páginas de otro. Sin documento
             // activo tampoco se monta, o quedaría una tercera columna al lado
             // del visor vacío.
-            <SignedPanel
+            <SignaturesPanel
               documentName={acknowledgement.documentName}
-              signedAt={acknowledgement.signedAt}
-              signatures={acknowledgement.signatures}
-              findings={acknowledgement.findings}
               destination={acknowledgement.destination}
+              moment={{
+                kind: "acknowledgement",
+                signedAt: acknowledgement.signedAt,
+                signatures: acknowledgement.signatures,
+                findings: acknowledgement.findings,
+                onChangeDestination: () => void acknowledgement.changeDestination(),
+              }}
               onOpenDocument={acknowledgement.openDocument}
               onOpenFolder={acknowledgement.openFolder}
               onSign={acknowledgement.signAgain}
-              onChangeDestination={() => void acknowledgement.changeDestination()}
               failure={acknowledgement.openFailure}
               onOpenHelp={() => void externalDestinations.open("discussions")}
             />
           ) : signatureReading.reading ? (
-            <SignedPanel
+            <SignaturesPanel
               documentName={signatureReading.reading.documentName}
-              signatures={
-                signatureReading.reading.kind === "read" ? signatureReading.reading.signatures : []
-              }
-              findings={
-                signatureReading.reading.kind === "read" ? signatureReading.reading.findings : []
-              }
-              format={
-                signatureReading.reading.kind === "read" ? signatureReading.reading.format : "pades"
-              }
-              signable={signatureReading.reading.signable}
-              reading={signatureReading.reading.kind === "reading"}
-              readFailure={
-                signatureReading.reading.kind === "failed" ? signatureReading.reading.failure : null
-              }
               destination={signatureReading.reading.destination}
+              moment={{
+                kind: "reading",
+                state: signatureReading.reading,
+                signable: signatureReading.reading.signable,
+              }}
               onOpenDocument={signatureReading.reading.openDocument}
               onOpenFolder={signatureReading.reading.openFolder}
               onSign={signatureReading.reading.signAgain}

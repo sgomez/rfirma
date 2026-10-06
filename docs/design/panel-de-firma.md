@@ -12,13 +12,13 @@ citan sus claves.
 | Pieza | Componente | Historias |
 | --- | --- | --- |
 | Panel antes de firmar | `signing/SigningPanel.tsx` | «Panel de firma/1 · Antes de firmar» |
-| Panel firmado y de `verify --gui` | `signing/SignedPanel.tsx` | «Panel de firma/2 · Firmado» |
+| Panel de firmas: acuse y lectura de firmas | `signing/SignaturesPanel.tsx` | «Panel de firma/2 · Firmado» |
 | Selector de certificado | `signing/CertificateSelect.tsx` | «Firma/CertificateSelect» |
 | Tarjeta de certificado | `signing/CertificateCard.tsx` | «Firma/CertificateCard» |
 | Aviso de firmas previas | `signing/PreviousSignaturesNotice.tsx` | las de «Antes de firmar» que empiezan por `PreviousSignatures` |
 | Pie fijo | `signing/PanelFooter.tsx` | las dos carpetas de arriba |
 
-`SignedPanel` y `CertificateSelect` se exportan en la entrada de `/design-sync`:
+`SignaturesPanel` y `CertificateSelect` se exportan en la entrada de `/design-sync`:
 no reciben puertos, solo datos y órdenes. `SigningPanel` no se exporta porque
 lo conecta `App.tsx` a la vista previa del visor y a la colocación.
 
@@ -382,7 +382,7 @@ interruptor es el de [design-system.md](design-system.md). Clases: `.rf-label`,
 `.rf-input`, `.rf-body`, `.rf-prose`. Tokens: `--rf-surface`, `--rf-bg`,
 `--rf-primary`, `--rf-on-primary`, `--rf-border-strong`, `--rf-border-subtle`,
 `--rf-text-muted`, `--rf-radius-sm|md|lg` y `--rf-shadow-elevated`. Las medidas
-son de `SigningPanel.css`, `SignedPanel.css`, `SignatureCards.css` y
+son de `SigningPanel.css`, `SignaturesPanel.css`, `SignatureCards.css` y
 `CertificateSelect.css`.
 
 ## Decisiones
