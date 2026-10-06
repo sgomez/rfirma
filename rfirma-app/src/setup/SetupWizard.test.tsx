@@ -1,6 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { Dialog } from "../design-system/Dialog";
 import { inMemoryPreferences } from "../preferences/preferences";
 import { defaults } from "../preferences/testing/fixtures";
 import { memoryStatus, type SignalRow } from "../status/status";
@@ -116,6 +117,67 @@ describe("SetupWizard", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     expect(screen.getByText("rFirma certificate")).toBeInTheDocument();
+  });
+
+  it("continues and finishes with Intro, each button already focused", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
+        onFinish={onFinish}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Continuar" })).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Terminar" })).toHaveFocus());
+    expect(onFinish).not.toHaveBeenCalled();
+    await user.keyboard("{Enter}");
+    expect(onFinish).toHaveBeenCalledOnce();
+  });
+
+  it("leaves Intro alone while a dialog without a primary sits in front", async () => {
+    const user = userEvent.setup();
+    renderWithCatalog(
+      <>
+        <SetupWizard
+          preferences={inMemoryPreferences(defaults)}
+          seen={false}
+          statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
+          onFinish={() => {}}
+        />
+        <Dialog label="Acerca de">
+          <p>Acerca de</p>
+        </Dialog>
+      </>,
+    );
+
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Terminar" })).not.toBeInTheDocument();
+  });
+
+  it("does nothing with Escape", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={memoryStatus()}
+        onFinish={onFinish}
+      />,
+    );
+
+    await user.keyboard("{Escape}");
+
+    expect(onFinish).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeInTheDocument();
   });
 
   it("can be skipped from the welcome screen without touching the computer", async () => {

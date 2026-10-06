@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useActionKeys, useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
@@ -65,6 +66,12 @@ export function ErrorNotice({
     if (technicalDetail !== undefined) void navigator.clipboard.writeText(technicalDetail);
   };
 
+  const confirmEmptyStore = useDefaultButton(confirmingEmptyStore);
+  useActionKeys(
+    { primary: confirmEmptyStore, secondary: () => setConfirmingEmptyStore(false) },
+    confirmingEmptyStore,
+  );
+
   const offersToEmptyStore = situation === "keyringPinMissing" && onEmptyStore !== undefined;
 
   const emptyStoreAction = confirmingEmptyStore ? (
@@ -77,6 +84,7 @@ export function ErrorNotice({
       </Button>
       <Button
         variant="primary"
+        ref={confirmEmptyStore}
         onClick={() => {
           setConfirmingEmptyStore(false);
           onEmptyStore?.();
