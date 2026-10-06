@@ -115,7 +115,7 @@
 .sede-waiting__retry {
   flex: 1;
   min-width: 0;
-  font-weight: 700;
+  font-weight: var(--rf-title-weight);
   color: var(--rf-text);
 }
 
@@ -150,7 +150,7 @@
 /* El PDF sin título se nombra como lo que es, en gris y sin peso. */
 .sede-consent__untitled {
   color: var(--rf-text-muted);
-  font-weight: 400;
+  font-weight: var(--rf-body-weight);
 }
 
 /*
@@ -187,7 +187,8 @@
 }
 
 .sede-consent__warning-head > .rf-title {
-  font-size: 16px;
+  font-size: var(--rf-subtitle-size);
+  line-height: var(--rf-subtitle-leading);
 }
 
 .sede-consent__warning-body {
@@ -275,7 +276,8 @@
   min-height: 28px;
   margin: -4px -4px -4px auto;
   padding: 0 var(--rf-space-xs);
-  font-size: 12px;
+  font-size: var(--rf-caption-size);
+  line-height: var(--rf-caption-leading);
   gap: 4px;
   white-space: nowrap;
 }

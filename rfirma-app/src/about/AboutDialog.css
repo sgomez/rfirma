@@ -23,8 +23,8 @@
 
 .about__name {
   flex: 1;
-  font-size: 32px;
-  line-height: 1.1;
+  font-size: var(--rf-headline-size);
+  line-height: var(--rf-headline-leading);
   letter-spacing: -0.6px;
 }
 
@@ -39,13 +39,13 @@
   border: 1px solid var(--rf-border-subtle);
   border-radius: var(--rf-radius-md);
   background: var(--rf-surface);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--rf-ui-size);
+  line-height: var(--rf-ui-leading);
 }
 
 .about__updateStatus--new {
   border-color: var(--rf-border-strong);
-  font-weight: 700;
+  font-weight: var(--rf-title-weight);
 }
 
 .about__upToDateIcon {
@@ -63,13 +63,13 @@
 }
 
 .about__facts dt {
-  line-height: 20px;
+  line-height: var(--rf-body-leading);
 }
 
 .about__facts dd {
   margin: 0;
-  font-size: 13px;
-  line-height: 20px;
+  font-size: var(--rf-body-size);
+  line-height: var(--rf-body-leading);
 }
 
 .about__stackedFact {
@@ -106,7 +106,6 @@
 }
 
 .about__independence .rf-prose {
-  font-size: 13px;
   color: var(--rf-text-muted);
 }
 
