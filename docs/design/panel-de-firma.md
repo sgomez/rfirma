@@ -13,6 +13,7 @@ citan sus claves.
 | --- | --- | --- |
 | Panel antes de firmar | `signing/SigningPanel.tsx` | «Flujos/Firma/SigningPanel» |
 | Panel de firmas: acuse y lectura de firmas | `signing/SignaturesPanel.tsx` | «Flujos/Firma/SignaturesPanel» |
+| Firma visible: interruptor y colocación | `signing/VisibleSignatureFieldset.tsx` | «Flujos/Firma/VisibleSignatureFieldset» |
 | Selector de certificado | `signing/CertificateSelect.tsx` | «Dominio/Firma/CertificateSelect» |
 | Tarjeta de certificado | `signing/CertificateCard.tsx` | «Dominio/Firma/CertificateCard» |
 | Aviso de firmas previas | `signing/PreviousSignaturesNotice.tsx` | las de «Flujos/Firma/SigningPanel» que empiezan por `PreviousSignatures` |
