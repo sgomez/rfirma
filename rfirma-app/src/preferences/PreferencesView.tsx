@@ -142,7 +142,7 @@ export function PreferencesView({
   const tabs = useRef(new Map<Section, HTMLElement | null>());
 
   // `Escape` cierra Preferencias desde cualquier sitio, tenga el foco donde lo
-  // tenga: como `StatusView`, no depende de que el foco esté dentro de la
+  // tenga: como `StatusWindow`, no depende de que el foco esté dentro de la
   // pantalla. Un `Escape` que ya haya cerrado el menú de la cabecera llega
   // aquí con `defaultPrevented`, así que cerrar el menú no cierra además
   // Preferencias.

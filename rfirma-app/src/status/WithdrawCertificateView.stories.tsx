@@ -4,7 +4,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { inStatusWindow } from "../../.storybook/decorators/statusWindow";
 import { StatusView } from "./StatusView";
-import { memoryStatus } from "./status";
 import {
   caInstalledEverywhere,
   sitesHandledByRfirma,
@@ -17,8 +16,12 @@ import { WithdrawCertificateView } from "./WithdrawCertificateView";
 
 const behindTheVeil = (
   <StatusView
+    rows={[sitesHandledByRfirma, caInstalledEverywhere]}
     onClose={fn()}
-    statusPort={memoryStatus([sitesHandledByRfirma, caInstalledEverywhere])}
+    onRecheck={fn()}
+    onAction={fn()}
+    onChooseSiteSignatureHandler={fn()}
+    onWithdraw={fn()}
   />
 );
 

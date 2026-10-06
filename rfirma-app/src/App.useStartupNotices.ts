@@ -22,7 +22,7 @@ export function useStartupNotices(status: StatusPort, versions: VersionCheck) {
   const [newVersion, setNewVersion] = useState<NewVersion | null>(null);
   const [versionDismissed, setVersionDismissed] = useState(false);
   // Las filas del panel de estado, para el triángulo del menú: se
-  // miden aquí al arrancar, y `StatusView` reenvía cada remedición suya
+  // miden aquí al arrancar, y `StatusWindow` reenvía cada remedición suya
   // propia —al abrirse, tras una acción, con «Volver a comprobar»— sin que
   // esta ventana dispare ninguna por su cuenta.
   const [statusRows, setStatusRows] = useState<SignalRow[]>([]);

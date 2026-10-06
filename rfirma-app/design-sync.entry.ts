@@ -35,6 +35,7 @@ export { SigningPanel } from "./src/signing/SigningPanel";
 export { SigningProgressDialog } from "./src/signing/SigningProgressDialog";
 export { UnsealedPagesDialog } from "./src/signing/UnsealedPagesDialog";
 export { VisibleSignatureFieldset } from "./src/signing/VisibleSignatureFieldset";
+export { StatusView } from "./src/status/StatusView";
 export { WithdrawCertificateView } from "./src/status/WithdrawCertificateView";
 export { NewVersionStrip } from "./src/updates/NewVersionStrip";
 export { DocumentViewer } from "./src/viewer/DocumentViewer";

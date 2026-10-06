@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import { StatusView } from "./StatusView";
+import { StatusWindow } from "./StatusWindow";
 import { memoryStatus, type SignalRow, type StatusPort } from "./status";
 
 const stillChecking: SignalRow = {
@@ -15,7 +15,7 @@ const stillChecking: SignalRow = {
   restartFirefoxNotice: false,
 };
 
-describe("StatusView", () => {
+describe("StatusWindow", () => {
   it("installs the local CA certificate and shows the restart notice when Firefox was alive", async () => {
     const user = userEvent.setup();
     let resolveInstall!: (row: SignalRow) => void;
@@ -46,7 +46,7 @@ describe("StatusView", () => {
       withdrawRfirma: vi.fn(),
     };
 
-    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+    renderWithCatalog(<StatusWindow statusPort={statusPort} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
     await user.click(within(row).getByRole("button", { name: "Instalar" }));
@@ -82,7 +82,7 @@ describe("StatusView", () => {
         restartFirefoxNotice: false,
       },
     ];
-    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+    renderWithCatalog(<StatusWindow statusPort={memoryStatus(rows)} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
     expect(within(row).getByText("Correcto")).toBeInTheDocument();
@@ -108,7 +108,7 @@ describe("StatusView", () => {
         restartFirefoxNotice: false,
       },
     ];
-    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+    renderWithCatalog(<StatusWindow statusPort={memoryStatus(rows)} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
     expect(within(row).getByRole("button", { name: "Retirar…" })).toBeInTheDocument();

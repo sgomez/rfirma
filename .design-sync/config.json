@@ -40,6 +40,7 @@
     "SigningProgressDialog": "SigningProgressDialog",
     "Sincertificado": "SedeView",
     "Stack": "Stack",
+    "StatusView": "StatusView",
     "Switch": "Switch",
     "UnsealedPagesDialog": "UnsealedPagesDialog",
     "VisibleSignatureFieldset": "VisibleSignatureFieldset",
@@ -100,6 +101,11 @@
     "SigningProgressDialog": {
       "cardMode": "single",
       "viewport": "1340x780"
+    },
+    "StatusView": {
+      "cardMode": "single",
+      "primaryStory": "EverythingCorrect",
+      "viewport": "1240x760"
     },
     "UnsealedPagesDialog": {
       "cardMode": "single",

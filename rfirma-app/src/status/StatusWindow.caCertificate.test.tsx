@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import { StatusView } from "./StatusView";
+import { StatusWindow } from "./StatusWindow";
 import { memoryStatus, type SignalRow, type StatusPort } from "./status";
 
 const stillChecking: SignalRow = {
@@ -15,7 +15,7 @@ const stillChecking: SignalRow = {
   restartFirefoxNotice: false,
 };
 
-describe("StatusView", () => {
+describe("StatusWindow", () => {
   it("measures the local CA certificate signal on opening, without Volver a comprobar", async () => {
     const born: SignalRow = {
       signal: "localCaCertificate",
@@ -36,7 +36,7 @@ describe("StatusView", () => {
       restartFirefoxNotice: false,
     };
     renderWithCatalog(
-      <StatusView
+      <StatusWindow
         statusPort={memoryStatus([born], undefined, undefined, undefined, undefined, measured)}
         onClose={() => {}}
       />,
@@ -79,7 +79,7 @@ describe("StatusView", () => {
       withdrawRfirma: vi.fn(),
     };
 
-    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+    renderWithCatalog(<StatusWindow statusPort={statusPort} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
     expect(within(row).getByText("Ninguno")).toBeInTheDocument();

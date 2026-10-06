@@ -1,7 +1,8 @@
 # Panel de estado
 
 **La verdad del dibujo es el código y sus historias:** `status/StatusView.stories.tsx`
-(«Pantallas/Estado/1 · Panel»), con una historia por señal y veredicto, por caso de la
+(«Flujos/Estado/StatusView», la vista pura) y `status/StatusWindow.stories.tsx`
+(«Pantallas/Estado/1 · Panel», la ventana con su puerto), con una historia por señal y veredicto, por caso de la
 firma en sedes y por detalle plegado o desplegado. Esta ficha cuenta el flujo y
 el porqué; los textos salen del catálogo (claves `status.*`) y no se copian.
 

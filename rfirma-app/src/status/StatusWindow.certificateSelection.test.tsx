@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import { StatusView } from "./StatusView";
+import { StatusWindow } from "./StatusWindow";
 import type { SignalRow, StatusPort } from "./status";
 
 const stillChecking: SignalRow = {
@@ -15,7 +15,7 @@ const stillChecking: SignalRow = {
   restartFirefoxNotice: false,
 };
 
-describe("StatusView", () => {
+describe("StatusWindow", () => {
   it("chooses rFirma from Usar rFirma and remeasures both signals through Comprobando", async () => {
     const user = userEvent.setup();
     let resolveChoose!: (rows: SignalRow[]) => void;
@@ -59,7 +59,7 @@ describe("StatusView", () => {
       withdrawRfirma: vi.fn(),
     };
 
-    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+    renderWithCatalog(<StatusWindow statusPort={statusPort} onClose={() => {}} />);
 
     const rows = await screen.findAllByRole("status");
     const siteRow = rows[0];
@@ -151,7 +151,7 @@ describe("StatusView", () => {
       withdrawRfirma: vi.fn(),
     };
 
-    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+    renderWithCatalog(<StatusWindow statusPort={statusPort} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
     await user.click(within(row).getByRole("combobox"));

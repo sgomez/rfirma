@@ -26,7 +26,7 @@ import { SigningPanel } from "./signing/SigningPanel";
 import { useCertificateListing } from "./signing/useCertificateListing";
 import { useSignatureReading } from "./signing/useSignatureReading";
 import type { VisibleSignature } from "./signing/visibleSignature";
-import { StatusView } from "./status/StatusView";
+import { StatusWindow } from "./status/StatusWindow";
 import { InstallUpdateDialog } from "./updates/InstallUpdateDialog";
 import { NewVersionStrip } from "./updates/NewVersionStrip";
 import { DocumentViewer } from "./viewer/DocumentViewer";
@@ -228,7 +228,7 @@ export function App({
         onOpenAbout={() => setDialog("about")}
         view={
           view === "status" ? (
-            <StatusView
+            <StatusWindow
               statusPort={status}
               externalDestinations={externalDestinations}
               onClose={() => setView(null)}

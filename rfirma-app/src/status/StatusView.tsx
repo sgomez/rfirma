@@ -1,8 +1,8 @@
-//! La vista del cuerpo con el estado de rFirma: una fila por señal, su detalle, sus acciones y «Volver a comprobar».
+//! La vista del cuerpo con el estado de rFirma: una fila por señal, su detalle, sus acciones y «Volver a comprobar», sin puertos.
 
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import "./StatusView.css";
@@ -16,57 +16,40 @@ import {
   NotApplicableIcon,
 } from "../design-system/icons";
 import { Select } from "../design-system/Select";
-import type {
-  ExternalDestination,
-  ExternalDestinationOpener,
-} from "../desktop/externalDestination";
-import { unavailableExternalDestinationOpener } from "../desktop/externalDestination";
 import {
   type Signal,
   type SignalDetail,
   type SignalRow,
-  type StatusPort,
   storeBrandLabel,
   type Verdict,
-  withLocalCaCertificateMeasured,
-  withVersionMeasured,
 } from "./status";
-import { WithdrawCertificateDialog } from "./WithdrawCertificateDialog";
 
 export interface StatusViewProps {
+  rows: SignalRow[];
+  isRechecking?: boolean;
   onClose: () => void;
-  statusPort: StatusPort;
-  externalDestinations?: ExternalDestinationOpener;
-  /**
-   * Se llama con las filas de cada remedición propia —al abrirse, tras una
-   * acción, con «Volver a comprobar»—, para quien más allá del panel también
-   * necesite saberlas (el triángulo del menú).
-   */
-  onRowsChange?: (rows: SignalRow[]) => void;
+  onRecheck: () => void;
+  onAction: (row: SignalRow) => void;
+  onChooseSiteSignatureHandler: (handlerId: string) => void;
+  onWithdraw: () => void;
   /** Las señales cuyo detalle empieza desplegado. */
   initiallyExpanded?: Signal[];
 }
 
 export function StatusView({
+  rows,
+  isRechecking = false,
   onClose,
-  statusPort,
-  externalDestinations = unavailableExternalDestinationOpener(),
-  onRowsChange,
+  onRecheck,
+  onAction,
+  onChooseSiteSignatureHandler,
+  onWithdraw,
   initiallyExpanded = [],
 }: StatusViewProps) {
   const { t } = useTranslation();
-  const [rows, setRows] = useState<SignalRow[]>([]);
-  const [isRechecking, setIsRechecking] = useState(false);
   const [expandedDetail, setExpandedDetail] = useState<Set<Signal>>(
     () => new Set(initiallyExpanded),
   );
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
-
-  // Cada remedición propia —al abrirse, tras una acción, con «Volver a
-  // comprobar»— cambia `rows`, y eso es lo que se reenvía hacia fuera.
-  useEffect(() => {
-    onRowsChange?.(rows);
-  }, [rows, onRowsChange]);
 
   const toggleDetail = useCallback((signal: Signal) => {
     setExpandedDetail((current) => {
@@ -80,144 +63,6 @@ export function StatusView({
     });
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    statusPort
-      .readStatus()
-      .then((initialRows) => {
-        if (!cancelled) {
-          setRows(initialRows);
-        }
-        return withLocalCaCertificateMeasured(initialRows, statusPort);
-      })
-      .then((rowsWithCaMeasured) => {
-        if (!cancelled) {
-          setRows(rowsWithCaMeasured);
-        }
-        return withVersionMeasured(rowsWithCaMeasured, statusPort);
-      })
-      .then((measuredRows) => {
-        if (!cancelled) {
-          setRows(measuredRows);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [statusPort]);
-
-  // El velo de la retirada atiende su propio Escape (WithdrawCertificateDialog);
-  // mientras está delante, uno que le llegue aquí no debe cerrar además el panel.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented && !isWithdrawing) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [onClose, isWithdrawing]);
-
-  const handleRecheck = useCallback(() => {
-    setIsRechecking(true);
-    setRows((current) =>
-      current.map((row) => ({
-        ...row,
-        verdict: "checking",
-        action: null,
-        detail: null,
-        candidates: null,
-      })),
-    );
-    statusPort
-      .recheck()
-      .then((updatedRows) => {
-        setRows(updatedRows);
-        return withVersionMeasured(updatedRows, statusPort);
-      })
-      .then((measuredRows) => {
-        setRows(measuredRows);
-        setIsRechecking(false);
-      });
-  }, [statusPort]);
-
-  const handleChooseSiteSignatureHandler = useCallback(
-    (handlerId: string) => {
-      setRows((current) =>
-        current.map((r) =>
-          r.signal === "siteSignature" || r.signal === "localCaCertificate"
-            ? {
-                ...r,
-                verdict: "checking",
-                action: null,
-                detail: null,
-                candidates: null,
-                restartFirefoxNotice: false,
-              }
-            : r,
-        ),
-      );
-      statusPort.chooseSiteSignatureHandler(handlerId).then((updatedRows) => {
-        setRows((current) =>
-          current.map((r) => updatedRows.find((updated) => updated.signal === r.signal) ?? r),
-        );
-      });
-    },
-    [statusPort],
-  );
-
-  const handleAction = useCallback(
-    (row: SignalRow) => {
-      if (!row.action) return;
-      if (row.action.kind === "link") {
-        void externalDestinations.open(row.action.target as ExternalDestination);
-      }
-      if (row.action.kind === "choice") {
-        handleChooseSiteSignatureHandler(row.action.target);
-        return;
-      }
-      setRows((current) =>
-        current.map((r) =>
-          r.signal === row.signal
-            ? {
-                ...r,
-                verdict: "checking",
-                action: null,
-                detail: null,
-                candidates: null,
-                restartFirefoxNotice: false,
-              }
-            : r,
-        ),
-      );
-      if (row.action.kind === "repair") {
-        statusPort.installLocalCaCertificate().then((updatedRow) => {
-          setRows((current) =>
-            current.map((r) => (r.signal === updatedRow.signal ? updatedRow : r)),
-          );
-        });
-        return;
-      }
-      statusPort.recheck().then((updatedRows) => {
-        setRows(updatedRows);
-      });
-    },
-    [externalDestinations, statusPort, handleChooseSiteSignatureHandler],
-  );
-
-  // Al cerrar el velo de la retirada, el panel vuelve a medir: la verdad
-  // sigue viviendo en la tabla, no en el diálogo.
-  const handleWithdrawalDialogClose = useCallback(() => {
-    setIsWithdrawing(false);
-    handleRecheck();
-  }, [handleRecheck]);
-
-  const localCaCertificateRow = rows.find((row) => row.signal === "localCaCertificate");
-  const trustedStores =
-    localCaCertificateRow?.detail?.kind === "trust" ? localCaCertificateRow.detail.stores : [];
-
   return (
     <section className="status-view" aria-label={t("status.title")}>
       <div className="status-view__header">
@@ -225,7 +70,7 @@ export function StatusView({
         <Button
           variant="secondary"
           className="status-view__recheck"
-          onClick={handleRecheck}
+          onClick={onRecheck}
           disabled={isRechecking}
         >
           {t("status.recheck")}
@@ -248,7 +93,7 @@ export function StatusView({
                       value: candidate.id,
                       label: candidate.name,
                     }))}
-                    onChange={handleChooseSiteSignatureHandler}
+                    onChange={onChooseSiteSignatureHandler}
                   />
                 ) : (
                   <p className="rf-prose status-view__cell-value-text">{valueLabel(t, row)}</p>
@@ -277,7 +122,7 @@ export function StatusView({
                   <Button
                     variant="secondary"
                     className="status-view__action-btn"
-                    onClick={() => setIsWithdrawing(true)}
+                    onClick={onWithdraw}
                   >
                     {t("status.actions.withdraw")}
                   </Button>
@@ -286,7 +131,7 @@ export function StatusView({
                     <Button
                       variant="secondary"
                       className="status-view__action-btn"
-                      onClick={() => handleAction(row)}
+                      onClick={() => onAction(row)}
                     >
                       {actionLabel(t, row)}
                     </Button>
@@ -360,14 +205,6 @@ export function StatusView({
           {t("actions.close")}
         </Button>
       </div>
-
-      {isWithdrawing && (
-        <WithdrawCertificateDialog
-          stores={trustedStores}
-          onWithdraw={statusPort.withdrawRfirma}
-          onClose={handleWithdrawalDialogClose}
-        />
-      )}
     </section>
   );
 }
