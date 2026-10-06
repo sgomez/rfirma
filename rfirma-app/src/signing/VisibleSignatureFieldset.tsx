@@ -5,6 +5,7 @@ import { Switch } from "../design-system/Switch";
 import { PlacementBlock, type PlacementBlockState } from "../placement/PlacementBlock";
 import type { CertificateState } from "./certificate";
 import type { VisibleSignatureSection } from "./visibleSignature";
+import "./SigningPanel.css";
 
 interface VisibleSignatureFieldsetProps {
   signature: VisibleSignatureSection;
