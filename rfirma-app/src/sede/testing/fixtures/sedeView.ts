@@ -22,3 +22,8 @@ export const sedeViewActions = {
 export function sedeErrand(stage: ErrandStage, errand: Partial<Errand> = {}): Errand {
   return { origin: "sede.ejemplo.gob.es", operation: "sign", stage, ...errand };
 }
+
+/** Lo que un momento recibe del trámite además de su etapa: el origen, la orden terminal y la operación. */
+export function momentProps({ origin, terminalOrder, operation }: Errand) {
+  return { origin, terminalOrder: terminalOrder ?? null, operation };
+}

@@ -1,20 +1,25 @@
 //! Las historias de la sede en su momento 4, el desenlace: cada final del trámite y un rechazo por cada acción que cuenta.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
+import { sedeMomentMeta } from "../../.storybook/decorators/sedeWindow";
 import type { SiteOutcome } from "./errand";
-import type { SedeView } from "./SedeView";
-import { sedeErrand } from "./testing/fixtures/sedeView";
+import { SedeOutcome } from "./SedeOutcome";
+import { sedeViewActions } from "./testing/fixtures/sedeView";
 import { signedDocument } from "./testing/fixtures/sedeWindow";
 
-const meta = { title: "Flujos/Sede/Desenlace", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
+const meta = {
+  title: "Flujos/Sede/Desenlace",
+  ...sedeMomentMeta,
+  component: SedeOutcome,
+  args: { onClose: sedeViewActions.onClose, onOpenHelp: sedeViewActions.onOpenHelp },
+} satisfies Meta<typeof SedeOutcome>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
 const outcome = (result: SiteOutcome, origin: string | null = "sede.ejemplo.gob.es"): Story => ({
-  args: { errand: sedeErrand({ kind: "outcome", outcome: result }, { origin }) },
+  args: { origin, outcome: result },
 });
 
 export const Signed = outcome({ kind: "signed", document: signedDocument });
