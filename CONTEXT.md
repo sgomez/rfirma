@@ -465,6 +465,12 @@ un diálogo de un trayecto, una sección de un panel. Se publica en el kit de
 diseño: es el material para diseñar recorridos nuevos.
 _Avoid_: bloque —es el bloque trifásico—, widget, organismo
 
+**Rol tipográfico** (`type role`):
+Cada uno de los pocos papeles que un texto puede jugar en la interfaz —del
+display al caption—, con su tamaño, su peso y su interlínea decididos juntos.
+El texto elige rol, no números; un tamaño suelto no es un rol.
+_Avoid_: escala como lista de píxeles, tamaño de fuente, estilo de texto
+
 **Pantalla** (`screens`):
 Ventana o página completa que compone flujos y piezas de dominio. Es referencia
 local: no se publica en el kit de diseño.
