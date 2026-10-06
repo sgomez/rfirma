@@ -73,7 +73,7 @@ where
     )
 }
 
-pub use crate::desktop::domain::command_line::{HELP_FLAGS, VERSION_FLAGS};
+pub use crate::desktop::domain::command_line::{DEBUG_INFO_FLAGS, HELP_FLAGS, VERSION_FLAGS};
 
 /// Ayuda: de la cabecera a los parámetros comunes.
 const HELP_OPENING: &str = "\
@@ -86,6 +86,7 @@ Uso:
   rfirma <orden> --help
   rfirma --help
   rfirma --version
+  rfirma --debug-info
 
 Argumentos:
   documento           Ruta de un PDF: se abre en la ventana, listo para firmar.
@@ -99,6 +100,7 @@ Argumentos:
 Opciones:
   -h, --help          Muestra esta ayuda y termina.
   --version           Muestra la versión.
+  --debug-info        Muestra los datos del entorno para un informe de fallo.
 
 Órdenes, las de AutoFirma, sin distinguir mayúsculas y siempre como primer
 argumento. Se atienden en la terminal, sin unirse a la ventana de rFirma que
@@ -283,6 +285,18 @@ where
         .into_iter()
         .skip(1)
         .any(|argument| VERSION_FLAGS.contains(&argument.as_ref()))
+}
+
+/// Si los argumentos de ejecución piden el informe de diagnóstico del entorno.
+pub fn debug_info_was_asked_for<I, S>(arguments: I) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    arguments
+        .into_iter()
+        .skip(1)
+        .any(|argument| DEBUG_INFO_FLAGS.contains(&argument.as_ref()))
 }
 
 /// Dónde corre rFirma: lo que `--version` añade a las versiones.

@@ -3,9 +3,10 @@
 use std::path::Path;
 
 use crate::desktop::adapters::paths::Platform;
+use crate::desktop::application::debug_report::debug_report_text;
 use crate::desktop::application::invocation::{
-    arguments_before_the_single_instance, delivered_urls, informative_text, Arguments, Invocation,
-    RunningBuild,
+    arguments_before_the_single_instance, debug_info_was_asked_for, delivered_urls,
+    help_was_asked_for, informative_text, Arguments, Invocation, RunningBuild,
 };
 use crate::desktop::domain::channel::Channel;
 use crate::signing::adapters::ffi::{candidates, locate};
@@ -81,8 +82,15 @@ fn launch_a_site_process(url: &str) {
     }
 }
 
-/// Imprime la ayuda o la versión si la línea de órdenes las pide, y dice si lo hizo.
+/// Imprime la ayuda, el diagnóstico o la versión si la línea de órdenes los pide, y dice si lo hizo.
 pub fn printed_the_informative_text(command_line: &[String]) -> bool {
+    if !help_was_asked_for(command_line) && debug_info_was_asked_for(command_line) {
+        println!(
+            "{}",
+            debug_report_text(&crate::desktop::adapters::debug_info::this_process_report())
+        );
+        return true;
+    }
     let library = native_library_found_or_looked_for();
     let build = RunningBuild {
         channel: Channel::detected().label(),
