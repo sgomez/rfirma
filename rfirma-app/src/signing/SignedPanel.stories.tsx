@@ -71,6 +71,27 @@ export const VerifyCadesWithCountersignatures: Story = {
   },
 };
 
+export const VerifyCadesWithNestedCountersignatures: Story = {
+  args: {
+    ...verifyOnly,
+    format: "cades",
+    documentName: "contrato.csig",
+    signatures: [
+      aSignature({
+        name: "FIRST SIGNER",
+        countersignatures: [
+          aSignature({
+            name: "CHILD SIGNER",
+            countersignatures: [aSignature({ name: "DEEP SIGNER" })],
+          }),
+          aSignature({ name: "SIBLING SIGNER" }),
+        ],
+      }),
+      aSignature({ name: "SECOND SIGNER" }),
+    ],
+  },
+};
+
 export const VerifyXades: Story = {
   args: {
     ...verifyOnly,
