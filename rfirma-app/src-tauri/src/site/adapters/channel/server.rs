@@ -247,7 +247,7 @@ async fn attend(
             }
             Answer::Pending(url) => {
                 operations.arrived();
-                let Some(_turn) = clients.take_the_turn() else {
+                let Some(turn) = clients.take_the_turn() else {
                     socket
                         .send(Message::text(another_operation_in_flight()))
                         .await?;
@@ -265,7 +265,9 @@ async fn attend(
                 // Fuera del hilo del socket: lo que el token deja en la cola de errores de
                 // OpenSSL de su hilo haría fallar la siguiente lectura TLS del canal.
                 tokio::task::spawn_blocking(move || operations.deliver(url, origin, reply));
-                match wait_for_the_reply(&mut socket, receiver, &mut queued).await {
+                let waited = wait_for_the_reply(&mut socket, receiver, &mut queued).await;
+                drop(turn);
+                match waited {
                     Waited::Reply(reply) => {
                         let sent = socket.send(Message::text(reply)).await;
                         if sent.is_ok() {
