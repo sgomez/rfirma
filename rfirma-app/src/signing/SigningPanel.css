@@ -467,7 +467,6 @@
 
 .panel__destination-ellipsis {
   min-width: 0;
-  line-height: var(--rf-caption-leading);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -484,7 +483,7 @@
   flex: 1;
   min-width: 0;
   font-size: var(--rf-body-size);
-  line-height: var(--rf-subtitle-leading);
+  line-height: var(--rf-body-leading);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -523,5 +522,4 @@
 
 .panel__visible-hint {
   margin: 0;
-  line-height: var(--rf-body-leading);
 }

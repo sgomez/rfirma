@@ -10,11 +10,7 @@
 .certificate-card__headline {
   font-size: var(--rf-body-size);
   font-weight: var(--rf-ui-strong-weight);
-  line-height: var(--rf-caption-leading);
-}
-
-.certificate-card__line {
-  line-height: var(--rf-subtitle-leading);
+  line-height: var(--rf-body-leading);
 }
 
 .certificate-card__meta {
@@ -31,7 +27,6 @@
 
 .certificate-card__expiry {
   margin-left: 4px;
-  line-height: var(--rf-subtitle-leading);
 }
 
 /* Atenuada por color y no por opacidad: el motivo en negrita tiene que leerse entero. */
@@ -47,5 +42,4 @@
 
 .certificate-card__reason .rf-body {
   font-weight: var(--rf-title-weight);
-  line-height: var(--rf-caption-leading);
 }

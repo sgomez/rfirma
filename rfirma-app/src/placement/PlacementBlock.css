@@ -68,7 +68,7 @@
   flex: 1;
   min-width: 0;
   font-size: var(--rf-body-size);
-  line-height: var(--rf-subtitle-leading);
+  line-height: var(--rf-body-leading);
 }
 
 .panel__page-button {

@@ -86,7 +86,6 @@
 .signature-cards__field-label {
   flex: none;
   width: 104px;
-  line-height: var(--rf-subtitle-leading);
 }
 
 .signature-cards__field-value {

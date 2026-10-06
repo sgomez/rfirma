@@ -64,7 +64,6 @@
 .certificate-select__chosen,
 .certificate-select__ellipsis {
   overflow: hidden;
-  line-height: var(--rf-caption-leading);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -72,6 +71,7 @@
 .certificate-select__chosen {
   font-size: var(--rf-ui-size);
   font-weight: var(--rf-ui-strong-weight);
+  line-height: var(--rf-ui-leading);
 }
 
 .certificate-select__unchosen {
