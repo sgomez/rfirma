@@ -965,6 +965,18 @@ msgstr ""
 msgid "status.detail.where"
 msgstr ""
 
+#. El desplegable de la señal de la aplicación de las sedes en Flatpak: cómo averiguar qué se abre.
+msgid "status.detail.diagnose"
+msgstr ""
+
+#. Antes de la orden que dice qué aplicación abre `afirma://`.
+msgid "status.detail.diagnoseIntro"
+msgstr ""
+
+#. {{file}} es el nombre del fichero de escritorio de rFirma; va antes de la orden que lo fija como predeterminado.
+msgid "status.detail.diagnoseFix"
+msgstr ""
+
 #. Que el certificado de rFirma está puesto en ese navegador.
 msgid "status.detail.installed"
 msgstr ""

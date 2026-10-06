@@ -63,7 +63,7 @@ reinicio.
 | Señal | Clave | Valor | Acción |
 | ----- | ----- | ----- | ------ |
 | Versión | `status.signals.version` | la versión, o `0.4.1 → 0.5.0` | `status.actions.update` |
-| Firma en sedes | `status.signals.siteSignature` | el programa, `status.values.siteSignature.*` | `status.actions.useRfirma`, y un desplegable si hay dónde elegir |
+| Aplicación predeterminada para firmar en sedes | `status.signals.siteSignature` | el programa, `status.values.siteSignature.*` | `status.actions.useRfirma`, y un desplegable si hay dónde elegir |
 | Certificado de rFirma | `status.signals.localCaCertificate` | `status.values.localCaCertificate` | `status.actions.install` o `status.actions.withdraw`, y `status.detail.toggle` |
 | Tus certificados | `status.signals.userCertificates` | `status.values.userCertificates.*` | `status.actions.howToInstall`, y `status.detail.where` |
 
@@ -96,10 +96,11 @@ idioma de quien lee es «navegador». Los nombres de cada sitio salen de
 `status.storeBrands.*`, uno solo que comparten la tabla, el asistente y la
 retirada.
 
-**La segunda fila se llama «Firma en sedes», no «Aplicación de firma».** Arrastrar
-un PDF a la ventana y firmarlo no toca la CA local: lo único que se cae sin
-certificado es la firma que **empieza en una sede**. El nombre dice dónde
-empieza la firma, no el mecanismo, y no nombra `afirma://`.
+**La segunda fila se llama «Aplicación predeterminada para firmar en sedes», no
+«Aplicación de firma».** Arrastrar un PDF a la ventana y firmarlo no toca la CA
+local: lo único que se cae sin certificado es la firma que **empieza en una
+sede**. El nombre dice qué aplicación atiende esa firma y dónde empieza, no el
+mecanismo, y no nombra `afirma://`.
 
 **La fila no se parte en dos.** Una señal aparte para la firma de escritorio no
 tendría nada que elegir ni que reparar, y una casilla que siempre dice
@@ -122,8 +123,9 @@ fila, y el botón solo aparece con las averías que rFirma puede arreglar.
 
 Cinco casos, cada uno con su historia: `SitesWithTwoCandidates` (AutoFirma es la
 aplicación, con desplegable y `Usar rFirma`), `SitesHandledByRfirma` (texto
-pelado), `SitesNotConfigured`, `SitesUnavailable` y, en `EverythingCorrect`,
-rFirma ya elegida.
+pelado), `SitesNotConfigured`, `SitesUnavailable` (con su variante
+`SitesUnavailableDiagnosisExpanded`, el desplegable abierto) y, en
+`EverythingCorrect`, rFirma ya elegida.
 
 **El desplegable solo aparece si hay dónde elegir**, es decir, con dos o más
 candidatos. Con rFirma puesta y AutoFirma sin instalar el valor va en texto
@@ -137,10 +139,15 @@ aviso de la cabecera.** Que las sedes abran AutoFirma es una elección legítima
 no una avería: la fila informa, el botón llama. La regla del botón vive en
 `hasMenuAttention` (`status/status.ts`).
 
-**«No se puede consultar» es el sandbox del flatpak**, donde los manejadores
-registrados no se pueden leer: la casilla se apaga con «No aplica» y sin botón,
-pero **la fila no desaparece**, porque una fila que a veces está obliga a
-reaprender la pantalla.
+**«Gestionada por tu escritorio» es el sandbox del flatpak**, donde los manejadores
+registrados no se pueden leer: la fila no muestra veredicto ni botón de reparación,
+solo un desplegable «Diagnosticar problemas» con las órdenes que se ejecutan fuera
+del sandbox. El desplegable es de la vista: el backend sigue mandando
+`notApplicable` sin detalle. **La fila no desaparece**, porque una fila que a veces
+está obliga a reaprender la pantalla.
+
+**Que el escritorio pregunte qué aplicación usar no es un problema** y la fila no
+lo explica: el desplegable solo cubre que se abra otra aplicación sin preguntar.
 
 ### Dónde y cuántos en «Tus certificados»
 
@@ -170,7 +177,7 @@ La restricción es una: **sin certificado instalado, rFirma no puede firmar en
 sedes**. De ahí sale que `Usar rFirma` instala también el certificado y no
 cambia de rótulo —el botón promete un resultado, no una lista de pasos—, que al
 elegir rFirma o AutoFirma las dos filas se vuelven a medir pasando por
-«Comprobando», y que «Sin configurar» y «No se puede consultar» no apagan el
+«Comprobando», y que «Sin configurar» y «Gestionada por tu escritorio» no apagan el
 certificado: de un desconocido no se deduce que algo sobre.
 
 ## Estados y flujo

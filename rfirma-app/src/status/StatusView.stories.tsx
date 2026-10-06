@@ -76,6 +76,10 @@ export const SitesNotConfigured = panel([sitesNotConfigured]);
 
 export const SitesUnavailable = panel([sitesUnavailable]);
 
+export const SitesUnavailableDiagnosisExpanded = panel([sitesUnavailable], {
+  initiallyExpanded: ["siteSignature"],
+});
+
 export const SitesWithTwoCandidates = panel([sitesWithTwoCandidates]);
 
 export const CertificateMissing = panel([caMissing]);

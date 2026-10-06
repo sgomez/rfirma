@@ -150,6 +150,11 @@
   gap: var(--rf-space-xs);
 }
 
+.status-view__detail-command {
+  font-family: ui-monospace, monospace;
+  user-select: all;
+}
+
 .status-view__detail-place {
   width: 230px;
   flex: none;

@@ -906,7 +906,7 @@ msgid "status.signals.version"
 msgstr "Versió"
 
 msgid "status.signals.siteSignature"
-msgstr "Signatura a les seus"
+msgstr "Aplicació predeterminada per signar a les seus"
 
 msgid "status.signals.userCertificates"
 msgstr "Els teus certificats"
@@ -948,7 +948,7 @@ msgid "status.values.siteSignature.notConfigured"
 msgstr "Sense configurar"
 
 msgid "status.values.siteSignature.unavailable"
-msgstr "No es pot consultar"
+msgstr "Gestionada pel teu escriptori"
 
 msgid "status.values.userCertificates.none"
 msgstr "Cap"
@@ -973,6 +973,18 @@ msgstr "Veure navegadors"
 #. El desplegable de la señal de los certificados propios: en qué sitio hay cuántos.
 msgid "status.detail.where"
 msgstr "Veure on"
+
+#. El desplegable de la señal de la aplicación de las sedes en Flatpak: cómo averiguar qué se abre.
+msgid "status.detail.diagnose"
+msgstr "Diagnosticar problemes"
+
+#. Antes de la orden que dice qué aplicación abre `afirma://`.
+msgid "status.detail.diagnoseIntro"
+msgstr "Si en signar en una seu s'obre una altra aplicació sense preguntar, mira quina és la predeterminada:"
+
+#. {{file}} es el nombre del fichero de escritorio de rFirma; va antes de la orden que lo fija como predeterminado.
+msgid "status.detail.diagnoseFix"
+msgstr "Si no és {{file}}, canvia-la:"
 
 #. Que el certificado de rFirma está puesto en ese navegador.
 msgid "status.detail.installed"

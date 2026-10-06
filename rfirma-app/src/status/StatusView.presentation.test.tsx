@@ -16,7 +16,14 @@ interface Expected {
 
 const table: Record<keyof typeof stories, Expected> = {
   EverythingCorrect: {
-    texts: ["Versión", "0.4.1", "Firma en sedes", "rFirma", "5 certificados", "2 de 2 navegadores"],
+    texts: [
+      "Versión",
+      "0.4.1",
+      "Aplicación predeterminada para firmar en sedes",
+      "rFirma",
+      "5 certificados",
+      "2 de 2 navegadores",
+    ],
     buttons: ["Retirar…", "Ver navegadores", "Ver dónde"],
     absent: ["Atención", "Incorrecto"],
   },
@@ -33,14 +40,27 @@ const table: Record<keyof typeof stories, Expected> = {
     texts: ["0.4.1 → 0.5.0", "Atención"],
     buttons: ["Actualizar"],
   },
-  SitesHandledByRfirma: { texts: ["Firma en sedes", "rFirma", "Correcto"], buttons: [] },
+  SitesHandledByRfirma: {
+    texts: ["Aplicación predeterminada para firmar en sedes", "rFirma", "Correcto"],
+    buttons: [],
+  },
   SitesNotConfigured: {
     texts: ["Sin configurar", "Atención"],
     buttons: ["Usar rFirma"],
   },
   SitesUnavailable: {
-    texts: ["No se puede consultar", "No aplica"],
-    buttons: [],
+    texts: ["Aplicación predeterminada para firmar en sedes", "Gestionada por tu escritorio"],
+    buttons: ["Diagnosticar problemas"],
+    absent: ["No aplica"],
+  },
+  SitesUnavailableDiagnosisExpanded: {
+    texts: [
+      "Si al firmar en una sede se abre otra aplicación sin preguntar",
+      "xdg-mime query default x-scheme-handler/afirma",
+      "Si no es me.sgomez.rfirma.desktop, cámbiala:",
+      "xdg-mime default me.sgomez.rfirma.desktop x-scheme-handler/afirma",
+    ],
+    buttons: ["Diagnosticar problemas"],
   },
   SitesWithTwoCandidates: {
     texts: [],
@@ -126,6 +146,21 @@ describe("StatusView stories", () => {
 
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Chrome y Chromium")).toBeInTheDocument();
+  });
+
+  it("keeps the site signature diagnosis behind a toggle that reports its state", async () => {
+    const user = userEvent.setup();
+    const { SitesUnavailable } = stories;
+    renderWithCatalog(<SitesUnavailable />);
+
+    const toggle = await screen.findByRole("button", { name: "Diagnosticar problemas" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("xdg-mime query default x-scheme-handler/afirma")).toBeNull();
+
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("xdg-mime query default x-scheme-handler/afirma")).toBeInTheDocument();
   });
 
   it("closes from the footer with Cerrar, and the signal table has no column header", async () => {
