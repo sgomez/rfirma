@@ -1,7 +1,57 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRef } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { useActionKeys } from "./actionKeys";
+import { Button } from "./Button";
 import { Dialog } from "./Dialog";
+import { Select } from "./Select";
+
+function Screen({
+  onPrimary,
+  onSecondary,
+  children,
+}: {
+  onPrimary: () => void;
+  onSecondary: () => void;
+  children?: React.ReactNode;
+}) {
+  const primary = useRef<HTMLButtonElement>(null);
+  useActionKeys({ primary, onSecondary });
+  return (
+    <>
+      <Button ref={primary} onClick={onPrimary}>
+        Continuar
+      </Button>
+      {children}
+    </>
+  );
+}
+
+function Confirm({
+  label = "¿Firmar de todos modos?",
+  onSign = () => {},
+  onCancel = () => {},
+  disabled = false,
+  children,
+}: {
+  label?: string;
+  onSign?: () => void;
+  onCancel?: () => void;
+  disabled?: boolean;
+  children?: React.ReactNode;
+}) {
+  const primary = useRef<HTMLButtonElement>(null);
+  return (
+    <Dialog label={label} onClose={onCancel} primary={primary}>
+      {children}
+      <Button onClick={onCancel}>Cancelar</Button>
+      <Button ref={primary} variant="primary" disabled={disabled} onClick={onSign}>
+        Firmar
+      </Button>
+    </Dialog>
+  );
+}
 
 function Pair({ onOuter, onInner }: { onOuter: () => void; onInner: () => void }) {
   return (
@@ -116,6 +166,148 @@ describe("Dialog", () => {
 
     rerender(<button type="button">Abrir</button>);
     expect(screen.getByRole("button", { name: "Abrir" })).toHaveFocus();
+  });
+
+  it("presses its primary on Enter, with the focus on it on opening", async () => {
+    const onSign = vi.fn();
+    render(<Confirm onSign={onSign} />);
+
+    expect(screen.getByRole("button", { name: "Firmar" })).toHaveFocus();
+    screen.getByRole("dialog").focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(onSign).toHaveBeenCalledOnce();
+  });
+
+  it("ignores Enter when it has no primary", async () => {
+    const onSign = vi.fn();
+    render(
+      <Dialog label="Firmas" onClose={() => {}}>
+        <Button onClick={onSign}>Firmar</Button>
+      </Dialog>,
+    );
+
+    await userEvent.keyboard("{Enter}");
+
+    expect(onSign).not.toHaveBeenCalled();
+  });
+
+  it("presses its secondary on Escape", async () => {
+    const onCancel = vi.fn();
+    const onSign = vi.fn();
+    render(<Confirm onSign={onSign} onCancel={onCancel} />);
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onSign).not.toHaveBeenCalled();
+  });
+
+  it("ignores Enter while the primary is disabled and focuses it once enabled", async () => {
+    const onSign = vi.fn();
+    const { rerender } = render(<Confirm onSign={onSign} disabled />);
+
+    await userEvent.keyboard("{Enter}");
+    expect(onSign).not.toHaveBeenCalled();
+
+    rerender(<Confirm onSign={onSign} />);
+    expect(screen.getByRole("button", { name: "Firmar" })).toHaveFocus();
+  });
+
+  it("keeps the focus where the person moved it when the primary becomes enabled", async () => {
+    const { rerender } = render(<Confirm disabled />);
+
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Cancelar" })).toHaveFocus();
+    rerender(<Confirm />);
+
+    expect(screen.getByRole("button", { name: "Cancelar" })).toHaveFocus();
+  });
+
+  it("leaves Enter to the focused button", async () => {
+    const onSign = vi.fn();
+    const onCancel = vi.fn();
+    render(<Confirm onSign={onSign} onCancel={onCancel} />);
+
+    screen.getByRole("button", { name: "Cancelar" }).focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onSign).not.toHaveBeenCalled();
+  });
+
+  it("leaves Enter to the focused text field", async () => {
+    const onSign = vi.fn();
+    render(
+      <Confirm onSign={onSign}>
+        <input aria-label="Páginas" />
+      </Confirm>,
+    );
+
+    await userEvent.click(screen.getByRole("textbox", { name: "Páginas" }));
+    await userEvent.keyboard("{Enter}");
+
+    expect(onSign).not.toHaveBeenCalled();
+  });
+
+  it("leaves Enter to the focused dropdown", async () => {
+    const onSign = vi.fn();
+    render(
+      <Confirm onSign={onSign}>
+        <Select
+          label="Certificado"
+          value="a"
+          options={[
+            { value: "a", label: "Uno" },
+            { value: "b", label: "Dos" },
+          ]}
+          onChange={() => {}}
+        />
+      </Confirm>,
+    );
+
+    screen.getByRole("combobox", { name: "Certificado" }).focus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    await userEvent.keyboard("{Enter}");
+
+    expect(onSign).not.toHaveBeenCalled();
+  });
+
+  it("lets only the most recent one answer Enter", async () => {
+    const onOuter = vi.fn();
+    const onInner = vi.fn();
+    render(
+      <>
+        <Confirm label="Fuera" onSign={onOuter} />
+        <Confirm label="Dentro" onSign={onInner} />
+      </>,
+    );
+
+    screen.getByRole("dialog", { name: "Dentro" }).focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(onInner).toHaveBeenCalledOnce();
+    expect(onOuter).not.toHaveBeenCalled();
+  });
+
+  it("keeps the screen behind it from answering Enter and Escape", async () => {
+    const onPrimary = vi.fn();
+    const onSecondary = vi.fn();
+    const { rerender } = render(
+      <Screen onPrimary={onPrimary} onSecondary={onSecondary}>
+        <Dialog label="Firmando">Firmando</Dialog>
+      </Screen>,
+    );
+
+    await userEvent.keyboard("{Enter}{Escape}");
+    expect(onPrimary).not.toHaveBeenCalled();
+    expect(onSecondary).not.toHaveBeenCalled();
+
+    rerender(<Screen onPrimary={onPrimary} onSecondary={onSecondary} />);
+    await userEvent.keyboard("{Enter}{Escape}");
+    expect(onPrimary).toHaveBeenCalledOnce();
+    expect(onSecondary).toHaveBeenCalledOnce();
   });
 
   it("does not compile without a label", () => {

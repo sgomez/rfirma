@@ -241,6 +241,26 @@ del documento** lleva el círculo con aspa y borde de 2 px en
 `--rf-border-strong`, y el aviso con algún problema, el mismo borde. Sin ámbar
 ni rojo: la silueta, la palabra y el peso bastan.
 
+### Teclado
+
+Toda pantalla y todo diálogo se recorren sin ratón con una sola regla:
+
+- **Intro pulsa la acción primaria** de lo que está delante, y **Escape la
+  secundaria**: cancelar o cerrar. Sin primaria, Intro no hace nada; sin
+  secundaria, Escape tampoco.
+- Con la primaria desactivada, Intro no hace nada hasta que se active.
+- Si el foco está en un control que usa Intro —un botón, un desplegable, un
+  campo de texto, un enlace—, Intro es de ese control: con el foco en
+  «Cancelar», Intro cancela.
+- Sin excepciones por tipo de acción: una primaria destructiva también se
+  acepta con Intro.
+- La primaria recibe el foco al aparecer, o al activarse, si nadie lo ha llevado
+  a otro sitio.
+- Con dos diálogos apilados, solo atiende el teclado el de arriba.
+
+El diálogo común la aplica con su `primary` y su `onClose`; una pantalla
+completa, con `useActionKeys` y `useDefaultButton` del design system.
+
 ---
 
 ## 9. Vocabulario de clases

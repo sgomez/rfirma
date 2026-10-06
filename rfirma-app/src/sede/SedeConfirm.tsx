@@ -7,7 +7,8 @@ import { Button } from "../design-system/Button";
 import { AlertIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
-import { SedeBody, useDefaultButton } from "./SedeFrame";
+import { useDefaultButton } from "../design-system/useDefaultButton";
+import { SedeBody } from "./SedeFrame";
 
 interface SedeConfirmProps {
   messageCode: string;
