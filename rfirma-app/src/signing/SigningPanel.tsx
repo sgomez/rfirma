@@ -6,14 +6,14 @@ import { ErrorNotice } from "../errors/ErrorNotice";
 import { PlacementBlock, type PlacementBlockState } from "../placement/PlacementBlock";
 import { CertificateNotice } from "./CertificateNotice";
 import { CertificateSelect } from "./CertificateSelect";
-import type { Certificate, CertificateState } from "./certificate";
+import type { CertificateSection } from "./certificate";
 import type { Destination } from "./destination";
 import type { SigningFailure } from "./failure";
 import { ModelFieldset } from "./ModelFieldset";
 import { PanelFooter } from "./PanelFooter";
 import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
 import type { PreviousSignaturesReport } from "./previousSignatures";
-import type { Rubric, RubricFailure } from "./rubric";
+import type { RubricSection } from "./rubric";
 import "./SigningPanel.css";
 import type { VisibleSignature } from "./visibleSignature";
 
@@ -30,19 +30,12 @@ interface SigningPanelProps {
   document: SigningDocument;
   /** El informe de firmas previas del documento, pedido al abrir o cargar. */
   previousSignatures: PreviousSignaturesReport;
-  certificate: CertificateState;
-  /** Cuál se elige en el desplegable. */
-  onChooseCertificate: (certificate: Certificate) => void;
-  onRetryCertificates: () => void;
-  onChooseModule: () => void;
+  certificate: CertificateSection;
   signature: VisibleSignature;
   onChangeSignature: (signature: VisibleSignature) => void;
   /** La colocación de la firma visible, tal y como la entrega su estado. */
   placementState: PlacementBlockState;
-  rubric: Rubric | null;
-  /** El último fallo al elegir la rúbrica, que se cuenta aquí y no al firmar. */
-  rubricFailure: RubricFailure | null;
-  onChooseRubric: () => void;
+  rubric: RubricSection;
   destination: Destination;
   onChangeDestination: () => void;
   onSign: () => void;
@@ -75,16 +68,11 @@ interface SigningPanelProps {
 export function SigningPanel({
   document,
   previousSignatures,
-  certificate,
-  onChooseCertificate,
-  onRetryCertificates,
-  onChooseModule,
+  certificate: certificateSection,
   signature,
   onChangeSignature,
   placementState,
   rubric,
-  rubricFailure,
-  onChooseRubric,
   destination,
   onChangeDestination,
   onSign,
@@ -95,6 +83,7 @@ export function SigningPanel({
   onEmptyStore,
 }: SigningPanelProps) {
   const { t } = useTranslation();
+  const certificate = certificateSection.state;
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
 
   const visible = signature.enabled && chosen !== null;
@@ -124,7 +113,7 @@ export function SigningPanel({
                 <CertificateSelect
                   certificates={certificate.kind === "loading" ? [] : certificate.certificates}
                   chosen={chosen}
-                  onChoose={onChooseCertificate}
+                  onChoose={certificateSection.choose}
                   searching={certificate.kind === "loading"}
                   disabled={signing}
                 />
@@ -183,9 +172,9 @@ export function SigningPanel({
                   signature={signature}
                   onChangeSignature={onChangeSignature}
                   certificate={chosen}
-                  rubric={rubric}
-                  rubricFailure={rubricFailure}
-                  onChooseRubric={onChooseRubric}
+                  rubric={rubric.value}
+                  rubricFailure={rubric.failure}
+                  onChooseRubric={rubric.choose}
                   onOpenHelp={onOpenHelp}
                 />
               </div>
@@ -203,8 +192,8 @@ export function SigningPanel({
         blocked={blocked}
         closed={previousSignatures.closed === true}
         certificate={certificate}
-        onRetryCertificates={onRetryCertificates}
-        onChooseModule={onChooseModule}
+        onRetryCertificates={() => void certificateSection.lookAgain()}
+        onChooseModule={() => void certificateSection.lookAgain()}
         onSign={onSign}
         onBack={onBack}
       />

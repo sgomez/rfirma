@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { placementStateOf } from "../placement/placementFixtures";
 import {
+  aCertificateSection,
   certificate,
   previousSignatureOf,
   renderPanel,
@@ -25,12 +26,12 @@ describe("SigningPanel", () => {
 
   it("asks to look for certificates again when none turned up", async () => {
     const user = userEvent.setup();
-    const onRetryCertificates = vi.fn();
-    renderPanel({ certificate: { kind: "empty" }, onRetryCertificates });
+    const lookAgain = vi.fn();
+    renderPanel({ certificate: aCertificateSection({ kind: "empty" }, { lookAgain }) });
 
     await user.click(screen.getByRole("button", { name: "Volver a buscar" }));
 
-    expect(onRetryCertificates).toHaveBeenCalled();
+    expect(lookAgain).toHaveBeenCalled();
   });
 
   it("calls onBack from the error's «Volver»", async () => {
@@ -53,7 +54,11 @@ describe("SigningPanel", () => {
   ] as const)("refuses to sign with a %s chosen certificate", (_kind, status) => {
     const unusable = { ...certificate, status };
     renderPanel({
-      certificate: { kind: "chosen", certificate: unusable, certificates: [unusable] },
+      certificate: aCertificateSection({
+        kind: "chosen",
+        certificate: unusable,
+        certificates: [unusable],
+      }),
     });
 
     expect(screen.getByRole("button", { name: "Firmar" })).toBeDisabled();
@@ -61,17 +66,19 @@ describe("SigningPanel", () => {
 
   it("chooses the certificate from the selector, not from the footer", async () => {
     const user = userEvent.setup();
-    const onChooseCertificate = vi.fn();
+    const choose = vi.fn();
     const grace = { ...certificate, id: "otra", holderName: "Grace Hopper" };
     renderPanel({
-      certificate: { kind: "unchosen", certificates: [certificate, grace] },
-      onChooseCertificate,
+      certificate: aCertificateSection(
+        { kind: "unchosen", certificates: [certificate, grace] },
+        { choose },
+      ),
     });
 
     await user.click(screen.getByRole("combobox", { name: "Certificado" }));
     await user.click(screen.getByRole("option", { name: /Grace Hopper/ }));
 
-    expect(onChooseCertificate).toHaveBeenCalledWith(grace);
+    expect(choose).toHaveBeenCalledWith(grace);
   });
 });
 
@@ -82,7 +89,7 @@ describe("la firma visible, al cambiar el certificado", () => {
     const { show } = renderPanel({ signature: visible });
     expect(screen.getByText("En la página 3")).toBeInTheDocument();
 
-    show({ certificate: { kind: "empty" }, signature: visible });
+    show({ certificate: aCertificateSection({ kind: "empty" }), signature: visible });
     expect(screen.queryByText("En la página 3")).not.toBeInTheDocument();
     show({ signature: visible });
 

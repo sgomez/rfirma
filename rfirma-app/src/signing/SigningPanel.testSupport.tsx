@@ -9,6 +9,7 @@ import type { Certificate } from "./certificate";
 import type { PreviousSignature, PreviousSignaturesReport } from "./previousSignatures";
 import type { Rubric } from "./rubric";
 import { SigningPanel } from "./SigningPanel";
+import { aCertificateSection, aRubricSection } from "./signingSectionFixtures";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 /** Una firma previa válida, lista para sobreescribir con `overrides`. */
@@ -43,6 +44,8 @@ export function reportOf(
     ...overrides,
   };
 }
+
+export { aCertificateSection, aRubricSection };
 
 export const certificate: Certificate = {
   id: "0123456789abcdef0123456789abcdef",
@@ -79,10 +82,11 @@ function panelWith(props: PanelProps) {
     <SigningPanel
       document={{ id: "doc-1", name: "contrato.pdf", sizeBytes: 2_400_000 }}
       previousSignatures={reportOf([])}
-      certificate={{ kind: "chosen", certificate, certificates: [certificate] }}
-      onChooseCertificate={noop}
-      onRetryCertificates={noop}
-      onChooseModule={noop}
+      certificate={aCertificateSection({
+        kind: "chosen",
+        certificate,
+        certificates: [certificate],
+      })}
       signature={{ ...DEFAULT_VISIBLE_SIGNATURE, enabled: true }}
       onChangeSignature={noop}
       placementState={placementStateOf({
@@ -91,9 +95,7 @@ function panelWith(props: PanelProps) {
         viewedPage: 3,
         pageCount: 27,
       })}
-      rubric={null}
-      rubricFailure={null}
-      onChooseRubric={noop}
+      rubric={aRubricSection()}
       destination={{ folder: "Documentos", name: "contrato-firmado.pdf", writable: true }}
       onChangeDestination={noop}
       onSign={noop}

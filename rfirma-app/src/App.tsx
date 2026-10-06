@@ -111,6 +111,10 @@ export function App({
   const certificateListing = useCertificateListing(certificates);
   const { settings, changeSettings, chooseDestination, rubric, rubricFailure, chooseRubric } =
     usePreferencesState(preferences, rubrics, covered, windowTheme);
+  const rubricSection = useMemo(
+    () => ({ value: rubric, failure: rubricFailure, choose: () => void chooseRubric() }),
+    [rubric, rubricFailure, chooseRubric],
+  );
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión es recordar.
   const rememberActivity = settings?.rememberActivity ?? true;
   const documents = useDocuments(recents, picker, rememberActivity);
@@ -342,16 +346,11 @@ export function App({
                 sizeBytes,
               }}
               previousSignatures={journey.previousSignatures}
-              certificate={journey.certificate.state}
-              onChooseCertificate={journey.certificate.choose}
-              onRetryCertificates={() => void journey.certificate.lookAgain()}
-              onChooseModule={() => void journey.certificate.lookAgain()}
+              certificate={journey.certificate}
               signature={journey.signature.value}
               onChangeSignature={journey.signature.change}
               placementState={placementState}
-              rubric={rubric}
-              rubricFailure={rubricFailure}
-              onChooseRubric={() => void chooseRubric()}
+              rubric={rubricSection}
               destination={journey.destination.value}
               onChangeDestination={() => void journey.destination.chooseSingle()}
               onSign={() => void journey.signing.sign()}
