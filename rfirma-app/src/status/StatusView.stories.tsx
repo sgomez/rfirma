@@ -3,6 +3,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { inStatusWindow } from "../../.storybook/decorators/statusWindow";
+import { StatusView, type StatusViewProps } from "./StatusView";
+import { memoryStatus, type SignalRow } from "./status";
 import {
   caChecking,
   caHalfInstalled,
@@ -18,9 +20,7 @@ import {
   versionChecking,
   versionOutdated,
   versionUpToDate,
-} from "../../.storybook/fixtures/status";
-import { StatusView, type StatusViewProps } from "./StatusView";
-import { memoryStatus, type SignalRow } from "./status";
+} from "./testing/fixtures";
 
 const meta = {
   title: "Pantallas/Estado/1 · Panel",

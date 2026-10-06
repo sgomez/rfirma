@@ -8,14 +8,9 @@ import {
   panelStoryParameters,
   WRITABLE_DESTINATION,
 } from "../../.storybook/decorators/signingPanel";
-import {
-  aSignature,
-  EXPIRED,
-  NOT_ADMITTED,
-  VALID_CLOSING,
-} from "../../.storybook/fixtures/signing";
 import type { DocumentFinding, PreviousSignature, SignatureFormat } from "./previousSignatures";
 import { type SignaturesMoment, SignaturesPanel } from "./SignaturesPanel";
+import { aSignature, EXPIRED, NOT_ADMITTED, VALID_CLOSING } from "./testing/storyReports";
 import type { ReadingState } from "./useSignatureReading";
 
 const OWN_SIGNATURE = aSignature({ name: "LOVELACE BYRON ADA", idNumber: "00000000T" });
