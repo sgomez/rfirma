@@ -291,8 +291,7 @@ color del texto de un botón primario**. Como máximo un `--primary` por vista.
 ```
 
 `.rf-card` ya es flex en columna con `gap: --rf-space-1` y
-`padding: --rf-space-md`; no le añadas relleno propio. `--interactive` solo si
-toda la tarjeta es pulsable. Para un contenedor sin sombra ni relleno,
+`padding: --rf-space-md`; no le añadas relleno propio. Para un contenedor sin sombra ni relleno,
 `.rf-surface`.
 
 ### Campo
