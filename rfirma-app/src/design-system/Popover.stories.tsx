@@ -34,6 +34,7 @@ function PopoverDemo({ startsOpen, inPortal }: { startsOpen: boolean; inPortal: 
 const meta = {
   title: "Primitivos/Popover",
   component: PopoverDemo,
+  parameters: { designSync: { cardMode: "single", primaryStory: "Open" } },
   args: { startsOpen: true, inPortal: false },
   argTypes: { startsOpen: { control: "boolean" }, inPortal: { control: "boolean" } },
 } satisfies Meta<typeof PopoverDemo>;

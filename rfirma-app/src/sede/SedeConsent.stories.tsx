@@ -7,9 +7,14 @@ import { previousSignature, previousSignaturesReport } from "./testing/fixtures/
 import { sedeErrand } from "./testing/fixtures/sedeView";
 import { certificate, consentStage, signedDocument } from "./testing/fixtures/sedeWindow";
 
-const meta = { title: "Flujos/Sede/Consentimiento", ...sedeStoryMeta } satisfies Meta<
-  typeof SedeView
->;
+const meta = {
+  title: "Flujos/Sede/Consentimiento",
+  ...sedeStoryMeta,
+  parameters: {
+    ...sedeStoryMeta.parameters,
+    designSync: { cardMode: "single", primaryStory: "Consent" },
+  },
+} satisfies Meta<typeof SedeView>;
 
 export default meta;
 

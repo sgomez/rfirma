@@ -23,11 +23,12 @@ CONFIG = {
 EXPORT_LINE = re.compile(r'^export \{ ([^}]+) \} from "([^"]+)";$', re.MULTILINE)
 
 
-def story(title: str, component: str, imports: str) -> str:
+def story(title: str, component: str, imports: str, parameters: str = "") -> str:
+    extra = f"  parameters: {{ {parameters} }},\n" if parameters else ""
     return (
         'import type { Meta, StoryObj } from "@storybook/react-vite";\n'
         f"{imports}\n\n"
-        f'const meta = {{\n  title: "{title}",\n  component: {component},\n}} '
+        f'const meta = {{\n  title: "{title}",\n  component: {component},\n{extra}}} '
         f"satisfies Meta<typeof {component}>;\n\n"
         "export default meta;\n"
     )
@@ -266,6 +267,164 @@ class SelectionTest(unittest.TestCase):
         result = self.run_script("check")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("design-sync.entry.ts", result.stderr)
+
+    def overrides(self) -> dict[str, dict[str, str]]:
+        return json.loads((self.root / ".design-sync/config.json").read_text())[
+            "overrides"
+        ]
+
+    def add_dialog_story(self, parameters: str) -> None:
+        self.add_story(
+            "design-system/Dialog.stories.tsx",
+            story(
+                "Primitivos/Dialog",
+                "Dialog",
+                'import { Dialog } from "./Dialog";',
+                parameters,
+            ),
+        )
+
+    def test_override_declared_in_the_story_reaches_the_config(self) -> None:
+        self.add_dialog_story(
+            'layout: "centered", designSync: { cardMode: "single", '
+            'primaryStory: "Closable", viewport: "1340x780" }'
+        )
+
+        self.write()
+
+        self.assertEqual(
+            self.overrides(),
+            {
+                "Dialog": {
+                    "cardMode": "single",
+                    "primaryStory": "Closable",
+                    "viewport": "1340x780",
+                }
+            },
+        )
+
+    def test_stale_override_is_dropped_on_regeneration(self) -> None:
+        config = self.root / ".design-sync/config.json"
+        config.write_text(
+            json.dumps({**CONFIG, "overrides": {"Gone": {"cardMode": "column"}}})
+        )
+
+        self.write()
+
+        self.assertEqual(self.overrides(), {})
+
+    def test_override_on_a_screen_fails(self) -> None:
+        self.add_story(
+            "status/StatusView.stories.tsx",
+            story(
+                "Pantallas/Estado/1 · Panel",
+                "StatusView",
+                'import { StatusView } from "./StatusView";',
+                'designSync: { cardMode: "column" }',
+            ),
+        )
+
+        self.assert_fails_naming("status/StatusView.stories.tsx", "designSync")
+
+    def test_unknown_override_key_fails(self) -> None:
+        self.add_dialog_story('designSync: { colour: "red" }')
+
+        self.assert_fails_naming("design-system/Dialog.stories.tsx", "colour")
+
+    def test_conflicting_overrides_for_one_component_fail(self) -> None:
+        for name, mode in (("SedeA", "single"), ("SedeB", "column")):
+            self.add_story(
+                f"sede/{name}.stories.tsx",
+                story(
+                    f"Flujos/Sede/{name}",
+                    "SedeView",
+                    'import { SedeView } from "./SedeView";',
+                    f'designSync: {{ cardMode: "{mode}" }}',
+                ),
+            )
+
+        self.assert_fails_naming("sede/SedeA.stories.tsx", "sede/SedeB.stories.tsx")
+
+    def test_seal_detects_a_hand_edited_override(self) -> None:
+        self.add_dialog_story('designSync: { cardMode: "single" }')
+        self.write()
+        config = self.root / ".design-sync/config.json"
+        edited = json.loads(config.read_text())
+        edited["overrides"]["Dialog"]["cardMode"] = "column"
+        config.write_text(json.dumps(edited))
+
+        result = self.run_script("check")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("overrides", result.stderr)
+
+    def use_conventions(self, prose: str) -> Path:
+        config = self.root / ".design-sync/config.json"
+        config.write_text(
+            json.dumps({**CONFIG, "readmeHeader": ".design-sync/conventions.md"})
+        )
+        header = self.root / ".design-sync/conventions.md"
+        header.write_text(prose)
+        return header
+
+    def test_catalog_tables_regenerate_between_markers(self) -> None:
+        header = self.use_conventions(
+            "Prosa antes.\n\n<!-- design-sync:catalog:start -->\nviejo\n"
+            "<!-- design-sync:catalog:end -->\n\nProsa despues.\n"
+        )
+        self.add_story(
+            "design-system/Button.stories.tsx",
+            story("Primitivos/Button", "Button", 'import { Button } from "./Button";'),
+        )
+        self.add_story(
+            "sede/SedeWaiting.stories.tsx",
+            story(
+                "Flujos/Sede/Espera",
+                "SedeView",
+                'import { SedeView } from "./SedeView";',
+            ),
+        )
+        self.add_story(
+            "status/StatusView.stories.tsx",
+            story(
+                "Pantallas/Estado/1 · Panel",
+                "StatusView",
+                'import { StatusView } from "./StatusView";',
+            ),
+        )
+
+        self.write()
+
+        text = header.read_text()
+        self.assertTrue(text.startswith("Prosa antes.\n"))
+        self.assertTrue(text.endswith("\nProsa despues.\n"))
+        self.assertNotIn("viejo", text)
+        self.assertIn("| Primitivos | Button | `Button` |", text)
+        self.assertIn("| Flujos | Sede / Espera | `SedeView` |", text)
+        self.assertNotIn("StatusView", text)
+        self.assertEqual(self.run_script("check").returncode, 0)
+
+    def test_seal_detects_a_hand_edited_catalog(self) -> None:
+        header = self.use_conventions(
+            "<!-- design-sync:catalog:start -->\n<!-- design-sync:catalog:end -->\n"
+        )
+        self.write()
+        header.write_text(
+            header.read_text().replace(
+                "<!-- design-sync:catalog:end -->",
+                "editado\n<!-- design-sync:catalog:end -->",
+            )
+        )
+
+        result = self.run_script("check")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("catálogo", result.stderr)
+
+    def test_missing_catalog_markers_fail(self) -> None:
+        self.use_conventions("sin marcadores\n")
+
+        self.assert_fails_naming("conventions.md", "marcadores")
 
 
 if __name__ == "__main__":
