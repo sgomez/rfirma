@@ -1,0 +1,81 @@
+# Code scanning con CodeQL, sin las pruebas ni testdata; en una PR, Rust solo si toca Rust.
+name: CodeQL
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '41 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  rust-scope:
+    name: Alcance de Rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      rust: ${{ steps.scope.outputs.rust }}
+    steps:
+      - id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != pull_request ]; then
+              echo "rust=true" >> "$GITHUB_OUTPUT"
+              exit 0
+          fi
+          if gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename' \
+              | grep -qE '\.rs$|(^|/)Cargo\.(toml|lock)$'; then
+              echo "rust=true" >> "$GITHUB_OUTPUT"
+          else
+              echo "rust=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    needs: rust-scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, java-kotlin, javascript-typescript, python, rust]
+    env:
+      ANALYZE: ${{ matrix.language != 'rust' || needs.rust-scope.outputs.rust == 'true' }}
+    steps:
+      - if: env.ANALYZE == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - if: env.ANALYZE == 'true'
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config: |
+            paths-ignore:
+              - '**/tests/**'
+              - '**/tests.rs'
+              - testdata/**
+
+      - if: env.ANALYZE == 'true'
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          category: /language:${{ matrix.language }}
