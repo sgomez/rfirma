@@ -113,7 +113,6 @@ check: tools check-repo check-java check-ts check-landing check-rust
 check-repo: check-version fmt-check
     set -euo pipefail
     {{ root }}/packaging/flatpak/check-sources.sh
-    {{ root }}/scripts/design_sync_selection.py check
     {{ root }}/.github/check-workflows.sh
     {{ root }}/scripts/check-versions.sh
     {{ root }}/packaging/repo/build-tree.test.sh
@@ -598,7 +597,7 @@ flatpak-sources:
 # Regenera la entrada de design-sync, su titleMap y su sello desde los titulos de las historias (ADR-0046).
 [group('dev')]
 design-sync-selection:
-    {{ root }}/scripts/design_sync_selection.py write
+    {{ root }}/scripts/design_sync_selection.py
 
 # Mutation testing incremental, a mano antes de publicar una version: no bloquea (ADR-0014).
 [group('release')]

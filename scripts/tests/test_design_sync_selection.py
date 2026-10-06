@@ -51,16 +51,16 @@ class SelectionTest(unittest.TestCase):
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(content)
 
-    def run_script(self, verb: str) -> subprocess.CompletedProcess[str]:
+    def run_script(self) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            [sys.executable, str(SCRIPT), verb, "--root", str(self.root)],
+            [sys.executable, str(SCRIPT), "--root", str(self.root)],
             capture_output=True,
             text=True,
             check=False,
         )
 
     def write(self) -> None:
-        result = self.run_script("write")
+        result = self.run_script()
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def exported(self) -> dict[str, str]:
@@ -180,7 +180,7 @@ class SelectionTest(unittest.TestCase):
         )
 
     def assert_fails_naming(self, *culprits: str) -> None:
-        result = self.run_script("write")
+        result = self.run_script()
         self.assertNotEqual(result.returncode, 0)
         for culprit in culprits:
             self.assertIn(culprit, result.stderr)
@@ -235,38 +235,6 @@ class SelectionTest(unittest.TestCase):
         self.assert_fails_naming(
             "signing/Panel.stories.tsx", "status/Panel.stories.tsx"
         )
-
-    def test_seal_detects_a_forgotten_regeneration(self) -> None:
-        self.add_story(
-            "design-system/Button.stories.tsx",
-            story("Primitivos/Button", "Button", 'import { Button } from "./Button";'),
-        )
-        self.write()
-        self.assertEqual(self.run_script("check").returncode, 0)
-
-        self.add_story(
-            "design-system/Card.stories.tsx",
-            story("Primitivos/Card", "Card", 'import { Card } from "./Card";'),
-        )
-
-        result = self.run_script("check")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("just design-sync-selection", result.stderr)
-
-    def test_seal_detects_a_hand_edited_selection(self) -> None:
-        self.add_story(
-            "design-system/Button.stories.tsx",
-            story("Primitivos/Button", "Button", 'import { Button } from "./Button";'),
-        )
-        self.write()
-        entry = self.root / "rfirma-app/design-sync.entry.ts"
-        entry.write_text(
-            entry.read_text() + 'export { Card } from "./src/design-system/Card";\n'
-        )
-
-        result = self.run_script("check")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("design-sync.entry.ts", result.stderr)
 
     def overrides(self) -> dict[str, dict[str, str]]:
         return json.loads((self.root / ".design-sync/config.json").read_text())[
@@ -345,19 +313,6 @@ class SelectionTest(unittest.TestCase):
 
         self.assert_fails_naming("sede/SedeA.stories.tsx", "sede/SedeB.stories.tsx")
 
-    def test_seal_detects_a_hand_edited_override(self) -> None:
-        self.add_dialog_story('designSync: { cardMode: "single" }')
-        self.write()
-        config = self.root / ".design-sync/config.json"
-        edited = json.loads(config.read_text())
-        edited["overrides"]["Dialog"]["cardMode"] = "column"
-        config.write_text(json.dumps(edited))
-
-        result = self.run_script("check")
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("overrides", result.stderr)
-
     def use_conventions(self, prose: str) -> Path:
         config = self.root / ".design-sync/config.json"
         config.write_text(
@@ -402,24 +357,6 @@ class SelectionTest(unittest.TestCase):
         self.assertIn("| Primitivos | Button | `Button` |", text)
         self.assertIn("| Flujos | Sede / Espera | `SedeView` |", text)
         self.assertNotIn("StatusView", text)
-        self.assertEqual(self.run_script("check").returncode, 0)
-
-    def test_seal_detects_a_hand_edited_catalog(self) -> None:
-        header = self.use_conventions(
-            "<!-- design-sync:catalog:start -->\n<!-- design-sync:catalog:end -->\n"
-        )
-        self.write()
-        header.write_text(
-            header.read_text().replace(
-                "<!-- design-sync:catalog:end -->",
-                "editado\n<!-- design-sync:catalog:end -->",
-            )
-        )
-
-        result = self.run_script("check")
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("catálogo", result.stderr)
 
     def test_missing_catalog_markers_fail(self) -> None:
         self.use_conventions("sin marcadores\n")
