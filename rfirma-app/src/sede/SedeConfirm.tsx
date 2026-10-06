@@ -42,6 +42,7 @@ export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmPro
   return (
     <SedeBody
       onEscape={onCancel}
+      primary={continueButton}
       footer={
         <>
           <div className="sede-window__spacer" />
