@@ -146,14 +146,15 @@ export function StatusView({
               </div>
             </div>
 
-            {row.signal === "siteSignature" && row.verdict === "notApplicable" && (
+            {row.detail?.kind === "handlerDiagnosis" && (
               <SiteSignatureDiagnosis
+                desktopFile={row.detail.desktopFile}
                 expanded={expandedDetail.has(row.signal)}
                 onToggle={() => toggleDetail(row.signal)}
               />
             )}
 
-            {row.detail && (
+            {row.detail && row.detail.kind !== "handlerDiagnosis" && (
               <div className="status-view__detail">
                 <Button
                   variant="ghost"
@@ -222,12 +223,12 @@ export function StatusView({
   );
 }
 
-const RFIRMA_DESKTOP_FILE = "me.sgomez.rfirma.desktop";
-
 function SiteSignatureDiagnosis({
+  desktopFile,
   expanded,
   onToggle,
 }: {
+  desktopFile: string;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -257,12 +258,12 @@ function SiteSignatureDiagnosis({
           </li>
           <li className="status-view__detail-item">
             <span className="rf-prose">
-              {t("status.detail.diagnoseFix", { file: RFIRMA_DESKTOP_FILE })}
+              {t("status.detail.diagnoseFix", { file: desktopFile })}
             </span>
           </li>
           <li className="status-view__detail-item">
             <code className="status-view__detail-command">
-              xdg-mime default {RFIRMA_DESKTOP_FILE} x-scheme-handler/afirma
+              xdg-mime default {desktopFile} x-scheme-handler/afirma
             </code>
           </li>
         </ul>

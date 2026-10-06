@@ -142,9 +142,10 @@ no una avería: la fila informa, el botón llama. La regla del botón vive en
 **«Gestionada por tu escritorio» es el sandbox del flatpak**, donde los manejadores
 registrados no se pueden leer: la fila no muestra veredicto ni botón de reparación,
 solo un desplegable «Diagnosticar problemas» con las órdenes que se ejecutan fuera
-del sandbox. El desplegable es de la vista: el backend sigue mandando
-`notApplicable` sin detalle. **La fila no desaparece**, porque una fila que a veces
-está obliga a reaprender la pantalla.
+del sandbox. Las órdenes llegan como detalle `handlerDiagnosis`, con el `.desktop`
+del flatpak, y solo en ese canal: donde no se puede consultar por otro motivo, la
+fila no ofrece órdenes `xdg-mime`. **La fila no desaparece**, porque una fila que a
+veces está obliga a reaprender la pantalla.
 
 **Que el escritorio pregunte qué aplicación usar no es un problema** y la fila no
 lo explica: el desplegable solo cubre que se abra otra aplicación sin preguntar.

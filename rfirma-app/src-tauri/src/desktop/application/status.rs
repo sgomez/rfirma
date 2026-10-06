@@ -7,7 +7,7 @@ use crate::desktop::application::version::{
 };
 use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::destination::{CERTIFICATE_ISSUANCE, RELEASES, REPOSITORY, WINDOWS};
-use crate::desktop::domain::handlers::UrlHandlers;
+use crate::desktop::domain::handlers::{UrlHandlers, FLATPAK_DESKTOP_FILE};
 use crate::desktop::domain::status::{
     ActionKind, Signal, SignalDetail, SignalRow, SiteSignatureCandidate, StatusAction,
     StoreCertificates, StoreDetail, Verdict,
@@ -112,15 +112,22 @@ fn site_signature_action(handlers: &UrlHandlers) -> Option<StatusAction> {
     })
 }
 
+/// Cómo diagnosticar quién abre las sedes: solo en el flatpak, donde lo dicen las órdenes `xdg-mime` de fuera del sandbox.
+fn site_signature_diagnosis(channel: Channel) -> Option<SignalDetail> {
+    (channel == Channel::Flatpak).then(|| SignalDetail::HandlerDiagnosis {
+        desktop_file: FLATPAK_DESKTOP_FILE.to_owned(),
+    })
+}
+
 /// Evalúa el estado de la señal de qué programa abre las sedes, con las candidatas instaladas.
-pub fn evaluate_site_signature_signal(handlers: UrlHandlers) -> SignalRow {
+pub fn evaluate_site_signature_signal(handlers: UrlHandlers, channel: Channel) -> SignalRow {
     if !handlers.available {
         return SignalRow {
             signal: Signal::SiteSignature,
             value: String::new(),
             verdict: Verdict::NotApplicable,
             action: None,
-            detail: None,
+            detail: site_signature_diagnosis(channel),
             candidates: None,
             restart_firefox_notice: false,
         };

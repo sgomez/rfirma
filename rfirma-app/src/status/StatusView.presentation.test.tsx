@@ -62,6 +62,11 @@ const table: Record<keyof typeof stories, Expected> = {
     ],
     buttons: ["Diagnosticar problemas"],
   },
+  SitesUnavailableOutsideFlatpak: {
+    texts: ["Gestionada por tu escritorio"],
+    buttons: [],
+    absent: ["Diagnosticar problemas", "xdg-mime query default x-scheme-handler/afirma"],
+  },
   SitesWithTwoCandidates: {
     texts: [],
     buttons: ["Usar rFirma"],

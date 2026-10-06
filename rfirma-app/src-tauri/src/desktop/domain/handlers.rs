@@ -3,6 +3,9 @@
 /// Fichero .desktop con el que rFirma queda registrada en paquetes nativos.
 pub const OUR_DESKTOP_FILE: &str = "rfirma.desktop";
 
+/// Fichero .desktop con el que rFirma queda registrada en el flatpak.
+pub const FLATPAK_DESKTOP_FILE: &str = "me.sgomez.rfirma.desktop";
+
 /// Estado del manejador de enlaces `afirma://` en el sistema.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UrlHandlers {

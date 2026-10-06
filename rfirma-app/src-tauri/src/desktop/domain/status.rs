@@ -124,7 +124,7 @@ pub struct StoreCertificates {
     pub certificates: usize,
 }
 
-/// Lo que cuelga de una señal: dónde se confía en la CA, o cuántos certificados hay en cada sitio.
+/// Lo que cuelga de una señal: dónde se confía en la CA, cuántos certificados hay en cada sitio o cómo diagnosticar las sedes.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum SignalDetail {
@@ -137,5 +137,10 @@ pub enum SignalDetail {
     Certificates {
         /// Los sitios con al menos un certificado.
         stores: Vec<StoreCertificates>,
+    },
+    /// Cómo averiguar fuera del sandbox quién abre las sedes, con el `.desktop` de rFirma.
+    HandlerDiagnosis {
+        /// El `.desktop` que debería abrir las sedes.
+        desktop_file: String,
     },
 }
