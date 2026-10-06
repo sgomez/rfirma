@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
+import type { NamedFailure } from "../errors/classify";
+import { ErrorNotice } from "../errors/ErrorNotice";
 import "./StatusView.css";
 import {
   AlertIcon,
@@ -26,6 +28,7 @@ import {
 
 export interface StatusViewProps {
   rows: SignalRow[];
+  failure?: NamedFailure | null;
   isRechecking?: boolean;
   onClose: () => void;
   onRecheck: () => void;
@@ -38,6 +41,7 @@ export interface StatusViewProps {
 
 export function StatusView({
   rows,
+  failure = null,
   isRechecking = false,
   onClose,
   onRecheck,
@@ -78,6 +82,7 @@ export function StatusView({
       </div>
 
       <div className="status-view__body">
+        {failure && <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />}
         {rows.map((row) => (
           <div key={row.signal} className="status-view__row" role="status">
             <div className="status-view__row-main">

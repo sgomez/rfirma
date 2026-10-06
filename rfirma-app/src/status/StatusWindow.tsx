@@ -1,11 +1,12 @@
 //! La ventana del estado de rFirma: lleva el puerto, mide las señales, atiende el Escape y monta su vista y el velo de la retirada.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ExternalDestination,
   ExternalDestinationOpener,
 } from "../desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "../desktop/externalDestination";
+import { classify, type NamedFailure } from "../errors/classify";
 import { StatusView } from "./StatusView";
 import {
   type Signal,
@@ -30,6 +31,15 @@ export interface StatusWindowProps {
   initiallyExpanded?: Signal[];
 }
 
+function restoreSignals(snapshot: SignalRow[], signals: Signal[]) {
+  return (current: SignalRow[]) =>
+    current.map((row) =>
+      signals.includes(row.signal)
+        ? (snapshot.find((before) => before.signal === row.signal) ?? row)
+        : row,
+    );
+}
+
 export function StatusWindow({
   onClose,
   statusPort,
@@ -40,6 +50,9 @@ export function StatusWindow({
   const [rows, setRows] = useState<SignalRow[]>([]);
   const [isRechecking, setIsRechecking] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [failure, setFailure] = useState<NamedFailure | null>(null);
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
 
   useEffect(() => {
     onRowsChange?.(rows);
@@ -86,6 +99,8 @@ export function StatusWindow({
   }, [onClose, isWithdrawing]);
 
   const handleRecheck = useCallback(() => {
+    const snapshot = rowsRef.current;
+    setFailure(null);
     setIsRechecking(true);
     setRows((current) =>
       current.map((row) => ({
@@ -105,11 +120,18 @@ export function StatusWindow({
       .then((measuredRows) => {
         setRows(measuredRows);
         setIsRechecking(false);
+      })
+      .catch((thrown: unknown) => {
+        setRows(snapshot);
+        setIsRechecking(false);
+        setFailure(classify(thrown));
       });
   }, [statusPort]);
 
   const handleChooseSiteSignatureHandler = useCallback(
     (handlerId: string) => {
+      const snapshot = rowsRef.current;
+      setFailure(null);
       setRows((current) =>
         current.map((r) =>
           r.signal === "siteSignature" || r.signal === "localCaCertificate"
@@ -124,11 +146,17 @@ export function StatusWindow({
             : r,
         ),
       );
-      statusPort.chooseSiteSignatureHandler(handlerId).then((updatedRows) => {
-        setRows((current) =>
-          current.map((r) => updatedRows.find((updated) => updated.signal === r.signal) ?? r),
-        );
-      });
+      statusPort
+        .chooseSiteSignatureHandler(handlerId)
+        .then((updatedRows) => {
+          setRows((current) =>
+            current.map((r) => updatedRows.find((updated) => updated.signal === r.signal) ?? r),
+          );
+        })
+        .catch((thrown: unknown) => {
+          setRows(restoreSignals(snapshot, ["siteSignature", "localCaCertificate"]));
+          setFailure(classify(thrown));
+        });
     },
     [statusPort],
   );
@@ -143,6 +171,8 @@ export function StatusWindow({
         handleChooseSiteSignatureHandler(row.action.target);
         return;
       }
+      const snapshot = rowsRef.current;
+      setFailure(null);
       setRows((current) =>
         current.map((r) =>
           r.signal === row.signal
@@ -158,16 +188,28 @@ export function StatusWindow({
         ),
       );
       if (row.action.kind === "repair") {
-        statusPort.installLocalCaCertificate().then((updatedRow) => {
-          setRows((current) =>
-            current.map((r) => (r.signal === updatedRow.signal ? updatedRow : r)),
-          );
-        });
+        statusPort
+          .installLocalCaCertificate()
+          .then((updatedRow) => {
+            setRows((current) =>
+              current.map((r) => (r.signal === updatedRow.signal ? updatedRow : r)),
+            );
+          })
+          .catch((thrown: unknown) => {
+            setRows(restoreSignals(snapshot, [row.signal]));
+            setFailure(classify(thrown));
+          });
         return;
       }
-      statusPort.recheck().then((updatedRows) => {
-        setRows(updatedRows);
-      });
+      statusPort
+        .recheck()
+        .then((updatedRows) => {
+          setRows(updatedRows);
+        })
+        .catch((thrown: unknown) => {
+          setRows(restoreSignals(snapshot, [row.signal]));
+          setFailure(classify(thrown));
+        });
     },
     [externalDestinations, statusPort, handleChooseSiteSignatureHandler],
   );
@@ -187,6 +229,7 @@ export function StatusWindow({
     <>
       <StatusView
         rows={rows}
+        failure={failure}
         isRechecking={isRechecking}
         onClose={onClose}
         onRecheck={handleRecheck}
