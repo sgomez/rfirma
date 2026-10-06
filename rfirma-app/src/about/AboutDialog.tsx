@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./AboutDialog.css";
+import { useDefaultButton } from "../design-system/actionKeys";
 import { Badge } from "../design-system/Badge";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
@@ -36,6 +37,7 @@ export function AboutDialog({
   const { t } = useTranslation();
   const [currentVersion, setCurrentVersion] = useState(newVersion);
   const [updating, setUpdating] = useState(false);
+  const closeButton = useDefaultButton();
 
   useEffect(() => {
     let current = true;
@@ -55,7 +57,7 @@ export function AboutDialog({
 
   return (
     <>
-      <Dialog label={t("app.name")} onClose={onClose} className="about">
+      <Dialog label={t("app.name")} onClose={onClose} primary={closeButton} className="about">
         <div className="about__header">
           <div className="about__identity">
             <p className="rf-heading about__name">{t("app.name")}</p>
@@ -103,7 +105,7 @@ export function AboutDialog({
         </Row>
 
         <Row className="about__footer">
-          <Button variant="primary" className="about__close" onClick={onClose}>
+          <Button variant="primary" className="about__close" onClick={onClose} ref={closeButton}>
             {t("actions.close")}
           </Button>
         </Row>

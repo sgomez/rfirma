@@ -44,6 +44,18 @@ describe("AboutDialog", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it("closes on Intro and on Escape", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderAbout({ onClose });
+
+    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
+    await user.keyboard("{Enter}");
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
   describe("version status", () => {
     describe("updating from the application", () => {
       const installable: NewVersion = { version: "0.4.1", installable: true };
@@ -59,6 +71,61 @@ describe("AboutDialog", () => {
         await user.click(screen.getByRole("button", { name: "Instalar y cerrar" }));
 
         expect(versions.installCalls).toBe(1);
+      });
+
+      it("answers Intro with Instalar y cerrar and Escape with Ahora no, only on the update", async () => {
+        const user = userEvent.setup();
+        const onClose = vi.fn();
+        const versions = inMemoryVersionCheck(installable);
+        renderAbout({ newVersion: installable, versions, onClose });
+
+        await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
+        expect(screen.getByRole("button", { name: "Instalar y cerrar" })).toHaveFocus();
+        await user.keyboard("{Escape}");
+        expect(screen.queryByText("¿Actualizar a la versión 0.4.1?")).not.toBeInTheDocument();
+        expect(onClose).not.toHaveBeenCalled();
+
+        await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
+        await user.keyboard("{Enter}");
+
+        expect(versions.installCalls).toBe(1);
+        expect(onClose).not.toHaveBeenCalled();
+      });
+
+      it("ignores Intro and Escape while installing", async () => {
+        const user = userEvent.setup();
+        const onClose = vi.fn();
+        const versions = {
+          ...inMemoryVersionCheck(installable),
+          install: vi.fn(() => new Promise<never>(() => {})),
+        };
+        renderAbout({ newVersion: installable, versions, onClose });
+
+        await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
+        await user.keyboard("{Enter}");
+        expect(versions.install).toHaveBeenCalledOnce();
+        await user.keyboard("{Enter}");
+        await user.keyboard("{Escape}");
+
+        expect(versions.install).toHaveBeenCalledOnce();
+        expect(screen.getByRole("status")).toBeInTheDocument();
+        expect(onClose).not.toHaveBeenCalled();
+      });
+
+      it("closes the update with Intro and with Escape after a failure", async () => {
+        const user = userEvent.setup();
+        renderAbout({
+          newVersion: installable,
+          versions: inMemoryVersionCheck(installable, "invalidSignature"),
+        });
+
+        for (const key of ["{Enter}", "{Escape}"]) {
+          await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
+          await user.click(screen.getByRole("button", { name: "Instalar y cerrar" }));
+          expect(await screen.findByRole("alert")).toBeInTheDocument();
+          await user.keyboard(key);
+          expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+        }
       });
 
       it("explains a failed installation and keeps About open", async () => {
