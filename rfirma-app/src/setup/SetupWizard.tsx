@@ -1,8 +1,9 @@
 //! El asistente del primer arranque, en dos pasos —bienvenida y configuración—, que no se monta una vez visto (`Preferences.setupWizardSeen`); usa los casos de uso del panel de estado.
 
 import type { TFunction } from "i18next";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useActionKeys } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { Card } from "../design-system/Card";
 import { AlertIcon, CheckIcon, SpinnerIcon } from "../design-system/icons";
@@ -10,6 +11,7 @@ import { Row } from "../design-system/Row";
 import { Select } from "../design-system/Select";
 import { Stack } from "../design-system/Stack";
 import { Switch } from "../design-system/Switch";
+import { useDefaultButton } from "../design-system/useDefaultButton";
 import { classify } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
@@ -89,12 +91,9 @@ export function SetupWizard({
   const [certificate, setCertificate] = useState<CertificateStatus>({ kind: "reading" });
   const [handler, setHandler] = useState<HandlerStatus>({ kind: "unavailable" });
   const [autoFirmaAppears, setAutoFirmaAppears] = useState(true);
-  const continueButton = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (seen) return;
-    continueButton.current?.focus();
-  }, [seen]);
+  const continueButton = useDefaultButton(!seen && step === 1);
+  const finishButton = useDefaultButton(!seen && step === 2);
+  useActionKeys({ primary: step === 1 ? continueButton : finishButton });
 
   useEffect(() => {
     if (seen) return;
@@ -222,7 +221,7 @@ export function SetupWizard({
             {t("actions.continue")}
           </Button>
         ) : (
-          <Button variant="primary" onClick={onFinish}>
+          <Button ref={finishButton} variant="primary" onClick={onFinish}>
             {t("setup.actions.finish")}
           </Button>
         )}

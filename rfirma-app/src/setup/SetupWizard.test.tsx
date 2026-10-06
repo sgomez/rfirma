@@ -502,4 +502,45 @@ describe("SetupWizard", () => {
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
   });
+
+  it("goes through both screens with Enter, from the document or from the focused primary", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
+        onFinish={onFinish}
+      />,
+    );
+    (document.activeElement as HTMLElement).blur();
+
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByText("Paso 2 de 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Terminar" })).toHaveFocus();
+
+    await user.keyboard("{Enter}");
+
+    expect(onFinish).toHaveBeenCalledOnce();
+  });
+
+  it("does not skip the wizard on Escape", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
+        onFinish={onFinish}
+      />,
+    );
+
+    await user.keyboard("{Escape}");
+
+    expect(onFinish).not.toHaveBeenCalled();
+    expect(screen.getByText("Paso 1 de 2")).toBeInTheDocument();
+  });
 });

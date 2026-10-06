@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useActionKeys } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
+import { useDefaultButton } from "../design-system/useDefaultButton";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import { type ErrorSituation, errorText, MESSAGE_OF } from "./errorMessage";
 import "./ErrorNotice.css";
@@ -51,6 +53,12 @@ export function ErrorNotice({
   const { t } = useTranslation();
   const notice = useRef<HTMLDivElement>(null);
   const [confirmingEmptyStore, setConfirmingEmptyStore] = useState(false);
+  const confirmEmptyStore = useDefaultButton(confirmingEmptyStore);
+  useActionKeys(
+    confirmingEmptyStore
+      ? { primary: confirmEmptyStore, onSecondary: () => setConfirmingEmptyStore(false) }
+      : {},
+  );
 
   useEffect(() => {
     if (focusOnMount) notice.current?.focus();
@@ -76,6 +84,7 @@ export function ErrorNotice({
         {t("actions.cancel")}
       </Button>
       <Button
+        ref={confirmEmptyStore}
         variant="primary"
         onClick={() => {
           setConfirmingEmptyStore(false);
