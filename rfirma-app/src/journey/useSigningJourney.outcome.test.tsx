@@ -188,6 +188,7 @@ describe("useSigningJourney, el resultado de la firma", () => {
     ]);
     expect(journey.current.acknowledgement?.documentName).toBe("contrato-firmado.pdf");
     expect(journey.current.acknowledgement?.signedAt).not.toBeNull();
+    expect(journey.current.acknowledgement?.destination).toEqual(journey.current.destination.value);
   });
 
   it("names the failure, leaves the document as it was, and lets the person retry", async () => {
