@@ -1,4 +1,4 @@
-//! Las historias de la ventana principal: sin documentos, con la franja de versión nueva, con el aviso y con la barra de título nativa.
+//! Las historias de la ventana principal: sin documentos, con la franja de versión nueva, con el aviso, con la barra de título nativa y con los slots en caja gris.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
@@ -98,3 +98,26 @@ export const NewVersionNotInstallable: Story = {
 };
 
 export const NativeTitlebar: Story = { args: { menuAnchor: "titlebar" } };
+
+const greyBox = (label: string) => (
+  <div
+    style={{
+      height: "100%",
+      display: "grid",
+      placeItems: "center",
+      background: "var(--rf-bg)",
+      color: "var(--rf-text-muted)",
+      border: "1px dashed var(--rf-border-subtle)",
+    }}
+  >
+    {label}
+  </div>
+);
+
+export const GreySlots: Story = {
+  args: {
+    tabs: greyBox("Pestañas"),
+    viewer: greyBox("Visor"),
+    panel: greyBox("Panel"),
+  },
+};
