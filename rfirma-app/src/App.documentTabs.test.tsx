@@ -55,6 +55,29 @@ describe("App, con varios documentos abiertos", () => {
     expect(muted).not.toHaveClass("document-tab--active");
   });
 
+  it("moves focus between the tabs with the arrow keys, and only the active one is tabbable", async () => {
+    const user = userEvent.setup();
+    renderApp({
+      recents: inMemoryRecents(),
+      documents: [document("primero.pdf"), document("segundo.pdf")],
+      pdfs: pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+    });
+    await openPdf(user);
+    await openPdf(user);
+    const active = await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
+    const other = screen.getByRole("tab", { name: "primero.pdf" });
+    expect(active).toHaveAttribute("tabindex", "0");
+    expect(other).toHaveAttribute("tabindex", "-1");
+
+    active.focus();
+    await user.keyboard("{ArrowLeft}");
+    expect(other).toHaveFocus();
+
+    await user.keyboard("{ArrowRight}");
+    expect(active).toHaveFocus();
+    expect(active).toHaveAttribute("aria-selected", "true");
+  });
+
   it("names each tab after its file, whole in its tooltip, with a check when it is signed", async () => {
     const user = userEvent.setup();
     const long = `contrato-de-arrendamiento-${"largo-".repeat(8)}.pdf`;
