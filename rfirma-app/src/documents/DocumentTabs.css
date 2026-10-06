@@ -152,6 +152,7 @@
   font: inherit;
   color: inherit;
   cursor: inherit;
+  opacity: 1;
 }
 
 .document-tab__icon,
