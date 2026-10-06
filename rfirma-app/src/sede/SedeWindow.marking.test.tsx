@@ -87,4 +87,57 @@ describe("1c · marking the area of the visible signature", () => {
     expect(calls.markArea).toHaveBeenCalledWith(null);
     expect(calls.cancel).not.toHaveBeenCalled();
   });
+
+  describe("Intro", () => {
+    async function tracedBox() {
+      const { document, renders } = recordingDocument();
+      const { port, calls } = scriptedErrand({ kind: "marking", pdf: document });
+      renderWithCatalog(<SedeWindow errands={port} />);
+      await waitFor(() => expect(renders).toHaveLength(1));
+      traceOver(sheet(), [100, 100], [300, 200]);
+      return calls;
+    }
+
+    it("continues from the box, which also moves with the arrows", async () => {
+      const calls = await tracedBox();
+      const box = await screen.findByRole("application", { name: "Recuadro de la firma visible" });
+      box.focus();
+
+      await userEvent.keyboard("{ArrowRight}{Enter}");
+
+      await waitFor(() => expect(calls.markArea).toHaveBeenCalledOnce());
+    });
+
+    it("stays with the pages field instead of continuing", async () => {
+      const calls = await tracedBox();
+      await userEvent.click(screen.getByRole("radio", { name: "Varias" }));
+      await userEvent.click(screen.getByRole("textbox", { name: "Páginas de la firma visible" }));
+
+      await userEvent.keyboard("{Enter}");
+
+      expect(calls.markArea).not.toHaveBeenCalled();
+    });
+
+    it("does nothing while there is no area", async () => {
+      const { document, renders } = recordingDocument();
+      const { port, calls } = scriptedErrand({ kind: "marking", pdf: document });
+      renderWithCatalog(<SedeWindow errands={port} />);
+      await waitFor(() => expect(renders).toHaveLength(1));
+
+      await userEvent.keyboard("{Enter}");
+
+      expect(calls.markArea).not.toHaveBeenCalled();
+    });
+
+    it("does nothing while the typed pages make no sense", async () => {
+      const calls = await tracedBox();
+      await userEvent.click(screen.getByRole("radio", { name: "Varias" }));
+      await userEvent.clear(screen.getByRole("textbox", { name: "Páginas de la firma visible" }));
+      (document.activeElement as HTMLElement).blur();
+
+      await userEvent.keyboard("{Enter}");
+
+      expect(calls.markArea).not.toHaveBeenCalled();
+    });
+  });
 });
