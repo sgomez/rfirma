@@ -77,10 +77,7 @@ fn pretty_name_in(os_release: &str) -> Option<String> {
 }
 
 fn locale() -> String {
-    ["LC_ALL", "LC_MESSAGES", "LANG"]
-        .iter()
-        .find_map(|name| std::env::var(name).ok().filter(|value| !value.is_empty()))
-        .unwrap_or_else(|| UNKNOWN.to_owned())
+    sys_locale::get_locale().unwrap_or_else(|| UNKNOWN.to_owned())
 }
 
 fn protocol_handler(channel: Channel) -> ProtocolHandlerStatus {
@@ -89,11 +86,14 @@ fn protocol_handler(channel: Channel) -> ProtocolHandlerStatus {
     }
     let desktop = this_desktop();
     let handler = desktop.current_default_for(SCHEME).or_else(|| {
+        if channel == Channel::Windows {
+            return None;
+        }
         let registered = desktop.registered_for(SCHEME)?;
         (!registered.is_empty()).then(|| {
             registered
                 .iter()
-                .map(|handler| handler.id.clone())
+                .map(|handler| without_directories(&handler.id))
                 .collect::<Vec<_>>()
                 .join(", ")
         })
@@ -106,10 +106,10 @@ fn protocol_handler(channel: Channel) -> ProtocolHandlerStatus {
 
 fn without_directories(identifier: &str) -> String {
     identifier
-        .split(", ")
-        .map(|part| part.rsplit(['/', '\\']).next().unwrap_or(part))
-        .collect::<Vec<_>>()
-        .join(", ")
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(identifier)
+        .to_owned()
 }
 
 fn native_library() -> NativeLibraryStatus {
