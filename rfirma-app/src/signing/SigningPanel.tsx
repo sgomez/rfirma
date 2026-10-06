@@ -1,9 +1,7 @@
 //! La columna derecha antes de firmar: la zona que se desliza con todo lo que se decide y el pie fijo con el botón de firmar.
 
-import { useTranslation } from "react-i18next";
-import { Switch } from "../design-system/Switch";
 import { ErrorNotice } from "../errors/ErrorNotice";
-import { PlacementBlock, type PlacementBlockState } from "../placement/PlacementBlock";
+import type { PlacementBlockState } from "../placement/PlacementBlock";
 import { CertificateNotice } from "./CertificateNotice";
 import { CertificateSelect } from "./CertificateSelect";
 import type { CertificateSection } from "./certificate";
@@ -16,6 +14,7 @@ import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
 import type { PreviousSignaturesReport } from "./previousSignatures";
 import type { RubricSection } from "./rubric";
 import "./SigningPanel.css";
+import { VisibleSignatureFieldset } from "./VisibleSignatureFieldset";
 import type { VisibleSignatureSection } from "./visibleSignature";
 
 /** El documento que se va a firmar, con lo que el panel enseña de él. */
@@ -73,7 +72,6 @@ export function SigningPanel({
   onOpenHelp,
   onEmptyStore,
 }: SigningPanelProps) {
-  const { t } = useTranslation();
   const certificate = certificateSection.state;
   const { value: signature, change: onChangeSignature } = signatureSection;
   const signing = signingSection.running;
@@ -125,35 +123,12 @@ export function SigningPanel({
               <CertificateNotice state={certificate} onOpenHelp={onOpenHelp} />
             )}
 
-            <section className="panel__visible" aria-label={t("panel.visibleSignature.title")}>
-              <div className={signing ? "panel__toggle panel__toggle--dim" : "panel__toggle"}>
-                <Switch
-                  trailing
-                  checked={visible}
-                  disabled={chosen === null}
-                  label={t("panel.visibleSignature.title")}
-                  title={
-                    visible
-                      ? t("panel.visibleSignature.turnOff")
-                      : t("panel.visibleSignature.turnOn")
-                  }
-                  onChange={(enabled) => onChangeSignature({ ...signature, enabled })}
-                />
-              </div>
-              {(certificate.kind === "loading" || certificate.kind === "unchosen") && (
-                <p className="rf-hint panel__visible-hint">
-                  {t("panel.visibleSignature.needsCertificate")}
-                </p>
-              )}
-
-              {visible && (
-                <div
-                  className={signing ? "panel__placement panel__controls--dim" : "panel__placement"}
-                >
-                  <PlacementBlock state={placementState} />
-                </div>
-              )}
-            </section>
+            <VisibleSignatureFieldset
+              signature={signatureSection}
+              certificate={certificate}
+              placementState={placementState}
+              signing={signing}
+            />
 
             {visible && (
               <div
