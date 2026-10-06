@@ -1,10 +1,10 @@
 //! Los datos de ejemplo que comparten las historias de sede: las firmas previas y un PDF en blanco.
 
-import type { PdfDocument } from "../../../viewer/pdf";
 import type {
   PreviousSignature,
   PreviousSignaturesReport,
 } from "../../../signing/previousSignatures";
+import type { PdfDocument } from "../../../viewer/pdf";
 
 /** Una firma previa válida de la misma persona que firma. */
 export function previousSignature(overrides: Partial<PreviousSignature> = {}): PreviousSignature {
