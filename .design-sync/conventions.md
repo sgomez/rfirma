@@ -90,6 +90,7 @@ Lo que hay en `window.RFirma`, por capa y título de historia.
 | Primitivos | Badge | `Badge` |
 | Primitivos | Button | `Button` |
 | Primitivos | Card | `Card` |
+| Primitivos | Combobox | `Combobox` |
 | Primitivos | Dialog | `Dialog` |
 | Primitivos | Field | `Field` |
 | Primitivos | Menu | `Menu` |
