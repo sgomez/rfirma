@@ -19,7 +19,7 @@ const singlePage = {
 const meta = {
   title: "Flujos/Firma/VisibleSignatureFieldset",
   component: VisibleSignatureFieldset,
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "column" } },
   decorators: [
     (Story) => (
       <div style={{ width: 332 }}>

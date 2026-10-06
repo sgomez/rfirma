@@ -9,7 +9,7 @@ const RECT = { x0: 100, y0: 100, x1: 300, y1: 180 };
 const meta = {
   title: "Flujos/Firma/PlacementBlock",
   component: PlacementBlock,
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "column" } },
   decorators: [
     (Story) => (
       <section className="panel__placement" style={{ width: 332 }}>
