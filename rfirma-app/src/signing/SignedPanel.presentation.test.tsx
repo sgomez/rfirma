@@ -10,6 +10,7 @@ const {
   VerifyWithSignatures,
   VerifyWithProblems,
   VerifyCadesWithCountersignatures,
+  VerifyCadesWithNestedCountersignatures,
   VerifyWithoutSignatures,
   VerifyUnrecognizedFormat,
   VerifyReadFailed,
@@ -154,6 +155,18 @@ describe("the signed panel, by state", () => {
       const card = screen.getByText("Firma 1").closest("li") as HTMLElement;
       expect(within(card).getByText("Contrafirma 1.1")).toBeInTheDocument();
       expect(within(card).getByText("GRACE HOPPER (44444444A)")).toBeInTheDocument();
+    });
+
+    it("nests each countersignature inside its signature, at any depth, and counts both", () => {
+      renderWithCatalog(<VerifyCadesWithNestedCountersignatures />);
+
+      expect(screen.getByText("2 firmas · 3 contrafirmas")).toBeInTheDocument();
+      const [first, second] = cards() as [HTMLElement, HTMLElement];
+      expect(within(first).getByText("Contrafirma 1.1")).toBeInTheDocument();
+      expect(within(first).getByText("Contrafirma 1.1.1")).toBeInTheDocument();
+      expect(within(first).getByText("Contrafirma 1.2")).toBeInTheDocument();
+      expect(within(first).getByText(/^DEEP SIGNER/)).toBeInTheDocument();
+      expect(within(second).queryByText(/Contrafirma/)).not.toBeInTheDocument();
     });
 
     it("paints no field that is absent", () => {
