@@ -374,11 +374,11 @@ conoce ningún puerto de Tauri; `SedeWindow` es la parte conectada a
 
 `src/stories.test.tsx` las pinta todas con axe, así que una historia nueva queda
 revisada sin escribir otro test. El momento de consentimiento, que comparten las
-pruebas, está en `sede/testing/fixtures/sedeWindow.ts`; el resto de lo que usan las historias,
-en `rfirma-app/.storybook/`: las firmas previas y el PDF en blanco en
-`fixtures/sede.ts`, los espías de las órdenes en `fixtures/sedeView.ts` y los
+pruebas, está en `sede/testing/fixtures/sedeWindow.ts`; el resto de lo que usan las historias:
+las firmas previas y el PDF en blanco en `sede/testing/fixtures/previousSignatures.ts`,
+los espías de las órdenes en `sede/testing/fixtures/sedeView.ts` y los
 marcos —520 × 420, y 1080 × 660 al marcar el área— en
-`decorators/sedeWindow.tsx`.
+`rfirma-app/.storybook/decorators/sedeWindow.tsx`.
 
 ## Claves i18n
 

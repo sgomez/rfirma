@@ -9,7 +9,7 @@ import { consentStage, signedDocument } from "./testing/fixtures/sedeWindow";
 
 const meta = {
   title: "Pantallas/Ventana de sede",
-  ...sedeWindowMeta,
+  parameters: sedeWindowMeta.parameters,
   component: SedeView,
   args: { ...sedeViewActions, consentCountdown: false },
 } satisfies Meta<typeof SedeView>;
@@ -19,10 +19,14 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Waiting: Story = {
+  decorators: sedeWindowMeta.decorators,
   args: { errand: sedeErrand({ kind: "waiting" }, { origin: null }) },
 };
 
-export const Consent: Story = { args: { errand: sedeErrand(consentStage()) } };
+export const Consent: Story = {
+  decorators: sedeWindowMeta.decorators,
+  args: { errand: sedeErrand(consentStage()) },
+};
 
 export const MarkingTheArea: Story = {
   decorators: sedeAreaWindowMeta.decorators,
@@ -30,6 +34,7 @@ export const MarkingTheArea: Story = {
 };
 
 export const Signed: Story = {
+  decorators: sedeWindowMeta.decorators,
   args: {
     errand: sedeErrand({ kind: "outcome", outcome: { kind: "signed", document: signedDocument } }),
   },
