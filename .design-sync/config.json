@@ -13,8 +13,8 @@
     "CertificateCard": "CertificateCard",
     "CertificateSelect": "CertificateSelect",
     "Confirmar": "SedeView",
-    "Consentimiento": "SedeView",
-    "Desenlace": "SedeView",
+    "Consentimiento": "SedeConsent",
+    "Desenlace": "SedeOutcome",
     "Dialog": "Dialog",
     "DocumentTabs": "DocumentTabs",
     "DocumentViewer": "DocumentViewer",
@@ -85,7 +85,7 @@
     "RecentsSection": {
       "cardMode": "column"
     },
-    "SedeView": {
+    "SedeConsent": {
       "cardMode": "single",
       "primaryStory": "Consent"
     },

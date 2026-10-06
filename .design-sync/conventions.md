@@ -76,8 +76,8 @@ Lo que hay en `window.RFirma`, por capa y título de historia.
 | Flujos | Firma / UnsealedPagesDialog | `UnsealedPagesDialog` |
 | Flujos | Firma / VisibleSignatureFieldset | `VisibleSignatureFieldset` |
 | Flujos | Sede / Confirmar | `SedeView` |
-| Flujos | Sede / Consentimiento | `SedeView` |
-| Flujos | Sede / Desenlace | `SedeView` |
+| Flujos | Sede / Consentimiento | `SedeConsent` |
+| Flujos | Sede / Desenlace | `SedeOutcome` |
 | Flujos | Sede / Espera | `SedeView` |
 | Flujos | Sede / Firmando | `SedeView` |
 | Flujos | Sede / Marcar la firma | `SedeView` |

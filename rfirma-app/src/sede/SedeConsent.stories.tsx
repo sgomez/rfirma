@@ -1,24 +1,36 @@
 //! Las historias de la sede en su momento 2, el consentimiento: cada operación, ronda de firma, aviso y origen que cambia la pantalla.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
-import type { SedeView } from "./SedeView";
+import { sedeMomentMeta } from "../../.storybook/decorators/sedeWindow";
+import type { ErrandStage } from "./errand";
+import { SedeConsent } from "./SedeConsent";
 import { previousSignature, previousSignaturesReport } from "./testing/fixtures/previousSignatures";
-import { sedeErrand } from "./testing/fixtures/sedeView";
+import { momentProps, sedeErrand, sedeViewActions } from "./testing/fixtures/sedeView";
 import { certificate, consentStage, signedDocument } from "./testing/fixtures/sedeWindow";
 
 const meta = {
   title: "Flujos/Sede/Consentimiento",
-  ...sedeStoryMeta,
+  ...sedeMomentMeta,
+  component: SedeConsent,
+  args: {
+    countdown: false,
+    onConsent: sedeViewActions.onConsent,
+    onCancel: sedeViewActions.onCancel,
+  },
   parameters: {
-    ...sedeStoryMeta.parameters,
+    ...sedeMomentMeta.parameters,
     designSync: { cardMode: "single", primaryStory: "Consent" },
   },
-} satisfies Meta<typeof SedeView>;
+} satisfies Meta<typeof SedeConsent>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
+
+const consentProps = (
+  stage: Extract<ErrandStage, { kind: "consent" }>,
+  errand: Parameters<typeof sedeErrand>[1] = {},
+) => ({ ...momentProps(sedeErrand(stage, errand)), stage });
 
 const documentWith = (overrides: Partial<typeof signedDocument>) => ({
   ...signedDocument,
@@ -27,15 +39,15 @@ const documentWith = (overrides: Partial<typeof signedDocument>) => ({
 
 const terminalOrder = { documentPath: "/home/ada/contratos/convenio.pdf" };
 
-export const Consent: Story = { args: { errand: sedeErrand(consentStage()) } };
+export const Consent: Story = { args: { ...consentProps(consentStage()) } };
 
 export const Countdown: Story = {
-  args: { errand: sedeErrand(consentStage()), consentCountdown: true },
+  args: { ...consentProps(consentStage()), countdown: true },
 };
 
 export const SeveralCertificates: Story = {
   args: {
-    errand: sedeErrand(
+    ...consentProps(
       consentStage({
         certificates: [
           certificate({ remembered: true }),
@@ -57,40 +69,38 @@ export const SeveralCertificates: Story = {
 };
 
 export const SignChallenge: Story = {
-  args: { errand: sedeErrand(consentStage({ document: null, signing: "challenge" })) },
+  args: { ...consentProps(consentStage({ document: null, signing: "challenge" })) },
 };
 
 export const SignXml: Story = {
-  args: { errand: sedeErrand(consentStage({ document: null, signing: "xml" })) },
+  args: { ...consentProps(consentStage({ document: null, signing: "xml" })) },
 };
 
 export const SignInvoice: Story = {
-  args: { errand: sedeErrand(consentStage({ document: null, signing: "invoice" })) },
+  args: { ...consentProps(consentStage({ document: null, signing: "invoice" })) },
 };
 
 export const NarrowedBySite: Story = {
-  args: { errand: sedeErrand(consentStage({ narrowed: true })) },
+  args: { ...consentProps(consentStage({ narrowed: true })) },
 };
 
 export const Sha1Allowed: Story = {
-  args: { errand: sedeErrand(consentStage({ sha1Allowed: true })) },
+  args: { ...consentProps(consentStage({ sha1Allowed: true })) },
 };
 
 export const BatchAsksForSha1: Story = {
   args: {
-    errand: sedeErrand(
-      consentStage({ document: null, signing: null, signs: 3, sha1ToAllow: true }),
-    ),
+    ...consentProps(consentStage({ document: null, signing: null, signs: 3, sha1ToAllow: true })),
   },
 };
 
 export const SingleSignAsksForSha1: Story = {
-  args: { errand: sedeErrand(consentStage({ sha1ToAllow: true })) },
+  args: { ...consentProps(consentStage({ sha1ToAllow: true })) },
 };
 
 export const LocalBatchAsksForSha1: Story = {
   args: {
-    errand: sedeErrand(
+    ...consentProps(
       consentStage({
         document: null,
         signs: 3,
@@ -107,18 +117,18 @@ export const LocalBatchAsksForSha1: Story = {
 };
 
 export const UntitledDocument: Story = {
-  args: { errand: sedeErrand(consentStage({ document: documentWith({ title: null }) })) },
+  args: { ...consentProps(consentStage({ document: documentWith({ title: null }) })) },
 };
 
 export const Cosign: Story = {
   args: {
-    errand: sedeErrand(consentStage({ document: documentWith({ round: { kind: "cosign" } }) })),
+    ...consentProps(consentStage({ document: documentWith({ round: { kind: "cosign" } }) })),
   },
 };
 
 export const CountersignTree: Story = {
   args: {
-    errand: sedeErrand(
+    ...consentProps(
       consentStage({ document: documentWith({ round: { kind: "counter", target: "tree" } }) }),
     ),
   },
@@ -126,7 +136,7 @@ export const CountersignTree: Story = {
 
 export const CountersignLeafs: Story = {
   args: {
-    errand: sedeErrand(
+    ...consentProps(
       consentStage({ document: documentWith({ round: { kind: "counter", target: "leafs" } }) }),
     ),
   },
@@ -134,7 +144,7 @@ export const CountersignLeafs: Story = {
 
 export const PreviousSignaturesValid: Story = {
   args: {
-    errand: sedeErrand(
+    ...consentProps(
       consentStage({
         document: documentWith({
           round: { kind: "cosign" },
@@ -147,7 +157,7 @@ export const PreviousSignaturesValid: Story = {
 
 export const PreviousSignaturesWithProblem: Story = {
   args: {
-    errand: sedeErrand(
+    ...consentProps(
       consentStage({
         document: documentWith({
           round: { kind: "cosign" },
@@ -172,7 +182,7 @@ export const PreviousSignaturesWithProblem: Story = {
 
 export const PreviousSignatureBySameCertificate: Story = {
   args: {
-    errand: sedeErrand(
+    ...consentProps(
       consentStage({
         document: documentWith({
           previousSignatures: previousSignaturesReport([
@@ -188,12 +198,12 @@ export const PreviousSignatureBySameCertificate: Story = {
 };
 
 export const Batch: Story = {
-  args: { errand: sedeErrand(consentStage({ document: null, signs: 3, signing: null })) },
+  args: { ...consentProps(consentStage({ document: null, signs: 3, signing: null })) },
 };
 
 export const LocalBatch: Story = {
   args: {
-    errand: sedeErrand(
+    ...consentProps(
       consentStage({
         document: null,
         signs: 5,
@@ -212,7 +222,7 @@ export const LocalBatch: Story = {
 
 export const IdentityData: Story = {
   args: {
-    errand: sedeErrand(consentStage({ document: null, signing: null }), {
+    ...consentProps(consentStage({ document: null, signing: null }), {
       operation: "selectcert",
     }),
   },
@@ -220,7 +230,7 @@ export const IdentityData: Story = {
 
 export const IdentityDataWithoutOrigin: Story = {
   args: {
-    errand: sedeErrand(consentStage({ document: null, signing: null }), {
+    ...consentProps(consentStage({ document: null, signing: null }), {
       operation: "selectcert",
       origin: null,
     }),
@@ -228,18 +238,18 @@ export const IdentityDataWithoutOrigin: Story = {
 };
 
 export const WithoutOrigin: Story = {
-  args: { errand: sedeErrand(consentStage(), { origin: null }) },
+  args: { ...consentProps(consentStage(), { origin: null }) },
 };
 
 export const TerminalOrder: Story = {
   args: {
-    errand: sedeErrand(consentStage({ narrowed: true }), { origin: null, terminalOrder }),
+    ...consentProps(consentStage({ narrowed: true }), { origin: null, terminalOrder }),
   },
 };
 
 export const TerminalOrderWithPreviousSignatures: Story = {
   args: {
-    errand: sedeErrand(
+    ...consentProps(
       consentStage({
         document: documentWith({
           previousSignatures: previousSignaturesReport([previousSignature()]),

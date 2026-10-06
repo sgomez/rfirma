@@ -21,6 +21,8 @@ export { DocumentTabs } from "./src/documents/DocumentTabs";
 export { RecentRows, RecentsSection } from "./src/documents/RecentRows";
 export { ErrorNotice } from "./src/errors/ErrorNotice";
 export { PlacementBlock } from "./src/placement/PlacementBlock";
+export { SedeConsent } from "./src/sede/SedeConsent";
+export { SedeOutcome } from "./src/sede/SedeOutcome";
 export { SedeView } from "./src/sede/SedeView";
 export { Header } from "./src/shell/Header";
 export { MainWindow } from "./src/shell/MainWindow";

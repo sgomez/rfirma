@@ -4,7 +4,15 @@ import type { Mock } from "storybook/test";
 import { fn } from "storybook/test";
 import type { Certificate } from "../../../signing/certificate";
 import { NO_PREVIOUS_SIGNATURES } from "../../../signing/previousSignatures";
-import type { Errand, ErrandStage, SiteDocument, SiteErrandPort } from "../../errand";
+import type {
+  Errand,
+  ErrandStage,
+  SiteDocument,
+  SiteErrandPort,
+  SiteOperation,
+  SiteOutcome,
+  TerminalOrder,
+} from "../../errand";
 import { noErrand } from "../../errand";
 
 /** Los dobles y auxiliares que comparten las pruebas de `SedeWindow`. */
@@ -72,14 +80,32 @@ export function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {})
   return { port, calls };
 }
 
+/** Los args de una historia de sede: el trámite entero o las props finas de un momento. */
+interface StoryArgs {
+  errand?: Errand;
+  origin?: string | null;
+  terminalOrder?: TerminalOrder | null;
+  operation?: SiteOperation;
+  stage?: ErrandStage;
+  outcome?: SiteOutcome;
+}
+
 /** El trámite de una historia, para montar su estado en un test de comportamiento. */
-export function errandOf(story: { args: { errand?: Errand } }): Errand {
-  if (story.args.errand === undefined) throw new Error("the story carries no errand");
-  return story.args.errand;
+export function errandOf({ args }: { args: StoryArgs }): Errand {
+  if (args.errand !== undefined) return args.errand;
+  const stage =
+    args.outcome === undefined ? args.stage : { kind: "outcome" as const, outcome: args.outcome };
+  if (stage === undefined) throw new Error("the story carries no errand");
+  return {
+    origin: args.origin ?? null,
+    operation: args.operation ?? "sign",
+    stage,
+    ...(args.terminalOrder ? { terminalOrder: args.terminalOrder } : {}),
+  };
 }
 
 /** Un puerto guionizado que arranca en el trámite de una historia. */
-export function scriptedFrom(story: { args: { errand?: Errand } }) {
+export function scriptedFrom(story: { args: StoryArgs }) {
   const errand = errandOf(story);
   return scriptedErrand(errand.stage, errand);
 }
