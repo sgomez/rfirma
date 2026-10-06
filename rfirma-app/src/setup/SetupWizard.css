@@ -49,12 +49,13 @@
 }
 
 .setup-wizard__title {
-  font-size: 28px;
-  line-height: 1.2;
+  font-size: var(--rf-headline-size);
+  line-height: var(--rf-headline-leading);
 }
 
 .setup-wizard__notice-title {
-  font-size: 16px;
+  font-size: var(--rf-subtitle-size);
+  line-height: var(--rf-subtitle-leading);
 }
 
 .setup-wizard__card {
@@ -62,7 +63,8 @@
 }
 
 .setup-wizard__card-title {
-  font-size: 17px;
+  font-size: var(--rf-subtitle-size);
+  line-height: var(--rf-subtitle-leading);
 }
 
 .setup-wizard .rf-btn {
@@ -96,8 +98,9 @@
   border: 1.5px solid var(--rf-border-strong);
   border-radius: var(--rf-radius-pill);
   color: var(--rf-text);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--rf-caption-size);
+  line-height: var(--rf-caption-leading);
+  font-weight: var(--rf-ui-strong-weight);
 }
 
 .setup-wizard__step-marker--done {
@@ -138,7 +141,7 @@
 }
 
 .setup-wizard__step-title {
-  font-weight: 600;
+  font-weight: var(--rf-ui-strong-weight);
 }
 
 .setup-wizard__step-action {
@@ -146,7 +149,7 @@
 }
 
 .setup-wizard__step-outcome {
-  font-weight: 600;
+  font-weight: var(--rf-ui-strong-weight);
 }
 
 .setup-wizard__stores {
