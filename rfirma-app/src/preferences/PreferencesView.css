@@ -107,7 +107,8 @@
    mismo `.rf-title`, a 14 px y sin divisoria, para no confundirlo con el
    título de página que abre el panel. */
 .preferences__group-heading {
-  font-size: 14px;
+  font-size: var(--rf-ui-size);
+  line-height: var(--rf-ui-leading);
 }
 
 .preferences__section-body > .rf-divider {
@@ -135,7 +136,8 @@
   margin-left: calc(40px + var(--rf-space-sm));
   min-height: 32px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: var(--rf-caption-size);
+  line-height: var(--rf-caption-leading);
 }
 
 /* Fijo, y no al final del contenido: en una pantalla que se desplaza, un botón
@@ -169,7 +171,7 @@
 }
 
 .preferences__destination-title {
-  font-weight: 600;
+  font-weight: var(--rf-ui-strong-weight);
 }
 
 /* El círculo del radio, dibujado con los tokens en vez del control nativo. */

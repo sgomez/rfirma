@@ -29,8 +29,8 @@
   background: none;
   color: var(--rf-text);
   font: inherit;
-  font-size: 13px;
-  line-height: normal;
+  font-size: var(--rf-body-size);
+  line-height: var(--rf-body-leading);
   text-align: left;
   cursor: pointer;
 }

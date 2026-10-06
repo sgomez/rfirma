@@ -67,8 +67,8 @@
 .select__option {
   padding: 9px 10px;
   border-radius: var(--rf-radius-sm);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--rf-ui-size);
+  line-height: var(--rf-ui-leading);
   cursor: pointer;
 }
 
@@ -82,7 +82,7 @@
    color de acento: color solo nunca es el único distintivo. */
 .select__option[aria-selected="true"] {
   color: var(--rf-primary);
-  font-weight: 600;
+  font-weight: var(--rf-ui-strong-weight);
 }
 
 .select__option[aria-selected="true"]::after {
