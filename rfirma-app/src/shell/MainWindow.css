@@ -13,9 +13,10 @@
    la franja en medio serían dos o tres según el día, y `flex` no necesita
    saberlo. */
 .main-window {
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  height: 100dvh;
   overflow: hidden;
 }
 
