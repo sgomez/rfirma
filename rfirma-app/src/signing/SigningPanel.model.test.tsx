@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   aCertificateSection,
   aRubricSection,
+  aVisibleSignatureSection,
   certificate,
   renderPanel,
   rubric,
@@ -14,49 +15,58 @@ import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 describe("SigningPanel · Modelo y rúbrica", () => {
   it("chooses the complete model", async () => {
     const user = userEvent.setup();
-    const onChangeSignature = vi.fn();
+    const change = vi.fn();
     renderPanel({
-      signature: {
-        ...DEFAULT_VISIBLE_SIGNATURE,
-        enabled: true,
-        withRubric: true,
-        content: { model: "rubricOnly" },
-      },
+      signature: aVisibleSignatureSection(
+        {
+          ...DEFAULT_VISIBLE_SIGNATURE,
+          enabled: true,
+          withRubric: true,
+          content: { model: "rubricOnly" },
+        },
+        { change },
+      ),
       rubric: aRubricSection({ value: rubric }),
-      onChangeSignature,
     });
 
     await user.click(screen.getByRole("radio", { name: "Completa" }));
 
-    expect(onChangeSignature).toHaveBeenCalledWith(
+    expect(change).toHaveBeenCalledWith(
       expect.objectContaining({ content: { model: "complete" } }),
     );
   });
 
   it("chooses the rubric-only model and turns «Con rúbrica» on with it", async () => {
     const user = userEvent.setup();
-    const onChangeSignature = vi.fn();
+    const change = vi.fn();
     renderPanel({
-      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true, withRubric: true },
+      signature: aVisibleSignatureSection(
+        { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true, withRubric: true },
+        { change },
+      ),
       rubric: aRubricSection({ value: rubric }),
-      onChangeSignature,
     });
 
     await user.click(screen.getByRole("radio", { name: "Solo rúbrica" }));
 
-    expect(onChangeSignature).toHaveBeenCalledWith(
+    expect(change).toHaveBeenCalledWith(
       expect.objectContaining({ content: { model: "rubricOnly" }, withRubric: true }),
     );
   });
 
   it("chooses the custom model with a starting phrase of signer and date", async () => {
     const user = userEvent.setup();
-    const onChangeSignature = vi.fn();
-    renderPanel({ onChangeSignature });
+    const change = vi.fn();
+    renderPanel({
+      signature: aVisibleSignatureSection(
+        { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true },
+        { change },
+      ),
+    });
 
     await user.click(screen.getByRole("radio", { name: "Personalizada" }));
 
-    expect(onChangeSignature).toHaveBeenCalledWith(
+    expect(change).toHaveBeenCalledWith(
       expect.objectContaining({
         content: {
           model: "custom",
@@ -84,11 +94,11 @@ describe("SigningPanel · Modelo y rúbrica", () => {
         certificate: fnmtTest,
         certificates: [fnmtTest],
       }),
-      signature: {
+      signature: aVisibleSignatureSection({
         ...DEFAULT_VISIBLE_SIGNATURE,
         enabled: true,
         content: { model: "custom", phrase: [{ datum: "signer" }] },
-      },
+      }),
     });
 
     await user.click(screen.getByRole("button", { name: "Dato" }));
@@ -104,15 +114,17 @@ describe("SigningPanel · Modelo y rúbrica", () => {
 
   it("turns «Con rúbrica» off with a click, when nothing locks it", async () => {
     const user = userEvent.setup();
-    const onChangeSignature = vi.fn();
+    const change = vi.fn();
     renderPanel({
-      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true, withRubric: true },
+      signature: aVisibleSignatureSection(
+        { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true, withRubric: true },
+        { change },
+      ),
       rubric: aRubricSection({ value: rubric }),
-      onChangeSignature,
     });
 
     await user.click(screen.getByRole("switch", { name: "Con rúbrica" }));
 
-    expect(onChangeSignature).toHaveBeenCalledWith(expect.objectContaining({ withRubric: false }));
+    expect(change).toHaveBeenCalledWith(expect.objectContaining({ withRubric: false }));
   });
 });

@@ -4,7 +4,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import {
   inPanelColumn,
-  panelActions,
   panelStoryParameters,
   UNWRITABLE_DESTINATION,
   WRITABLE_DESTINATION,
@@ -23,7 +22,13 @@ import {
 } from "../../.storybook/fixtures/signing";
 import { placementStateOf } from "../placement/placementFixtures";
 import { SigningPanel } from "./SigningPanel";
-import { aCertificateSection, aRubricSection } from "./signingSectionFixtures";
+import {
+  aCertificateSection,
+  aDestinationSection,
+  aRubricSection,
+  aSigningSection,
+  aVisibleSignatureSection,
+} from "./signingSectionFixtures";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 const RECT = { x0: 100, y0: 100, x1: 300, y1: 180 };
@@ -49,15 +54,13 @@ const meta = {
       certificate: PERSONAL_CERTIFICATE,
       certificates: [PERSONAL_CERTIFICATE],
     }),
-    signature: DEFAULT_VISIBLE_SIGNATURE,
-    onChangeSignature: fn(),
+    signature: aVisibleSignatureSection(DEFAULT_VISIBLE_SIGNATURE),
     placementState: placementStateOf({ viewedPage: 3, pageCount: 27 }),
     rubric: aRubricSection(),
-    destination: WRITABLE_DESTINATION,
-    signing: false,
+    destination: aDestinationSection(WRITABLE_DESTINATION),
+    signing: aSigningSection(),
     failure: null,
-    onBack: fn(),
-    ...panelActions,
+    onOpenHelp: fn(),
   },
 } satisfies Meta<typeof SigningPanel>;
 
@@ -68,7 +71,7 @@ type Story = StoryObj<typeof meta>;
 const singlePage = { rect: RECT, sets: { single: 3, these: null }, viewedPage: 3, pageCount: 27 };
 
 const singlePageSeal = {
-  signature: visible,
+  signature: aVisibleSignatureSection(visible),
   placementState: placementStateOf(singlePage),
 } satisfies Story["args"];
 
@@ -103,7 +106,7 @@ export const VisibleSignatureOnePage: Story = { args: singlePageSeal };
 
 export const VisibleSignatureSeveralPages: Story = {
   args: {
-    signature: visible,
+    signature: aVisibleSignatureSection(visible),
     placementState: placementStateOf({
       ...singlePage,
       sets: { single: 3, these: { only: [1, 6] } },
@@ -114,7 +117,7 @@ export const VisibleSignatureSeveralPages: Story = {
 
 export const VisibleSignatureEveryPage: Story = {
   args: {
-    signature: visible,
+    signature: aVisibleSignatureSection(visible),
     placementState: placementStateOf({ ...singlePage, mode: "all" }),
   },
 };
@@ -123,11 +126,13 @@ export const VisibleSignatureOnAnotherPage: Story = {
   args: { ...singlePageSeal, placementState: placementStateOf({ ...singlePage, viewedPage: 5 }) },
 };
 
-export const VisibleSignatureNotPlaced: Story = { args: { signature: visible } };
+export const VisibleSignatureNotPlaced: Story = {
+  args: { signature: aVisibleSignatureSection(visible) },
+};
 
 export const RangeOutOfDocument: Story = {
   args: {
-    signature: visible,
+    signature: aVisibleSignatureSection(visible),
     placementState: placementStateOf({
       ...singlePage,
       sets: { single: 3, these: { only: [10, 40] } },
@@ -140,7 +145,7 @@ export const RangeOutOfDocument: Story = {
 export const CompleteModelWithRubric: Story = {
   args: {
     ...singlePageSeal,
-    signature: { ...visible, withRubric: true },
+    signature: aVisibleSignatureSection({ ...visible, withRubric: true }),
     rubric: aRubricSection({ value: STORY_RUBRIC }),
   },
 };
@@ -148,13 +153,20 @@ export const CompleteModelWithRubric: Story = {
 export const RubricOnlyModel: Story = {
   args: {
     ...singlePageSeal,
-    signature: { ...visible, withRubric: true, content: { model: "rubricOnly" } },
+    signature: aVisibleSignatureSection({
+      ...visible,
+      withRubric: true,
+      content: { model: "rubricOnly" },
+    }),
     rubric: aRubricSection({ value: STORY_RUBRIC }),
   },
 };
 
 export const RubricWithoutImage: Story = {
-  args: { ...singlePageSeal, signature: { ...visible, withRubric: true } },
+  args: {
+    ...singlePageSeal,
+    signature: aVisibleSignatureSection({ ...visible, withRubric: true }),
+  },
 };
 
 export const RubricFailed: Story = {
@@ -169,7 +181,7 @@ export const RubricFailed: Story = {
 export const CustomModel: Story = {
   args: {
     ...singlePageSeal,
-    signature: {
+    signature: aVisibleSignatureSection({
       ...visible,
       content: {
         model: "custom",
@@ -180,7 +192,7 @@ export const CustomModel: Story = {
           { datum: "signedAt" },
         ],
       },
-    },
+    }),
   },
 };
 
@@ -234,24 +246,28 @@ export const ClosedDocument: Story = {
 
 export const VisibleSignatureWithoutCertificate: Story = {
   args: {
-    signature: visible,
+    signature: aVisibleSignatureSection(visible),
     certificate: aCertificateSection({ kind: "unchosen", certificates: STORY_CERTIFICATES }),
   },
 };
 
 export const LongDestinationName: Story = {
   args: {
-    destination: {
+    destination: aDestinationSection({
       folder: "Documentos",
       name: `contrato-de-arrendamiento-${"largo-".repeat(6)}firmado-2.pdf`,
       writable: true,
-    },
+    }),
   },
 };
 
-export const Signing: Story = { args: { ...singlePageSeal, signing: true } };
+export const Signing: Story = {
+  args: { ...singlePageSeal, signing: aSigningSection({ running: true }) },
+};
 
-export const UnwritableDestination: Story = { args: { destination: UNWRITABLE_DESTINATION } };
+export const UnwritableDestination: Story = {
+  args: { destination: aDestinationSection(UNWRITABLE_DESTINATION) },
+};
 
 export const SigningFailed: Story = {
   args: {

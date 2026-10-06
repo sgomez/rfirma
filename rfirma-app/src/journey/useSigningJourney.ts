@@ -128,7 +128,7 @@ export function useSigningJourney({
       compose: stamp.compose,
       onGesture: stamp.onGesture,
     },
-    signing: { sign: signFlow.sign, back: signing.cancel },
+    signing: { running, sign: signFlow.sign, back: signing.cancel },
     failure: outcome.failedHere?.failure ?? null,
     acknowledgement:
       signedHere === null
