@@ -1,6 +1,6 @@
 //! 1c · El área de la firma visible trazada sobre el PDF, y sus páginas, con el visor y el segmentado de la ventana principal, antes del consentimiento.
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlacementBlock } from "../placement/PlacementBlock";
 import { firstSealedPage, type Placement } from "../placement/pageSets";
@@ -12,6 +12,7 @@ import type { MarkedArea } from "./errand";
 import { SedeBody } from "./SedeFrame";
 import "../signing/SigningPanel.css";
 import { Button } from "../design-system/Button";
+import { useDefaultButton } from "../design-system/useDefaultButton";
 
 interface SedeMarkingProps {
   pdf: PdfDocument | null;
@@ -34,7 +35,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   const placementState = usePlacement({ document, standardRectOn });
   const { placement, rangeError, viewPage, moveBox, sealPage } = placementState;
   const [handing, setHanding] = useState(false);
-  const continueButton = useRef<HTMLButtonElement>(null);
+  const continueButton = useDefaultButton(placement !== null && rangeError === null && !handing);
 
   const accept = async () => {
     if (pdf === null || placement === null) return;

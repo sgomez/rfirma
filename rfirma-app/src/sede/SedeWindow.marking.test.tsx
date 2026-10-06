@@ -77,6 +77,18 @@ describe("1c · marking the area of the visible signature", () => {
     expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
   });
 
+  it("leaves the focus on the traced box rather than moving it to Continue", async () => {
+    const { document, renders } = recordingDocument();
+    const { port } = scriptedErrand({ kind: "marking", pdf: document });
+    renderWithCatalog(<SedeWindow errands={port} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    traceOver(sheet(), [100, 100], [300, 200]);
+
+    expect(box()).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeEnabled();
+  });
+
   it("moves the box with the arrows and hands it on with Enter, with the focus on the box", async () => {
     const { document, renders } = recordingDocument();
     const { port, calls } = scriptedErrand({ kind: "marking", pdf: document });
