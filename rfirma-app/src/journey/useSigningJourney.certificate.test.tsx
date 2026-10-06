@@ -168,6 +168,34 @@ describe("useSigningJourney · el certificado", () => {
     });
   });
 
+  it("names the failure of an installation and drops it on the next attempt", async () => {
+    const install = vi
+      .fn<() => Promise<boolean>>()
+      .mockRejectedValueOnce({ situation: "keyKindUnsupported", detail: "DSA" })
+      .mockResolvedValueOnce(false);
+    const rendered = renderJourney({ store: { ...storeOf(), install } });
+    await listed(rendered);
+
+    await act(async () => rendered.result.current.journey.certificate.install());
+    expect(rendered.result.current.journey.certificate.installFailure).toMatchObject({
+      situation: "keyKindUnsupported",
+    });
+
+    await act(async () => rendered.result.current.journey.certificate.install());
+    expect(rendered.result.current.journey.certificate.installFailure).toBeNull();
+  });
+
+  it("drops the installation failure when looking again", async () => {
+    const install = vi.fn().mockRejectedValueOnce({ situation: "keyKindUnsupported", detail: "x" });
+    const rendered = renderJourney({ store: { ...storeOf(), install } });
+    await listed(rendered);
+    await act(async () => rendered.result.current.journey.certificate.install());
+
+    await act(async () => rendered.result.current.journey.certificate.lookAgain());
+
+    expect(rendered.result.current.journey.certificate.installFailure).toBeNull();
+  });
+
   it("chooses no certificate by itself, and takes the one that is picked", async () => {
     const rendered = renderJourney({ store: storeOf(aCertificate, grace) });
     await listed(rendered);

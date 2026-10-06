@@ -161,7 +161,8 @@ export function SigningPanel({
         closed={previousSignatures.closed === true}
         certificate={certificate}
         onRetryCertificates={() => void certificateSection.lookAgain()}
-        onChooseModule={() => void certificateSection.lookAgain()}
+        installFailure={certificateSection.installFailure}
+        onInstallCertificate={() => void certificateSection.install()}
         onSign={() => void signingSection.sign()}
         onBack={signingSection.back}
       />

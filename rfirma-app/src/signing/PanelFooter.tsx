@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { AlertIcon, FileIcon, FolderIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
+import type { NamedFailure } from "../errors/classify";
+import { ErrorNotice } from "../errors/ErrorNotice";
 import type { Certificate, CertificateState } from "./certificate";
 import { isUsable } from "./certificate";
 import type { Destination } from "./destination";
@@ -26,7 +28,8 @@ interface PanelFooterSigningProps extends PanelFooterDestinationProps {
   closed: boolean;
   certificate: CertificateState;
   onRetryCertificates: () => void;
-  onChooseModule: () => void;
+  installFailure: NamedFailure | null;
+  onInstallCertificate: () => void;
   onSign: () => void;
   /** Cierra el error y vuelve al panel, con el ciclo a medias olvidado en el backend. */
   onBack: () => void;
@@ -175,22 +178,30 @@ export function PanelFooter(props: PanelFooterProps) {
           )}
           {!props.failure &&
             (props.certificate.kind === "empty" || props.certificate.kind === "failed") && (
-              <Row gap="xs" className="panel__certificate-actions">
-                <Button
-                  variant="primary"
-                  className="panel__add-certificate"
-                  onClick={props.onChooseModule}
-                >
-                  {t("panel.footer.addCertificate")}
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="panel__retry"
-                  onClick={props.onRetryCertificates}
-                >
-                  {t("actions.lookAgain")}
-                </Button>
-              </Row>
+              <>
+                {props.installFailure !== null && (
+                  <ErrorNotice
+                    situation={props.installFailure.situation}
+                    technicalDetail={props.installFailure.detail}
+                  />
+                )}
+                <Row gap="xs" className="panel__certificate-actions">
+                  <Button
+                    variant="primary"
+                    className="panel__add-certificate"
+                    onClick={props.onInstallCertificate}
+                  >
+                    {t("panel.footer.addCertificate")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="panel__retry"
+                    onClick={props.onRetryCertificates}
+                  >
+                    {t("actions.lookAgain")}
+                  </Button>
+                </Row>
+              </>
             )}
           {!props.failure &&
             props.certificate.kind !== "empty" &&
