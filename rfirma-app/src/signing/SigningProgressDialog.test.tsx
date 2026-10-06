@@ -1,5 +1,6 @@
 import { composeStories } from "@storybook/react-vite";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import * as stories from "./SigningProgressDialog.stories";
@@ -49,4 +50,13 @@ describe("SigningProgressDialog", () => {
       expect(bar).toHaveAttribute("aria-valuemax", "3");
     },
   );
+
+  it("ignores Intro and Escape: there is nothing to accept or to cancel", async () => {
+    const user = userEvent.setup();
+    renderWithCatalog(<Sign />);
+
+    await user.keyboard("{Enter}{Escape}");
+
+    expect(screen.getByRole("dialog", { name: "Firmando el documento…" })).toBeInTheDocument();
+  });
 });
