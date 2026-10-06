@@ -41,9 +41,11 @@
     "SigningPanel": "SigningPanel",
     "SigningProgressDialog": "SigningProgressDialog",
     "Sincertificado": "SedeNoCertificate",
+    "SplitButton": "SplitButton",
     "Stack": "Stack",
     "StatusView": "StatusView",
     "Switch": "Switch",
+    "Tabs": "Tabs",
     "UnsealedPagesDialog": "UnsealedPagesDialog",
     "VisibleSignatureFieldset": "VisibleSignatureFieldset",
     "WithdrawCertificateView": "WithdrawCertificateView"

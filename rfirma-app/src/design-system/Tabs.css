@@ -1,0 +1,35 @@
+/* Especificidad 0 con `:where()`: quien usa las pestañas las ajusta con una sola clase suya. */
+:where(.rf-tabs) {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+:where(.rf-tabs__tab) {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--rf-radius-md) var(--rf-radius-md) 0 0;
+  background: none;
+  color: var(--rf-text);
+  font: inherit;
+  font-size: var(--rf-ui-size);
+  cursor: pointer;
+}
+
+:where(.rf-tabs__tab[aria-selected="true"]) {
+  background: var(--rf-bg);
+  font-weight: var(--rf-ui-strong-weight);
+}
+
+:where(.rf-tabs__tab:hover:not([disabled])) {
+  background: var(--rf-surface);
+}
+
+:where(.rf-tabs__tab[disabled]) {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
