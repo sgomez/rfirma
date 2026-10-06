@@ -14,7 +14,7 @@ import { SignaturesDialog } from "./SignaturesDialog";
 const meta = {
   title: "Flujos/Firma/SignaturesDialog",
   component: SignaturesDialog,
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "single", viewport: "1340x780" } },
   decorators: [inDialogWindow],
   args: { report: MIXED_REPORT, onClose: fn() },
 } satisfies Meta<typeof SignaturesDialog>;

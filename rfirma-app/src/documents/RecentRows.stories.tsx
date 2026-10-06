@@ -8,7 +8,7 @@ import { RecentRows, RecentsSection } from "./RecentRows";
 const meta = {
   title: "Dominio/Documentos/RecentRows",
   component: RecentsSection,
-  parameters: { layout: "centered" },
+  parameters: { layout: "centered", designSync: { cardMode: "column" } },
   decorators: [
     (Story) => (
       <div style={{ width: 420 }}>
