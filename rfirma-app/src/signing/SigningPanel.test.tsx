@@ -36,6 +36,29 @@ describe("SigningPanel", () => {
     expect(lookAgain).toHaveBeenCalled();
   });
 
+  it("installs a certificate, and does not search again, from «Añadir un certificado…»", async () => {
+    const user = userEvent.setup();
+    const install = vi.fn();
+    const lookAgain = vi.fn();
+    renderPanel({ certificate: aCertificateSection({ kind: "empty" }, { install, lookAgain }) });
+
+    await user.click(screen.getByRole("button", { name: "Añadir un certificado…" }));
+
+    expect(install).toHaveBeenCalled();
+    expect(lookAgain).not.toHaveBeenCalled();
+  });
+
+  it("shows the installation failure next to the certificate actions", () => {
+    renderPanel({
+      certificate: aCertificateSection(
+        { kind: "empty" },
+        { installFailure: { situation: "unknown", detail: "bad pkcs12", attemptsLeft: null } },
+      ),
+    });
+
+    expect(screen.getByText(/bad pkcs12/)).toBeInTheDocument();
+  });
+
   it("calls onBack from the error's «Volver»", async () => {
     const user = userEvent.setup();
     const onBack = vi.fn();

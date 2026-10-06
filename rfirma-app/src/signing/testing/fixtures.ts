@@ -12,7 +12,7 @@ export function aCertificateSection(
   state: CertificateSection["state"],
   actions: Partial<Omit<CertificateSection, "state">> = {},
 ): CertificateSection {
-  return { state, choose: fn(), lookAgain: fn(), ...actions };
+  return { state, installFailure: null, install: fn(), choose: fn(), lookAgain: fn(), ...actions };
 }
 
 /** La sección de la rúbrica con espía al elegirla, salvo lo que se pase. */

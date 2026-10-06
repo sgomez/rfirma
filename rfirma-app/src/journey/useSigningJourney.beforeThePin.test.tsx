@@ -101,7 +101,7 @@ async function journeyAbout({
     }),
     opener: { openDocument: async () => {}, openFolder: async () => {} },
   };
-  const certificates = { listing, lookAgain: async () => {} };
+  const certificates = { listing, lookAgain: async () => {}, install: async () => false };
 
   const { result } = renderHook(
     () => {

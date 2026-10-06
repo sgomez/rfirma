@@ -102,6 +102,7 @@ function renderJourney(
       certificates: [{ ...aCertificate, remembered: true }],
     },
     lookAgain: async () => {},
+    install: async () => false,
   };
   const reopenDocument = vi.fn();
   const rendered = renderHook(

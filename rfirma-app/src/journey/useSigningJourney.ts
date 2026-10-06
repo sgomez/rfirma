@@ -1,8 +1,10 @@
 //! El recorrido de firma de la ventana principal detrás de una sola interfaz: ocho entradas, sus secciones y dos señales.
 
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DocumentInHand } from "../documents/document";
 import type { OpenPdf } from "../documents/useOpenPdf";
+import { classify, type NamedFailure } from "../errors/classify";
 import { firstSealedPage } from "../placement/pageSets";
 import type { PlacementState } from "../placement/usePlacement";
 import type { DestinationSource, SignedDocumentOpener } from "../signing/destination";
@@ -37,7 +39,7 @@ interface SigningJourneyInput {
   ports: SigningJourneyPorts;
   document: OpenedDocument;
   placement: PlacementState;
-  certificates: Pick<ReturnType<typeof useCertificateListing>, "listing" | "lookAgain">;
+  certificates: Pick<ReturnType<typeof useCertificateListing>, "listing" | "lookAgain" | "install">;
   rubric: Rubric | null;
   /** La carpeta de destino de los ajustes; `null` mientras no se han leído. */
   settingsFolder: string | null;
@@ -61,6 +63,19 @@ export function useSigningJourney({
   const activeId = active?.id ?? null;
 
   const { certificate, chooseCertificate } = useCertificateChoice(certificates.listing);
+  const [installFailure, setInstallFailure] = useState<NamedFailure | null>(null);
+  const installCertificate = async () => {
+    setInstallFailure(null);
+    try {
+      await certificates.install();
+    } catch (thrown) {
+      setInstallFailure(classify(thrown));
+    }
+  };
+  const lookCertificatesAgain = async () => {
+    setInstallFailure(null);
+    await certificates.lookAgain();
+  };
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
   const signing = useSigning(signer);
   const previousSignatures = usePreviousSignatures(signer, activeId);
@@ -112,7 +127,9 @@ export function useSigningJourney({
     certificate: {
       state: certificate,
       choose: chooseCertificate,
-      lookAgain: certificates.lookAgain,
+      installFailure,
+      install: installCertificate,
+      lookAgain: lookCertificatesAgain,
     },
     signature: { value: signature, change: setSignature },
     previousSignatures,

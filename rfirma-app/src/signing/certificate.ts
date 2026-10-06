@@ -292,9 +292,13 @@ export type CertificateState =
    */
   | { kind: "chosen"; certificate: Certificate; certificates: readonly Certificate[] };
 
-/** La sección del certificado: su estado y las dos cosas que se hacen con él. */
+/** La sección del certificado: su estado y las tres cosas que se hacen con él. */
 export interface CertificateSection {
   state: CertificateState;
+  /** El último fallo al instalar un `.p12` desde el panel, `null` si no hay. */
+  installFailure: NamedFailure | null;
+  /** Instala un `.p12` en rFirma; cancelar no es un fallo. */
+  install: () => void | Promise<void>;
   /** Cuál se elige en el desplegable. */
   choose: (certificate: Certificate) => void;
   /** Vuelve a buscar los certificados, que es también cambiar de módulo. */
