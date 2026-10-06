@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Card } from "./Card";
 
 const meta = {
-  title: "Sistema de diseño/Card",
+  title: "Primitivos/Card",
   component: Card,
   args: { children: "Contenido de la tarjeta" },
   argTypes: { elevated: { control: "boolean" } },

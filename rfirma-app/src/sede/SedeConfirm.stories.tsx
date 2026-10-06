@@ -5,7 +5,7 @@ import { sedeStoryMeta } from "../../.storybook/decorators/sedeWindow";
 import { sedeErrand } from "../../.storybook/fixtures/sedeView";
 import type { SedeView } from "./SedeView";
 
-const meta = { title: "Sede/2b · Confirmar", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
+const meta = { title: "Flujos/Sede/Confirmar", ...sedeStoryMeta } satisfies Meta<typeof SedeView>;
 
 export default meta;
 

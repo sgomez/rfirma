@@ -42,7 +42,7 @@ const entityChosen = {
 } as const;
 
 const meta = {
-  title: "Panel de firma/1 · Antes de firmar",
+  title: "Flujos/Firma/SigningPanel",
   component: SigningPanel,
   decorators: [inPanelColumn],
   parameters: panelStoryParameters,

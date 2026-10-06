@@ -20,7 +20,7 @@ const tabs = (
 );
 
 const meta = {
-  title: "Ventana principal/2 · Cabecera",
+  title: "Flujos/Ventana principal/Header",
   component: Header,
   parameters: {
     layout: "fullscreen",

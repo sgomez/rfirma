@@ -1,7 +1,7 @@
 # Retirar el certificado
 
 **La verdad del dibujo es el código y sus historias:**
-`status/WithdrawCertificateView.stories.tsx` («Estado/2 · Retirar certificado»),
+`status/WithdrawCertificateView.stories.tsx` («Flujos/Estado/WithdrawCertificateView»),
 una historia por tiempo y por desenlace. Esta ficha cuenta el flujo y el porqué;
 los textos salen del catálogo (claves `status.withdrawal.*`) y no se copian.
 

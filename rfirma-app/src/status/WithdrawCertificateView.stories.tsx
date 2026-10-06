@@ -23,7 +23,7 @@ const behindTheVeil = (
 );
 
 const meta = {
-  title: "Estado/2 · Retirar certificado",
+  title: "Flujos/Estado/WithdrawCertificateView",
   component: WithdrawCertificateView,
   decorators: [
     (Story) => (

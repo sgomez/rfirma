@@ -8,7 +8,7 @@ import { inMemoryVersionCheck } from "./newVersion";
 const newVersion = { version: "0.4.1", installable: true };
 
 const meta = {
-  title: "Acerca de/2 · Instalar actualización",
+  title: "Pantallas/Acerca de/2 · Instalar actualización",
   component: InstallUpdateDialog,
   parameters: { layout: "fullscreen" },
   args: { newVersion, versions: inMemoryVersionCheck(newVersion), onClose: fn() },

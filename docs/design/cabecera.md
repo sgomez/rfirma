@@ -6,7 +6,7 @@ con una tira de pestañas debajo.
 
 **La verdad del dibujo es el código y sus historias.** Esta ficha cuenta el
 porqué y el flujo entre estados; para ver la barra, las historias de
-`rfirma-app/src/shell/Header.stories.tsx` («Ventana principal/2 · Cabecera») y
+`rfirma-app/src/shell/Header.stories.tsx` («Flujos/Ventana principal/Header») y
 las de la ventana entera, en `MainWindow.stories.tsx`. Los textos salen del
 catálogo i18n (`po/messages.pot`) y no se copian aquí.
 

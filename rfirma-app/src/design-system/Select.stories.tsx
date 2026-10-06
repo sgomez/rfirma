@@ -29,7 +29,7 @@ function SelectDemo({ hideLabel, opens }: { hideLabel: boolean; opens: "down" | 
 }
 
 const meta = {
-  title: "Sistema de diseño/Select",
+  title: "Primitivos/Select",
   component: SelectDemo,
   args: { hideLabel: false, opens: "down" },
   argTypes: {

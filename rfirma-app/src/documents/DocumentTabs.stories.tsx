@@ -6,7 +6,7 @@ import { manyStoryTabs, storyRecents, storyTabs } from "../../.storybook/fixture
 import { DocumentTabs } from "./DocumentTabs";
 
 const meta = {
-  title: "Ventana principal/3 · Pestañas",
+  title: "Dominio/Documentos/DocumentTabs",
   component: DocumentTabs,
   parameters: {
     layout: "fullscreen",

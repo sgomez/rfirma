@@ -6,7 +6,7 @@ import { storyRecents } from "../../.storybook/fixtures/documents";
 import { RecentRows, RecentsSection } from "./RecentRows";
 
 const meta = {
-  title: "Ventana principal/4 · Recientes",
+  title: "Dominio/Documentos/RecentRows",
   component: RecentsSection,
   parameters: { layout: "centered" },
   decorators: [

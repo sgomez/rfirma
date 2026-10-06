@@ -32,7 +32,7 @@ function PopoverDemo({ startsOpen, inPortal }: { startsOpen: boolean; inPortal: 
 }
 
 const meta = {
-  title: "Sistema de diseño/Popover",
+  title: "Primitivos/Popover",
   component: PopoverDemo,
   args: { startsOpen: true, inPortal: false },
   argTypes: { startsOpen: { control: "boolean" }, inPortal: { control: "boolean" } },

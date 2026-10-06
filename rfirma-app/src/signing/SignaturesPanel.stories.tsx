@@ -23,7 +23,7 @@ const OWN_SIGNATURE = aSignature({ name: "LOVELACE BYRON ADA", idNumber: "000000
 const SIGNED_AT = new Date(2026, 9, 3, 11, 4);
 
 const meta = {
-  title: "Panel de firma/2 · Firmado",
+  title: "Flujos/Firma/SignaturesPanel",
   component: SignaturesPanel,
   decorators: [inPanelColumn],
   parameters: panelStoryParameters,

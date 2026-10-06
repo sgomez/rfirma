@@ -7,7 +7,7 @@ cuenta. Es la primera pantalla de la aplicación, antes de que haya documento
 alguno. **Informa y además hace.**
 
 Componente: `rfirma-app/src/setup/SetupWizard.tsx`. Historias:
-`SetupWizard.stories.tsx`, en «Primer arranque», con las filas de estado del
+`SetupWizard.stories.tsx`, en «Pantallas/Primer arranque», con las filas de estado del
 equipo de `setupFixtures.ts`, que comparten las pruebas.
 
 ## Casos de uso que la usan

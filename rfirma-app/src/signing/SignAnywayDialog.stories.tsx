@@ -13,7 +13,7 @@ import { signingProblems } from "./previousSignatures";
 import { SignAnywayDialog } from "./SignAnywayDialog";
 
 const meta = {
-  title: "Diálogos de firma/2 · Firmar de todos modos",
+  title: "Flujos/Firma/SignAnywayDialog",
   component: SignAnywayDialog,
   parameters: { layout: "centered" },
   decorators: [inDialogWindow],

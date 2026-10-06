@@ -5,7 +5,7 @@ import { fn } from "storybook/test";
 import { NewVersionStrip } from "./NewVersionStrip";
 
 const meta = {
-  title: "Ventana principal/6 · Franja de versión nueva",
+  title: "Dominio/Actualizaciones/NewVersionStrip",
   component: NewVersionStrip,
   parameters: { layout: "fullscreen" },
   args: { onOpen: fn(), onDismiss: fn() },

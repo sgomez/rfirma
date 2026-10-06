@@ -8,8 +8,8 @@ con su propia confirmación.
 
 Componentes: `rfirma-app/src/about/AboutDialog.tsx` y, para instalar,
 `rfirma-app/src/updates/InstallUpdateDialog.tsx`. Historias:
-`AboutDialog.stories.tsx`, en «Acerca de/1 · Diálogo», e
-`InstallUpdateDialog.stories.tsx`, en «Acerca de/2 · Instalar actualización».
+`AboutDialog.stories.tsx`, en «Pantallas/Acerca de/1 · Diálogo», e
+`InstallUpdateDialog.stories.tsx`, en «Pantallas/Acerca de/2 · Instalar actualización».
 
 ## Casos de uso que la usan
 

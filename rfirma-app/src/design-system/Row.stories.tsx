@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Row } from "./Row";
 
 const meta = {
-  title: "Sistema de diseño/Row",
+  title: "Primitivos/Row",
   component: Row,
   argTypes: { gap: { control: "select", options: [undefined, "xs", "sm"] } },
   render: (args) => (

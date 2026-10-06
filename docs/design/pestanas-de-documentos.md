@@ -6,8 +6,8 @@ recientes del estado vacío. Responde a una sola pregunta: **qué documento se
 firma**, y es el único sitio donde se abre, se cambia o se cierra uno.
 
 **La verdad del dibujo es el código y sus historias:**
-`documents/DocumentTabs.stories.tsx` («Ventana principal/3 · Pestañas») y
-`documents/RecentRows.stories.tsx` («Ventana principal/4 · Recientes»). Esta
+`documents/DocumentTabs.stories.tsx` («Dominio/Documentos/DocumentTabs») y
+`documents/RecentRows.stories.tsx` («Dominio/Documentos/RecentRows»). Esta
 ficha cuenta el flujo y el porqué; los textos salen del catálogo (`tabs.*` y
 `recents.*` en `po/messages.pot`) y no se copian aquí.
 

@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ProgressBar } from "./ProgressBar";
 
 const meta = {
-  title: "Sistema de diseño/ProgressBar",
+  title: "Primitivos/ProgressBar",
   component: ProgressBar,
   decorators: [
     (Story) => (

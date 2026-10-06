@@ -5,7 +5,7 @@ import { fn } from "storybook/test";
 import { ErrorNotice } from "./ErrorNotice";
 
 const meta = {
-  title: "Ventana principal/7 · Aviso de error",
+  title: "Dominio/Errores/ErrorNotice",
   component: ErrorNotice,
   parameters: { layout: "centered" },
   decorators: [
