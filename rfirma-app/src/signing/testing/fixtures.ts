@@ -1,11 +1,11 @@
 //! Las secciones de certificado, rúbrica, firma visible, destino y firmar con espías que comparten las historias y las pruebas del panel de firma.
 
 import { fn } from "storybook/test";
-import type { CertificateSection } from "./certificate";
-import type { Destination, DestinationSection } from "./destination";
-import type { SigningSection } from "./flow";
-import type { RubricSection } from "./rubric";
-import type { VisibleSignature, VisibleSignatureSection } from "./visibleSignature";
+import type { CertificateSection } from "../certificate";
+import type { Destination, DestinationSection } from "../destination";
+import type { SigningSection } from "../flow";
+import type { RubricSection } from "../rubric";
+import type { VisibleSignature, VisibleSignatureSection } from "../visibleSignature";
 
 /** La sección del certificado con espías en sus dos acciones, salvo las que se pasen. */
 export function aCertificateSection(

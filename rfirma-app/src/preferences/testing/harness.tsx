@@ -2,9 +2,9 @@
 
 import { screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
-import { renderWithCatalog } from "../testing/render";
-import { PreferencesView } from "./PreferencesView";
-import { defaults } from "./preferencesFixtures";
+import { renderWithCatalog } from "../../testing/render";
+import { PreferencesView } from "../PreferencesView";
+import { defaults } from "./fixtures";
 
 const noop = async () => {};
 
@@ -30,4 +30,4 @@ export async function openTab(user: UserEvent, name: string) {
   await user.click(screen.getByRole("tab", { name }));
 }
 
-export { anInstalledCertificate, defaults } from "./preferencesFixtures";
+export { anInstalledCertificate, defaults } from "./fixtures";

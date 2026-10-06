@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { toUserSpace } from "../viewer/signatureBox";
-import { recordingDocument, sheet, viewportAt } from "../viewer/testing/documentViewerFixtures";
+import { recordingDocument, sheet, viewportAt } from "../viewer/testing/fixtures";
 import { SedeWindow } from "./SedeWindow";
-import { scriptedErrand } from "./sedeWindowFixtures";
+import { scriptedErrand } from "./testing/fixtures/sedeWindow";
 
 /** Grada A: el momento 1c, el área de la firma visible marcada sobre el PDF. */
 

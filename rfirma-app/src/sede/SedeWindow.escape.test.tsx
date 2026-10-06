@@ -10,7 +10,7 @@ import * as outcomeModule from "./SedeOutcome.stories";
 import * as signingModule from "./SedeSigning.stories";
 import * as waitingModule from "./SedeWaiting.stories";
 import { SedeWindow } from "./SedeWindow";
-import { scriptedFrom } from "./sedeWindowFixtures";
+import { scriptedFrom } from "./testing/fixtures/sedeWindow";
 
 /** Grada A: Escape es el botón de cancelar o cerrar de cada momento. */
 

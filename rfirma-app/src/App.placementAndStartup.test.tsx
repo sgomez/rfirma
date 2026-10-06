@@ -1,7 +1,6 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { document, pdfsOf, renderApp } from "./App.testSupport";
 import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
 import type { Drop, FakeDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentDrops } from "./documents/drops";
@@ -10,6 +9,7 @@ import { emptyCertificateStore } from "./signing/certificate";
 import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
 import { memoryStatus, type SignalRow } from "./status/status";
+import { document, pdfsOf, renderApp } from "./testing/harness";
 import { inMemoryVersionCheck, type VersionCheck } from "./updates/newVersion";
 import { unavailablePdfSource } from "./viewer/source";
 

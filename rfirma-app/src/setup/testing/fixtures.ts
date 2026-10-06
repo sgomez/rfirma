@@ -1,6 +1,6 @@
 //! Las filas de estado del equipo que ven el asistente del primer arranque, sus historias y sus pruebas.
 
-import type { SignalRow } from "../status/status";
+import type { SignalRow } from "../../status/status";
 
 export const aVersionRow: SignalRow = {
   signal: "version",

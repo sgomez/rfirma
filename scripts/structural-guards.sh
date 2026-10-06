@@ -12,6 +12,7 @@ guards=(
     single_cfg_os_site
     design_system_stays_below_the_domain
     window_directions
+    testing_stays_out_of_production
 )
 
 PATH="$HOME/.cargo/bin:$PATH"

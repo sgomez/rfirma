@@ -2,14 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import type { TokenFailure } from "../signing/token";
 import type { DescribedDocument, SiteErrandView } from "./siteErrands";
+import type { PortalResult } from "./siteErrandView";
 import {
   ASKING_TO_CONFIRM,
   ASKING_TO_SIGN,
   certificate,
   described,
   watched,
-} from "./siteErrandsFixtures";
-import type { PortalResult } from "./siteErrandView";
+} from "./testing/fixtures/siteErrands";
 
 /**
  * Grada A: el adaptador del puerto, **contra las órdenes dobladas** (TD-78).

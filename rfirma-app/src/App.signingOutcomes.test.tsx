@@ -1,12 +1,12 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { aCertificate, document, openPdf, pdfsOf, renderApp } from "./App.testSupport";
 import { inMemoryRecents } from "./documents/recents";
 import type { Certificate } from "./signing/certificate";
 import type { SigningBackend } from "./signing/flow";
 import { NO_PREVIOUS_SIGNATURES } from "./signing/previousSignatures";
 import { emptyRubricPicker } from "./signing/rubric";
+import { aCertificate, document, openPdf, pdfsOf, renderApp } from "./testing/harness";
 
 const remembered: Certificate = { ...aCertificate, remembered: true };
 

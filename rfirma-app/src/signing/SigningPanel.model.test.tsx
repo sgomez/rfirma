@@ -8,7 +8,7 @@ import {
   certificate,
   renderPanel,
   rubric,
-} from "./SigningPanel.testSupport";
+} from "./testing/harness";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 // Grada A: el modelo y la rúbrica (docs/design/panel-de-firma.md § El modelo, § La rúbrica).

@@ -6,7 +6,7 @@ import { type FakeDocumentDrops, inMemoryDocumentDrops } from "../documents/drop
 import { inMemoryDocumentPicker } from "../documents/picker";
 import { inMemoryRecents } from "../documents/recents";
 import { inMemoryPreferences } from "../preferences/preferences";
-import { defaults } from "../preferences/preferencesFixtures";
+import { defaults } from "../preferences/testing/fixtures";
 import { absentWindowTheme } from "../preferences/theme";
 import { absentNativeTitlebar } from "../shell/nativeTitlebar";
 import { type CertificateStore, emptyCertificateStore } from "../signing/certificate";

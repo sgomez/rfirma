@@ -2,12 +2,17 @@ import { composeStories } from "@storybook/react-vite";
 import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { expectNoticeLine } from "../signing/SigningPanel.testSupport";
+import { expectNoticeLine } from "../signing/testing/harness";
 import { elapse } from "../testing/elapse";
 import { renderWithCatalog } from "../testing/render";
 import * as consentModule from "./SedeConsent.stories";
 import { SedeWindow } from "./SedeWindow";
-import { certificate, consentStage, scriptedErrand, scriptedFrom } from "./sedeWindowFixtures";
+import {
+  certificate,
+  consentStage,
+  scriptedErrand,
+  scriptedFrom,
+} from "./testing/fixtures/sedeWindow";
 
 /** Grada A: el momento 2, el consentimiento, con su cuenta atrás. Lo que enseña cada historia está en `SedeWindow.presentation.test.tsx`. */
 

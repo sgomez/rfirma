@@ -1,8 +1,8 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { document, openPdf, pdfsOf, renderApp, row } from "./App.testSupport";
 import { inMemoryRecents } from "./documents/recents";
+import { document, openPdf, pdfsOf, renderApp, row } from "./testing/harness";
 
 const now = () => Math.floor(Date.now() / 1000);
 const DAY = 86_400;

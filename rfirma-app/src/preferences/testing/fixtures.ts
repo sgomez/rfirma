@@ -1,7 +1,7 @@
 //! Los ajustes y los certificados instalados de ejemplo, compartidos por las historias y las pruebas de Preferencias.
 
-import type { Certificate } from "../signing/certificate";
-import type { Preferences } from "./preferences";
+import type { Certificate } from "../../signing/certificate";
+import type { Preferences } from "../preferences";
 
 export const defaults: Preferences = {
   theme: "system",

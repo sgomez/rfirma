@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { MarkedArea } from "./errand";
-import { MARKING_THE_AREA, opened, watched } from "./siteErrandsFixtures";
+import { MARKING_THE_AREA, opened, watched } from "./testing/fixtures/siteErrands";
 
 /** Grada A: el área de la firma visible que pide `visibleSignature`, contra las órdenes dobladas. */
 

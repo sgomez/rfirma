@@ -2,29 +2,29 @@
 
 import { screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
-import { App } from "./App";
-import type { DocumentInHand } from "./documents/document";
-import type { Drop } from "./documents/drops";
-import { inMemoryDocumentDrops } from "./documents/drops";
-import { inMemoryDocumentPicker } from "./documents/picker";
-import { inMemoryRecents, type RecentDocument } from "./documents/recents";
-import type { Preferences } from "./preferences/preferences";
-import { inMemoryPreferences } from "./preferences/preferences";
-import { defaults } from "./preferences/preferencesFixtures";
-import type { NativeTitlebar } from "./shell/nativeTitlebar";
-import type { Certificate, CertificateStore } from "./signing/certificate";
-import { emptyCertificateStore } from "./signing/certificate";
+import { App } from "../App";
+import type { DocumentInHand } from "../documents/document";
+import type { Drop } from "../documents/drops";
+import { inMemoryDocumentDrops } from "../documents/drops";
+import { inMemoryDocumentPicker } from "../documents/picker";
+import { inMemoryRecents, type RecentDocument } from "../documents/recents";
+import type { Preferences } from "../preferences/preferences";
+import { inMemoryPreferences } from "../preferences/preferences";
+import { defaults } from "../preferences/testing/fixtures";
+import type { NativeTitlebar } from "../shell/nativeTitlebar";
+import type { Certificate, CertificateStore } from "../signing/certificate";
+import { emptyCertificateStore } from "../signing/certificate";
 import {
   type Destination,
   type DestinationSource,
   inMemoryDestination,
   type SingleDestination,
-} from "./signing/destination";
-import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
-import { aMainWindowDoubles, type MainWindowDoubleOverrides } from "./testing/mainWindowDoubles";
-import { renderWithCatalog } from "./testing/render";
-import type { PdfDocument, PdfPage, Viewport } from "./viewer/pdf";
-import type { PdfSource } from "./viewer/source";
+} from "../signing/destination";
+import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "../signing/visibleSignature";
+import type { PdfDocument, PdfPage, Viewport } from "../viewer/pdf";
+import type { PdfSource } from "../viewer/source";
+import { aMainWindowDoubles, type MainWindowDoubleOverrides } from "./mainWindowDoubles";
+import { renderWithCatalog } from "./render";
 
 /** El destino que contesta el backend mientras la prueba no diga otra cosa. */
 export const aDestination = () =>
