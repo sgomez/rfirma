@@ -38,12 +38,12 @@ Proyecto: «rFirma Components» (`312bca0c-2f94-494a-820a-e947e03f9ade`), forma 
 
 ## Re-sync de octubre 2026
 
-- `CertificateSelect` entró en la entrada: `cardMode: "column"` (`[GRID_OVERFLOW]`). Su historia `Open` se abre con un `play()` que el arnés no ejecuta; el preview propio `.design-sync/previews/CertificateSelect.tsx` hace clic en el combobox al montar. Si cambia el `play()` de la historia, hay que actualizar ese preview. El compare sigue avisando `[PORTAL?]` (el listbox va en portal); se dejó `column` para conservar todos los estados.
+- `CertificateSelect` entró en la entrada con `cardMode: "single"` y `primaryStory: "Open"` en los parámetros de su historia. `Open` se abre con `defaultOpen`, así que el arnés la pinta abierta sin preview propio. El compare avisa `[PORTAL?]` (el listbox va en portal).
 - `SedeView` › `Marking` y `Unreadable Document` (ventana de 1080 × 660) salen cortadas por la derecha en la captura de 900 px. Están graduadas `close`: el recorte es del marco, no del componente. Darle `viewport` a `SedeView` lo arreglaría, pero re-gradúa las 63 historias y agranda la tarjeta `single` de `Consent`.
 - `SedeView` tiene ya 66 historias; el driver se corre con `--max-stories 63` y las tres últimas quedan sin graduar (subir el tope las deja pendientes de nota).
 - `Header`: las pestañas se truncan algo antes que en la referencia porque el marco del preview lleva 24 px de margen de cuerpo. Aceptado.
 - Títulos sin mapear (`TITLE_UNMAPPED`), fuera de la sincronización a propósito: los que imprime el build.
-- `conventions.md` no menciona `CertificateSelect`.
+- `conventions.md` lista `CertificateSelect` en la tabla de dominio.
 
 ## Re-sync del 6 de octubre de 2026
 

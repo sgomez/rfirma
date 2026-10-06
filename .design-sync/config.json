@@ -65,10 +65,6 @@
     "src/design-system/bundle/fonts/fonts.css"
   ],
   "overrides": {
-    "CertificateSelect": {
-      "cardMode": "single",
-      "primaryStory": "Open"
-    },
     "Dialog": {
       "cardMode": "single",
       "primaryStory": "Closable",
