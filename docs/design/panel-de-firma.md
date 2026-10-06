@@ -15,7 +15,7 @@ citan sus claves.
 | Panel de firmas: acuse y lectura de firmas | `signing/SignaturesPanel.tsx` | «Flujos/Firma/SignaturesPanel» |
 | Selector de certificado | `signing/CertificateSelect.tsx` | «Dominio/Firma/CertificateSelect» |
 | Tarjeta de certificado | `signing/CertificateCard.tsx` | «Dominio/Firma/CertificateCard» |
-| Aviso de firmas previas | `signing/PreviousSignaturesNotice.tsx` | las de «Antes de firmar» que empiezan por `PreviousSignatures` |
+| Aviso de firmas previas | `signing/PreviousSignaturesNotice.tsx` | las de «Flujos/Firma/SigningPanel» que empiezan por `PreviousSignatures` |
 | Pie fijo | `signing/PanelFooter.tsx` | las dos carpetas de arriba |
 
 `SignaturesPanel` y `CertificateSelect` se exportan en la entrada de `/design-sync`:
@@ -70,7 +70,7 @@ Pie fijo: **el destino** con su `Cambiar` y **el botón de firmar**, a secas.
 
 ## Estados
 
-Cada uno tiene su historia en «Antes de firmar», salvo que se diga otra cosa:
+Cada uno tiene su historia en «Flujos/Firma/SigningPanel», salvo que se diga otra cosa:
 
 | Estado | Historia | Qué cambia |
 | --- | --- | --- |

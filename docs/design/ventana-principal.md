@@ -2,8 +2,8 @@
 
 **La verdad del dibujo es el código y sus historias:**
 `shell/MainWindow.stories.tsx` («Flujos/Ventana principal/MainWindow»), con las piezas
-en las historias que su número ordena en la misma carpeta de la barra lateral
-(cabecera, pestañas, recientes, visor, franja de versión y aviso de error). Esta
+en las historias de sus capas (`Dominio/Documentos`, `Flujos/Documentos`,
+`Dominio/Actualizaciones` y `Dominio/Errores`). Esta
 ficha cuenta el flujo y el porqué; los textos salen del catálogo y no se copian.
 
 La única ventana de rFirma. Aloja el recorrido completo de firmar un PDF, de
