@@ -106,8 +106,6 @@
 }
 
 .about__independence .rf-prose {
-  font-size: var(--rf-body-size);
-  line-height: var(--rf-body-leading);
   color: var(--rf-text-muted);
 }
 
