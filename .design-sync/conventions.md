@@ -66,6 +66,7 @@ Lo que hay en `window.RFirma`, por capa y título de historia.
 | Dominio | Firma / CertificateCard | `CertificateCard` |
 | Dominio | Firma / CertificateSelect | `CertificateSelect` |
 | Flujos | Documentos / DocumentViewer | `DocumentViewer` |
+| Flujos | Estado / StatusView | `StatusView` |
 | Flujos | Estado / WithdrawCertificateView | `WithdrawCertificateView` |
 | Flujos | Firma / PlacementBlock | `PlacementBlock` |
 | Flujos | Firma / SignAnywayDialog | `SignAnywayDialog` |
