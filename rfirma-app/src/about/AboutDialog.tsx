@@ -1,6 +1,6 @@
 //! El diálogo Acerca de: identidad de la aplicación, estado de la versión, licencias y aviso de independencia.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./AboutDialog.css";
 import { Badge } from "../design-system/Badge";
@@ -36,6 +36,7 @@ export function AboutDialog({
   const { t } = useTranslation();
   const [currentVersion, setCurrentVersion] = useState(newVersion);
   const [updating, setUpdating] = useState(false);
+  const close = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let current = true;
@@ -55,7 +56,7 @@ export function AboutDialog({
 
   return (
     <>
-      <Dialog label={t("app.name")} onClose={onClose} className="about">
+      <Dialog label={t("app.name")} onClose={onClose} primary={close} className="about">
         <div className="about__header">
           <div className="about__identity">
             <p className="rf-heading about__name">{t("app.name")}</p>
@@ -103,7 +104,7 @@ export function AboutDialog({
         </Row>
 
         <Row className="about__footer">
-          <Button variant="primary" className="about__close" onClick={onClose}>
+          <Button ref={close} variant="primary" className="about__close" onClick={onClose}>
             {t("actions.close")}
           </Button>
         </Row>
