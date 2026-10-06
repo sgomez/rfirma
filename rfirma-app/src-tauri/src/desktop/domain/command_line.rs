@@ -15,6 +15,9 @@ pub const HELP_FLAGS: [&str; 3] = ["--help", "-help", "-h"];
 /// Formas aceptadas del parámetro de la versión.
 pub const VERSION_FLAGS: [&str; 2] = ["--version", "-version"];
 
+/// Forma aceptada del parámetro que pide el informe de diagnóstico del entorno.
+pub const DEBUG_INFO_FLAGS: [&str; 1] = ["--debug-info"];
+
 /// El parámetro de la contraseña del original, que nunca se acepta en argv.
 pub const PASSWORD: &str = "-password";
 

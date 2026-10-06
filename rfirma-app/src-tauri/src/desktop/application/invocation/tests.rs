@@ -538,6 +538,27 @@ fn the_version_is_asked_for_in_either_form() {
 }
 
 #[test]
+fn the_debug_info_is_asked_for_only_by_its_flag() {
+    assert!(debug_info_was_asked_for(["rfirma", "--debug-info"]));
+    assert!(!debug_info_was_asked_for(["rfirma"]));
+    assert!(!debug_info_was_asked_for([
+        "rfirma",
+        "--version",
+        "debug-info"
+    ]));
+    assert!(
+        !debug_info_was_asked_for(["--debug-info"]),
+        "el ejecutable no cuenta"
+    );
+}
+
+#[test]
+fn the_help_names_the_debug_info_flag() {
+    assert!(help(Platform::Linux).contains("--debug-info"));
+    assert!(help(Platform::Windows).contains("--debug-info"));
+}
+
+#[test]
 fn the_version_text_is_one_line_with_the_build_and_the_compatible_autofirma() {
     let build = RunningBuild {
         channel: "flatpak",

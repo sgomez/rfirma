@@ -34,7 +34,7 @@ fn a_terminal_command_is_attended_by_the_console() {
 
 #[test]
 fn the_help_and_the_version_are_printed_by_the_console() {
-    for flag in ["--help", "-h", "--version", "-version"] {
+    for flag in ["--help", "-h", "--version", "-version", "--debug-info"] {
         assert_eq!(
             console_entry_of(invoked_with_the_words(&[flag])),
             ConsoleEntry::PrintsTheInformativeText,
