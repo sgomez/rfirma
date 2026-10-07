@@ -4,10 +4,11 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
+import { useDefaultButton } from "../design-system/useDefaultButton";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { NoCertificateReason } from "./errand";
-import { SedeBody, useDefaultButton } from "./SedeFrame";
+import { SedeBody } from "./SedeFrame";
 
 interface SedeNoCertificateProps {
   origin: string | null;
@@ -66,6 +67,7 @@ export function SedeNoCertificate({
 
   return (
     <SedeBody
+      primary={defaultButton}
       onEscape={onLeave}
       steadyFooter
       footer={

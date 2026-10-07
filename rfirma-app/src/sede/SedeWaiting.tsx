@@ -6,6 +6,7 @@ import { Button } from "../design-system/Button";
 import { CopyIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
+import { useDefaultButton } from "../design-system/useDefaultButton";
 import { CHROME_LOCAL_NETWORK_SETTINGS } from "./errand";
 import { SedeBody } from "./SedeFrame";
 
@@ -40,6 +41,7 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
   const { t } = useTranslation();
   const [browser, setBrowser] = useState<Browser>("chrome");
   const unreachable = moment === "unreachable";
+  const installLocalCaButton = useDefaultButton(unreachable);
 
   const localCa = (
     <Row gap="xs" className="sede-waiting__ca">
@@ -47,7 +49,7 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
       {/* `--primary`, y es el único de la pantalla: la tabla «Estados» de la
           ficha da instalar la CA como la **acción principal** de este estado.
           Sin ella el navegador ni llega a preguntar por el permiso. */}
-      <Button variant="primary" onClick={onInstallLocalCa}>
+      <Button ref={installLocalCaButton} variant="primary" onClick={onInstallLocalCa}>
         {t("status.actions.install")}
       </Button>
     </Row>
@@ -55,6 +57,7 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
 
   return (
     <SedeBody
+      primary={installLocalCaButton}
       onEscape={onCancel}
       footer={
         <>

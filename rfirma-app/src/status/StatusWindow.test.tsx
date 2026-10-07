@@ -32,8 +32,22 @@ describe("StatusWindow", () => {
 
     const event = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
     event.preventDefault();
-    window.dispatchEvent(event);
+    document.dispatchEvent(event);
 
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("does nothing on Enter", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const statusPort = memoryStatus();
+    const withdrawRfirma = vi.spyOn(statusPort, "withdrawRfirma");
+    renderWithCatalog(<StatusWindow statusPort={statusPort} onClose={onClose} />);
+
+    await user.keyboard("{Enter}");
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(withdrawRfirma).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

@@ -12,6 +12,7 @@ import type { MarkedArea } from "./errand";
 import { SedeBody } from "./SedeFrame";
 import "../signing/SigningPanel.css";
 import { Button } from "../design-system/Button";
+import { useDefaultButton } from "../design-system/useDefaultButton";
 
 interface SedeMarkingProps {
   pdf: PdfDocument | null;
@@ -34,6 +35,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   const placementState = usePlacement({ document, standardRectOn });
   const { placement, rangeError, viewPage, moveBox, sealPage } = placementState;
   const [handing, setHanding] = useState(false);
+  const continueButton = useDefaultButton(placement !== null && rangeError === null && !handing);
 
   const accept = async () => {
     if (pdf === null || placement === null) return;
@@ -48,6 +50,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   return (
     <SedeBody
       flush
+      primary={continueButton}
       onEscape={onCancel}
       footer={
         <>
@@ -56,6 +59,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
             {t("actions.cancel")}
           </Button>
           <Button
+            ref={continueButton}
             variant="primary"
             disabled={placement === null || rangeError !== null || handing}
             onClick={() => void accept()}

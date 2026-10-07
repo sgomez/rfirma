@@ -85,6 +85,13 @@ describe("SedeWindow", () => {
       fireEvent.click(install);
       expect(calls.installLocalCa).toHaveBeenCalledOnce();
     });
+
+    it("focuses the local CA's install once the channel will not open, so Enter installs it", () => {
+      const { port } = scriptedFrom(Unreachable);
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByRole("button", { name: "Instalar" })).toHaveFocus();
+    });
   });
 
   describe("1b · the channel that will never open", () => {

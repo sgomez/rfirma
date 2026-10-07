@@ -1,6 +1,8 @@
 import { composeStories } from "@storybook/react-vite";
 import { fireEvent, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { elapse } from "../testing/elapse";
 import { renderWithCatalog } from "../testing/render";
 import * as confirmModule from "./SedeConfirm.stories";
 import * as consentModule from "./SedeConsent.stories";
@@ -13,7 +15,7 @@ import * as waitingModule from "./SedeWaiting.stories";
 import { SedeWindow } from "./SedeWindow";
 import { scriptedFrom } from "./testing/fixtures/sedeWindow";
 
-/** Grada A: Escape es el botón de cancelar o cerrar de cada momento. */
+/** Grada A: Escape es el botón de cancelar o cerrar de cada momento, e Intro su acción principal. */
 
 const { OldWebClient } = composeStories(oldWebClientModule);
 const { Waiting, Unreachable } = composeStories(waitingModule);
@@ -25,6 +27,7 @@ const { Signed } = composeStories(outcomeModule);
 const { UnreadableDocument } = composeStories(markingModule);
 
 const pressEscape = () => fireEvent.keyDown(document, { key: "Escape" });
+const pressEnter = () => fireEvent.keyDown(document, { key: "Enter" });
 
 describe("Escape", () => {
   it.each([
@@ -89,5 +92,73 @@ describe("Escape", () => {
 
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     expect(calls.cancel).not.toHaveBeenCalled();
+  });
+});
+
+describe("Enter", () => {
+  it.each([
+    ["confirming", ShadowAttackSuspect, "confirmSignatures"],
+    ["noCertificate", NoneInstalled, "installCertificate"],
+    ["unreachable", Unreachable, "installLocalCa"],
+    ["outcome", Signed, "close"],
+    ["oldWebClient", OldWebClient, "dismissWarning"],
+  ] as const)("presses the main action in %s", (_, story, action) => {
+    const { port, calls } = scriptedFrom(story);
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    pressEnter();
+
+    expect(calls[action]).toHaveBeenCalledOnce();
+    expect(calls.cancel).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["waiting", Waiting],
+    ["signing", Signing],
+    ["returning", Returning],
+  ])("does nothing in %s, which has no main action", (_, story) => {
+    const { port, calls } = scriptedFrom(story);
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    pressEnter();
+
+    for (const call of Object.values(calls)) expect(call).not.toHaveBeenCalled();
+  });
+
+  it("opens the certificate list at consent, without signing, when it has the focus", async () => {
+    const user = userEvent.setup();
+    const { port, calls } = scriptedFrom(Consent);
+    renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
+    screen.getByRole("combobox").focus();
+
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    expect(calls.consent).not.toHaveBeenCalled();
+  });
+
+  describe("at consent", () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("does nothing while the countdown runs", async () => {
+      const { port, calls } = scriptedFrom(Consent);
+      renderWithCatalog(<SedeWindow errands={port} />);
+      await elapse(1000);
+
+      pressEnter();
+
+      expect(calls.consent).not.toHaveBeenCalled();
+    });
+
+    it("signs once the countdown ends", async () => {
+      const { port, calls } = scriptedFrom(Consent);
+      renderWithCatalog(<SedeWindow errands={port} />);
+      for (let second = 0; second < 3; second++) await elapse(1000);
+
+      pressEnter();
+
+      expect(calls.consent).toHaveBeenCalledOnce();
+    });
   });
 });

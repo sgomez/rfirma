@@ -5,7 +5,8 @@ import { Button } from "../design-system/Button";
 import { AlertIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
-import { SedeBody, useDefaultButton } from "./SedeFrame";
+import { useDefaultButton } from "../design-system/useDefaultButton";
+import { SedeBody } from "./SedeFrame";
 
 /** El aviso de que la página usa un cliente web antiguo, que no detiene el trámite. */
 export function SedeOldWebClient({ onDismiss }: { onDismiss: () => void }) {
@@ -14,6 +15,7 @@ export function SedeOldWebClient({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <SedeBody
+      primary={dismissButton}
       steadyFooter
       footer={
         <>
