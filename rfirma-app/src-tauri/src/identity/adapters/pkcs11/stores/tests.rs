@@ -555,3 +555,57 @@ fn the_softhsm_path_without_multiarch_is_the_one_discovered_on_this_machine() {
         Some(multiarch.to_path_buf())
     );
 }
+
+fn a_firefox_profile_at(home: &Path, profiles_ini_dir: &str, profile_dir: &str) -> PathBuf {
+    let ini_dir = home.join(profiles_ini_dir);
+    let profile = home.join(profile_dir);
+    std::fs::create_dir_all(&ini_dir).expect("deberia poder crearse el directorio de profiles.ini");
+    std::fs::create_dir_all(&profile).expect("deberia poder crearse el perfil");
+    std::fs::write(profile.join("cert9.db"), b"").expect("deberia poder escribirse");
+    let name = profile.file_name().expect("el perfil tiene nombre");
+    std::fs::write(
+        ini_dir.join("profiles.ini"),
+        format!(
+            "[Profile0]\nIsRelative=1\nPath={}\n",
+            name.to_string_lossy()
+        ),
+    )
+    .expect("deberia poder escribirse");
+    profile
+}
+
+#[test]
+fn reads_an_xdg_firefox_profile_kept_beside_its_profiles_ini() {
+    let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+    let profile = a_firefox_profile_at(
+        home.path(),
+        ".config/mozilla/firefox",
+        ".config/mozilla/firefox/eeeeeeee.default-release",
+    );
+
+    assert_eq!(nss_profiles(home.path()), vec![profile]);
+}
+
+#[test]
+fn reads_a_firefox_profile_from_the_flatpak_xdg_layout() {
+    let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+    let profile = a_firefox_profile_at(
+        home.path(),
+        ".var/app/org.mozilla.firefox/config/mozilla/firefox",
+        ".var/app/org.mozilla.firefox/config/mozilla/firefox/ffffffff.default-release",
+    );
+
+    assert_eq!(nss_profiles(home.path()), vec![profile]);
+}
+
+#[test]
+fn reads_a_firefox_profile_from_the_flatpak_legacy_layout() {
+    let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+    let profile = a_firefox_profile_at(
+        home.path(),
+        ".var/app/org.mozilla.firefox/.mozilla/firefox",
+        ".var/app/org.mozilla.firefox/.mozilla/firefox/gggggggg.default-release",
+    );
+
+    assert_eq!(nss_profiles(home.path()), vec![profile]);
+}

@@ -134,12 +134,21 @@ pub fn installed_stores(softoken: &Path, directory: &Path) -> Vec<Store> {
 }
 
 /// Pares de directorios de configuración y datos de Firefox en el sistema.
-fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 5] {
+fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 7] {
+    let flatpak = home.join(".var/app/org.mozilla.firefox");
     [
         (home.join(".mozilla/firefox"), home.join(".mozilla/firefox")),
         (
             home.join(".config/mozilla/firefox"),
             home.join(".local/share/mozilla/firefox"),
+        ),
+        (
+            flatpak.join(".mozilla/firefox"),
+            flatpak.join(".mozilla/firefox"),
+        ),
+        (
+            flatpak.join("config/mozilla/firefox"),
+            flatpak.join("data/mozilla/firefox"),
         ),
         (
             home.join("snap/firefox/common/.mozilla/firefox"),
@@ -157,11 +166,10 @@ fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 5] {
 pub fn nss_profiles(home: &Path) -> Vec<PathBuf> {
     let mut profiles: Vec<PathBuf> = Vec::new();
     for (config, data) in firefox_layouts(home) {
-        profiles.extend(
-            profiles_declared_in(&config.join("profiles.ini"))
-                .into_iter()
-                .map(|relative_or_absolute| resolve_under(&data, &relative_or_absolute)),
-        );
+        for relative_or_absolute in profiles_declared_in(&config.join("profiles.ini")) {
+            profiles.push(resolve_under(&data, &relative_or_absolute));
+            profiles.push(resolve_under(&config, &relative_or_absolute));
+        }
     }
     profiles.push(home.join(".pki/nssdb"));
     profiles.push(home.join(".local/share/pki/nssdb"));
