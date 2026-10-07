@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./InstallUpdateDialog.css";
-import { useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
 import { Row } from "../design-system/Row";
@@ -27,7 +26,6 @@ export function InstallUpdateDialog({ newVersion, versions, onClose }: InstallUp
   const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>({ kind: "confirming" });
   const { version } = newVersion;
-  const primaryButton = useDefaultButton(phase.kind !== "installing");
 
   async function install() {
     setPhase({ kind: "installing" });
@@ -50,7 +48,6 @@ export function InstallUpdateDialog({ newVersion, versions, onClose }: InstallUp
     <Dialog
       label={label}
       onClose={phase.kind === "installing" ? undefined : onClose}
-      primary={primaryButton}
       className="install-update-dialog"
     >
       {phase.kind === "confirming" && (
@@ -61,7 +58,7 @@ export function InstallUpdateDialog({ newVersion, versions, onClose }: InstallUp
             <Button variant="ghost" onClick={onClose}>
               {t("actions.notNow")}
             </Button>
-            <Button variant="primary" onClick={() => void install()} ref={primaryButton}>
+            <Button variant="primary" onClick={() => void install()}>
               {t("updates.install.confirm")}
             </Button>
           </Row>
@@ -79,7 +76,7 @@ export function InstallUpdateDialog({ newVersion, versions, onClose }: InstallUp
             {t(`updates.install.failed.${phase.reason}`)}
           </p>
           <Row className="install-update-dialog__actions">
-            <Button variant="primary" onClick={onClose} ref={primaryButton}>
+            <Button variant="primary" onClick={onClose}>
               {t("actions.close")}
             </Button>
           </Row>

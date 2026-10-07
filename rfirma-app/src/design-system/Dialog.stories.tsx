@@ -1,10 +1,9 @@
-//! La historia de `Dialog`: un diálogo con dos salidas y el foco en su primaria, y otro sin ninguna.
+//! La historia de `Dialog`: un diálogo con dos salidas y otro sin ninguna.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { inDialogWindow } from "../../.storybook/decorators/dialogWindow";
-import { useDefaultButton } from "./actionKeys";
 import { Button } from "./Button";
-import { Dialog, type DialogProps } from "./Dialog";
+import { Dialog } from "./Dialog";
 import { Row } from "./Row";
 
 const meta = {
@@ -21,27 +20,20 @@ const meta = {
 
 export default meta;
 
-function ClosableDialog(args: DialogProps) {
-  const sign = useDefaultButton();
-  return (
-    <Dialog {...args} primary={sign}>
-      <p className="rf-title">¿Firmar de todos modos?</p>
-      <p className="rf-prose">El documento tiene firmas que no son válidas.</p>
-      <Row style={{ justifyContent: "flex-end" }}>
-        <Button variant="ghost" onClick={args.onClose}>
-          Cancelar
-        </Button>
-        <Button variant="primary" ref={sign}>
-          Firmar
-        </Button>
-      </Row>
-    </Dialog>
-  );
-}
-
 export const Closable: StoryObj<typeof meta> = {
-  args: { onClose: () => {} },
-  render: (args) => <ClosableDialog {...args} />,
+  args: {
+    onClose: () => {},
+    children: (
+      <>
+        <p className="rf-title">¿Firmar de todos modos?</p>
+        <p className="rf-prose">El documento tiene firmas que no son válidas.</p>
+        <Row style={{ justifyContent: "flex-end" }}>
+          <Button variant="ghost">Cancelar</Button>
+          <Button variant="primary">Firmar</Button>
+        </Row>
+      </>
+    ),
+  },
 };
 
 export const WithoutExit: StoryObj<typeof meta> = {

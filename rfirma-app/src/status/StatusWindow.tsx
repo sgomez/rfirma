@@ -1,7 +1,6 @@
-//! La ventana del estado de rFirma: lleva el puerto, mide las señales, atiende el atajo común de teclado y monta su vista y el velo de la retirada.
+//! La ventana del estado de rFirma: lleva el puerto, mide las señales, atiende el Escape y monta su vista y el velo de la retirada.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useActionKeys } from "../design-system/actionKeys";
 import type {
   ExternalDestination,
   ExternalDestinationOpener,
@@ -85,7 +84,19 @@ export function StatusWindow({
     };
   }, [statusPort]);
 
-  useActionKeys({ secondary: onClose }, !isWithdrawing);
+  // El velo de la retirada atiende su propio Escape (WithdrawCertificateDialog);
+  // mientras está delante, uno que le llegue aquí no debe cerrar además el panel.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented && !isWithdrawing) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose, isWithdrawing]);
 
   const handleRecheck = useCallback(() => {
     const snapshot = rowsRef.current;

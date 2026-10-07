@@ -33,17 +33,4 @@ describe("SignaturesDialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "Cerrar" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
-
-  it("closes with Intro, with the focus already on Cerrar, and with Escape", async () => {
-    const user = userEvent.setup();
-    const onClose = fn();
-    renderWithCatalog(<AllValid onClose={onClose} />);
-
-    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
-    await user.keyboard("{Enter}");
-    expect(onClose).toHaveBeenCalledTimes(1);
-
-    await user.keyboard("{Escape}");
-    expect(onClose).toHaveBeenCalledTimes(2);
-  });
 });

@@ -1,7 +1,6 @@
 //! El diálogo «¿Firmar de todos modos?», justo antes de firmar, con una fila por problema del documento.
 
 import { useTranslation } from "react-i18next";
-import { useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
 import { AlertIcon, CrossCircleIcon } from "../design-system/icons";
@@ -26,15 +25,9 @@ interface SignAnywayDialogProps {
  */
 export function SignAnywayDialog({ problems, locale, onConfirm, onCancel }: SignAnywayDialogProps) {
   const { t } = useTranslation();
-  const primary = useDefaultButton();
 
   return (
-    <Dialog
-      label={t("signAnyway.title")}
-      onClose={onCancel}
-      primary={primary}
-      className="sign-anyway-dialog"
-    >
+    <Dialog label={t("signAnyway.title")} onClose={onCancel} className="sign-anyway-dialog">
       <p className="rf-title">{t("signAnyway.title")}</p>
 
       <ul className="sign-anyway-dialog__list">
@@ -51,7 +44,7 @@ export function SignAnywayDialog({ problems, locale, onConfirm, onCancel }: Sign
         <Button variant="ghost" onClick={onCancel}>
           {t("actions.cancel")}
         </Button>
-        <Button variant="primary" onClick={onConfirm} ref={primary}>
+        <Button variant="primary" onClick={onConfirm}>
           {t("actions.signAnyway")}
         </Button>
       </Row>

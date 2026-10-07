@@ -286,33 +286,6 @@ describe("el aviso de error", () => {
     expect(screen.getByRole("button", { name: "Vaciar el almacén" })).toBeInTheDocument();
   });
 
-  it("empties the store with Intro while the confirmation is open, with the focus already on it", async () => {
-    const user = userEvent.setup();
-    const onEmptyStore = vi.fn();
-    renderIn("es", <ErrorNotice situation="keyringPinMissing" onEmptyStore={onEmptyStore} />);
-
-    await user.keyboard("{Enter}");
-    expect(onEmptyStore).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
-    expect(screen.getByRole("button", { name: "Vaciar el almacén" })).toHaveFocus();
-    await user.keyboard("{Enter}");
-
-    expect(onEmptyStore).toHaveBeenCalledOnce();
-  });
-
-  it("cancels the confirmation with Escape and ignores Escape once closed", async () => {
-    const user = userEvent.setup();
-    const onEmptyStore = vi.fn();
-    renderIn("es", <ErrorNotice situation="keyringPinMissing" onEmptyStore={onEmptyStore} />);
-
-    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
-    await user.keyboard("{Escape}");
-
-    expect(onEmptyStore).not.toHaveBeenCalled();
-    expect(screen.queryByText(/¿Seguro\? Se perderán/)).not.toBeInTheDocument();
-  });
-
   /**
    * Firmar con un certificado instalado también pasa por aquí (criterio 3 del
    * #1062): sin esta excepción a la tarjeta fija de «Error al firmar», quien

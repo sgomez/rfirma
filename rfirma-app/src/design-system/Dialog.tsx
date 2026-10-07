@@ -1,7 +1,6 @@
-//! El diálogo modal `rf-dialog` sobre su velo: foco dentro, tabulador que no sale, Intro en su primaria y, si se puede cerrar, Escape.
+//! El diálogo modal `rf-dialog` sobre su velo: foco dentro, tabulador que no sale y, si se puede cerrar, Escape.
 
-import { type ComponentPropsWithoutRef, type RefObject, useEffect, useRef } from "react";
-import { answerActionKey } from "./actionKeys";
+import { type ComponentPropsWithoutRef, useEffect, useRef } from "react";
 import { classNames } from "./classNames";
 
 type DialogRole = "dialog" | "alertdialog";
@@ -14,8 +13,6 @@ export type DialogProps = Omit<
   label: string;
   /** Lo que hace Escape; sin él, el diálogo no se cierra con el teclado. */
   onClose?: () => void;
-  /** El botón que pulsa Intro, el de `useDefaultButton` para que reciba el foco; sin él, Intro no hace nada. */
-  primary?: RefObject<HTMLButtonElement | null>;
   role?: DialogRole;
   /** La clase del velo, para quien lo coloca distinto. */
   scrimClassName?: string;
@@ -57,7 +54,6 @@ function keepTabInside(event: KeyboardEvent, dialog: HTMLElement) {
 export function Dialog({
   label,
   onClose,
-  primary,
   role = "dialog",
   className,
   scrimClassName,
@@ -83,13 +79,15 @@ export function Dialog({
       if (element === null || open.at(-1) !== element || event.defaultPrevented) return;
       if (event.key === "Tab") {
         keepTabInside(event, element);
-      } else if (answerActionKey(event, { primary, secondary: onClose })) {
+      } else if (event.key === "Escape" && onClose !== undefined) {
+        event.preventDefault();
         event.stopPropagation();
+        onClose();
       }
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [onClose, primary]);
+  }, [onClose]);
 
   return (
     <div className={classNames("rf-scrim", scrimClassName)}>

@@ -3,12 +3,11 @@
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { AlertIcon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
-import { SedeBody } from "./SedeFrame";
+import { SedeBody, useDefaultButton } from "./SedeFrame";
 
 interface SedeConfirmProps {
   messageCode: string;
@@ -42,7 +41,6 @@ export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmPro
   return (
     <SedeBody
       onEscape={onCancel}
-      primary={continueButton}
       footer={
         <>
           <div className="sede-window__spacer" />

@@ -1,7 +1,6 @@
 //! El diálogo de páginas sin sello, justo antes de firmar: cuántas del conjunto elegido se quedan sin firma visible.
 
 import { useTranslation } from "react-i18next";
-import { useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
 import { AlertIcon } from "../design-system/icons";
@@ -33,13 +32,11 @@ interface UnsealedPagesDialogProps {
  */
 export function UnsealedPagesDialog({ fallen, onConfirm, onCancel }: UnsealedPagesDialogProps) {
   const { t } = useTranslation();
-  const primary = useDefaultButton();
 
   return (
     <Dialog
       label={t("sealLoss.title", { count: fallen })}
       onClose={onCancel}
-      primary={primary}
       className="unsealed-pages-dialog"
     >
       <div className="unsealed-pages-dialog__heading">
@@ -57,7 +54,7 @@ export function UnsealedPagesDialog({ fallen, onConfirm, onCancel }: UnsealedPag
         <Button variant="ghost" onClick={onCancel}>
           {t("actions.cancel")}
         </Button>
-        <Button variant="primary" onClick={onConfirm} ref={primary}>
+        <Button variant="primary" onClick={onConfirm}>
           {t("actions.signAnyway")}
         </Button>
       </Row>

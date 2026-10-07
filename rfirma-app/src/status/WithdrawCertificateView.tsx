@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useDefaultButton } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
 import { CheckCircleIcon, CheckingIcon, CrossCircleIcon } from "../design-system/icons";
@@ -40,7 +39,6 @@ export function WithdrawCertificateView({
   onClose,
 }: WithdrawCertificateViewProps) {
   const { t } = useTranslation();
-  const primaryButton = useDefaultButton(moment !== "working");
 
   const failed = (outcome: WithdrawalOutcome) => outcome.kind === "failed";
   const success =
@@ -60,7 +58,6 @@ export function WithdrawCertificateView({
       role="alertdialog"
       label={title}
       onClose={moment === "working" ? undefined : onClose}
-      primary={primaryButton}
       className="withdraw-certificate-dialog"
       scrimClassName="withdraw-certificate-dialog__scrim"
     >
@@ -128,7 +125,7 @@ export function WithdrawCertificateView({
             <Button variant="ghost" onClick={onClose}>
               {t("actions.cancel")}
             </Button>
-            <Button variant="primary" onClick={onWithdraw} ref={primaryButton}>
+            <Button variant="primary" onClick={onWithdraw}>
               {t("status.withdrawal.confirm")}
             </Button>
           </>
@@ -145,7 +142,7 @@ export function WithdrawCertificateView({
                 {t("actions.close")}
               </Button>
             )}
-            <Button variant="primary" onClick={success ? onClose : onWithdraw} ref={primaryButton}>
+            <Button variant="primary" onClick={success ? onClose : onWithdraw}>
               {success ? t("actions.close") : t("actions.retry")}
             </Button>
           </>

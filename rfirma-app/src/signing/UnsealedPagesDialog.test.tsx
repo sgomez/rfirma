@@ -45,19 +45,4 @@ describe("UnsealedPagesDialog", () => {
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onCancel).toHaveBeenCalledOnce();
   });
-
-  it("signs anyway with Intro, with the focus already on it, and cancels with Escape", async () => {
-    const user = userEvent.setup();
-    const onConfirm = fn();
-    const onCancel = fn();
-    renderWithCatalog(<SeveralPages onConfirm={onConfirm} onCancel={onCancel} />);
-
-    expect(screen.getByRole("button", { name: "Firmar de todos modos" })).toHaveFocus();
-    await user.keyboard("{Enter}");
-    expect(onConfirm).toHaveBeenCalledOnce();
-    expect(onCancel).not.toHaveBeenCalled();
-
-    await user.keyboard("{Escape}");
-    expect(onCancel).toHaveBeenCalledOnce();
-  });
 });

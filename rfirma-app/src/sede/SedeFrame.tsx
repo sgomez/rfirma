@@ -1,7 +1,6 @@
-//! El cuerpo y el pie de cada momento (`SedeBody`), con el atajo común de Intro y Escape, y los hooks que comparten los momentos: el cierre solo del desenlace y la cuenta atrás de consentir.
+//! El cuerpo y el pie de cada momento (`SedeBody`), con su tecla Escape, y los hooks que comparten los momentos: el cierre solo del desenlace, la cuenta atrás de consentir y el botón por defecto.
 
-import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
-import { answerActionKey } from "../design-system/actionKeys";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Row } from "../design-system/Row";
 import { CONSENT_COUNTDOWN_SECONDS, OUTCOME_CLOSE_MS } from "./errand";
 
@@ -18,16 +17,14 @@ export function SedeBody({
   steadyFooter = false,
   flush = false,
   onEscape,
-  primary,
 }: {
   children: ReactNode;
   footer: ReactNode;
   steadyFooter?: boolean;
   flush?: boolean;
   onEscape?: () => void;
-  primary?: RefObject<HTMLButtonElement | null>;
 }) {
-  useActionKeys(primary, onEscape);
+  useEscapeKey(onEscape);
 
   return (
     <>
@@ -63,21 +60,34 @@ export function useOutcomeClock(onClose: () => void, enabled = true) {
   }, [enabled]);
 }
 
-/** Intro pulsa la primaria del momento y Escape su salida, salvo que un control ya lo haya atendido. */
-function useActionKeys(
-  primary: RefObject<HTMLButtonElement | null> | undefined,
-  onEscape: (() => void) | undefined,
-) {
-  const latest = useRef({ primary, secondary: onEscape });
-  latest.current = { primary, secondary: onEscape };
+/** Escape pulsa el botón de cancelar o cerrar del momento, salvo que un control ya lo haya atendido. */
+function useEscapeKey(onEscape: (() => void) | undefined) {
+  const latest = useRef(onEscape);
+  latest.current = onEscape;
 
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
-      answerActionKey(event, latest.current);
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      latest.current?.();
     };
     document.addEventListener("keydown", listener);
     return () => document.removeEventListener("keydown", listener);
   }, []);
+}
+
+/** El botón por defecto del momento: el foco, en cuanto se puede pulsar y si nadie lo ha llevado a otro sitio. */
+export function useDefaultButton(enabled = true) {
+  const button = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (enabled && focusIsUnclaimed()) button.current?.focus();
+  }, [enabled]);
+
+  return button;
+}
+
+function focusIsUnclaimed(): boolean {
+  return document.activeElement === null || document.activeElement === document.body;
 }
 
 /** Los segundos que le faltan al botón de consentir para activarse; cero sin cuenta atrás. */

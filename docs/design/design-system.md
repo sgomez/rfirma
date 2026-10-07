@@ -241,24 +241,6 @@ del documento** lleva el círculo con aspa y borde de 2 px en
 `--rf-border-strong`, y el aviso con algún problema, el mismo borde. Sin ámbar
 ni rojo: la silueta, la palabra y el peso bastan.
 
-### Teclado
-
-Cada pantalla y cada diálogo declaran su acción primaria y su secundaria, las
-dos opcionales, y se recorren sin ratón con una sola regla:
-
-- **Intro pulsa la primaria** de la pantalla o del diálogo que está delante; sin
-  primaria, o con la primaria desactivada, Intro no hace nada.
-- **Escape pulsa la secundaria**, cancelar o cerrar; sin secundaria, no hace
-  nada.
-- **Si el foco está en un control que usa Intro** —un botón, un desplegable, un
-  campo de texto, un enlace—, Intro es de ese control: con el foco en
-  «Cancelar», Intro cancela.
-- **Sin excepciones por tipo de acción:** una primaria destructiva también se
-  acepta con Intro.
-- **La primaria recibe el foco al aparecer**, o al activarse, si nadie lo ha
-  llevado a otro sitio.
-- Con dos diálogos apilados, solo atiende el teclado el de arriba.
-
 ---
 
 ## 9. Vocabulario de clases
