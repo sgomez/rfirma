@@ -104,6 +104,11 @@ finish-args:
   - --filesystem=~/snap/chromium/current
   - --filesystem=~/.librewolf
   - --filesystem=~/.config/librewolf
+  # El perfil del Firefox de Flatpak vive bajo ~/.var/app, que --filesystem=home
+  # no concede (#1732). Se declara solo su almacen, no el directorio de la app.
+  - --filesystem=~/.var/app/org.mozilla.firefox/.mozilla/firefox
+  - --filesystem=~/.var/app/org.mozilla.firefox/config/mozilla/firefox
+  - --filesystem=~/.var/app/org.mozilla.firefox/data/mozilla/firefox
 
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin

@@ -415,6 +415,13 @@ ya asumió que no compartir perfil con el Firefox de Flatpak es «conducta norma
 de Linux». Esta medición no cambia ese razonamiento; solo quita la excusa de que
 fuera imposible. **Recomendación: no hacerlo.**
 
+**Revocada en el [#1732](https://github.com/sgomez/rfirma/issues/1732).** El pasaje del
+ADR-0004 trata de los canales de rFirma, no de los almacenes; el permiso NSS es del
+ADR-0005, que manda declarar todo almacén con ruta conocida y rechaza declarar solo los
+de navegadores no confinados. En Bazzite, donde Firefox viene como flatpak, rFirma no
+veía ni un certificado. El manifiesto declara solo los almacenes de perfiles, no
+`~/.var/app/org.mozilla.firefox` entero.
+
 ### 5.3 ¿Y cargar un `libsoftokn3.so` del anfitrión? **No, y no hace ninguna falta.**
 
 Sin `--filesystem=host-os` el `/usr` del anfitrión sencillamente no está montado.
@@ -461,9 +468,7 @@ no se hace. Los dos primeros son un solo cambio y van en el
    del ADR-0004 corren sobre el NSS del anfitrión**, y ahí un `aarch64` hoy no
    arranca. Es la única fila de la tabla de la brecha que muerde fuera del
    flatpak.
-5. **Firefox de Flatpak: no.** Medido que se puede, decidido que no. Si algún día
-   se reconsidera, que sea reescribiendo el ADR-0004, no añadiendo una línea al
-   manifiesto.
+5. **Firefox de Flatpak: sí**, desde el #1732 (ver el final de 5.2).
 
 En el tracker de rFirma **no hay ningún issue sobre Snap, sobre el Firefox de
 Flatpak, sobre ESR ni sobre otras arquitecturas**. Los que rondan el asunto
