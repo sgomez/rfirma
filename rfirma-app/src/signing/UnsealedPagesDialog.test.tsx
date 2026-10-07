@@ -45,4 +45,27 @@ describe("UnsealedPagesDialog", () => {
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onCancel).toHaveBeenCalledOnce();
   });
+
+  it("opens with the focus on «Firmar de todos modos» and signs anyway on Enter", async () => {
+    const onConfirm = fn();
+    const onCancel = fn();
+    renderWithCatalog(<SeveralPages onConfirm={onConfirm} onCancel={onCancel} />);
+
+    expect(screen.getByRole("button", { name: "Firmar de todos modos" })).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(onConfirm).toHaveBeenCalledOnce();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("cancels without signing on Escape", async () => {
+    const onConfirm = fn();
+    const onCancel = fn();
+    renderWithCatalog(<SeveralPages onConfirm={onConfirm} onCancel={onCancel} />);
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
 });

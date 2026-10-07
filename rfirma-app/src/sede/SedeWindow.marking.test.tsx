@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { toUserSpace } from "../viewer/signatureBox";
-import { recordingDocument, sheet, viewportAt } from "../viewer/testing/fixtures";
+import { box, recordingDocument, sheet, viewportAt } from "../viewer/testing/fixtures";
 import { SedeWindow } from "./SedeWindow";
 import { scriptedErrand } from "./testing/fixtures/sedeWindow";
 
@@ -75,6 +75,96 @@ describe("1c · marking the area of the visible signature", () => {
     await userEvent.clear(screen.getByRole("textbox", { name: "Páginas de la firma visible" }));
 
     expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+  });
+
+  it("leaves the focus on the traced box rather than moving it to Continue", async () => {
+    const { document, renders } = recordingDocument();
+    const { port } = scriptedErrand({ kind: "marking", pdf: document });
+    renderWithCatalog(<SedeWindow errands={port} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    traceOver(sheet(), [100, 100], [300, 200]);
+
+    expect(box()).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeEnabled();
+  });
+
+  it("moves the box with the arrows and hands it on with Enter, with the focus on the box", async () => {
+    const { document, renders } = recordingDocument();
+    const { port, calls } = scriptedErrand({ kind: "marking", pdf: document });
+    renderWithCatalog(<SedeWindow errands={port} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    traceOver(sheet(), [100, 100], [300, 200]);
+    box().focus();
+    await userEvent.keyboard("{ArrowRight}{Enter}");
+
+    const rect = toUserSpace(viewportAt(1), { x: 101, y: 100, width: 200, height: 100 });
+    await waitFor(() =>
+      expect(calls.markArea).toHaveBeenCalledWith(
+        expect.objectContaining({ rect: [rect.x0, rect.y0, rect.x1, rect.y1] }),
+      ),
+    );
+  });
+
+  it("leaves Enter to the pages field, without handing on a half-typed range", async () => {
+    const { document, renders } = recordingDocument();
+    const { port, calls } = scriptedErrand({ kind: "marking", pdf: document });
+    renderWithCatalog(<SedeWindow errands={port} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    traceOver(sheet(), [100, 100], [300, 200]);
+    await userEvent.click(screen.getByRole("radio", { name: "Varias" }));
+    const pages = screen.getByRole("textbox", { name: "Páginas de la firma visible" });
+    await userEvent.clear(pages);
+    await userEvent.type(pages, "1,2");
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeEnabled();
+    await userEvent.type(pages, "{Enter}");
+
+    expect(calls.markArea).not.toHaveBeenCalled();
+  });
+
+  it("does nothing on Enter while there is no area", async () => {
+    const { document, renders } = recordingDocument();
+    const { port, calls } = scriptedErrand({ kind: "marking", pdf: document });
+    renderWithCatalog(<SedeWindow errands={port} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    sheet().focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(calls.markArea).not.toHaveBeenCalled();
+  });
+
+  it("does nothing on Enter while the typed pages make no sense", async () => {
+    const { document, renders } = recordingDocument();
+    const { port, calls } = scriptedErrand({ kind: "marking", pdf: document });
+    renderWithCatalog(<SedeWindow errands={port} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    traceOver(sheet(), [100, 100], [300, 200]);
+    await userEvent.click(screen.getByRole("radio", { name: "Varias" }));
+    await userEvent.clear(screen.getByRole("textbox", { name: "Páginas de la firma visible" }));
+    box().focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(calls.markArea).not.toHaveBeenCalled();
+  });
+
+  it("cancels on Escape with the focus on the pages field", async () => {
+    const { document, renders } = recordingDocument();
+    const { port, calls } = scriptedErrand({ kind: "marking", pdf: document });
+    renderWithCatalog(<SedeWindow errands={port} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    traceOver(sheet(), [100, 100], [300, 200]);
+    await userEvent.click(screen.getByRole("radio", { name: "Varias" }));
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Páginas de la firma visible" }),
+      "{Escape}",
+    );
+
+    expect(calls.markArea).toHaveBeenCalledWith(null);
   });
 
   it("cancels the dialog of the area, not the errand", async () => {

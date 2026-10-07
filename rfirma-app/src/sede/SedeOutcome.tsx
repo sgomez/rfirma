@@ -13,6 +13,7 @@ import {
 } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
+import { useDefaultButton } from "../design-system/useDefaultButton";
 import { errorText } from "../errors/errorMessage";
 import { formatSize } from "../signing/panelFormat";
 import {
@@ -23,7 +24,7 @@ import {
   type SiteDocument,
   type SiteOutcome,
 } from "./errand";
-import { SedeBody, useDefaultButton, useOutcomeClock } from "./SedeFrame";
+import { SedeBody, useOutcomeClock } from "./SedeFrame";
 
 interface SedeOutcomeProps {
   origin: string | null;
@@ -65,6 +66,7 @@ export function SedeOutcome({ origin, outcome, onClose, onOpenHelp }: SedeOutcom
 
   return (
     <SedeBody
+      primary={closeButton}
       onEscape={onClose}
       steadyFooter
       footer={

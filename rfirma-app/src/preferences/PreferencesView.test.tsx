@@ -288,7 +288,7 @@ describe("PreferencesView", () => {
 
     const event = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
     event.preventDefault();
-    window.dispatchEvent(event);
+    document.dispatchEvent(event);
 
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -462,5 +462,38 @@ describe("PreferencesView", () => {
     ).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("accepts the purge with Enter, without closing the screen", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onChange = vi.fn(async () => {});
+    const onForgetActivity = vi.fn(async () => {});
+    renderView({ onClose, onChange, onForgetActivity });
+
+    await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
+    await user.keyboard("{Enter}");
+
+    expect(onChange).toHaveBeenCalledWith({ ...defaults, rememberActivity: false });
+    expect(onForgetActivity).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("does not close on Enter, from the screen or from a field", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onChange = vi.fn(async () => {});
+    renderView({
+      onClose,
+      onChange,
+      preferences: { ...defaults, offersOriginalFolder: true },
+    });
+
+    await user.keyboard("{Enter}");
+    await openTab(user, "Firma");
+    screen.getByRole("radio", { name: "En esta carpeta" }).focus();
+    await user.keyboard("{Enter}");
+
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

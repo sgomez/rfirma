@@ -1,5 +1,6 @@
 //! El diálogo «Ver firmas»: las firmas que ya trae el documento, con su validez, que se mira y se cierra.
 
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
@@ -20,11 +21,13 @@ export function SignaturesDialog({ report, onClose }: SignaturesDialogProps) {
   const { t } = useTranslation();
   const format = report.format ?? "pades";
   const count = t("panel.signed.count", { count: report.signatures.length });
+  const closeButton = useRef<HTMLButtonElement>(null);
 
   return (
     <Dialog
       label={t("panel.signed.title")}
       onClose={onClose}
+      primary={closeButton}
       className="signatures-dialog"
       scrimClassName="signatures-dialog__scrim"
     >
@@ -42,7 +45,7 @@ export function SignaturesDialog({ report, onClose }: SignaturesDialogProps) {
       <hr className="rf-divider" />
 
       <Row className="signatures-dialog__actions">
-        <Button variant="primary" onClick={onClose}>
+        <Button variant="primary" ref={closeButton} onClick={onClose}>
           {t("actions.close")}
         </Button>
       </Row>

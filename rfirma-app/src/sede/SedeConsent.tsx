@@ -14,6 +14,7 @@ import "../signing/SigningPanel.css";
 import { Button } from "../design-system/Button";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
+import { useDefaultButton } from "../design-system/useDefaultButton";
 import type {
   ErrandStage,
   LocalBatchItem,
@@ -24,7 +25,7 @@ import type {
   TerminalOrder,
 } from "./errand";
 import { consentActionKey } from "./errand";
-import { SedeBody, useConsentCountdown, useDefaultButton } from "./SedeFrame";
+import { SedeBody, useConsentCountdown } from "./SedeFrame";
 
 interface SedeConsentProps {
   origin: string | null;
@@ -74,6 +75,7 @@ export function SedeConsent({
 
   return (
     <SedeBody
+      primary={consentButton}
       onEscape={onCancel}
       footer={
         <>

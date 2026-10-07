@@ -33,4 +33,23 @@ describe("SignaturesDialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "Cerrar" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("opens with the focus on Cerrar and closes on Enter", async () => {
+    const onClose = fn();
+    renderWithCatalog(<AllValid onClose={onClose} />);
+
+    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("closes on Escape", async () => {
+    const onClose = fn();
+    renderWithCatalog(<AllValid onClose={onClose} />);
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
 });

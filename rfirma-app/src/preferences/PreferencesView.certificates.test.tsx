@@ -166,4 +166,27 @@ describe("certificates in a file", () => {
 
     expect(onEmptyStore).toHaveBeenCalledOnce();
   });
+
+  it("calls the emptying of the store off with Escape, without closing the screen", async () => {
+    const user = userEvent.setup();
+    const onEmptyStore = vi.fn();
+    const onClose = vi.fn();
+    renderView({
+      onInstallCertificate: async () => {
+        throw { situation: "keyringPinMissing", detail: "sin pin" };
+      },
+      onEmptyStore,
+      onClose,
+    });
+    await openTab(user, "Certificados");
+
+    await user.click(screen.getByRole("button", { name: "Añadir…" }));
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
+    await user.keyboard("{Escape}");
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onEmptyStore).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Vaciar el almacén" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancelar" })).not.toBeInTheDocument();
+  });
 });
