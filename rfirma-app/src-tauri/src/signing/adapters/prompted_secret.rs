@@ -5,7 +5,7 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::prompted_holder_of;
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::{SecretName, StoreSecret};
+use crate::identity::domain::secret::{PinWarning, SecretName, StoreSecret};
 use crate::identity::ports::{
     prompted_until_accepted, OriginWindow, PromptedError, SecretPromptRequest, SecretPrompter,
 };
@@ -50,11 +50,13 @@ pub fn sign_on_token_with_prompter(
         holder,
         language,
         incorrect_secret: false,
+        pin_warning: PinWarning::Quiet,
         origin_window: Some(origin_window),
     };
     prompted_until_accepted(
         prompter,
         request,
+        || Ok(signer.pin_warning(&certificate)?),
         |typed| session::sign_on_token(signer, session, typed),
         secret_was_rejected,
     )
@@ -101,11 +103,13 @@ pub fn secret_for_the_batch(
         holder: prompted_holder_of(certificate.der()),
         language,
         incorrect_secret: false,
+        pin_warning: PinWarning::Quiet,
         origin_window: Some(OriginWindow::Site),
     };
     let (secret, ()) = prompted_until_accepted(
         prompter,
         request,
+        || signer.pin_warning(certificate.reference()),
         |secret| signer.accepts_the_secret(certificate.reference(), secret),
         token_secret_rejected,
     )

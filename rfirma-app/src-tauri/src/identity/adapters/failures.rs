@@ -44,15 +44,10 @@ pub fn code_of_token(situation: Situation) -> SafCode {
 impl From<TokenError> for Failure {
     fn from(error: TokenError) -> Self {
         Self {
-            attempts_left: attempts_left_after(error.situation()),
+            attempts_left: error.attempts_left(),
             ..Self::new(situation_name(error.situation()), error.detail())
         }
     }
-}
-
-/// Lo único que PKCS#11 deja saber de los intentos: ninguno con el PIN bloqueado (ADR-0047).
-fn attempts_left_after(situation: Situation) -> Option<u32> {
-    (situation == Situation::PinLocked).then_some(0)
 }
 
 /// Código de protocolo cuando el secreto se teclea en el lector y no se sabe pedir.

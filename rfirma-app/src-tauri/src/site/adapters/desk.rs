@@ -9,7 +9,7 @@ use crate::identity::adapters::failures::code_of_token;
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::{SecretName, StoreSecret};
+use crate::identity::domain::secret::{PinWarning, SecretName, StoreSecret};
 use crate::identity::ports::{OriginWindow, SecretPromptRequest};
 use crate::identity::IdentityRoot;
 use crate::signing::adapters::failures::told_of_cycle;
@@ -115,6 +115,7 @@ impl Neighbours for Neighbourhood<'_> {
                 holder: None,
                 language: self.signing.configuration().language,
                 incorrect_secret: after_a_wrong_one,
+                pin_warning: PinWarning::Quiet,
                 origin_window: Some(OriginWindow::Site),
             })
             .ok()?;

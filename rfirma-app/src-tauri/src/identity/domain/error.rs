@@ -44,6 +44,7 @@ pub struct TokenError {
     situation: Situation,
     ckr: Option<String>,
     detail: String,
+    final_try: bool,
 }
 
 impl TokenError {
@@ -53,6 +54,24 @@ impl TokenError {
             situation,
             ckr: None,
             detail: detail.into(),
+            final_try: false,
+        }
+    }
+
+    /// El mismo fallo, dejando la tarjeta en su último intento.
+    pub fn on_the_final_try(self) -> Self {
+        Self {
+            final_try: true,
+            ..self
+        }
+    }
+
+    /// Los intentos que se saben: ninguno con el PIN bloqueado, uno en el último intento (ADR-0047).
+    pub fn attempts_left(&self) -> Option<u32> {
+        match self.situation {
+            Situation::PinLocked => Some(0),
+            _ if self.final_try => Some(1),
+            _ => None,
         }
     }
 
@@ -89,6 +108,7 @@ impl From<Error> for TokenError {
                     situation: classify(rv),
                     detail: format!("{ckr} ({})", function_name(function)),
                     ckr: Some(ckr),
+                    final_try: false,
                 }
             }
             Error::LibraryLoading(e) => Self::new(Situation::ModuleNotFound, e.to_string()),

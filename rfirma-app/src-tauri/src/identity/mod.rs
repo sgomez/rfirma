@@ -172,6 +172,16 @@ impl crate::signing::ports::Signer for TokenSigner<'_> {
         self.token.secret_of(reference)
     }
 
+    fn pin_warning(
+        &self,
+        reference: &CertificateRef,
+    ) -> Result<domain::secret::PinWarning, TokenError> {
+        if self.is_installed(reference) {
+            return Ok(domain::secret::PinWarning::Quiet);
+        }
+        self.token.pin_warning(reference)
+    }
+
     fn offers(
         &self,
         reference: &CertificateRef,
@@ -208,6 +218,13 @@ impl<T: ports::Token + ?Sized> crate::signing::ports::Signer for T {
         reference: &domain::certificate::CertificateRef,
     ) -> Result<domain::secret::StoreSecret, domain::error::TokenError> {
         ports::Token::secret_of(self, reference)
+    }
+
+    fn pin_warning(
+        &self,
+        reference: &domain::certificate::CertificateRef,
+    ) -> Result<domain::secret::PinWarning, domain::error::TokenError> {
+        ports::Token::pin_warning(self, reference)
     }
 
     fn offers(

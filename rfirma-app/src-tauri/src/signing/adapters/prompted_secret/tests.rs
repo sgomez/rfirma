@@ -7,7 +7,7 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::ports::OriginWindow;
 use crate::signing::adapters::gtk_prompter::{MockSecretPrompter, PreconfiguredSecretPrompter};
 use crate::signing::application::session::{begin, DocumentToSign, SigningSession};
@@ -420,4 +420,79 @@ fn a_store_that_needs_no_secret_signs_without_opening_the_dialog() {
         prompter.recorded_requests().is_empty(),
         "no abre el dialogo"
     );
+}
+
+/// Un token que pide el PIN en pantalla, solo firma con `correct_pin` y tras un fallo dice estar en su último intento.
+struct ATokenOnItsFinalTryAfterAFailure {
+    failures: RefCell<usize>,
+}
+
+impl Signer for ATokenOnItsFinalTryAfterAFailure {
+    fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+        Ok(StoreSecret::TypedOnScreen)
+    }
+
+    fn pin_warning(&self, _reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+        Ok(if *self.failures.borrow() == 0 {
+            PinWarning::Quiet
+        } else {
+            PinWarning::FinalTry
+        })
+    }
+
+    fn offers(
+        &self,
+        _reference: &CertificateRef,
+        _algorithm: SignatureAlgorithm,
+    ) -> Result<(), TokenError> {
+        Ok(())
+    }
+
+    fn sign_with_secret(
+        &self,
+        _reference: &CertificateRef,
+        secret: &ProtectedSecret,
+        _algorithm: SignatureAlgorithm,
+        data: &[u8],
+    ) -> Result<Vec<u8>, TokenError> {
+        if secret.as_str() == Ok("correct_pin") {
+            return Ok(data.to_vec());
+        }
+        *self.failures.borrow_mut() += 1;
+        Err(TokenError::new(Situation::IncorrectPin, "PIN incorrecto"))
+    }
+
+    fn accepts_the_secret(
+        &self,
+        _reference: &CertificateRef,
+        _secret: &ProtectedSecret,
+    ) -> Result<(), TokenError> {
+        Ok(())
+    }
+}
+
+#[test]
+fn the_main_window_dialog_after_a_failure_carries_the_warning_read_again() {
+    let certificate = a_certificate("FIRMA", b"der");
+    let signer = ATokenOnItsFinalTryAfterAFailure {
+        failures: RefCell::new(0),
+    };
+    let session = a_session_with_open_cycle(&signer, &certificate);
+    let mock = MockSecretPrompter::with_secrets(&["wrong_pin", "correct_pin"]);
+
+    sign_on_token_with_prompter(
+        &signer,
+        &session,
+        &mock,
+        Language::Spanish,
+        OriginWindow::Main,
+    )
+    .expect("deberia firmar tras corregir el PIN");
+
+    let warnings: Vec<PinWarning> = mock
+        .recorded_requests()
+        .iter()
+        .map(|request| request.pin_warning)
+        .collect();
+    assert_eq!(warnings, vec![PinWarning::Quiet, PinWarning::FinalTry]);
 }

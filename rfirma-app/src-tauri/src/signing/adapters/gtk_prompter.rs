@@ -5,142 +5,15 @@ use std::sync::Mutex;
 use std::sync::{Arc, OnceLock};
 
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::SecretName;
+#[cfg(target_os = "linux")]
+use crate::identity::domain::secret::PinWarning;
 #[cfg(target_os = "linux")]
 use crate::identity::ports::OriginWindow;
 use crate::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
-use crate::signing::domain::Language;
 
-/// Estructura interna con los textos localizados para el diálogo modal del secreto.
-#[derive(Debug, PartialEq, Eq)]
-pub struct DialogI18n {
-    pub title: String,
-    pub holder_name: Option<String>,
-    pub id_number: Option<String>,
-    pub incorrect_secret: String,
-    pub accept: &'static str,
-    pub cancel: &'static str,
-}
+mod texts;
 
-fn title_text(lang: Language, secret: &SecretName) -> String {
-    match (lang, secret) {
-        (Language::Spanish, SecretName::Pin) => "Introduce el PIN".to_string(),
-        (Language::Spanish, SecretName::Password) => "Introduce la contraseña".to_string(),
-
-        (Language::Catalan, SecretName::Pin) => "Introdueix el PIN".to_string(),
-        (Language::Catalan, SecretName::Password) => "Introdueix la contrasenya".to_string(),
-
-        (Language::Basque, SecretName::Pin) => "Sartu PINa".to_string(),
-        (Language::Basque, SecretName::Password) => "Sartu pasahitza".to_string(),
-
-        (Language::Galician, SecretName::Pin) => "Introduce o PIN".to_string(),
-        (Language::Galician, SecretName::Password) => "Introduce o contrasinal".to_string(),
-
-        (Language::English, SecretName::Pin) => "Enter PIN".to_string(),
-        (Language::English, SecretName::Password) => "Enter password".to_string(),
-
-        (Language::Spanish, SecretName::DocumentPassword) => {
-            "Introduce la contraseña del PDF".to_string()
-        }
-        (Language::Catalan, SecretName::DocumentPassword) => {
-            "Introdueix la contrasenya del PDF".to_string()
-        }
-        (Language::Basque, SecretName::DocumentPassword) => "Sartu PDFaren pasahitza".to_string(),
-        (Language::Galician, SecretName::DocumentPassword) => {
-            "Introduce o contrasinal do PDF".to_string()
-        }
-        (Language::English, SecretName::DocumentPassword) => "Enter the PDF password".to_string(),
-
-        (Language::Spanish, SecretName::Pkcs12Password(file)) => {
-            format!("Introduce la contraseña de {file}")
-        }
-        (Language::Catalan, SecretName::Pkcs12Password(file)) => {
-            format!("Introdueix la contrasenya de {file}")
-        }
-        (Language::Basque, SecretName::Pkcs12Password(file)) => {
-            format!("Sartu {file} fitxategiaren pasahitza")
-        }
-        (Language::Galician, SecretName::Pkcs12Password(file)) => {
-            format!("Introduce o contrasinal de {file}")
-        }
-        (Language::English, SecretName::Pkcs12Password(file)) => {
-            format!("Enter the password for {file}")
-        }
-    }
-}
-
-fn button_texts(lang: Language) -> (&'static str, &'static str) {
-    match lang {
-        Language::Spanish => ("Aceptar", "Cancelar"),
-        Language::Catalan => ("Acceptar", "Cancel·lar"),
-        Language::Basque => ("Onartu", "Utzi"),
-        Language::Galician => ("Aceptar", "Cancelar"),
-        Language::English => ("OK", "Cancel"),
-    }
-}
-
-fn incorrect_secret_text(lang: Language, secret: &SecretName) -> String {
-    match (lang, secret) {
-        (Language::Spanish, SecretName::Pin) => "PIN incorrecto. Vuelve a intentarlo.".to_string(),
-        (Language::Spanish, SecretName::Password | SecretName::Pkcs12Password(_)) => {
-            "Contraseña incorrecta. Vuelve a intentarlo.".to_string()
-        }
-
-        (Language::Catalan, SecretName::Pin) => "PIN incorrecte. Torna-ho a provar.".to_string(),
-        (Language::Catalan, SecretName::Password | SecretName::Pkcs12Password(_)) => {
-            "Contrasenya incorrecta. Torna-ho a provar.".to_string()
-        }
-
-        (Language::Basque, SecretName::Pin) => "PIN okerra. Saiatu berriro.".to_string(),
-        (Language::Basque, SecretName::Password | SecretName::Pkcs12Password(_)) => {
-            "Pasahitza okerra. Saiatu berriro.".to_string()
-        }
-
-        (Language::Galician, SecretName::Pin) => "PIN incorrecto. Tenta de novo.".to_string(),
-        (Language::Galician, SecretName::Password | SecretName::Pkcs12Password(_)) => {
-            "Contrasinal incorrecto. Tenta de novo.".to_string()
-        }
-
-        (Language::English, SecretName::Pin) => "Incorrect PIN. Try again.".to_string(),
-        (Language::English, SecretName::Password | SecretName::Pkcs12Password(_)) => {
-            "Incorrect password. Try again.".to_string()
-        }
-
-        (Language::Spanish, SecretName::DocumentPassword) => {
-            "Contraseña del PDF incorrecta. Vuelve a intentarlo.".to_string()
-        }
-        (Language::Catalan, SecretName::DocumentPassword) => {
-            "Contrasenya del PDF incorrecta. Torna-ho a provar.".to_string()
-        }
-        (Language::Basque, SecretName::DocumentPassword) => {
-            "PDFaren pasahitza okerra. Saiatu berriro.".to_string()
-        }
-        (Language::Galician, SecretName::DocumentPassword) => {
-            "Contrasinal do PDF incorrecto. Tenta de novo.".to_string()
-        }
-        (Language::English, SecretName::DocumentPassword) => {
-            "Incorrect PDF password. Try again.".to_string()
-        }
-    }
-}
-
-/// Traduce los textos del diálogo a uno de los 5 idiomas oficiales de rFirma (ADR-0009).
-pub fn localize(request: &SecretPromptRequest) -> DialogI18n {
-    let (accept, cancel) = button_texts(request.language);
-
-    DialogI18n {
-        title: title_text(request.language, &request.secret),
-        holder_name: request.holder.as_ref().map(|holder| holder.name.clone()),
-        id_number: request
-            .holder
-            .as_ref()
-            .map(|holder| holder.id_number.clone())
-            .filter(|id_number| !id_number.is_empty()),
-        incorrect_secret: incorrect_secret_text(request.language, &request.secret),
-        accept,
-        cancel,
-    }
-}
+pub use texts::{localize, DialogI18n};
 
 #[cfg(target_os = "linux")]
 /// Adaptador de producción que presenta un diálogo modal nativo GTK3 para la solicitud de PIN.
@@ -271,7 +144,23 @@ fn say_the_previous_attempt_was_wrong(content_area: &gtk::Box, entry: &gtk::Entr
 }
 
 #[cfg(target_os = "linux")]
-fn body_of(dialog: &gtk::Dialog, i18n: &DialogI18n, incorrect_secret: bool) -> gtk::Entry {
+fn warning_label(text: &str, warning: PinWarning) -> gtk::Label {
+    use gtk::prelude::*;
+
+    let label = gtk::Label::new(None);
+    let escaped = glib::markup_escape_text(text);
+    match warning {
+        PinWarning::FinalTry => label.set_markup(&format!("<b>{escaped}</b>")),
+        PinWarning::CountLow | PinWarning::Quiet => label.set_markup(&escaped),
+    }
+    label.set_halign(gtk::Align::Start);
+    label.set_xalign(0.0);
+    label.set_line_wrap(true);
+    label
+}
+
+#[cfg(target_os = "linux")]
+fn body_of(dialog: &gtk::Dialog, i18n: &DialogI18n, request: &SecretPromptRequest) -> gtk::Entry {
     use gtk::prelude::*;
 
     let content_area = dialog.content_area();
@@ -282,10 +171,14 @@ fn body_of(dialog: &gtk::Dialog, i18n: &DialogI18n, incorrect_secret: bool) -> g
     content_area.set_margin_bottom(24);
     content_area.pack_start(&heading_of(i18n), false, false, 0);
 
+    if let Some(text) = &i18n.pin_warning {
+        content_area.pack_start(&warning_label(text, request.pin_warning), false, false, 0);
+    }
+
     let entry = masked_entry();
     content_area.pack_start(&entry, false, false, 0);
 
-    if incorrect_secret {
+    if request.incorrect_secret {
         say_the_previous_attempt_was_wrong(&content_area, &entry, &i18n.incorrect_secret);
     }
 
@@ -337,7 +230,7 @@ fn show_gtk_dialog(
 
     let i18n = localize(request);
     let dialog = dialog_for(&i18n, parent);
-    let entry = body_of(&dialog, &i18n, request.incorrect_secret);
+    let entry = body_of(&dialog, &i18n, request);
 
     dialog.show_all();
     entry.grab_focus();

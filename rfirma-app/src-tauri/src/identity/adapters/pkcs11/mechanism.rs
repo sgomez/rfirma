@@ -15,7 +15,8 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 
 use super::session::{
-    context, private_key, slot_of, the_store_is_really_there, token_info_unless_locked,
+    context, private_key, refused_login, slot_of, the_store_is_really_there,
+    token_info_unless_locked,
 };
 
 pub(super) fn sign_holding_the_turn(
@@ -39,7 +40,7 @@ pub(super) fn sign_holding_the_turn(
         Ok(()) => {}
         // Si otra biblioteca del proceso ya autenticó el token, se reutiliza la sesión.
         Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => {}
-        Err(other) => return Err(other.into()),
+        Err(other) => return Err(refused_login(&context, slot, other)),
     }
 
     let signature = private_key(&session, reference)

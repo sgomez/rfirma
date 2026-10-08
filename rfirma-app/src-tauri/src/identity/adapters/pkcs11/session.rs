@@ -15,6 +15,7 @@ use cryptoki::slot::{Slot, TokenInfo};
 
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::secret::PinWarning;
 use crate::identity::domain::store::Store;
 
 /// Comprueba si existe la base de datos NSS antes de inicializar el módulo.
@@ -75,6 +76,33 @@ pub(super) fn token_info_unless_locked(
         ));
     }
     Ok(info)
+}
+
+/// El aviso del PIN que dan las banderas de la ranura, o el bloqueo si lo declaran (ADR-0047).
+pub(super) fn pin_warning_of(context: &Pkcs11, slot: Slot) -> Result<PinWarning, TokenError> {
+    let info = token_info_unless_locked(context, slot)?;
+    Ok(PinWarning::of_token(
+        info.user_pin_count_low(),
+        info.user_pin_final_try(),
+    ))
+}
+
+/// El fallo de un `C_Login`, con lo que la tarjeta dice de sus intentos en ese mismo proceso (ADR-0047).
+pub(super) fn refused_login(context: &Pkcs11, slot: Slot, error: Error) -> TokenError {
+    let refused = TokenError::from(error);
+    let Ok(info) = context.get_token_info(slot) else {
+        return refused;
+    };
+    if info.user_pin_locked() && refused.situation() == Situation::IncorrectPin {
+        return TokenError::new(
+            Situation::PinLocked,
+            format!("{}: el intento ha bloqueado la tarjeta", refused.detail()),
+        );
+    }
+    if info.user_pin_final_try() {
+        return refused.on_the_final_try();
+    }
+    refused
 }
 
 /// La clave privada del certificado emparejada por `CKA_ID`.

@@ -13,7 +13,7 @@ use crate::identity::domain::holder::{
 };
 use crate::identity::domain::keyring::KeyringError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::SecretName;
+use crate::identity::domain::secret::{PinWarning, SecretName};
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{
     prompted_until_accepted, CertificateMemory, InstalledFolder, Keyring, OriginWindow,
@@ -271,11 +271,13 @@ pub fn install_pkcs12_asking_its_password(
         holder: None,
         language: prompt.language,
         incorrect_secret: false,
+        pin_warning: PinWarning::Quiet,
         origin_window: Some(prompt.origin_window),
     };
     prompted_until_accepted(
         prompt.prompter,
         request,
+        || Ok(PinWarning::Quiet),
         |secret| {
             install_pkcs12(
                 token,
