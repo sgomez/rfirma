@@ -2,15 +2,12 @@
 
 mod common;
 
-use cryptoki::context::Pkcs11;
 use cryptoki::error::{Error, RvError};
 use cryptoki::object::{Attribute, ObjectClass};
 use cryptoki::session::UserType;
-use cryptoki::slot::Slot;
-use cryptoki::types::AuthPin;
 use fake_pkcs11::FakeCard;
 
-use common::{process, session};
+use common::{log_in, process, session, signals};
 
 const WRONG_PIN: &str = "87654321";
 
@@ -18,27 +15,6 @@ const WRONG_PIN: &str = "87654321";
 fn log_in_once(card: &FakeCard, pin: &str) -> Result<(), RvError> {
     let (context, slot) = process(card);
     log_in(&context, slot, pin)
-}
-
-fn log_in(context: &Pkcs11, slot: Slot, pin: &str) -> Result<(), RvError> {
-    match session(context, slot).login(UserType::User, Some(&AuthPin::new(pin.into()))) {
-        Ok(()) => Ok(()),
-        Err(Error::Pkcs11(rv, _)) => Err(rv),
-        Err(other) => panic!("C_Login deberia devolver un código PKCS#11: {other}"),
-    }
-}
-
-/// Las señales del PIN que ve este proceso en `C_GetTokenInfo`.
-fn signals(context: &Pkcs11, slot: Slot) -> Vec<&'static str> {
-    let info = context.get_token_info(slot).unwrap();
-    [
-        (info.user_pin_count_low(), "COUNT_LOW"),
-        (info.user_pin_final_try(), "FINAL_TRY"),
-        (info.user_pin_locked(), "LOCKED"),
-    ]
-    .into_iter()
-    .filter_map(|(lit, name)| lit.then_some(name))
-    .collect()
 }
 
 #[test]

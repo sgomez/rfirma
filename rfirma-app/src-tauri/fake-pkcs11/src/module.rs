@@ -1,18 +1,20 @@
 //! El estado de un proceso que ha cargado el módulo: sesiones, login, búsquedas y firmas en curso.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 use cryptoki_sys::{
     CKF_SERIAL_SESSION, CKR_KEY_HANDLE_INVALID, CKR_MECHANISM_INVALID, CKR_OBJECT_HANDLE_INVALID,
     CKR_OK, CKR_OPERATION_ACTIVE, CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_HANDLE_INVALID,
     CKR_SESSION_PARALLEL_NOT_SUPPORTED, CKR_SLOT_ID_INVALID, CKR_USER_ALREADY_LOGGED_IN,
-    CKR_USER_NOT_LOGGED_IN, CKR_USER_TYPE_INVALID, CKU_USER, CK_ATTRIBUTE_TYPE, CK_FLAGS,
-    CK_MECHANISM_TYPE, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
+    CKR_USER_NOT_LOGGED_IN, CKR_USER_TYPE_INVALID, CKU_CONTEXT_SPECIFIC, CKU_USER,
+    CK_ATTRIBUTE_TYPE, CK_FLAGS, CK_MECHANISM_TYPE, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE,
+    CK_SLOT_ID, CK_USER_TYPE,
 };
 
+use crate::card::{self, Profile};
 use crate::material::{self, Failure, Material};
-use crate::objects::{self, key_role, Lookup, Object};
+use crate::objects::{self, key_role, KeyRole, Lookup, Object};
 use crate::pin;
 use crate::signing;
 
@@ -22,14 +24,19 @@ pub(crate) const SLOT: CK_SLOT_ID = 0;
 struct Session {
     found: Option<Vec<CK_OBJECT_HANDLE>>,
     signing: Option<(CK_MECHANISM_TYPE, CK_OBJECT_HANDLE)>,
+    signed_data: Vec<u8>,
+    signature_authorized: bool,
 }
 
 pub(crate) struct Module {
     dir: PathBuf,
     material: Material,
+    profile: Profile,
     objects: Vec<Object>,
     logged_in: bool,
     pin_signals: CK_FLAGS,
+    interference_pending: bool,
+    stale_sessions: BTreeSet<CK_SESSION_HANDLE>,
     sessions: BTreeMap<CK_SESSION_HANDLE, Session>,
     next_session: CK_SESSION_HANDLE,
 }
@@ -37,20 +44,27 @@ pub(crate) struct Module {
 impl Module {
     pub(crate) fn load(dir: PathBuf) -> Result<Self, Failure> {
         let material = material::load_or_generate(&dir)?;
-        let objects = objects::objects_of(&material)?;
+        let profile = card::read_profile(&dir);
+        let objects = objects::objects_of(&material, profile)?;
         Ok(Self {
+            interference_pending: card::interference_configured(&dir),
             dir,
             material,
+            profile,
             objects,
             logged_in: false,
             pin_signals: 0,
+            stale_sessions: BTreeSet::new(),
             sessions: BTreeMap::new(),
             next_session: 1,
         })
     }
 
     pub(crate) fn pin_signals(&self) -> CK_FLAGS {
-        self.pin_signals
+        match self.profile {
+            Profile::Dnie => self.pin_signals,
+            Profile::Signals => pin::standing_signals(card::read_tries_left(&self.dir)),
+        }
     }
 
     pub(crate) fn session_count(&self) -> usize {
@@ -107,21 +121,58 @@ impl Module {
         pin: Option<&[u8]>,
     ) -> Result<(), CK_RV> {
         self.check_session(handle)?;
-        if user != CKU_USER {
-            return Err(CKR_USER_TYPE_INVALID);
+        match user {
+            CKU_USER => self.login_user(handle, pin),
+            CKU_CONTEXT_SPECIFIC => self.login_for_signature(handle, pin),
+            _ => Err(CKR_USER_TYPE_INVALID),
         }
+    }
+
+    fn login_user(&mut self, handle: CK_SESSION_HANDLE, pin: Option<&[u8]>) -> Result<(), CK_RV> {
         if self.logged_in {
             return Err(CKR_USER_ALREADY_LOGGED_IN);
         }
+        if self.interfered_with(handle) {
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
+        self.submit_pin(pin)?;
+        self.logged_in = true;
+        Ok(())
+    }
+
+    fn login_for_signature(
+        &mut self,
+        handle: CK_SESSION_HANDLE,
+        pin: Option<&[u8]>,
+    ) -> Result<(), CK_RV> {
+        if !self.logged_in {
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
+        if self.session(handle)?.signing.is_none() {
+            return Err(CKR_OPERATION_NOT_INITIALIZED);
+        }
+        self.submit_pin(pin)?;
+        self.session(handle)?.signature_authorized = true;
+        Ok(())
+    }
+
+    /// Otro programa usa la tarjeta una vez: las sesiones abiertas hasta entonces pierden su canal.
+    fn interfered_with(&mut self, handle: CK_SESSION_HANDLE) -> bool {
+        if std::mem::take(&mut self.interference_pending) {
+            self.stale_sessions.extend(self.sessions.keys().copied());
+        }
+        self.stale_sessions.remove(&handle)
+    }
+
+    fn submit_pin(&mut self, pin: Option<&[u8]>) -> Result<(), CK_RV> {
         let attempt = pin::verify(&self.dir, pin);
         if let Some(signals) = attempt.signals {
             self.pin_signals = signals;
         }
-        if attempt.rv != CKR_OK {
-            return Err(attempt.rv);
+        match attempt.rv {
+            CKR_OK => Ok(()),
+            rv => Err(rv),
         }
-        self.logged_in = true;
-        Ok(())
     }
 
     pub(crate) fn logout(&mut self, handle: CK_SESSION_HANDLE) -> Result<(), CK_RV> {
@@ -215,6 +266,23 @@ impl Module {
         Ok(())
     }
 
+    pub(crate) fn sign_update(
+        &mut self,
+        handle: CK_SESSION_HANDLE,
+        data: &[u8],
+    ) -> Result<(), CK_RV> {
+        self.signing_operation(handle)?;
+        self.session(handle)?.signed_data.extend_from_slice(data);
+        Ok(())
+    }
+
+    /// La firma de lo acumulado por `sign_update`, sin cerrar la operación: la cierra `sign_done`.
+    pub(crate) fn sign_final(&mut self, handle: CK_SESSION_HANDLE) -> Result<Vec<u8>, CK_RV> {
+        self.signing_operation(handle)?;
+        let data = self.session(handle)?.signed_data.clone();
+        self.sign(handle, &data)
+    }
+
     /// La firma de `data` con la operación en curso, sin cerrarla: la cierra `sign_done`.
     pub(crate) fn sign(
         &mut self,
@@ -223,6 +291,9 @@ impl Module {
     ) -> Result<Vec<u8>, CK_RV> {
         let (mechanism, key) = self.signing_operation(handle)?;
         let role = key_role(key).ok_or(CKR_KEY_HANDLE_INVALID)?;
+        if self.requires_login_per_signature(role) && !self.session(handle)?.signature_authorized {
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
         let signature = signing::sign(&self.material, role, mechanism, data);
         if signature.is_err() {
             self.sign_done(handle);
@@ -239,7 +310,13 @@ impl Module {
     pub(crate) fn sign_done(&mut self, handle: CK_SESSION_HANDLE) {
         if let Some(session) = self.sessions.get_mut(&handle) {
             session.signing = None;
+            session.signed_data.clear();
+            session.signature_authorized = false;
         }
+    }
+
+    fn requires_login_per_signature(&self, role: KeyRole) -> bool {
+        self.profile == Profile::Signals && role == KeyRole::Signing
     }
 
     fn signing_operation(

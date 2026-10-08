@@ -1,15 +1,16 @@
 //! Los objetos de la tarjeta, con las etiquetas del DNIe: tres certificados públicos y dos claves privadas.
 
 use cryptoki_sys::{
-    CKA_CERTIFICATE_TYPE, CKA_CLASS, CKA_DECRYPT, CKA_EXTRACTABLE, CKA_ID, CKA_ISSUER,
-    CKA_KEY_TYPE, CKA_LABEL, CKA_MODIFIABLE, CKA_MODULUS, CKA_PRIVATE, CKA_PRIVATE_EXPONENT,
-    CKA_PUBLIC_EXPONENT, CKA_SENSITIVE, CKA_SERIAL_NUMBER, CKA_SIGN, CKA_SUBJECT, CKA_TOKEN,
-    CKA_VALUE, CKC_X_509, CKK_RSA, CKO_CERTIFICATE, CKO_PRIVATE_KEY, CK_ATTRIBUTE_TYPE,
-    CK_OBJECT_HANDLE, CK_ULONG,
+    CKA_ALWAYS_AUTHENTICATE, CKA_CERTIFICATE_TYPE, CKA_CLASS, CKA_DECRYPT, CKA_EXTRACTABLE, CKA_ID,
+    CKA_ISSUER, CKA_KEY_TYPE, CKA_LABEL, CKA_MODIFIABLE, CKA_MODULUS, CKA_PRIVATE,
+    CKA_PRIVATE_EXPONENT, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE, CKA_SERIAL_NUMBER, CKA_SIGN,
+    CKA_SUBJECT, CKA_TOKEN, CKA_VALUE, CKC_X_509, CKK_RSA, CKO_CERTIFICATE, CKO_PRIVATE_KEY,
+    CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_ULONG,
 };
 use openssl::hash::{hash, MessageDigest};
 use openssl::x509::X509;
 
+use crate::card::Profile;
 use crate::material::{Failure, Identity, Material};
 
 /// Un atributo tal como lo pediría quien llama a `C_GetAttributeValue`.
@@ -68,13 +69,18 @@ pub(crate) fn key_role(handle: CK_OBJECT_HANDLE) -> Option<KeyRole> {
 }
 
 /// Los objetos en el orden de sus manejadores, que empiezan en 1.
-pub(crate) fn objects_of(material: &Material) -> Result<Vec<Object>, Failure> {
+pub(crate) fn objects_of(material: &Material, profile: Profile) -> Result<Vec<Object>, Failure> {
     Ok(vec![
         certificate("CertAutenticacion", &material.authentication.certificate)?,
         certificate("CertFirmaDigital", &material.signing.certificate)?,
         certificate("CertCAIntermediaDGP", &material.intermediate)?,
-        private_key("KprivAutenticacion", &material.authentication, true)?,
-        private_key("KprivFirmaDigital", &material.signing, false)?,
+        private_key("KprivAutenticacion", &material.authentication, true, false)?,
+        private_key(
+            "KprivFirmaDigital",
+            &material.signing,
+            false,
+            profile == Profile::Signals,
+        )?,
     ])
 }
 
@@ -100,30 +106,39 @@ fn certificate(label: &str, certificate: &X509) -> Result<Object, Failure> {
     })
 }
 
-fn private_key(label: &str, identity: &Identity, decrypts: bool) -> Result<Object, Failure> {
+fn private_key(
+    label: &str,
+    identity: &Identity,
+    decrypts: bool,
+    always_authenticate: bool,
+) -> Result<Object, Failure> {
     let rsa = identity.key.rsa()?;
+    let mut attributes = vec![
+        (CKA_CLASS, ulong(CKO_PRIVATE_KEY)),
+        (CKA_KEY_TYPE, ulong(CKK_RSA)),
+        (CKA_TOKEN, boolean(true)),
+        (CKA_PRIVATE, boolean(true)),
+        (CKA_MODIFIABLE, boolean(false)),
+        (CKA_LABEL, bytes(label.as_bytes())),
+        (CKA_ID, bytes(&id_of(&identity.certificate)?)),
+        (
+            CKA_SUBJECT,
+            bytes(&identity.certificate.subject_name().to_der()?),
+        ),
+        (CKA_SIGN, boolean(true)),
+        (CKA_DECRYPT, boolean(decrypts)),
+        (CKA_SENSITIVE, boolean(true)),
+        (CKA_EXTRACTABLE, boolean(false)),
+        (CKA_MODULUS, bytes(&rsa.n().to_vec())),
+        (CKA_PUBLIC_EXPONENT, bytes(&rsa.e().to_vec())),
+        (CKA_PRIVATE_EXPONENT, Stored::Sensitive),
+        (CKA_VALUE, Stored::Sensitive),
+    ];
+    if always_authenticate {
+        attributes.push((CKA_ALWAYS_AUTHENTICATE, boolean(true)));
+    }
     Ok(Object {
-        attributes: vec![
-            (CKA_CLASS, ulong(CKO_PRIVATE_KEY)),
-            (CKA_KEY_TYPE, ulong(CKK_RSA)),
-            (CKA_TOKEN, boolean(true)),
-            (CKA_PRIVATE, boolean(true)),
-            (CKA_MODIFIABLE, boolean(false)),
-            (CKA_LABEL, bytes(label.as_bytes())),
-            (CKA_ID, bytes(&id_of(&identity.certificate)?)),
-            (
-                CKA_SUBJECT,
-                bytes(&identity.certificate.subject_name().to_der()?),
-            ),
-            (CKA_SIGN, boolean(true)),
-            (CKA_DECRYPT, boolean(decrypts)),
-            (CKA_SENSITIVE, boolean(true)),
-            (CKA_EXTRACTABLE, boolean(false)),
-            (CKA_MODULUS, bytes(&rsa.n().to_vec())),
-            (CKA_PUBLIC_EXPONENT, bytes(&rsa.e().to_vec())),
-            (CKA_PRIVATE_EXPONENT, Stored::Sensitive),
-            (CKA_VALUE, Stored::Sensitive),
-        ],
+        attributes,
         private: true,
     })
 }

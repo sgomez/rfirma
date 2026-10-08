@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use tempfile::TempDir;
 
-use crate::card::{CALL_LOG, TRIES_LEFT};
+use crate::card::{Profile, CALL_LOG, INTERFERENCE, PROFILE, REMOVED_FROM, TRIES_LEFT};
 
 /// Una tarjeta aislada: cada copia del módulo es una instancia aparte, aunque viva en el mismo proceso.
 pub struct FakeCard {
@@ -34,6 +34,24 @@ impl FakeCard {
         fs::write(dir.path().join(TRIES_LEFT), tries.to_string())?;
         fs::copy(built_module()?, dir.path().join(module_file_name()))?;
         Ok(Self { dir })
+    }
+
+    /// Pasa a ser una tarjeta que no es el DNIe: da `COUNT_LOW`, `FINAL_TRY` y `LOCKED` siempre y exige un login por firma.
+    pub fn signals_profile(self) -> io::Result<Self> {
+        fs::write(self.dir.path().join(PROFILE), Profile::SIGNALS_NAME)?;
+        Ok(self)
+    }
+
+    /// Otro programa usa la tarjeta tras abrirse la primera sesión: el primer `C_Login` de las sesiones abiertas falla.
+    pub fn interfered(self) -> io::Result<Self> {
+        fs::write(self.dir.path().join(INTERFERENCE), "")?;
+        Ok(self)
+    }
+
+    /// Retira la tarjeta a partir de la llamada `call`, contada desde 1: esa y las siguientes fallan como sin tarjeta.
+    pub fn removed_from_call(self, call: usize) -> io::Result<Self> {
+        fs::write(self.dir.path().join(REMOVED_FROM), call.to_string())?;
+        Ok(self)
     }
 
     /// La ruta del módulo que se le da a `cryptoki` o a un almacén de clase tarjeta.

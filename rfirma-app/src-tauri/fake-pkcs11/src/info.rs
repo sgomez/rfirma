@@ -25,11 +25,15 @@ pub(crate) fn library() -> CK_INFO {
     }
 }
 
-pub(crate) fn slot() -> CK_SLOT_INFO {
+pub(crate) fn slot(card_present: bool) -> CK_SLOT_INFO {
     CK_SLOT_INFO {
         slotDescription: padded("Lector falso de DNIe"),
         manufacturerID: padded("rfirma"),
-        flags: CKF_TOKEN_PRESENT | CKF_REMOVABLE_DEVICE | CKF_HW_SLOT,
+        flags: if card_present {
+            CKF_TOKEN_PRESENT | CKF_REMOVABLE_DEVICE | CKF_HW_SLOT
+        } else {
+            CKF_REMOVABLE_DEVICE | CKF_HW_SLOT
+        },
         hardwareVersion: DEVICE_VERSION,
         firmwareVersion: DEVICE_VERSION,
     }

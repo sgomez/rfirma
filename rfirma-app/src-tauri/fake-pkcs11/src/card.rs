@@ -10,6 +10,47 @@ pub(crate) const PIN: &str = "12345678";
 pub(crate) const MAX_TRIES: u8 = 3;
 pub(crate) const TRIES_LEFT: &str = "tries-left";
 pub(crate) const CALL_LOG: &str = "calls.log";
+pub(crate) const PROFILE: &str = "profile";
+pub(crate) const INTERFERENCE: &str = "interference";
+pub(crate) const REMOVED_FROM: &str = "removed-from";
+
+/// Qué tarjeta imita el módulo: el DNIe medido, o una que da las tres señales del PIN y exige el login por firma.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Profile {
+    Dnie,
+    Signals,
+}
+
+impl Profile {
+    pub(crate) const SIGNALS_NAME: &'static str = "signals";
+}
+
+pub(crate) fn read_profile(dir: &Path) -> Profile {
+    match fs::read_to_string(dir.join(PROFILE)) {
+        Ok(name) if name.trim() == Profile::SIGNALS_NAME => Profile::Signals,
+        _ => Profile::Dnie,
+    }
+}
+
+pub(crate) fn interference_configured(dir: &Path) -> bool {
+    dir.join(INTERFERENCE).is_file()
+}
+
+/// La llamada, contada desde 1, a partir de la cual la tarjeta ya no está.
+fn removed_from_call(dir: &Path) -> Option<usize> {
+    fs::read_to_string(dir.join(REMOVED_FROM))
+        .ok()
+        .and_then(|text| text.trim().parse().ok())
+}
+
+/// Si la llamada que llega ahora es la de la retirada o una posterior.
+pub(crate) fn card_removed(dir: &Path) -> bool {
+    removed_from_call(dir).is_some_and(|from| calls_received(dir) + 1 >= from)
+}
+
+fn calls_received(dir: &Path) -> usize {
+    fs::read_to_string(dir.join(CALL_LOG)).map_or(0, |log| log.lines().count())
+}
 
 pub(crate) fn read_tries_left(dir: &Path) -> u8 {
     fs::read_to_string(dir.join(TRIES_LEFT))
