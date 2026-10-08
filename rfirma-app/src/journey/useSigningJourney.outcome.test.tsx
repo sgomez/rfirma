@@ -101,6 +101,7 @@ function renderJourney(
       kind: "listed" as const,
       certificates: [{ ...aCertificate, remembered: true }],
     },
+    reader: { kind: "noReader" } as const,
     lookAgain: async () => {},
     install: async () => false,
   };

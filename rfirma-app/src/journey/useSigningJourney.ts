@@ -39,7 +39,10 @@ interface SigningJourneyInput {
   ports: SigningJourneyPorts;
   document: OpenedDocument;
   placement: PlacementState;
-  certificates: Pick<ReturnType<typeof useCertificateListing>, "listing" | "lookAgain" | "install">;
+  certificates: Pick<
+    ReturnType<typeof useCertificateListing>,
+    "listing" | "reader" | "lookAgain" | "install"
+  >;
   rubric: Rubric | null;
   /** La carpeta de destino de los ajustes; `null` mientras no se han leído. */
   settingsFolder: string | null;
@@ -126,6 +129,7 @@ export function useSigningJourney({
   return {
     certificate: {
       state: certificate,
+      reader: certificates.reader,
       choose: chooseCertificate,
       installFailure,
       install: installCertificate,

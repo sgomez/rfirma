@@ -1,4 +1,4 @@
-//! Las historias del panel de firma antes de firmar: cada estado del certificado, la firma visible con sus páginas y modelos, las firmas previas, firmando y el error.
+//! Las historias del panel de firma antes de firmar: cada estado del certificado y del lector, la firma visible con sus páginas y modelos, las firmas previas, firmando y el error.
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
@@ -9,6 +9,7 @@ import {
   WRITABLE_DESTINATION,
 } from "../../.storybook/decorators/signingPanel";
 import { placementStateOf } from "../placement/testing/fixtures";
+import type { CertificateState, ReaderStatus } from "./certificate";
 import { SigningPanel } from "./SigningPanel";
 import {
   aCertificateSection,
@@ -87,6 +88,43 @@ export const Searching: Story = { args: { certificate: aCertificateSection({ kin
 
 export const NoCertificates: Story = {
   args: { certificate: aCertificateSection({ kind: "empty" }) },
+};
+
+const withReader = (reader: ReaderStatus, state = meta.args.certificate.state) =>
+  aCertificateSection(state, { reader });
+
+const withDnie: CertificateState = {
+  kind: "unchosen",
+  certificates: [...STORY_CERTIFICATES, { ...PERSONAL_CERTIFICATE, id: "dnie", stores: ["dnie"] }],
+};
+
+export const ReaderWithoutCard: Story = {
+  args: { certificate: withReader({ kind: "noCard" }) },
+};
+
+export const ReadingTheCard: Story = {
+  args: {
+    certificate: withReader(
+      { kind: "reading" },
+      { kind: "unchosen", certificates: STORY_CERTIFICATES },
+    ),
+  },
+};
+
+export const DnieReady: Story = {
+  args: { certificate: withReader({ kind: "dnieReady" }, withDnie) },
+};
+
+export const CardReady: Story = {
+  args: { certificate: withReader({ kind: "cardReady" }) },
+};
+
+export const UnreadableCard: Story = {
+  args: { certificate: withReader({ kind: "unreadable" }) },
+};
+
+export const NoCertificatesWithReader: Story = {
+  args: { certificate: withReader({ kind: "noCard" }, { kind: "empty" }) },
 };
 
 export const SearchFailed: Story = {

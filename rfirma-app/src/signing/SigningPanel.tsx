@@ -12,6 +12,7 @@ import { ModelFieldset } from "./ModelFieldset";
 import { PanelFooter } from "./PanelFooter";
 import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
 import type { PreviousSignaturesReport } from "./previousSignatures";
+import { ReaderLine } from "./ReaderLine";
 import type { RubricSection } from "./rubric";
 import "./SigningPanel.css";
 import { VisibleSignatureFieldset } from "./VisibleSignatureFieldset";
@@ -115,6 +116,7 @@ export function SigningPanel({
                 disabled={signing}
               />
             </div>
+            <ReaderLine reader={certificateSection.reader} />
             <CertificateExits
               state={certificate}
               installFailure={certificateSection.installFailure}

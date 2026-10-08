@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const invoke = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
+const listen = vi.hoisted(() => vi.fn());
+vi.mock("@tauri-apps/api/event", () => ({ listen }));
 
 const {
   tauriCertificateStore,
@@ -188,6 +190,49 @@ describe("los puertos de firma sobre Tauri", () => {
     await tauriCertificateStore().emptyStore();
 
     expect(invoke).toHaveBeenCalledWith("empty_installed_store");
+  });
+});
+
+/**
+ * **Grada A**: las noticias de los lectores contra un `listen` falso. El nombre
+ * del evento es el de `CARD_READERS` en el backend.
+ */
+describe("las noticias de los lectores sobre Tauri", () => {
+  beforeEach(() => {
+    listen.mockReset();
+  });
+
+  function listening() {
+    let handler: (event: { payload: unknown }) => void = () => {};
+    const stop = vi.fn();
+    listen.mockImplementation((_name: string, onEvent: typeof handler) => {
+      handler = onEvent;
+      return Promise.resolve(stop);
+    });
+    return { emit: (payload: unknown) => handler({ payload }), stop };
+  }
+
+  it("hands on what the backend says about the readers, by the event's name", () => {
+    const window = listening();
+    const heard: unknown[] = [];
+
+    tauriCertificateStore().followReaders((news) => heard.push(news));
+    window.emit({ reader: { kind: "reading" }, certificates: null });
+
+    expect(listen.mock.calls[0]?.[0]).toBe("card-readers");
+    expect(heard).toEqual([{ reader: { kind: "reading" }, certificates: null }]);
+  });
+
+  it("stops listening, even before listening is ready, and hears nothing after", async () => {
+    const window = listening();
+    const heard: unknown[] = [];
+
+    tauriCertificateStore().followReaders((news) => heard.push(news))();
+    window.emit({ reader: { kind: "noCard" }, certificates: null });
+    await Promise.resolve();
+
+    expect(heard).toEqual([]);
+    expect(window.stop).toHaveBeenCalled();
   });
 });
 

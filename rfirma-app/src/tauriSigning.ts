@@ -1,8 +1,9 @@
 //! Los puertos de Tauri de la firma: certificados, las tres etapas, la rúbrica, la última firma visible, el sello, el destino y la apertura del firmado.
 
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { classify } from "./errors/classify";
-import type { Certificate, CertificateStore } from "./signing/certificate";
+import type { Certificate, CertificateStore, ReaderNews } from "./signing/certificate";
 import type {
   Destination,
   DestinationSource,
@@ -21,9 +22,11 @@ import type {
 import { stage } from "./tauriStage";
 import { pdfjsLoader } from "./viewer/pdfjsLoader";
 
+const CARD_READERS = "card-readers";
+
 /**
- * Los certificados de los tokens conectados, y los dos gestos de Preferencias
- * sobre los `.p12` instalados. Listar no pide el PIN.
+ * Los certificados de los tokens conectados, los dos gestos de Preferencias
+ * sobre los `.p12` instalados y las noticias de los lectores. Listar no pide el PIN.
  */
 export function tauriCertificateStore(): CertificateStore {
   return {
@@ -31,6 +34,16 @@ export function tauriCertificateStore(): CertificateStore {
     install: () => invoke<boolean>("install_certificate"),
     remove: (id) => invoke<void>("remove_certificate", { id }),
     emptyStore: () => invoke<void>("empty_installed_store"),
+    followReaders: (onNews) => {
+      let listening = true;
+      const stopping = listen<ReaderNews>(CARD_READERS, (event) => {
+        if (listening) onNews(event.payload);
+      });
+      return () => {
+        listening = false;
+        void stopping.then((stop) => stop());
+      };
+    },
   };
 }
 

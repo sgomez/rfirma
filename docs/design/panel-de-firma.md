@@ -37,6 +37,7 @@ documento: el nombre ya está en la [pestaña](pestanas-de-documentos.md).
 Zona que se desliza, de arriba abajo, cada bloque solo cuando toca:
 
 1. **Certificado**: el selector, siempre el primero mientras se puede firmar.
+   Debajo, **la línea del lector**, si hay un lector conectado.
 2. **Aviso de firmas previas**, si el PDF ya trae firmas.
 3. **Las salidas de sin certificados**, **el resumen** o **el error de firma**,
    según el estado.
@@ -79,7 +80,9 @@ Cada uno tiene su historia en «Flujos/Firma/SigningPanel», salvo que se diga o
 | Sin certificado elegido | `Unchosen` | Selector sin elegido, firmar al 55 %, firma visible apagada y desactivada con su ayuda |
 | Buscando certificados | `Searching` | La caja lo dice con un indicador; firmar al 55 % |
 | Sin certificados | `NoCertificates` | El selector se queda en su sitio, desactivado y diciendo «Sin certificados»; debajo, «Añadir un certificado…» (primario, el ancho que sobra) y «Volver a buscar» (secundario); el pie deja solo «Firmar», desactivado |
+| Sin certificados, con lector | `NoCertificatesWithReader` | La misma forma, con la línea del lector entre el selector desactivado y las salidas |
 | Búsqueda fallida | `SearchFailed` | La misma forma, con el error clasificado debajo de las salidas; la caja dice que no se pudo buscar, no que no haya ninguno |
+| Lector sin tarjeta, leyendo, tarjeta lista e ilegible | `ReaderWithoutCard`, `ReadingTheCard`, `DnieReady`, `CardReady`, `UnreadableCard` | La línea del lector bajo el selector; sin lector (`Ready`), no hay línea. Mientras se lee, los demás certificados se siguen pudiendo elegir |
 | Varios certificados | `SeveralCertificates` | El desplegable los lista todos al abrirse |
 | Certificados abiertos | `Open` de «Dominio/Firma/CertificateSelect» | El buscador en lugar de la caja y la lista flotando |
 | Firma visible | `VisibleSignature*` | Una página, varias, todas, otra página a la vista y sin colocar |
@@ -303,6 +306,18 @@ resto del panel y el pie, que no se mueven.
 - **Se recuerda al firmar con él**, no al elegirlo, y la próxima sesión sale ya
   puesto ([ADR-0010](../adr/0010-memoria-entre-sesiones.md)).
 - La lista se cierra al elegir, al pulsar fuera y con `Escape`.
+
+**La línea del lector** va justo debajo del selector y dice qué pasa con los
+lectores de tarjetas: `panel.certificate.reader.*`, con el icono de la tarjeta
+y, mientras se lee, con el indicador que gira. Sin lector no se pinta. La lista
+solo tiene certificados: ni filas de «leyendo» o de «ilegible», ni fila del
+recordado si su tarjeta no está; eso lo dice la línea.
+
+**La lista cambia sola** al meter o sacar una tarjeta, sin «Volver a buscar».
+Meter una tarjeta nunca cambia lo elegido; sacar la del elegido deja el panel
+sin elegido, y el recordado que llega con su tarjeta se elige solo si no hay
+ninguno elegido, igual que al arrancar. Así la aplicación sigue sin decidir con
+qué identidad se firma ([ADR-0048](../adr/0048-una-sola-lista-de-certificados-con-la-tarjeta-en-caliente.md)).
 
 **La primera vez no hay certificado elegido.** No se preselecciona ninguno,
 ni siquiera cuando hay uno solo —la identidad con que se firma no la elige la
