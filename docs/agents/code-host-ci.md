@@ -6,8 +6,9 @@ it out, reviewing the diff and merging need nothing from here.
 
 Three operations read the same `CI` workflow, for different readers.
 
-- **Wait for the checks and gate the merge** (the orchestrator, before
-  merging):
+- **Wait for the checks and gate the merge** (before merging; the
+  orchestrator runs the bundled `checks-gate.sh` instead, which does this,
+  the mergeable probe and the classification below in one call):
 
   ```bash
   gh pr checks <PR> --watch --fail-fast   # exits non-zero if any check fails
