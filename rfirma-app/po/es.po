@@ -111,10 +111,12 @@ msgid "errors.messages.incorrectPin.body"
 msgstr "La tarjeta se bloquea tras varios intentos fallidos."
 
 msgid "errors.messages.pinLocked.title"
-msgstr "La tarjeta está bloqueada"
+msgstr "La tarjeta tiene el PIN bloqueado"
 
 msgid "errors.messages.pinLocked.body"
-msgstr "Desbloquéala con el PUK."
+msgstr ""
+"No puedes firmar con ella hasta desbloquearlo. Si es un DNIe, se desbloquea "
+"en un punto de actualización del DNIe."
 
 #. Mensaje genérico: revisar la tarjeta y volver a buscar. Lo usan tokenAbsent y certificateNotFound.
 msgid "errors.messages.checkToken.title"
@@ -980,7 +982,9 @@ msgstr "Diagnosticar problemas"
 
 #. Antes de la orden que dice qué aplicación abre `afirma://`.
 msgid "status.detail.diagnoseIntro"
-msgstr "Si al firmar en una sede se abre otra aplicación sin preguntar, mira cuál es la predeterminada:"
+msgstr ""
+"Si al firmar en una sede se abre otra aplicación sin preguntar, mira cuál es "
+"la predeterminada:"
 
 #. {{file}} es el nombre del fichero de escritorio de rFirma; va antes de la orden que lo fija como predeterminado.
 msgid "status.detail.diagnoseFix"

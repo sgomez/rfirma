@@ -14,7 +14,9 @@ use crate::identity::domain::ecdsa;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 
-use super::session::{context, private_key, slot_of, the_store_is_really_there};
+use super::session::{
+    context, private_key, slot_of, the_store_is_really_there, token_info_unless_locked,
+};
 
 pub(super) fn sign_holding_the_turn(
     reference: &CertificateRef,
@@ -27,6 +29,7 @@ pub(super) fn sign_holding_the_turn(
     let context = context(&store)?;
     let slot = slot_of(&context, reference.token_label())?;
     let offered = the_slot_offers(&context, slot, algorithm)?;
+    token_info_unless_locked(&context, slot)?;
     let session = context.open_ro_session(slot)?;
     let pin = secret
         .as_str()

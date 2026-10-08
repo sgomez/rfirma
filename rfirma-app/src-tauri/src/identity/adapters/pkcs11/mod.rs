@@ -23,7 +23,7 @@ use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 pub use nss::{NssHost, RealNssHost};
-use session::{context, slot_of, the_store_is_really_there};
+use session::{context, slot_of, the_store_is_really_there, token_info_unless_locked};
 
 /// El adaptador del puerto [`Token`] sobre los módulos PKCS#11 del sistema.
 #[derive(Clone, Copy, Debug, Default)]
@@ -129,7 +129,7 @@ pub fn store_secret(reference: &CertificateRef) -> Result<StoreSecret, TokenErro
         the_store_is_really_there(&store)?;
         let context = context(&store)?;
         let slot = slot_of(&context, reference.token_label())?;
-        let info = context.get_token_info(slot)?;
+        let info = token_info_unless_locked(&context, slot)?;
         Ok(StoreSecret::of_token(
             info.login_required(),
             info.protected_authentication_path(),
@@ -171,6 +171,7 @@ pub fn accepts_the_secret(
         the_store_is_really_there(&store)?;
         let context = context(&store)?;
         let slot = slot_of(&context, reference.token_label())?;
+        token_info_unless_locked(&context, slot)?;
         let session = context.open_ro_session(slot)?;
         match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
             Ok(()) => {

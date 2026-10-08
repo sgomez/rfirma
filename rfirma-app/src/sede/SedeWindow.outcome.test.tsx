@@ -64,7 +64,7 @@ const SITE_ACTION: Record<keyof typeof REFUSAL_ACTION_OF, string> = {
 
 const DESK_TITLE: Record<(typeof NAMED_BY_THE_DESK)[number], string> = {
   incorrectPin: "El PIN no es correcto",
-  pinLocked: "La tarjeta está bloqueada",
+  pinLocked: "La tarjeta tiene el PIN bloqueado",
   tokenAbsent: "Falta la tarjeta o el certificado",
   expiredSession: "Algo ha fallado",
   moduleNotFound: "No se ha podido cargar el módulo de la tarjeta",
