@@ -10,6 +10,11 @@ default-run = "rfirma"
 
 # El binario se llama igual que `command:` en el manifiesto flatpak
 # (packaging/flatpak/me.sgomez.rfirma.yml). Si cambias uno, cambia el otro.
+# El módulo PKCS#11 falso de las pruebas comparte este Cargo.lock; `cargo build` y
+# `cargo test` sin `-p` siguen compilando solo la aplicación.
+[workspace]
+members = ["fake-pkcs11"]
+
 [[bin]]
 name = "rfirma"
 path = "src/main.rs"

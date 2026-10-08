@@ -13,6 +13,7 @@ set dotenv-override := true
 
 windows := if os_family() == "windows" { "true" } else { "false" }
 macos := if os() == "macos" { "true" } else { "false" }
+rust_workspace := if windows == "true" { "--workspace --exclude fake-pkcs11" } else { "--workspace" }
 
 # Cargo y las herramientas de `~/.local/bin` quedan fuera del PATH de una shell no interactiva: las recetas se llaman sin prefijo.
 export PATH := if windows == "true" { env("PATH", "") } else { home_directory() / ".cargo/bin" + ":" + home_directory() / ".local/bin" + ":" + env("PATH", "/usr/local/bin:/usr/bin:/bin") }
@@ -322,10 +323,10 @@ structural-guards:
 fmt-check-rust:
     cd {{ tauri }} && cargo fmt --all -- --check
 
-# rustfmt y clippy sobre rfirma-app/src-tauri.
+# rustfmt y clippy sobre rfirma-app/src-tauri y el módulo PKCS#11 falso de sus pruebas, que en Windows no compila.
 [private]
 lint-rust: fmt-check-rust build-ts
-    cd {{ tauri }} && cargo clippy --all-targets --all-features -- -D warnings
+    cd {{ tauri }} && cargo clippy {{ rust_workspace }} --all-targets --all-features -- -D warnings
 
 # Dependencias de Cargo.toml que no usa nadie. No compila: analiza el fuente.
 [private]
@@ -419,7 +420,7 @@ llvm-cov-tag:
 [private]
 coverage: (certs "install") build-ts llvm-cov-tag
     mkdir -p "{{ coverage_out }}/coverage"
-    cd {{ tauri }} && {{ no_debuginfo }} {{ cov_lock }} {{ root }}/scripts/token-per-test.sh cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
+    cd {{ tauri }} && {{ no_debuginfo }} {{ cov_lock }} {{ root }}/scripts/token-per-test.sh cargo llvm-cov --workspace --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
         --fail-under-lines {{ coverage_floor }}
 
 # La puerta del carril rapido, con el modulo FFI oculto.
