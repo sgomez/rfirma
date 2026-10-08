@@ -1,6 +1,6 @@
 //! El fallo como situación, no como mensaje: `classify` convierte lo que rechace una orden en un `NamedFailure`. Sin React.
 
-import type { ErrorSituation } from "./errorMessage";
+import { type ErrorSituation, MESSAGE_OF } from "./errorMessage";
 
 /**
  * Un fallo: una **situación** nuestra, que el catálogo
@@ -32,6 +32,10 @@ function isRejectedFailure(thrown: unknown): thrown is RejectedFailure {
   );
 }
 
+function isKnownSituation(situation: string): situation is ErrorSituation {
+  return Object.hasOwn(MESSAGE_OF, situation);
+}
+
 /**
  * Clasifica lo que sea que haya rechazado.
  *
@@ -46,7 +50,7 @@ function isRejectedFailure(thrown: unknown): thrown is RejectedFailure {
 export function classify(thrown: unknown): NamedFailure {
   if (isRejectedFailure(thrown)) {
     return {
-      situation: thrown.situation as ErrorSituation,
+      situation: isKnownSituation(thrown.situation) ? thrown.situation : "unknown",
       detail: thrown.detail,
       attemptsLeft: thrown.attemptsLeft ?? null,
     };

@@ -42,6 +42,12 @@ const cardGone: TokenFailure = {
   attemptsLeft: null,
 };
 
+const declined = {
+  situation: "userCancelled",
+  detail: "el diálogo del secreto se cerró sin respuesta",
+  attemptsLeft: null,
+} as unknown as TokenFailure;
+
 /**
  * Una orden cualquiera. Lo que se prueba aquí es **el orden de las etapas**, no
  * su contenido: la orden se pasa entera y este bucle no la mira.
@@ -193,6 +199,23 @@ describe("useSigning", () => {
       origin: anOrder().document,
     });
   });
+
+  it.each([
+    ["presign", { presign: async () => failed(declined) }],
+    ["sign", { sign: async () => failed(declined) }],
+    ["postsign", { postsign: async () => failed(declined) }],
+  ] as const)(
+    "goes back to the panel when the secret prompt is declined at %s",
+    async (_stage, override) => {
+      const discard = vi.fn(async () => {});
+      const { result } = renderHook(() => useSigning(backendOf({ ...override, discard })));
+
+      await act(() => result.current.start(certificate, anOrder()));
+
+      expect(result.current.state).toEqual({ kind: "idle" });
+      expect(discard).toHaveBeenCalledOnce();
+    },
+  );
 
   it("keeps the postsignature failure with its own stage in the raw detail", async () => {
     const assembling: TokenFailure = {
