@@ -16,6 +16,11 @@ Los nativos no se empaquetan aquí: los produce el *bundler* de Tauri
 | `sources.lock` | El sello del `Cargo.lock` contra el que se generó |
 | `check-sources.sh` | Falla si esas fuentes se han quedado atrás |
 
+OpenSC y `pcsc-lite` llevan `x-checker-data` en el manifiesto, y el workflow
+`flatpak-versions.yml` (lunes y a mano) sale en rojo cuando se publica una
+versión nueva de cualquiera de los dos. La subida es a mano, a la siguiente
+versión publicada y nunca a un commit de `master`.
+
 ## Instalar
 
 El bundle **no trae el runtime**, pero lleva dentro la dirección de **Flathub**

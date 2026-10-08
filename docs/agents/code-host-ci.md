@@ -148,6 +148,7 @@ to be fast.
 | nightly | `Nocturna` (`nightly.yml`) | Windows and macOS on `main` once a day if `main` moved since the last one; a red opens or comments one `needs-triage` issue |
 | warm | `Calienta la cache de la entrega` (`warm-release-cache.yml`) | Linux daily if `main` moved; Windows on the weekly cron; both on manual dispatch; never a PR |
 | cron | `Caducidad del kit FNMT` (`fnmt-kit-expiry.yml`) | weekly cron and manual dispatch only |
+| cron | `Versiones del flatpak` (`flatpak-versions.yml`) | weekly cron and manual dispatch only; red when OpenSC or pcsc-lite has a newer published release (`x-checker-data` in the manifest) |
 
 **Carriles por ficheros.** En un PR, `Alcance` pasa la lista de ficheros a
 `scripts/ci-lanes.sh`, y en un push a `main` la del intervalo `before...sha`. Un
