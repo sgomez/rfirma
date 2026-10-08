@@ -5,6 +5,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use openssl::bn::BigNum;
 use serde::{Deserialize, Serialize};
+use x509_cert::der::asn1::ObjectIdentifier;
 use x509_cert::der::{Decode, Encode};
 use x509_cert::ext::pkix::{BasicConstraints, KeyUsage};
 use x509_cert::Certificate;
@@ -14,6 +15,10 @@ use crate::identity::domain::store::Store;
 
 const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
 const EC_PUBLIC_KEY: &str = "1.2.840.10045.2.1";
+const COMMON_NAME: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.4.3");
+const COUNTRY: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.4.6");
+const ORGANIZATION: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.4.10");
+const ORGANIZATIONAL_UNIT: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.4.11");
 
 /// Coordenadas de persistencia para reencontrar un certificado en el almacén (ADR-0010).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -261,6 +266,46 @@ impl TokenCertificate {
         false
     }
 
+    /// Si lo emite una CA del DNIe, por el emisor y nunca por la etiqueta del objeto.
+    pub fn is_from_a_dnie(&self) -> bool {
+        let Ok(certificate) = Certificate::from_der(&self.der) else {
+            return false;
+        };
+        let issuer = certificate.tbs_certificate().issuer();
+        let attribute = |oid| -> Option<String> {
+            let value: x509_cert::ext::pkix::name::DirectoryString = issuer.by_oid(oid).ok()??;
+            Some(value.value().to_uppercase())
+        };
+        attribute(COMMON_NAME).is_some_and(|name| name.starts_with("AC DNIE "))
+            && attribute(ORGANIZATIONAL_UNIT).as_deref() == Some("DNIE")
+            && attribute(ORGANIZATION).as_deref() == Some("DIRECCION GENERAL DE LA POLICIA")
+            && attribute(COUNTRY).as_deref() == Some("ES")
+    }
+
+    /// Del DNIe y sin `nonRepudiation`: el de autenticación.
+    pub fn is_a_dnie_authentication(&self) -> bool {
+        self.is_from_a_dnie() && !self.declares_non_repudiation()
+    }
+
+    fn declares_non_repudiation(&self) -> bool {
+        Certificate::from_der(&self.der).is_ok_and(|certificate| {
+            matches!(
+                certificate.tbs_certificate().get_extension::<KeyUsage>(),
+                Ok(Some((_, usage))) if usage.non_repudiation()
+            )
+        })
+    }
+
+    /// Si es de una autoridad, con `CA:TRUE`.
+    pub fn is_an_authority(&self) -> bool {
+        Certificate::from_der(&self.der).is_ok_and(|certificate| {
+            matches!(
+                certificate.tbs_certificate().get_extension::<BasicConstraints>(),
+                Ok(Some((_, constraints))) if constraints.ca
+            )
+        })
+    }
+
     /// Estado del certificado en el instante actual.
     pub fn status(&self) -> CertificateStatus {
         self.status_at(SystemTime::now())
@@ -323,6 +368,8 @@ pub struct ListedCertificate {
     pub store: crate::identity::domain::store::StoreClass,
     /// Las clases de almacén donde está, por orden de preferencia.
     pub stores: Vec<crate::identity::domain::store::StoreClass>,
+    /// Si lo emite una CA del DNIe.
+    pub from_a_dnie: bool,
     pub status: CertificateStatus,
     /// Si alguna de sus copias fue la usada en la última firma.
     pub remembered: bool,

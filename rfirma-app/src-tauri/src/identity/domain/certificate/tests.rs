@@ -288,3 +288,163 @@ fn a_certificate_past_its_not_after_is_expired_and_not_usable() {
     );
     assert!(!certificate.status().is_usable());
 }
+
+const DGP: &str = "DIRECCION GENERAL DE LA POLICIA";
+
+fn issued_by(
+    label: &str,
+    issuer: &[(&str, &str)],
+    usage: Option<openssl::x509::X509Extension>,
+) -> TokenCertificate {
+    a_certificate_with_extensions(label, |builder| {
+        let mut name = X509Name::builder().expect("deberia poder construirse un nombre");
+        for (field, value) in issuer {
+            name.append_entry_by_text(field, value)
+                .expect("el atributo del emisor deberia entrar");
+        }
+        builder
+            .set_issuer_name(&name.build())
+            .expect("el emisor deberia ponerse");
+        if let Some(usage) = usage {
+            builder
+                .append_extension(usage)
+                .expect("keyUsage deberia anadirse");
+        }
+    })
+}
+
+fn a_dnie_authority(common_name: &str) -> Vec<(&str, &str)> {
+    vec![("C", "ES"), ("O", DGP), ("OU", "DNIE"), ("CN", common_name)]
+}
+
+fn non_repudiation() -> Option<openssl::x509::X509Extension> {
+    Some(
+        KeyUsage::new()
+            .critical()
+            .non_repudiation()
+            .build()
+            .expect("keyUsage deberia construirse"),
+    )
+}
+
+fn digital_signature() -> Option<openssl::x509::X509Extension> {
+    Some(
+        KeyUsage::new()
+            .critical()
+            .digital_signature()
+            .build()
+            .expect("keyUsage deberia construirse"),
+    )
+}
+
+#[test]
+fn a_certificate_issued_by_an_ac_dnie_of_the_police_is_from_a_dnie() {
+    let certificate = issued_by(
+        "CUALQUIERA",
+        &a_dnie_authority("AC DNIE 004"),
+        non_repudiation(),
+    );
+
+    assert!(certificate.is_from_a_dnie());
+}
+
+#[test]
+fn a_renewed_dnie_is_recognised_whatever_the_number_of_its_authority() {
+    for authority in ["AC DNIE 001", "AC DNIE 006", "AC DNIE 117"] {
+        let certificate = issued_by("SIN_ETIQUETA_DE_DNIE", &a_dnie_authority(authority), None);
+
+        assert!(certificate.is_from_a_dnie(), "{authority}");
+    }
+}
+
+#[test]
+fn an_issuer_missing_any_part_of_the_police_rule_is_not_a_dnie() {
+    let not_quite = [
+        vec![
+            ("C", "ES"),
+            ("O", DGP),
+            ("OU", "DNIE"),
+            ("CN", "AC RAIZ DNIE 2"),
+        ],
+        vec![
+            ("C", "ES"),
+            ("O", DGP),
+            ("OU", "FNMT"),
+            ("CN", "AC DNIE 004"),
+        ],
+        vec![
+            ("C", "ES"),
+            ("O", "FNMT-RCM"),
+            ("OU", "DNIE"),
+            ("CN", "AC DNIE 004"),
+        ],
+        vec![
+            ("C", "PT"),
+            ("O", DGP),
+            ("OU", "DNIE"),
+            ("CN", "AC DNIE 004"),
+        ],
+        vec![
+            ("C", "ES"),
+            ("O", "FNMT-RCM"),
+            ("OU", "Ceres"),
+            ("CN", "AC FNMT Usuarios"),
+        ],
+    ];
+
+    for issuer in not_quite {
+        let certificate = issued_by("CertFirmaDigital", &issuer, non_repudiation());
+
+        assert!(!certificate.is_from_a_dnie(), "{issuer:?}");
+    }
+}
+
+#[test]
+fn the_dnie_certificate_without_non_repudiation_is_its_authentication_one() {
+    let authentication = issued_by(
+        "CertFirmaDigital",
+        &a_dnie_authority("AC DNIE 004"),
+        digital_signature(),
+    );
+    let signing = issued_by(
+        "CertAutenticacion",
+        &a_dnie_authority("AC DNIE 004"),
+        non_repudiation(),
+    );
+    let elsewhere = issued_by(
+        "OTRA",
+        &[("C", "ES"), ("O", "FNMT-RCM"), ("CN", "AC FNMT Usuarios")],
+        digital_signature(),
+    );
+
+    assert!(authentication.is_a_dnie_authentication());
+    assert!(!signing.is_a_dnie_authentication());
+    assert!(!elsewhere.is_a_dnie_authentication());
+}
+
+#[test]
+fn a_certificate_with_ca_true_is_an_authority_and_one_without_it_is_not() {
+    let authority = a_certificate_with_extensions("CA", |builder| {
+        builder
+            .append_extension(
+                BasicConstraints::new()
+                    .critical()
+                    .ca()
+                    .build()
+                    .expect("basicConstraints deberia construirse"),
+            )
+            .expect("basicConstraints deberia anadirse");
+    });
+    let holder = a_certificate_with_extensions("TITULAR", |builder| {
+        builder
+            .append_extension(
+                BasicConstraints::new()
+                    .build()
+                    .expect("basicConstraints deberia construirse"),
+            )
+            .expect("basicConstraints deberia anadirse");
+    });
+
+    assert!(authority.is_an_authority());
+    assert!(!holder.is_an_authority());
+}

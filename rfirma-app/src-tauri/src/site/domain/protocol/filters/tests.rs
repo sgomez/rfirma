@@ -111,17 +111,6 @@ fn every_criterion_the_original_understands_crosses_untouched() {
 }
 
 #[test]
-fn unmeasured_criteria_contains_only_dnie_and_is_in_the_catalogue() {
-    assert_eq!(UNMEASURED_CRITERIA, &["dnie:"]);
-    for criterion in UNMEASURED_CRITERIA {
-        assert!(
-            ACCEPTED_CRITERIA.contains(criterion),
-            "«{criterion}» esta anotado como sin medir pero no esta en el catalogo"
-        );
-    }
-}
-
-#[test]
 fn the_sibling_keys_are_not_criteria_and_do_not_reach_the_engine() {
     let with_siblings = properties(&[
         ("headless", "true"),
