@@ -38,7 +38,7 @@ pub fn follow_the_readers_for(
     lend: impl Fn(&mut dyn FnMut(&dyn Relisting)) + Send + 'static,
 ) {
     let announcing = app.clone();
-    follow_the_readers_apart(Box::new(DesktopReaderWatch::default()), lend, move |news| {
+    follow_the_readers_apart(Box::<DesktopReaderWatch>::default(), lend, move |news| {
         announcing
             .state::<IdentityRoot>()
             .reader_now

@@ -45,7 +45,7 @@ fn a_card_arriving_during_the_consent_is_screened_by_the_filter_of_the_site() {
 }
 
 #[test]
-fn with_no_certificate_the_errand_looks_again_when_a_card_arrives() {
+fn with_no_certificate_the_errand_stays_put_when_a_card_arrives() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let rejected = a_usable_certificate("OTRA");
@@ -78,12 +78,10 @@ fn with_no_certificate_the_errand_looks_again_when_a_card_arrives() {
         &live,
     );
 
+    assert!(matches!(after, AfterTheReaders::Unchanged), "{after:?}");
     assert!(
-        matches!(
-            after,
-            AfterTheReaders::LookedAgain(Some(ErrandStep::AskingForConsent { .. }))
-        ),
-        "{after:?}"
+        matches!(live.moment(), Some(Moment::NoCertificate { .. })),
+        "el momento sigue esperando su «Volver a buscar»"
     );
 }
 

@@ -9,7 +9,7 @@ use crate::identity::ports::Relisting;
 use crate::identity::IdentityRoot;
 use crate::site::application::errand::{after_the_readers, AfterTheReaders};
 
-use super::window::{publish_what_moved, with_the_desk, SITE_WINDOW};
+use super::window::{with_the_desk, SITE_WINDOW};
 
 /// Quien vuelve a listar para la ventana de sede, con las asas que la sede ya concedió.
 struct ForTheSiteWindow {
@@ -24,10 +24,6 @@ impl Relisting for ForTheSiteWindow {
         let after = with_the_desk(&self.app, |desk, live| after_the_readers(desk, found, live));
         let rows = match after {
             AfterTheReaders::Accepted(accepted) => Some(identity.rows_keeping_handles(accepted)),
-            AfterTheReaders::LookedAgain(step) => {
-                publish_what_moved(&self.app, step);
-                None
-            }
             AfterTheReaders::Unchanged => None,
         };
         (rows, ready)
