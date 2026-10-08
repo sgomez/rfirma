@@ -141,6 +141,9 @@ Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrad
 - **several**: varios certificados de pruebas sin PIN, para los filtros, el almacén que nombra la
   sede y la fijación; el token queda alcanzable por su biblioteca, sin registrar.
 - **expired**: uno vigente y uno caducado, sin PIN, para ver qué oculta la selección.
+- **dnie**: el DNIe real que la persona tiene en el lector, con el OpenSC del sistema registrado; no
+  se copia nada de la tarjeta y el PIN lo teclea la persona. Sus comprobaciones son del camino
+  feliz, con asistencia de persona, y quedan PENDIENTE con su motivo si no hay tarjeta.
 Es condición de lanzamiento: la suite prepara un perfil aislado por almacén, igual para cualquier
 cliente.
 _Avoid_: keystore, perfil (para el almacén)
