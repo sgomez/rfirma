@@ -183,6 +183,11 @@ modules:
       - type: archive
         url: https://pcsclite.apdu.fr/files/pcsc-lite-2.5.1.tar.xz
         sha256: bfcfe38a20afc49849c6bf55325e38f449fc4b26d3923fdc32b969ae41a8741b
+        x-checker-data:
+          type: html
+          url: https://pcsclite.apdu.fr/files/
+          pattern: pcsc-lite-([\d.]+)\.tar\.xz"
+          url-template: https://pcsclite.apdu.fr/files/pcsc-lite-$version.tar.xz
     cleanup:
       - /bin
       - /sbin
@@ -235,6 +240,13 @@ modules:
       - type: archive
         url: https://github.com/OpenSC/OpenSC/releases/download/0.27.1/opensc-0.27.1.tar.gz
         sha256: 976f4a23eaf3397a1a2c3a7aac80bf971a8c3d829c9a79f06145bfaeeae5eca7
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/OpenSC/OpenSC/releases/latest
+          tag-query: .tag_name
+          version-query: .tag_name
+          timestamp-query: .published_at
+          url-query: '"https://github.com/OpenSC/OpenSC/releases/download/" + $version + "/opensc-" + $version + ".tar.gz"'
     cleanup:
       # Se quedan opensc-tool y pkcs11-tool, para diagnosticar; el resto no
       # lo usa rFirma.

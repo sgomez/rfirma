@@ -1,0 +1,25 @@
+# Avisa de versiones nuevas de OpenSC y pcsc-lite, que van dentro del flatpak (ADR-0049).
+name: Versiones del flatpak
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  outdated:
+    name: Versiones del flatpak
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Falla si OpenSC o pcsc-lite tienen una version publicada mas nueva
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --volume "$PWD/packaging/flatpak:/manifest:ro" \
+            ghcr.io/flathub-infra/flatpak-external-data-checker:latest \
+            --check-outdated /manifest/me.sgomez.rfirma.yml
