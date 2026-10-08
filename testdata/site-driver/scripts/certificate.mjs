@@ -1,6 +1,6 @@
 // Los guiones de selección de certificado de la sede publicada: filtros, almacén y fijación.
 
-import { createHash } from "node:crypto";
+import { createHash, X509Certificate } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import {
@@ -83,6 +83,7 @@ const A_NEW_SELECTION_AFTER_THE_RELEASE = "a-new-selection-after-the-release";
 const A_CERTIFICATE_OF_THE_NAMED_TOKEN = "a-certificate-of-the-named-token";
 const THE_ONLY_CANDIDATE_WITHOUT_ASKING = "the-only-candidate-without-asking";
 const A_NEW_SELECTION_AFTER_THE_RESET = "a-new-selection-after-the-reset";
+const THE_DNIE_OFFERED_AS_EACH_FILTER_ALLOWS = "the-dnie-offered-as-each-filter-allows";
 
 /** Los certificados del kit de la FNMT con los que se montan los almacenes aislados. */
 const THE_KIT = {
@@ -308,6 +309,52 @@ async function theResetScript() {
   settlingThe(after);
 }
 
+/** Cuál de los dos certificados del DNIe volvió, por el rol que lleva su titular entre paréntesis. */
+function theDnieRoleOf(answer) {
+  if (answer.error) return null;
+  const { subject } = new X509Certificate(bytesOf(answer.certificate));
+  if (/\(FIRMA\)/.test(subject)) return "signing";
+  if (/\(AUTENTICACI/.test(subject)) return "authentication";
+  return "other";
+}
+
+const THE_DNIE_ROLES = {
+  signing: "el de firma",
+  authentication: "el de autenticación",
+  other: "uno que no es del DNIe",
+};
+
+function describedDnie(answer) {
+  return answer.error
+    ? `la operación falló: ${answer.error}`
+    : `volvió ${THE_DNIE_ROLES[theDnieRoleOf(answer)]}`;
+}
+
+/** Sin filtro la persona elige cada uno de los dos; con `signingcert:` y `authcert:` vuelve el suyo solo. */
+async function theDnieFiltersScript() {
+  const pickedSigning = await aSelection([]);
+  await theChannelClosing();
+  const pickedAuthentication = await aSelection([]);
+  await theChannelClosing();
+  const signingOnly = await aSelection(["headless=true", "filters=signingcert:"]);
+  await theChannelClosing();
+  const authenticationOnly = await aSelection(["headless=true", "filters=authcert:"]);
+  const held =
+    theDnieRoleOf(pickedSigning) === "signing" &&
+    theDnieRoleOf(pickedAuthentication) === "authentication" &&
+    theDnieRoleOf(signingOnly) === "signing" &&
+    theDnieRoleOf(authenticationOnly) === "authentication";
+  emit(
+    aConditionEvent(
+      THE_DNIE_OFFERED_AS_EACH_FILTER_ALLOWS,
+      held,
+      `sin filtro, ${describedDnie(pickedSigning)} y ${describedDnie(pickedAuthentication)}; ` +
+        `con signingcert: ${describedDnie(signingOnly)}; con authcert: ${describedDnie(authenticationOnly)}`,
+    ),
+  );
+  settlingThe(authenticationOnly);
+}
+
 const PKCS11_OF_SOFTHSM = "PKCS11:/usr/lib/softhsm/libsofthsm2.so";
 
 /** En el almacén `token_apart`: el token tiene los dos activos y la NSS, solo el de seudónimo. */
@@ -422,6 +469,9 @@ export const CERTIFICATE_SCRIPTS = {
   }),
   stickyreset: aPublishedScript(theResetScript, {
     conditions: [A_NEW_SELECTION_AFTER_THE_RESET],
+  }),
+  dniefilters: aPublishedScript(theDnieFiltersScript, {
+    conditions: [THE_DNIE_OFFERED_AS_EACH_FILTER_ALLOWS],
   }),
   stickyreleased: aPublishedScript(theReleaseWithoutResetScript, {
     conditions: [A_NEW_SELECTION_AFTER_THE_RELEASE],
