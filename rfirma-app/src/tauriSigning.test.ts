@@ -200,7 +200,13 @@ describe("los puertos de firma sobre Tauri", () => {
 describe("las noticias de los lectores sobre Tauri", () => {
   beforeEach(() => {
     listen.mockReset();
+    invoke.mockReset();
+    invoke.mockResolvedValue({ kind: "noReader" });
   });
+
+  async function settled() {
+    for (let turn = 0; turn < 5; turn++) await Promise.resolve();
+  }
 
   function listening() {
     let handler: (event: { payload: unknown }) => void = () => {};
@@ -233,6 +239,33 @@ describe("las noticias de los lectores sobre Tauri", () => {
 
     expect(heard).toEqual([]);
     expect(window.stop).toHaveBeenCalled();
+  });
+
+  it("reads, once listening, the status announced before the window mounted", async () => {
+    listening();
+    invoke.mockResolvedValue({ kind: "noCard" });
+    const heard: unknown[] = [];
+
+    tauriCertificateStore().followReaders((news) => heard.push(news));
+    await settled();
+
+    expect(invoke).toHaveBeenCalledWith("read_card_readers");
+    expect(heard).toEqual([{ reader: { kind: "noCard" }, certificates: null }]);
+  });
+
+  it("keeps the news heard while the read was on its way, which is newer", async () => {
+    const window = listening();
+    let answer: (status: unknown) => void = () => {};
+    invoke.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const heard: unknown[] = [];
+
+    tauriCertificateStore().followReaders((news) => heard.push(news));
+    await settled();
+    window.emit({ reader: { kind: "reading" }, certificates: null });
+    answer({ kind: "noCard" });
+    await settled();
+
+    expect(heard).toEqual([{ reader: { kind: "reading" }, certificates: null }]);
   });
 });
 

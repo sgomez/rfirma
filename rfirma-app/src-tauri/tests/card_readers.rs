@@ -8,7 +8,7 @@ use std::thread::ThreadId;
 
 use fake_pkcs11::FakeCard;
 use rfirma_lib::identity::adapters::pkcs11::RealToken;
-use rfirma_lib::identity::application::certificates::ListedCertificates;
+use rfirma_lib::identity::application::certificates::{listed_rows, ListedCertificates};
 use rfirma_lib::identity::application::readers::{
     follow_the_readers, follow_the_readers_apart, CardListing, LastListing, ReaderNews,
 };
@@ -275,6 +275,38 @@ fn a_certificate_already_listed_keeps_its_handle_when_another_card_arrives() {
         );
     }
     assert_eq!(heard[2].reader, ReaderStatus::Reading);
+}
+
+#[test]
+fn the_search_of_a_window_that_mounts_after_the_reader_keeps_the_handles_it_announced() {
+    let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
+    let listing = Listing::over(&[&card]);
+    let heard = listing.followed(vec![(Happening::Nothing, reader(true))]);
+    let announced = heard
+        .last()
+        .and_then(|news| news.certificates.clone())
+        .expect("la lista con la tarjeta");
+
+    let searched = listed_rows(
+        &RealToken,
+        &listing.stores,
+        listing.installed.path(),
+        &listing.listed,
+        &listing.installed_copies,
+        &NoMemory,
+        &listing.last,
+    )
+    .expect("la tarjeta falsa deberia listarse");
+
+    assert!(!announced.is_empty());
+    for row in &announced {
+        assert!(
+            listing.listed.get(&row.id).is_some(),
+            "la fila {} perdió su asa",
+            row.label
+        );
+        assert!(searched.iter().any(|again| again.id == row.id));
+    }
 }
 
 #[test]

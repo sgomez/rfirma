@@ -8,9 +8,11 @@ use crate::identity::application::certificates::{
     on_the_desktop, rows_keeping_handles, ListedCertificates,
 };
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
-use crate::identity::domain::readers::{status_of, Listing, Reader, ReaderStatus, ReadyCard};
+use crate::identity::domain::readers::{
+    ready_card_among, status_of, Listing, Reader, ReaderStatus, ReadyCard,
+};
 use crate::identity::domain::store::{Store, StoreClass};
-use crate::identity::ports::{CertificateMemory, ReaderWatch, Token};
+use crate::identity::ports::{CertificateMemory, ReaderWatch, Relisting, Token};
 
 /// Los certificados del último listado completo, para no volver a abrir más que los almacenes de tarjeta.
 #[derive(Debug, Default)]
@@ -33,6 +35,32 @@ impl LastListing {
                 .cloned()
                 .collect()
         })
+    }
+}
+
+/// El último estado anunciado de los lectores, para la ventana que se monta después del anuncio.
+#[derive(Debug)]
+pub struct ReaderNow {
+    status: Mutex<ReaderStatus>,
+}
+
+impl Default for ReaderNow {
+    fn default() -> Self {
+        Self {
+            status: Mutex::new(ReaderStatus::NoReader),
+        }
+    }
+}
+
+impl ReaderNow {
+    /// Apunta el estado que se acaba de anunciar.
+    pub fn note(&self, status: ReaderStatus) {
+        *lock(&self.status) = status;
+    }
+
+    /// El último estado anunciado; sin anuncio todavía, sin lector.
+    pub fn status(&self) -> ReaderStatus {
+        *lock(&self.status)
     }
 }
 
@@ -63,9 +91,8 @@ pub struct CardListing<'a> {
     pub last: &'a LastListing,
 }
 
-impl CardListing<'_> {
-    /// La lista de siempre con los almacenes de tarjeta leídos de nuevo, y la tarjeta que ha enseñado certificados.
-    pub fn relisted(&self) -> (Vec<ListedCertificate>, Option<ReadyCard>) {
+impl Relisting for CardListing<'_> {
+    fn relisted(&self) -> (Option<Vec<ListedCertificate>>, Option<ReadyCard>) {
         let (cards, others): (Vec<Store>, Vec<Store>) = self
             .stores
             .iter()
@@ -86,14 +113,14 @@ impl CardListing<'_> {
             self.installed_copies,
             self.memory,
         );
-        (rows, ready)
+        (Some(rows), ready)
     }
 }
 
 /// Atiende cada cambio de los lectores hasta que el vigilante se para.
 pub fn follow_the_readers(
     watch: &mut dyn ReaderWatch,
-    listing: &CardListing<'_>,
+    listing: &dyn Relisting,
     announce: &dyn Fn(ReaderNews),
 ) {
     let mut with_a_card: Option<Vec<String>> = None;
@@ -118,7 +145,7 @@ pub fn follow_the_readers(
         ready = found;
         announce(ReaderNews {
             reader: status_of(&readers, Listing::Done(ready)),
-            certificates: Some(rows),
+            certificates: rows,
         });
     }
 }
@@ -126,7 +153,7 @@ pub fn follow_the_readers(
 /// Como `follow_the_readers`, en un hilo propio: el listado nunca corre en el de quien lo arranca.
 pub fn follow_the_readers_apart(
     mut watch: Box<dyn ReaderWatch>,
-    lend: impl Fn(&mut dyn FnMut(&CardListing<'_>)) + Send + 'static,
+    lend: impl Fn(&mut dyn FnMut(&dyn Relisting)) + Send + 'static,
     announce: impl Fn(ReaderNews) + Send + 'static,
 ) -> JoinHandle<()> {
     std::thread::spawn(move || {
@@ -152,19 +179,8 @@ fn listed_in(token: &dyn Token, stores: &[Store]) -> Vec<TokenCertificate> {
     token.list_across(stores).unwrap_or_default()
 }
 
-fn ready_card_among(on_the_cards: &[TokenCertificate]) -> Option<ReadyCard> {
-    if on_the_cards.is_empty() {
-        return None;
-    }
-    let a_dnie = on_the_cards.iter().any(TokenCertificate::is_from_a_dnie);
-    Some(if a_dnie {
-        ReadyCard::Dnie
-    } else {
-        ReadyCard::Other
-    })
-}
-
-fn is_a_card(store: &Store, installed_dir: &Path) -> bool {
+/// Si el almacén es de tarjeta; los `.p12` instalados también son módulos, y no lo son.
+pub fn is_a_card(store: &Store, installed_dir: &Path) -> bool {
     store.class_under(installed_dir) == StoreClass::Card
 }
 

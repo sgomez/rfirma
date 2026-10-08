@@ -167,8 +167,39 @@ fn after_a_full_listing_only_the_card_stores_are_opened_again_and_the_others_sta
     let (rows, ready) = arranged.card_listing().relisted();
 
     assert_eq!(arranged.token.asked(), vec![Store::module(CARD)]);
-    assert_eq!(rows.len(), 2, "el de la tarjeta y el de Firefox: {rows:?}");
+    assert_eq!(
+        rows.as_ref().map(Vec::len),
+        Some(2),
+        "el de la tarjeta y el de Firefox: {rows:?}"
+    );
     assert_eq!(ready, Some(ReadyCard::Other));
+}
+
+#[test]
+fn a_full_listing_after_the_readers_relisted_keeps_the_handles_they_announced() {
+    let arranged = Arranged::new();
+    let (announced, _) = arranged.card_listing().relisted();
+
+    let searched = arranged.listed_in_full();
+
+    for row in announced.expect("la lista del lector") {
+        assert!(
+            arranged.listed.get(&row.id).is_some(),
+            "la fila {} perdió su asa",
+            row.label
+        );
+        assert!(searched.iter().any(|again| again.id == row.id));
+    }
+}
+
+#[test]
+fn a_window_that_mounts_late_reads_the_last_status_announced() {
+    let now = ReaderNow::default();
+    assert_eq!(now.status(), ReaderStatus::NoReader);
+
+    now.note(ReaderStatus::NoCard);
+
+    assert_eq!(now.status(), ReaderStatus::NoCard);
 }
 
 #[test]
@@ -178,5 +209,5 @@ fn with_no_full_listing_yet_every_store_is_opened() {
     let (rows, _) = arranged.card_listing().relisted();
 
     assert_eq!(arranged.token.asked().len(), 2);
-    assert_eq!(rows.len(), 2);
+    assert_eq!(rows.map(|rows| rows.len()), Some(2));
 }

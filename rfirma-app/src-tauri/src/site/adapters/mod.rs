@@ -13,6 +13,7 @@ pub mod frontier;
 #[cfg(test)]
 mod header_probe;
 pub mod nss;
+pub mod readers;
 pub mod relay;
 pub mod scratch;
 pub mod service;

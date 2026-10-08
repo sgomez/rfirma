@@ -1,5 +1,7 @@
 //! Los lectores de tarjetas y el estado que la ventana enseña de ellos: el de cada uno y el que los resume.
 
+use crate::identity::domain::certificate::TokenCertificate;
+
 /// Un lector tal como lo ve PC/SC: su nombre y si tiene una tarjeta dentro.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Reader {
@@ -75,6 +77,19 @@ pub fn status_of(readers: &[Reader], listing: Listing) -> ReaderStatus {
             Listing::Done(None) => ReaderStatus::Unreadable,
         }
     }))
+}
+
+/// La tarjeta que enseñan los certificados leídos de los almacenes de tarjeta; sin ninguno, ninguna.
+pub fn ready_card_among(on_the_cards: &[TokenCertificate]) -> Option<ReadyCard> {
+    if on_the_cards.is_empty() {
+        return None;
+    }
+    let a_dnie = on_the_cards.iter().any(TokenCertificate::is_from_a_dnie);
+    Some(if a_dnie {
+        ReadyCard::Dnie
+    } else {
+        ReadyCard::Other
+    })
 }
 
 #[cfg(test)]

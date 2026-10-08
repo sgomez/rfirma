@@ -5,6 +5,7 @@ mod closing;
 pub mod desk;
 pub mod outcome;
 mod pdf_password;
+pub mod readers;
 pub mod replies;
 pub mod request;
 mod server_signature;
@@ -48,6 +49,7 @@ pub use outcome::{
     LoadingConsent, LocalBatchConsent, LocalBatchItem, Moment, NoCertificate, NoChannel,
     PendingSignature, ProtocolCodec, SavingConsent, SigningConsent, SiteOutcome,
 };
+pub use readers::{after_the_readers, AfterTheReaders};
 pub use replies::{
     batch_handed_over, declined, identify_with, identity_handed_over, loaded, saved,
     signature_handed_over, the_signature_did_not_come_out,

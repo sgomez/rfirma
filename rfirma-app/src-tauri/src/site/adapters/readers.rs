@@ -1,0 +1,53 @@
+//! La lista en caliente de la ventana de sede: el vigilante del proceso de sede vuelve a cribar con el filtro de la sede y se lo anuncia a esa ventana (ADR-0048).
+
+use tauri::Manager as _;
+
+use crate::identity::adapters::readers::follow_the_readers_for;
+use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+use crate::identity::domain::readers::{ready_card_among, ReadyCard};
+use crate::identity::ports::Relisting;
+use crate::identity::IdentityRoot;
+use crate::site::application::errand::{after_the_readers, AfterTheReaders};
+
+use super::window::{publish_what_moved, with_the_desk, SITE_WINDOW};
+
+/// Quien vuelve a listar para la ventana de sede, con las asas que la sede ya concedió.
+struct ForTheSiteWindow {
+    app: tauri::AppHandle,
+}
+
+impl Relisting for ForTheSiteWindow {
+    fn relisted(&self) -> (Option<Vec<ListedCertificate>>, Option<ReadyCard>) {
+        let identity = self.app.state::<IdentityRoot>();
+        let found = identity.certificates().unwrap_or_default();
+        let ready = ready_card_among(&on_the_cards(&identity, &found));
+        let after = with_the_desk(&self.app, |desk, live| after_the_readers(desk, found, live));
+        let rows = match after {
+            AfterTheReaders::Accepted(accepted) => Some(identity.rows_keeping_handles(accepted)),
+            AfterTheReaders::LookedAgain(step) => {
+                publish_what_moved(&self.app, step);
+                None
+            }
+            AfterTheReaders::Unchanged => None,
+        };
+        (rows, ready)
+    }
+}
+
+fn on_the_cards(identity: &IdentityRoot, found: &[TokenCertificate]) -> Vec<TokenCertificate> {
+    found
+        .iter()
+        .filter(|certificate| identity.is_a_card(&certificate.reference().store()))
+        .cloned()
+        .collect()
+}
+
+/// Arranca en su propio hilo la lista en caliente de la ventana de sede.
+pub fn follow_the_readers_for_the_site_window(app: &tauri::AppHandle) {
+    let lending = app.clone();
+    follow_the_readers_for(app, SITE_WINDOW, move |use_it| {
+        use_it(&ForTheSiteWindow {
+            app: lending.clone(),
+        });
+    });
+}

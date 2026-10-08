@@ -50,7 +50,7 @@ impl From<KeyringError> for InstallError {
     }
 }
 
-/// Los certificados del escritorio, ya como filas con su asa: sin el de autenticación del DNIe, como AutoFirma (ADR-0011).
+/// Los certificados del escritorio, sin el de autenticación del DNIe, como filas; la que ya tenía asa la conserva (ADR-0011, ADR-0048).
 pub fn listed_rows(
     token: &dyn Token,
     stores: &[Store],
@@ -62,7 +62,7 @@ pub fn listed_rows(
 ) -> Result<Vec<ListedCertificate>, TokenError> {
     let found = token.list_across(stores)?;
     last.keep(&found);
-    Ok(rows_of(
+    Ok(rows_keeping_handles(
         on_the_desktop(found),
         installed_dir,
         listed,

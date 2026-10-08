@@ -17,6 +17,7 @@ mod document_and_save;
 mod headless;
 mod pdf_awaiting_the_person;
 mod pdf_password;
+mod readers;
 mod relay_window;
 mod service;
 mod sha1_batches;

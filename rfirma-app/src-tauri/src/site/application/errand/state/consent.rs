@@ -238,6 +238,21 @@ impl LiveErrand {
         }
     }
 
+    /// El filtro de la sede del consentimiento pendiente que enseña una lista, si lo hay.
+    pub(in crate::site::application::errand) fn the_filter_of_the_list(
+        &self,
+    ) -> Option<SiteFilter> {
+        match &*crate::lock(&self.consent) {
+            Some(PendingConsent::Identity(filter, _)) => Some(filter.clone()),
+            Some(PendingConsent::Signature(pending)) => Some(pending.filter.clone()),
+            Some(
+                PendingConsent::Batch(PendingBatch { request, .. })
+                | PendingConsent::LocalBatch(PendingLocalBatch { request, .. }),
+            ) => Some(request.filter().clone()),
+            _ => None,
+        }
+    }
+
     /// Firma consentida pendiente, si la hay.
     pub(in crate::site::application::errand) fn the_signature_consented(
         &self,

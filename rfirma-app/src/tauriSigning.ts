@@ -3,7 +3,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { classify } from "./errors/classify";
-import type { Certificate, CertificateStore, ReaderNews } from "./signing/certificate";
+import type {
+  Certificate,
+  CertificateStore,
+  ReaderNews,
+  ReaderStatus,
+} from "./signing/certificate";
 import type {
   Destination,
   DestinationSource,
@@ -36,9 +41,17 @@ export function tauriCertificateStore(): CertificateStore {
     emptyStore: () => invoke<void>("empty_installed_store"),
     followReaders: (onNews) => {
       let listening = true;
+      let heard = false;
       const stopping = listen<ReaderNews>(CARD_READERS, (event) => {
+        heard = true;
         if (listening) onNews(event.payload);
       });
+      // El backend no guarda los eventos: lo anunciado antes de escuchar se lee.
+      void stopping
+        .then(() => invoke<ReaderStatus>("read_card_readers"))
+        .then((reader) => {
+          if (listening && !heard) onNews({ reader, certificates: null });
+        });
       return () => {
         listening = false;
         void stopping.then((stop) => stop());
