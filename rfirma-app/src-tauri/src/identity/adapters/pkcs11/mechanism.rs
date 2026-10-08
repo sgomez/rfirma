@@ -12,7 +12,9 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 
 use super::one_login::{self, Refused};
-use super::session::{context, logged_in, private_key, slot_of, the_store_is_really_there};
+use super::session::{
+    context, context_logged_in, logged_in, private_key, slot_of, the_store_is_really_there,
+};
 
 pub(super) fn sign_holding_the_turn(
     reference: &CertificateRef,
@@ -29,7 +31,9 @@ pub(super) fn sign_holding_the_turn(
     let slot = slot_of(&context, reference.token_label())?;
     let offered = the_slot_offers(&context, slot, algorithm)?;
     let log_in = || logged_in(&context, slot, secret);
-    let sign = |session: &Session| signed_in(session, reference, offered, algorithm, data);
+    let context_login = |session: &Session| context_logged_in(&context, slot, session, secret);
+    let sign =
+        |session: &Session| signed_in(session, reference, offered, algorithm, data, &context_login);
 
     if let Some(signature) = one_login::within(reference, secret, log_in, sign, Refused::CutsIt) {
         return signature;
@@ -46,19 +50,36 @@ fn signed_in(
     offered: Offered,
     algorithm: SignatureAlgorithm,
     data: &[u8],
+    context_login: &dyn Fn(&Session) -> Result<(), TokenError>,
 ) -> Result<Vec<u8>, TokenError> {
     let key = private_key(session, reference)?;
     the_key_is_of_the_kind(session, key, algorithm)?;
-    let signature = match offered {
-        Offered::Composed => session.sign(&algorithm.mechanism(), key, data)?,
-        Offered::EcdsaOverTheDigest => {
-            session.sign(&Mechanism::Ecdsa, key, &ecdsa::digest(algorithm, data)?)?
-        }
+    let (mechanism, bytes) = match offered {
+        Offered::Composed => (algorithm.mechanism(), data.to_vec()),
+        Offered::EcdsaOverTheDigest => (Mechanism::Ecdsa, ecdsa::digest(algorithm, data)?),
+    };
+    let signature = if the_key_always_authenticates(session, key)? {
+        session.sign_init(&mechanism, key)?;
+        context_login(session)?;
+        session.sign_update(&bytes)?;
+        session.sign_final()?
+    } else {
+        session.sign(&mechanism, key, &bytes)?
     };
     match algorithm.key_kind() {
         KeyKind::Ec => ecdsa::der_encoded(&signature),
         KeyKind::Rsa => Ok(signature),
     }
+}
+
+fn the_key_always_authenticates(
+    session: &Session,
+    key: cryptoki::object::ObjectHandle,
+) -> Result<bool, TokenError> {
+    Ok(session
+        .get_attributes(key, &[AttributeType::AlwaysAuthenticate])?
+        .into_iter()
+        .any(|attribute| matches!(attribute, Attribute::AlwaysAuthenticate(true))))
 }
 
 /// Con qué mecanismo de la ranura se cumple el algoritmo, y sobre qué bytes.
