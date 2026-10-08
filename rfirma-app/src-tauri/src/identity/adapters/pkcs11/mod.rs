@@ -19,11 +19,14 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 pub use nss::{NssHost, RealNssHost};
-use session::{context, slot_of, the_store_is_really_there, token_info_unless_locked};
+use session::{
+    context, pin_warning_of, refused_login, slot_of, the_store_is_really_there,
+    token_info_unless_locked,
+};
 
 /// El adaptador del puerto [`Token`] sobre los módulos PKCS#11 del sistema.
 #[derive(Clone, Copy, Debug, Default)]
@@ -48,6 +51,10 @@ impl Token for RealToken {
 
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
         store_secret(reference)
+    }
+
+    fn pin_warning(&self, reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+        pin_warning(reference)
     }
 
     fn offers(
@@ -137,6 +144,17 @@ pub fn store_secret(reference: &CertificateRef) -> Result<StoreSecret, TokenErro
     })
 }
 
+/// Lo que la tarjeta del certificado dice de sus intentos, leído ahora (ADR-0047).
+pub fn pin_warning(reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+    with_token_turn(|| {
+        let store = reference.store();
+        the_store_is_really_there(&store)?;
+        let context = context(&store)?;
+        let slot = slot_of(&context, reference.token_label())?;
+        pin_warning_of(&context, slot)
+    })
+}
+
 /// Comprueba en el listado de mecanismos de la ranura que el algoritmo se puede cumplir.
 pub fn offers(reference: &CertificateRef, algorithm: SignatureAlgorithm) -> Result<(), TokenError> {
     with_token_turn(|| {
@@ -179,7 +197,7 @@ pub fn accepts_the_secret(
                 Ok(())
             }
             Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => Ok(()),
-            Err(other) => Err(other.into()),
+            Err(other) => Err(refused_login(&context, slot, other)),
         }
     })
 }

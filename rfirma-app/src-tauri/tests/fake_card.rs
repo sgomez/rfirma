@@ -11,11 +11,12 @@ use rfirma_lib::identity::adapters::pkcs11::stores::{candidate_modules_under, CA
 use rfirma_lib::identity::adapters::pkcs11::RealToken;
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
+use rfirma_lib::identity::domain::secret::PinWarning;
 use rfirma_lib::identity::domain::store::{Store, StoreClass};
 use rfirma_lib::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
 use rfirma_lib::signing::adapters::prompted_secret::secret_for_the_batch;
 use rfirma_lib::signing::domain::Language;
-use rfirma_lib::site::adapters::desk::secret_for_the_remote_batch;
+use rfirma_lib::site::adapters::desk::{secret_for_the_remote_batch, signed_for_the_remote_batch};
 use rfirma_lib::site::domain::protocol::SafCode;
 
 const SIGNING_CERTIFICATE: &str = "CertFirmaDigital";
@@ -36,6 +37,15 @@ impl Typist {
 
     fn prompts(&self) -> usize {
         self.requests.lock().unwrap().len()
+    }
+
+    fn warnings(&self) -> Vec<PinWarning> {
+        self.requests
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|request| request.pin_warning)
+            .collect()
     }
 }
 
@@ -145,6 +155,135 @@ fn a_dnie_with_no_failed_tries_is_asked_for_the_pin_as_before() {
 
     assert_eq!(typist.prompts(), 1);
     assert_eq!(card.calls_to("C_Login").len(), 1, "{:?}", card.calls());
+}
+
+#[test]
+fn a_dnie_warns_of_the_last_try_only_in_the_dialog_after_two_failures() {
+    let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
+    let typist = Typist::typing(&["00000000", "11111111", FakeCard::PIN]);
+
+    the_batch_secret(&card, &typist).expect("el tercer PIN es el correcto");
+
+    assert_eq!(
+        typist.warnings(),
+        vec![PinWarning::Quiet, PinWarning::Quiet, PinWarning::FinalTry]
+    );
+}
+
+#[test]
+fn a_card_on_its_final_try_warns_in_the_first_dialog() {
+    let card = FakeCard::with_tries_left(1)
+        .and_then(FakeCard::signals_profile)
+        .expect("la tarjeta falsa deberia montarse");
+    let typist = Typist::typing(&[FakeCard::PIN]);
+
+    the_batch_secret(&card, &typist).expect("el PIN correcto abre la tarjeta");
+
+    assert_eq!(typist.warnings(), vec![PinWarning::FinalTry]);
+}
+
+#[test]
+fn a_card_with_a_low_count_warns_softly() {
+    let card = FakeCard::with_tries_left(2)
+        .and_then(FakeCard::signals_profile)
+        .expect("la tarjeta falsa deberia montarse");
+    let typist = Typist::typing(&[FakeCard::PIN]);
+
+    the_batch_secret(&card, &typist).expect("el PIN correcto abre la tarjeta");
+
+    assert_eq!(typist.warnings(), vec![PinWarning::CountLow]);
+}
+
+#[test]
+fn a_card_with_no_signals_is_asked_without_a_warning() {
+    let card = FakeCard::new()
+        .and_then(FakeCard::signals_profile)
+        .expect("la tarjeta falsa deberia montarse");
+    let typist = Typist::typing(&[FakeCard::PIN]);
+
+    the_batch_secret(&card, &typist).expect("el PIN correcto abre la tarjeta");
+
+    assert_eq!(typist.warnings(), vec![PinWarning::Quiet]);
+}
+
+#[test]
+fn a_rejected_pin_is_never_sent_again() {
+    let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
+    let typist = Typist::typing(&["00000000", "11111111", FakeCard::PIN]);
+
+    the_batch_secret(&card, &typist).expect("el tercer PIN es el correcto");
+
+    let logins = card.calls_to("C_Login");
+    assert_eq!(logins.len(), typist.prompts(), "{logins:?}");
+    for (login, typed) in logins.iter().zip(["00000000", "11111111", FakeCard::PIN]) {
+        assert!(login.contains(&format!("{typed:?}")), "{logins:?}");
+    }
+}
+
+#[test]
+fn the_try_that_locks_a_dnie_ends_as_pin_locked_without_asking_again() {
+    let card = FakeCard::with_tries_left(1).expect("la tarjeta falsa deberia montarse");
+    let typist = Typist::typing(&["00000000", FakeCard::PIN]);
+
+    let failure = the_batch_secret(&card, &typist).expect_err("la tarjeta se ha bloqueado");
+
+    assert_eq!(failure.situation, "pinLocked", "{:?}", card.calls());
+    assert_eq!(failure.attempts_left, Some(0));
+    assert_eq!(typist.prompts(), 1, "se volvió a pedir el PIN");
+    assert_eq!(card.calls_to("C_Login").len(), 1, "{:?}", card.calls());
+}
+
+#[test]
+fn a_site_hears_a_locked_keystore_when_the_rejected_pin_locks_a_dnie() {
+    let card = FakeCard::with_tries_left(1).expect("la tarjeta falsa deberia montarse");
+
+    let refusal = signed_for_the_remote_batch(
+        &RealToken,
+        &signing_certificate_of(&card),
+        &ProtectedSecret::from_str("00000000"),
+        "SHA256",
+        b"uno",
+    )
+    .expect_err("el PIN es incorrecto");
+
+    assert_eq!(refusal.code, SafCode::LockedKeystore);
+    assert_eq!(refusal.attempts_left, Some(0));
+}
+
+#[test]
+fn a_site_hears_one_attempt_left_when_a_rejected_pin_leaves_a_dnie_on_its_final_try() {
+    let card = FakeCard::with_tries_left(2).expect("la tarjeta falsa deberia montarse");
+
+    let refusal = signed_for_the_remote_batch(
+        &RealToken,
+        &signing_certificate_of(&card),
+        &ProtectedSecret::from_str("00000000"),
+        "SHA256",
+        b"uno",
+    )
+    .expect_err("el PIN es incorrecto");
+
+    assert_eq!(refusal.situation, "incorrectPin");
+    assert_eq!(refusal.attempts_left, Some(1));
+}
+
+#[test]
+fn a_site_hears_one_attempt_left_when_signing_fails_on_a_card_on_its_final_try() {
+    let card = FakeCard::with_tries_left(1)
+        .and_then(FakeCard::signals_profile)
+        .expect("la tarjeta falsa deberia montarse");
+
+    let refusal = signed_for_the_remote_batch(
+        &RealToken,
+        &signing_certificate_of(&card),
+        &ProtectedSecret::from_str("1234"),
+        "SHA256",
+        b"uno",
+    )
+    .expect_err("un PIN tan corto no llega a la tarjeta");
+
+    assert_eq!(refusal.attempts_left, Some(1), "{:?}", card.calls());
+    assert_eq!(card.tries_left(), 1);
 }
 
 #[test]

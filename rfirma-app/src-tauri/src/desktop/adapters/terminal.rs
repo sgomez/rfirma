@@ -25,7 +25,7 @@ use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::prompted_holder_of;
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::{SecretName, StoreSecret};
+use crate::identity::domain::secret::{PinWarning, SecretName, StoreSecret};
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{prompted_until_accepted, PromptedError, SecretPromptRequest, Token};
 use crate::identity::{every_store, IdentityRoot};
@@ -117,7 +117,14 @@ fn prompt_for(asked: &AskedSecret<'_>) -> String {
     } else {
         ""
     };
-    format!("{again}{name} de «{}»: ", asked.alias)
+    let warning = match asked.warning {
+        PinWarning::Quiet => "",
+        PinWarning::CountLow => "rfirma: ya ha habido algún intento fallido con esta tarjeta.\n",
+        PinWarning::FinalTry => {
+            "rfirma: último intento: si el PIN no es correcto, la tarjeta se bloqueará.\n"
+        }
+    };
+    format!("{again}{warning}{name} de «{}»: ", asked.alias)
 }
 
 /// La firma de la sede sobre las raíces de identidad y de firma, sin ventana.
@@ -203,8 +210,12 @@ impl RootsSigner<'_> {
             name: SecretName::of(reference.store().class()),
             alias: reference.label(),
             incorrect: false,
+            warning: PinWarning::Quiet,
         };
         loop {
+            asked.warning = signer
+                .pin_warning(reference)
+                .map_err(|error| Failure::from(error).detail)?;
             let typed = request.terminal.secret(&asked)?;
             let Err(failure) = self.signing.sign_on_token(signer, &typed) else {
                 return Ok(());
@@ -229,11 +240,13 @@ impl RootsSigner<'_> {
             holder: prompted_holder_of(request.certificate.der()),
             language: Language::Spanish,
             incorrect_secret: false,
+            pin_warning: PinWarning::Quiet,
             origin_window: None,
         };
         prompted_until_accepted(
             self.identity.prompter.as_ref(),
             prompt,
+            || Ok(signer.pin_warning(request.certificate.reference())?),
             |typed| self.signing.sign_on_token(signer, typed),
             |failure| Failure::from(failure).situation == situation_name(Situation::IncorrectPin),
         )
@@ -365,3 +378,6 @@ pub fn run_the_command_line(argv: &[String], context: tauri::Context<tauri::Wry>
     }
     outcome.exit_code
 }
+
+#[cfg(test)]
+mod tests;

@@ -6,7 +6,7 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
 pub use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
 use crate::signing::domain::document_signatures::DocumentSignatures;
 use crate::signing::domain::isolate_gone::IsolateGone;
@@ -39,6 +39,11 @@ pub trait IsolateHost {
 pub trait Signer {
     /// Cómo hay que pedirle el secreto al almacén del certificado.
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError>;
+
+    /// Lo que la tarjeta del certificado dice de sus intentos; sin señales, el diálogo de siempre (ADR-0047).
+    fn pin_warning(&self, _reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+        Ok(PinWarning::Quiet)
+    }
 
     /// Comprueba que el token ofrece el mecanismo del algoritmo, antes de pedir el secreto.
     fn offers(

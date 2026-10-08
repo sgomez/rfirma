@@ -14,7 +14,7 @@ use crate::desktop::domain::version_check::VersionCheck;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::SecretName;
+use crate::identity::domain::secret::{PinWarning, SecretName};
 use crate::identity::domain::store::StoreClass;
 use crate::memory_error::MemoryError;
 use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation};
@@ -89,6 +89,7 @@ pub struct AskedSecret<'a> {
     pub name: SecretName,
     pub alias: &'a str,
     pub incorrect: bool,
+    pub warning: PinWarning,
 }
 
 /// La terminal desde la que se lanza la orden.
