@@ -173,6 +173,9 @@ modules:
   - name: pcsc-lite
     buildsystem: meson
     config-opts:
+      # flatpak-builder 1.4.2 (Ubuntu 24.04) no se lo pasa a meson: sin el,
+      # pcsc-lite va a /app/lib64 y OpenSC no encuentra winscard.h.
+      - --libdir=lib
       - -Dlibsystemd=false
       - -Dlibudev=false
       - -Dlibusb=false
