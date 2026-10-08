@@ -54,6 +54,19 @@ impl FakeCard {
         Ok(self)
     }
 
+    /// Saca la tarjeta del lector: desde la próxima llamada, el módulo no ve ningún token.
+    pub fn take_out(&self) -> io::Result<()> {
+        fs::write(self.dir.path().join(REMOVED_FROM), "1")
+    }
+
+    /// Vuelve a meter la tarjeta en el lector.
+    pub fn put_in(&self) -> io::Result<()> {
+        match fs::remove_file(self.dir.path().join(REMOVED_FROM)) {
+            Err(error) if error.kind() != io::ErrorKind::NotFound => Err(error),
+            _ => Ok(()),
+        }
+    }
+
     /// La ruta del módulo que se le da a `cryptoki` o a un almacén de clase tarjeta.
     pub fn module(&self) -> PathBuf {
         self.dir.path().join(module_file_name())

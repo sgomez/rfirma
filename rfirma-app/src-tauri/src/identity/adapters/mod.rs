@@ -7,6 +7,7 @@ pub mod keyring;
 #[cfg(target_os = "macos")]
 pub mod pending_macos_keychain;
 pub mod pkcs11;
+pub mod readers;
 pub mod tauri;
 pub mod views;
 #[cfg(windows)]

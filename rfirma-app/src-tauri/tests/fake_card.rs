@@ -433,6 +433,7 @@ fn the_desktop_rows_of(card: &FakeCard) -> Vec<(String, Vec<String>)> {
         &ListedCertificates::new(),
         &ListedCertificates::new(),
         &NothingRemembered,
+        &Default::default(),
     )
     .expect("la tarjeta falsa deberia listarse")
     .into_iter()

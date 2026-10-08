@@ -103,6 +103,28 @@ impl<T: Clone> Handles<T> {
         self.len() == 0
     }
 
+    /// Como `replace`, pero lo que ya era nombrable conserva su asa.
+    pub fn replace_keeping(&self, values: impl IntoIterator<Item = T>) -> Vec<String>
+    where
+        T: PartialEq,
+    {
+        let mut before: Vec<(String, T)> = lock(&self.granted)
+            .drain()
+            .map(|(handle, grant)| (handle, grant.value))
+            .collect();
+        values
+            .into_iter()
+            .map(|value| {
+                let handle = match before.iter().position(|(_, kept)| *kept == value) {
+                    Some(at) => before.swap_remove(at).0,
+                    None => mint(),
+                };
+                self.grant(handle.clone(), value);
+                handle
+            })
+            .collect()
+    }
+
     fn grant(&self, handle: String, value: T) {
         let order = self.order.fetch_add(1, Ordering::Relaxed);
         lock(&self.granted).insert(handle, Grant { order, value });

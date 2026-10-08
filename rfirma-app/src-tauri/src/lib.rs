@@ -70,6 +70,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         installed_certificates: paths.installed_certificates_dir(),
         listed: identity::application::certificates::ListedCertificates::new(),
         installed_copies: identity::application::certificates::ListedCertificates::new(),
+        last_listing: identity::application::readers::LastListing::default(),
         memory: memory.clone(),
         folder: Arc::new(identity::adapters::folder::RealInstalledFolder),
         prompter: prompter.clone(),
@@ -361,6 +362,7 @@ fn run_desktop(
             dialogs.attach(app.handle().clone());
             prompter.attach(app.handle().clone());
             open_the_main_window(app.handle());
+            identity::adapters::readers::follow_the_readers_for_the_main_window(app.handle());
             serving.window_is_up.store(true, Ordering::SeqCst);
             Ok(())
         }

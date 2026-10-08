@@ -1,10 +1,12 @@
-//! Los tipos de identidad que cruzan a la ventana: `CertificateView`, `StatusView` y `SecretView` (ADR-0011).
+//! Los tipos de identidad que cruzan a la ventana: `CertificateView`, `StatusView`, `SecretView` y las noticias de los lectores (ADR-0011).
 
 use serde::Serialize;
 
 use crate::crossing::crossing;
 
+use crate::identity::application::readers::ReaderNews;
 use crate::identity::domain::certificate::{CertificateStatus, ListedCertificate};
+use crate::identity::domain::readers::{ReaderStatus, ReadyCard};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::StoreClass;
 
@@ -134,6 +136,55 @@ impl From<ListedCertificate> for CertificateView {
                 .collect(),
             status: certificate.status.into(),
             remembered: certificate.remembered,
+        }
+    }
+}
+
+crossing! {
+    /// El estado que resume a los lectores de tarjetas, tal como cruza a la ventana.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    pub enum ReaderStatusView {
+        NoReader,
+        NoCard,
+        Reading,
+        DnieReady,
+        CardReady,
+        Unreadable,
+    }
+}
+
+impl From<ReaderStatus> for ReaderStatusView {
+    fn from(status: ReaderStatus) -> Self {
+        match status {
+            ReaderStatus::NoReader => Self::NoReader,
+            ReaderStatus::NoCard => Self::NoCard,
+            ReaderStatus::Reading => Self::Reading,
+            ReaderStatus::Ready(ReadyCard::Dnie) => Self::DnieReady,
+            ReaderStatus::Ready(ReadyCard::Other) => Self::CardReady,
+            ReaderStatus::Unreadable => Self::Unreadable,
+        }
+    }
+}
+
+crossing! {
+    /// Lo que la ventana recibe al cambiar un lector o una tarjeta: el estado y, si ha cambiado, la lista (ADR-0048).
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct ReaderNewsView {
+        pub reader: ReaderStatusView,
+        /// La lista de siempre, con las tarjetas de ahora; nada, si no ha cambiado.
+        pub certificates: Option<Vec<CertificateView>>,
+    }
+}
+
+impl From<ReaderNews> for ReaderNewsView {
+    fn from(news: ReaderNews) -> Self {
+        Self {
+            reader: news.reader.into(),
+            certificates: news
+                .certificates
+                .map(|rows| rows.into_iter().map(CertificateView::from).collect()),
         }
     }
 }

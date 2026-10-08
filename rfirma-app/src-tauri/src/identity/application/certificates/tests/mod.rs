@@ -5,6 +5,7 @@ use super::{
     certificate_behind, certificates_by_class, certificates_with_their_chains, listed_rows,
     remember_the_certificate, rows_of, usable_certificate,
 };
+use crate::identity::application::readers::LastListing;
 use crate::identity::application::tests::{
     a_certificate, a_certificate_with_id, a_representative_certificate,
     a_representative_certificate_of_a_natural_person, a_usable_certificate, listed_from, NoToken,
@@ -31,6 +32,7 @@ fn with_nowhere_to_look_the_listing_says_so_instead_of_coming_back_empty() {
         &ListedCertificates::new(),
         &ListedCertificates::new(),
         &a_memory(home.path()),
+        &LastListing::default(),
     )
     .expect_err("no hay donde buscar");
 
@@ -359,6 +361,7 @@ fn an_authority_is_never_offered_even_when_its_store_hands_it_over_as_signable()
         &ListedCertificates::new(),
         &ListedCertificates::new(),
         &crate::identity::application::tests::NoMemory,
+        &LastListing::default(),
     )
     .expect("el almacen deberia listarse")
     .into_iter()

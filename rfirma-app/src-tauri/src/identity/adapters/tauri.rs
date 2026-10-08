@@ -22,6 +22,7 @@ pub fn list_certificates(
         &identity.listed,
         &identity.installed_copies,
         identity.memory.as_ref(),
+        &identity.last_listing,
     )?
     .into_iter()
     .map(CertificateView::from)
