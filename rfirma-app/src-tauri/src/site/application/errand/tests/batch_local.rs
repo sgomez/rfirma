@@ -198,6 +198,43 @@ fn a_local_batch_without_stoponerror_signs_around_the_failure() {
 }
 
 #[test]
+fn a_card_failure_in_a_local_batch_without_stoponerror_fails_the_whole_batch_with_its_code() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let mut neighbours =
+        neighbours_for_the_local_batch(home.path(), &listed, &opened, &memory, &ours);
+    neighbours.signer = ATokenThatSigns::locked_after(1);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
+
+    let url = a_local_batch("");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSignTheLocalBatch(asked) = remembered(&live, step) else {
+        panic!("un lote local pide consentimiento");
+    };
+    consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
+
+    let refused = finish_the_local_batch(&desk, &the_typed_secret(), &live);
+
+    assert!(matches!(refused, Err(ConsentError::Refused(_))));
+    let answered = what_the_site_received(&mut wire).expect("la sede recibe el rechazo");
+    assert!(answered.starts_with("SAF_52"), "{answered}");
+    assert_eq!(
+        neighbours.signer.attempts(),
+        2,
+        "el tercer documento no llega a la tarjeta"
+    );
+}
+
+#[test]
 fn a_local_batch_with_needcert_answers_the_signer() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());

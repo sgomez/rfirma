@@ -10,11 +10,13 @@ use std::sync::{Arc, Mutex, OnceLock};
 use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::error::{Error, RvError};
 use cryptoki::object::{Attribute, ObjectClass};
-use cryptoki::session::Session;
+use cryptoki::session::{Session, UserType};
 use cryptoki::slot::{Slot, TokenInfo};
+use cryptoki::types::AuthPin;
 
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::PinWarning;
 use crate::identity::domain::store::Store;
 
@@ -103,6 +105,24 @@ pub(super) fn refused_login(context: &Pkcs11, slot: Slot, error: Error) -> Token
         return refused.on_the_final_try();
     }
     refused
+}
+
+/// Una sesión de la ranura con el usuario dentro, tras comprobar que la tarjeta no declara el PIN bloqueado (ADR-0047).
+pub(super) fn logged_in(
+    context: &Pkcs11,
+    slot: Slot,
+    secret: &ProtectedSecret,
+) -> Result<Session, TokenError> {
+    token_info_unless_locked(context, slot)?;
+    let session = context.open_ro_session(slot)?;
+    let pin = secret
+        .as_str()
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
+    match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
+        // Si otra biblioteca del proceso ya autenticó el token, se reutiliza la sesión.
+        Ok(()) | Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => Ok(session),
+        Err(other) => Err(refused_login(context, slot, other)),
+    }
 }
 
 /// La clave privada del certificado emparejada por `CKA_ID`.

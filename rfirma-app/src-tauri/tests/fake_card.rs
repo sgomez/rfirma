@@ -14,7 +14,9 @@ use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::secret::PinWarning;
 use rfirma_lib::identity::domain::store::{Store, StoreClass};
 use rfirma_lib::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
-use rfirma_lib::signing::adapters::prompted_secret::secret_for_the_batch;
+use rfirma_lib::signing::adapters::prompted_secret::{
+    batch_signed_with_one_secret, secret_for_the_batch,
+};
 use rfirma_lib::signing::domain::Language;
 use rfirma_lib::site::adapters::desk::{secret_for_the_remote_batch, signed_for_the_remote_batch};
 use rfirma_lib::site::domain::protocol::SafCode;
@@ -83,6 +85,95 @@ fn the_batch_secret(
         Language::Spanish,
         &ProtectedSecret::new(b""),
     )
+}
+
+const THREE_DOCUMENTS: [&[u8]; 3] = [b"uno", b"dos", b"tres"];
+
+/// Firma un lote remoto de tres documentos con el secreto del lote, sin parar en los fallos: lo que se corte, lo corta el token.
+fn the_batch_signed(card: &FakeCard, typist: &Typist, typed: &str) -> Vec<Result<Vec<u8>, String>> {
+    let certificate = signing_certificate_of(card);
+    let mut signed = Vec::new();
+    batch_signed_with_one_secret(
+        &RealToken,
+        &certificate,
+        typist,
+        Language::Spanish,
+        &ProtectedSecret::from_str(typed),
+        |secret| {
+            for document in THREE_DOCUMENTS {
+                signed.push(
+                    signed_for_the_remote_batch(
+                        &RealToken,
+                        &certificate,
+                        secret,
+                        "SHA256",
+                        document,
+                    )
+                    .map_err(|refusal| refusal.situation),
+                );
+            }
+            Ok(())
+        },
+    )
+    .expect("el secreto del lote se abre");
+    signed
+}
+
+#[test]
+fn a_batch_is_asked_for_the_pin_once_and_signs_every_document_with_one_login() {
+    let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
+    let typist = Typist::typing(&[FakeCard::PIN]);
+
+    let signed = the_batch_signed(&card, &typist, "");
+
+    assert!(signed.iter().all(Result::is_ok), "{signed:?}");
+    assert_eq!(typist.prompts(), 1);
+    assert_eq!(card.calls_to("C_Login").len(), 1, "{:?}", card.calls());
+}
+
+#[test]
+fn the_first_failure_of_a_batch_cuts_the_cycle_without_more_logins() {
+    let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
+    let typist = Typist::typing(&[]);
+
+    let signed = the_batch_signed(&card, &typist, "00000000");
+
+    assert_eq!(
+        signed,
+        vec![Err("incorrectPin".to_owned()); 3],
+        "{:?}",
+        card.calls()
+    );
+    assert_eq!(card.calls_to("C_Login").len(), 1, "{:?}", card.calls());
+    assert_eq!(card.tries_left(), 2);
+}
+
+#[test]
+fn a_card_removed_in_the_middle_of_a_batch_cuts_the_cycle() {
+    let rehearsal = FakeCard::new().expect("la tarjeta falsa deberia montarse");
+    the_batch_signed(&rehearsal, &Typist::typing(&[FakeCard::PIN]), "");
+    let second_signature = rehearsal
+        .calls()
+        .iter()
+        .enumerate()
+        .filter(|(_, call)| call.starts_with("C_SignInit"))
+        .nth(1)
+        .map(|(index, _)| index + 1)
+        .expect("el ensayo firma los tres documentos");
+    let card = FakeCard::new()
+        .and_then(|card| card.removed_from_call(second_signature))
+        .expect("la tarjeta falsa deberia montarse");
+
+    let signed = the_batch_signed(&card, &Typist::typing(&[FakeCard::PIN]), "");
+
+    assert!(signed[0].is_ok(), "{signed:?}");
+    assert_eq!(
+        signed[1..],
+        [Err("tokenAbsent".to_owned()), Err("tokenAbsent".to_owned())],
+        "{:?}",
+        card.calls()
+    );
+    assert_eq!(card.calls_to("C_Login").len(), 1, "{:?}", card.calls());
 }
 
 #[test]

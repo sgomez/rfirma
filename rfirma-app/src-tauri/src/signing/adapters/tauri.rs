@@ -81,14 +81,14 @@ pub fn signed_with_the_secret(
             origin_window_of(live),
         );
     };
-    let secret = super::prompted_secret::secret_for_the_batch(
+    super::prompted_secret::batch_signed_with_one_secret(
         &signer,
         &certificate,
         prompter,
         language,
         &pin,
-    )?;
-    crate::site::the_pending_signature_signed(desk, live, &secret)
+        |secret| crate::site::the_pending_signature_signed(desk, live, secret),
+    )
 }
 
 /// De qué ventana viene el PIN: la de sede si hay un trámite abierto, si no la principal.

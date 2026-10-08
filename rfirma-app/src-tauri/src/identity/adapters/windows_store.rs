@@ -130,6 +130,14 @@ impl Token for WindowsToken {
         RealToken.sign_with_secret(reference, secret, algorithm, data)
     }
 
+    fn hold_one_login(&self, reference: &CertificateRef) {
+        RealToken.hold_one_login(reference);
+    }
+
+    fn release_the_login(&self, reference: &CertificateRef) {
+        RealToken.release_the_login(reference);
+    }
+
     fn import_pkcs12(
         &self,
         directory: &Path,

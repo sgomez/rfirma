@@ -3,6 +3,7 @@
 mod listing;
 mod mechanism;
 pub mod nss;
+mod one_login;
 pub mod p11kit;
 mod removal;
 mod session;
@@ -23,8 +24,9 @@ use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 pub use nss::{NssHost, RealNssHost};
+use one_login::Refused;
 use session::{
-    context, pin_warning_of, refused_login, slot_of, the_store_is_really_there,
+    context, logged_in, pin_warning_of, refused_login, slot_of, the_store_is_really_there,
     token_info_unless_locked,
 };
 
@@ -81,6 +83,14 @@ impl Token for RealToken {
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
         sign_with_secret(reference, secret, algorithm, data)
+    }
+
+    fn hold_one_login(&self, reference: &CertificateRef) {
+        one_login::hold(reference);
+    }
+
+    fn release_the_login(&self, reference: &CertificateRef) {
+        with_token_turn(|| one_login::release(reference));
     }
 
     fn import_pkcs12(
@@ -185,10 +195,19 @@ pub fn accepts_the_secret(
         .as_str()
         .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
     with_token_turn(|| {
+        if let Some(cut) = one_login::cut_short(reference) {
+            return Err(cut);
+        }
         let store = reference.store();
         the_store_is_really_there(&store)?;
         let context = context(&store)?;
         let slot = slot_of(&context, reference.token_label())?;
+        let log_in = || logged_in(&context, slot, secret);
+        if let Some(accepted) =
+            one_login::within(reference, secret, log_in, |_| Ok(()), Refused::LeavesItOpen)
+        {
+            return accepted;
+        }
         token_info_unless_locked(&context, slot)?;
         let session = context.open_ro_session(slot)?;
         match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {

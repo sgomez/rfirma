@@ -475,3 +475,5 @@ fn secret_prompt_context_names_the_password_for_a_file_store() {
     let (secret, _holder) = cycle.secret_prompt_context();
     assert_eq!(secret, SecretName::Password);
 }
+
+mod on_a_card;
