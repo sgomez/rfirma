@@ -7,7 +7,8 @@ use super::{
 };
 use crate::identity::application::tests::{
     a_certificate, a_certificate_with_id, a_representative_certificate,
-    a_representative_certificate_of_a_natural_person, listed_from, NoToken, TestAuthority,
+    a_representative_certificate_of_a_natural_person, a_usable_certificate, listed_from, NoToken,
+    TestAuthority,
 };
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -334,6 +335,38 @@ fn a_certificate_carries_the_issuer_that_its_own_store_has() {
         .expect("el almacen deberia listarse");
 
     assert_eq!(found[0].chain(), vec![signer.der(), authority.der()]);
+}
+
+#[test]
+fn an_authority_is_never_offered_even_when_its_store_hands_it_over_as_signable() {
+    let holder = TestAuthority::root("Raiz de pruebas").issues("Firmante de pruebas");
+    let signable = vec![
+        a_certificate_in(CARD, "AC", a_usable_certificate("AC").der()),
+        a_certificate_in(CARD, "FIRMA", &holder.der()),
+    ];
+    let token = StoresWith::holding(signable.clone(), signable);
+    let stores = [Store::module(CARD)];
+
+    let offered: Vec<String> = certificates_with_their_chains(&token, &stores)
+        .expect("el almacen deberia listarse")
+        .iter()
+        .map(|certificate| certificate.reference().label().to_owned())
+        .collect();
+    let rows: Vec<String> = listed_rows(
+        &token,
+        &stores,
+        Path::new("/nada"),
+        &ListedCertificates::new(),
+        &ListedCertificates::new(),
+        &crate::identity::application::tests::NoMemory,
+    )
+    .expect("el almacen deberia listarse")
+    .into_iter()
+    .map(|row| row.label)
+    .collect();
+
+    assert_eq!(offered, ["FIRMA"]);
+    assert_eq!(rows, ["FIRMA"]);
 }
 
 #[test]

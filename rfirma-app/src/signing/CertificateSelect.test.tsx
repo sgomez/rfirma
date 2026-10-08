@@ -212,6 +212,21 @@ describe("CertificateSelect", () => {
       expect(within(row(0)).getByText("Tarjeta")).toBeVisible();
     });
 
+    it("tags a DNIe certificate as «DNIe» and a certificate on any other card as «Tarjeta»", async () => {
+      renderSelect({
+        certificates: [
+          aCertificate({ id: "dnie", holderName: "Ada", stores: ["dnie"] }),
+          aCertificate({ id: "card", holderName: "Beatriz", stores: ["card"] }),
+        ],
+      });
+
+      await userEvent.click(box());
+
+      expect(within(row(0)).getByText("DNIe")).toBeVisible();
+      expect(within(row(0)).queryByText("Tarjeta")).toBeNull();
+      expect(within(row(1)).getByText("Tarjeta")).toBeVisible();
+    });
+
     it("keeps the issuer for the tooltip, naming the other stores of the same certificate", async () => {
       renderSelect();
 
