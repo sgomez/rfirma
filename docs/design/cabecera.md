@@ -29,7 +29,6 @@ la plataforma y de lo que haya que decir.
 | Con documentos | `WithDocuments` | El hueco de las pestañas, con el botón partido de abrir, y el menú al extremo |
 | Con aviso | `WithAttention` | El botón de aviso a la izquierda del menú |
 | Barra de título nativa | `NativeTitlebarWithDocuments` | Linux: la cabecera de 44 px no existe y solo queda la tira de pestañas |
-| Lector de tarjetas | `ReaderDetected`, `ReaderNotDetected`, `ReaderNotSupported` | El indicador del lector, a la izquierda del aviso; en Linux va al final de la tira de pestañas. Habla del lector y no de la tarjeta; «no soportado» va atenuado |
 
 El menú **arranca cerrado** y lo abre el botón. En Linux no lo pinta React:
 es el menú GTK de la barra de título, con F10, y lo cuenta el backend.

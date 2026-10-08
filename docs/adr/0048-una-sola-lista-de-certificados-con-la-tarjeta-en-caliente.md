@@ -61,13 +61,8 @@ la tarjeta.
 
 La consecuencia «sin vigilante no hay estado de lector» deja de valer. El
 estado de lectores gana `Unavailable` y es el valor inicial: solo pasa a otro
-si arranca el vigilante, lo que no ocurre fuera de Linux ni en Flatpak. Sin él,
-la cabecera no podía distinguir «he mirado y no hay lector» de «esta versión no
-mira», y su indicador habría mentido en las plataformas sin vigilante.
+si arranca el vigilante. Sin él, la cabecera no distinguía «he mirado y no hay
+lector» de «esta versión no mira».
 
-`pcscd` caído en deb o rpm sigue siendo «sin lector»; la lista se sigue
-buscando como antes con «Volver a buscar».
-
-**Esta decisión caduca**: cuando Flatpak reciba el socket de PC/SC o lleguen
-los vigilantes de Windows y macOS, la regla de arranque deja de excluirlos y
-«no soportado» desaparece de ellos.
+**Esta decisión caduca** cuando el vigilante cubra todas las plataformas y
+canales: `Unavailable` desaparece con la regla de arranque que lo sostiene.

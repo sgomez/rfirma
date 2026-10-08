@@ -75,11 +75,7 @@ export function Header({
     return documents === null && reader === undefined ? null : (
       <header className="header header--tabsOnly">
         {documents}
-        {reader && (
-          <div className="header__end">
-            <ReaderIndicator reader={reader} />
-          </div>
-        )}
+        {reader && <ReaderIndicator reader={reader} />}
       </header>
     );
   }

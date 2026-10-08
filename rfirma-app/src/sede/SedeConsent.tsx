@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
 import type { Certificate, CertificateState, ReaderStatus } from "../signing/certificate";
-import { keptAcrossTheReader, NO_READER, sitePreselection } from "../signing/certificate";
+import { keptAcrossTheReader, sitePreselection, UNAVAILABLE_READER } from "../signing/certificate";
 import { PreviousSignaturesNotice } from "../signing/PreviousSignaturesNotice";
 import { formatSize } from "../signing/panelFormat";
 import { ReaderLine } from "../signing/ReaderLine";
@@ -56,7 +56,7 @@ export function SedeConsent({
   operation,
   stage,
   countdown,
-  reader = NO_READER,
+  reader = UNAVAILABLE_READER,
   liveCertificates = null,
   onConsent,
   onCancel,

@@ -2,7 +2,7 @@
 
 import { useTranslation } from "react-i18next";
 import type { NamedFailure } from "../errors/classify";
-import { type Certificate, NO_READER, type ReaderStatus } from "../signing/certificate";
+import { type Certificate, type ReaderStatus, UNAVAILABLE_READER } from "../signing/certificate";
 import type { Errand, MarkedArea } from "./errand";
 import { SedeConfirm } from "./SedeConfirm";
 import { SedeConsent } from "./SedeConsent";
@@ -43,7 +43,7 @@ export function SedeView({
   errand,
   consentCountdown = true,
   installFailure = null,
-  reader = NO_READER,
+  reader = UNAVAILABLE_READER,
   liveCertificates = null,
   onConsent,
   onConfirmSignatures,
