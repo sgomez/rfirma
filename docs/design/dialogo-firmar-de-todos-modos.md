@@ -61,7 +61,7 @@ los motivos, `signatureReason.*`. Los textos no se copian aquí: se leen en
 ## Componentes y tokens
 
 El primitivo `Dialog` (con `Escape`, foco y trampa de foco), `Button` y `Row`,
-`CrossCircleIcon` y `AlertIcon` (los iconos de validez de
+los iconos `failure` y `warning` (los de validez de
 [design-system.md](design-system.md#8-accesibilidad)), `.rf-title`, `.rf-prose`,
 `.rf-body`, `.rf-text-muted` y `.rf-divider`. El ancho y el alto máximo de la
 lista son de `SignAnywayDialog.css`.

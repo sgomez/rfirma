@@ -3,7 +3,7 @@
 import { type ReactNode, useCallback, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import { AlertIcon, ExternalLinkIcon, MenuIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Menu, MenuItem } from "../design-system/Menu";
 import "./Header.css";
 import type { MenuAnchor } from "./menuAnchor";
@@ -84,7 +84,7 @@ export function Header({
             title={t("header.attention")}
             onClick={onOpenStatus}
           >
-            <AlertIcon size={16} />
+            <Icon name="warning" size={16} />
           </Button>
         )}
         {menuAnchor === "header" && (
@@ -98,7 +98,7 @@ export function Header({
               aria-controls={open ? menuId : undefined}
               onClick={() => setOpen((wasOpen) => !wasOpen)}
             >
-              <MenuIcon size={18} />
+              <Icon name="menu" size={18} />
             </Button>
             <Menu
               open={open}
@@ -120,7 +120,7 @@ export function Header({
               <MenuItem className="header__entry" onClick={choose(onOpenHelp)}>
                 <span className="header__entryLabel">{t("header.help")}</span>
                 <span className="header__entryIcon" aria-hidden="true">
-                  <ExternalLinkIcon />
+                  <Icon name="externalLink" />
                 </span>
               </MenuItem>
               <MenuItem className="header__entry" onClick={choose(onOpenAbout)}>

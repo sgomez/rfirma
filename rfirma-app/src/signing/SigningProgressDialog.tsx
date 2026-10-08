@@ -3,7 +3,7 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../design-system/Dialog";
-import { CheckIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { ProgressBar } from "../design-system/ProgressBar";
 import { SIGNING_STAGES, type SigningStage } from "./flow";
 import "./SigningProgressDialog.css";
@@ -51,7 +51,7 @@ export function SigningProgressDialog({ stage }: SigningProgressDialogProps) {
             >
               <span className="progress-dialog__mark" aria-hidden="true">
                 {state === "done" ? (
-                  <CheckIcon size={20} strokeWidth={2} />
+                  <Icon name="done" size={20} strokeWidth={2} />
                 ) : (
                   <span className="progress-dialog__dot" />
                 )}

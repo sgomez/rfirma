@@ -8,15 +8,7 @@ import { Button } from "../design-system/Button";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import "./StatusView.css";
-import {
-  AlertIcon,
-  CheckCircleIcon,
-  CheckingIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  CrossCircleIcon,
-  NotApplicableIcon,
-} from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Select } from "../design-system/Select";
 import {
   type Signal,
@@ -169,9 +161,9 @@ export function StatusView({
                   onClick={() => toggleDetail(row.signal)}
                 >
                   {expandedDetail.has(row.signal) ? (
-                    <ChevronDownIcon size={14} />
+                    <Icon name="expanded" size={14} />
                   ) : (
-                    <ChevronRightIcon size={14} />
+                    <Icon name="collapsed" size={14} />
                   )}
                   {detailToggleLabel(t, row.detail)}
                 </Button>
@@ -183,9 +175,9 @@ export function StatusView({
                           // biome-ignore lint/suspicious/noArrayIndexKey: la vista no trae la ruta del almacén, solo su marca, y el orden no cambia entre pintadas.
                           <li key={`${store.brand}-${index}`} className="status-view__detail-item">
                             {store.trusted ? (
-                              <CheckCircleIcon size={14} />
+                              <Icon name="success" size={14} />
                             ) : (
-                              <CrossCircleIcon size={14} />
+                              <Icon name="failure" size={14} />
                             )}
                             <span className="rf-prose">{storeBrandLabel(t, store.brand)}</span>
                             <span className="rf-body status-view__detail-note">
@@ -247,7 +239,7 @@ function SiteSignatureDiagnosis({
         aria-controls="status-view__detail-siteSignature"
         onClick={onToggle}
       >
-        {expanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
+        {expanded ? <Icon name="expanded" size={14} /> : <Icon name="collapsed" size={14} />}
         {t("status.detail.diagnose")}
       </Button>
 
@@ -352,14 +344,14 @@ function verdictLabel(t: TFunction, verdict: Verdict): string {
 function renderVerdictIcon(verdict: Verdict): ReactNode {
   switch (verdict) {
     case "correct":
-      return <CheckCircleIcon size={16} />;
+      return <Icon name="success" size={16} />;
     case "attention":
-      return <AlertIcon size={16} />;
+      return <Icon name="warning" size={16} />;
     case "incorrect":
-      return <CrossCircleIcon size={16} />;
+      return <Icon name="failure" size={16} />;
     case "notApplicable":
-      return <NotApplicableIcon size={16} />;
+      return <Icon name="notApplicable" size={16} />;
     case "checking":
-      return <CheckingIcon size={16} />;
+      return <Icon name="checking" size={16} />;
   }
 }

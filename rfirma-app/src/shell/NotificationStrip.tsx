@@ -1,7 +1,7 @@
 //! La franja de notificación bajo la cabecera: el patrón, no el aviso concreto.
 
 import { Button } from "../design-system/Button";
-import { InfoIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import "./NotificationStrip.css";
 
 interface NotificationStripProps {
@@ -52,7 +52,7 @@ export function NotificationStrip({
   return (
     <div className="notification-strip" role="status">
       <span className="notification-strip__icon" aria-hidden="true">
-        <InfoIcon size={18} />
+        <Icon name="info" size={18} />
       </span>
       <p className="rf-body notification-strip__message">{message}</p>
       {action !== undefined && (

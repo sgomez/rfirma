@@ -2,7 +2,7 @@
 
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { classNames } from "./classNames";
-import { CheckIcon, ChevronDownIcon, SearchIcon } from "./icons";
+import { Icon } from "./icons";
 import { Popover } from "./Popover";
 import { Stack } from "./Stack";
 import "./Combobox.css";
@@ -137,7 +137,7 @@ export function Combobox<T>({
         {renderOption(option.item)}
         {selected && (
           <span className="combobox__check">
-            <CheckIcon size={16} strokeWidth={2} />
+            <Icon name="selected" size={16} strokeWidth={2} />
           </span>
         )}
       </div>
@@ -172,7 +172,7 @@ export function Combobox<T>({
         {open ? (
           <div className="combobox__search">
             <span className="combobox__icon">
-              <SearchIcon />
+              <Icon name="search" />
             </span>
             <input
               ref={search}
@@ -212,7 +212,7 @@ export function Combobox<T>({
           >
             <span className="combobox__value">{children}</span>
             <span className="combobox__icon">
-              <ChevronDownIcon strokeWidth={1.8} />
+              <Icon name="dropdown" strokeWidth={1.8} />
             </span>
           </button>
         )}

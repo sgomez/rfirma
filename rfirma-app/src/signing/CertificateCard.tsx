@@ -3,7 +3,7 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../design-system/Badge";
-import { ClockIcon, RevokedIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import type { Certificate } from "./certificate";
 import { certificateHeadline, certificateSubtitle, expiryMonthYear, isUsable } from "./certificate";
 import "./CertificateCard.css";
@@ -72,9 +72,9 @@ function StatusIcon({ status }: { status: Certificate["status"] }) {
   switch (status.kind) {
     case "expired":
     case "notYetValid":
-      return <ClockIcon />;
+      return <Icon name="outOfValidity" />;
     case "revoked":
-      return <RevokedIcon />;
+      return <Icon name="revoked" />;
     default:
       return null;
   }

@@ -96,8 +96,8 @@ Es igual en los tres escritorios; solo cambia el icono (el del tema en Linux).
 
 ## Componentes y tokens
 
-`Button`, `Popover` y los iconos del sistema de diseño (`MenuIcon`, `AlertIcon`,
-`ExternalLinkIcon`); `.rf-divider`; `--rf-bg`, `--rf-surface`,
+`Button`, `Popover` y los iconos del sistema de diseño (`menu`, `warning` y
+`externalLink`); `.rf-divider`; `--rf-bg`, `--rf-surface`,
 `--rf-border-subtle`, `--rf-text`, `--rf-text-muted`, `--rf-shadow-elevated`,
 `--rf-focus-ring`, `--rf-radius-md`. La geometría la dan `Header.css` y las
 historias; el gris de la barra de GTK lo pone el tema del escritorio, no los

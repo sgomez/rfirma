@@ -42,7 +42,7 @@ en `po/es.po`.
 ## Componentes y tokens
 
 El primitivo `Dialog` (con `Escape`, foco y trampa de foco), `Button` y `Row`,
-`AlertIcon`, `.rf-title`, `.rf-prose` y `.rf-divider`. El ancho de 460 px es de
+el icono `warning`, `.rf-title`, `.rf-prose` y `.rf-divider`. El ancho de 460 px es de
 `UnsealedPagesDialog.css`.
 
 ## Decisiones

@@ -6,7 +6,7 @@ import "./AboutDialog.css";
 import { Badge } from "../design-system/Badge";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
-import { ExternalLinkIcon, InfoIcon, NewVersionIcon, UpToDateIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
 import { InstallUpdateDialog } from "../updates/InstallUpdateDialog";
@@ -88,14 +88,14 @@ export function AboutDialog({
               }}
             >
               <span>{t("about.repository")}</span>
-              <ExternalLinkIcon size={13} />
+              <Icon name="externalLink" size={13} />
             </a>
           </dd>
         </dl>
 
         <Row className="about__independence">
           <span className="about__independenceIcon">
-            <InfoIcon size={16} />
+            <Icon name="info" size={16} />
           </span>
           <Stack className="about__independenceText">
             <p className="rf-title">{t("about.independenceLead")}</p>
@@ -134,7 +134,7 @@ function UpdateStatus({
   if (newVersion !== null) {
     return (
       <Row className="about__updateStatus about__updateStatus--new">
-        <NewVersionIcon />
+        <Icon name="newVersion" />
         <span>{t("updates.newVersion", { version: newVersion.version })}</span>
         {offerUpdate && newVersion.installable && (
           <Button variant="primary" onClick={onUpdate}>
@@ -147,7 +147,7 @@ function UpdateStatus({
   return (
     <Row className="about__updateStatus">
       <span className="about__upToDateIcon">
-        <UpToDateIcon />
+        <Icon name="upToDate" />
       </span>
       <span>{t("about.update.upToDate")}</span>
     </Row>
