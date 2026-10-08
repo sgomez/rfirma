@@ -1,0 +1,46 @@
+//! Los papeles por los que la interfaz pide un icono, cada uno con su lado por defecto en px; no dicen qué familia lo dibuja.
+
+export const ICON_SIZES = {
+  add: 16,
+  checking: 16,
+  close: 12,
+  collapsed: 16,
+  copy: 14,
+  document: 20,
+  done: 12,
+  dropdown: 16,
+  dropFile: 28,
+  expanded: 16,
+  externalLink: 14,
+  failure: 24,
+  firstPage: 16,
+  fitPage: 16,
+  fitWindow: 16,
+  folder: 20,
+  info: 20,
+  lastPage: 16,
+  loading: 16,
+  menu: 20,
+  move: 14,
+  newVersion: 18,
+  nextPage: 16,
+  notApplicable: 16,
+  outOfValidity: 14,
+  previousPage: 16,
+  revoked: 14,
+  rubric: "100%",
+  search: 16,
+  selected: 16,
+  signed: 13,
+  signedByYou: 16,
+  smartCard: 16,
+  success: 24,
+  upToDate: 18,
+  warning: 20,
+  zoomIn: 16,
+  zoomOut: 16,
+} as const satisfies Record<string, number | string>;
+
+export type IconName = keyof typeof ICON_SIZES;
+
+export const ICON_NAMES = Object.keys(ICON_SIZES) as IconName[];

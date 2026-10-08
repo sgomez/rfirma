@@ -3,13 +3,7 @@
 import { type RefObject, useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import {
-  ChevronDownIcon,
-  CloseIcon,
-  FileIcon,
-  FolderIcon,
-  SignedMarkIcon,
-} from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Menu, MenuItem } from "../design-system/Menu";
 import { SplitButton } from "../design-system/SplitButton";
 import { Tab, Tabs } from "../design-system/Tabs";
@@ -88,12 +82,12 @@ export function DocumentTabs({
                 onClick={() => onActivate(tab.id)}
               >
                 <span className="document-tab__icon">
-                  <FileIcon size={14} />
+                  <Icon name="document" size={14} />
                 </span>
                 <span className="document-tab__name">{tab.name}</span>
                 {tab.badge === "Signed" && (
                   <span className="document-tab__signed" role="img" aria-label={t("badges.signed")}>
-                    <SignedMarkIcon />
+                    <Icon name="signed" />
                   </span>
                 )}
               </Tab>
@@ -103,7 +97,7 @@ export function DocumentTabs({
                 aria-label={t("tabs.close", { name: tab.name })}
                 onClick={() => onClose(tab.id)}
               >
-                <CloseIcon />
+                <Icon name="close" />
               </button>
             </div>
           );
@@ -142,7 +136,7 @@ function HiddenTabsMenu({ hidden, onActivate }: HiddenTabsMenuProps) {
         onClick={() => setOpen((was) => !was)}
       >
         +{hidden.length}
-        <ChevronDownIcon size={14} strokeWidth={2} />
+        <Icon name="dropdown" size={14} strokeWidth={2} />
       </Button>
       <Menu
         open={open}
@@ -165,7 +159,7 @@ function HiddenTabsMenu({ hidden, onActivate }: HiddenTabsMenuProps) {
             <span className="hidden-tab-row__name">{tab.name}</span>
             {tab.badge === "Signed" && (
               <span className="hidden-tab-row__signed" role="img" aria-label={t("badges.signed")}>
-                <SignedMarkIcon />
+                <Icon name="signed" />
               </span>
             )}
           </MenuItem>
@@ -229,7 +223,7 @@ function SplitOpenButton({
         menuLabel={t("recents.heading")}
         items={items}
       >
-        <FolderIcon size={15} />
+        <Icon name="folder" size={15} />
         {t("tabs.openPdf")}
       </SplitButton>
     </div>

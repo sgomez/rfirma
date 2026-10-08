@@ -3,7 +3,7 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../design-system/Badge";
-import { AlertIcon, CheckCircleIcon, FileIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
@@ -108,7 +108,7 @@ function AcknowledgementBody({ moment }: { moment: Acknowledgement }) {
   return (
     <>
       <Row gap="xs" className="signed-panel__signed-at">
-        <CheckCircleIcon size={18} />
+        <Icon name="success" size={18} />
         <span className="rf-body">
           {t("panel.signed.signedAt", { time: formatSignedTime(moment.signedAt, i18n.language) })}
         </span>
@@ -142,7 +142,7 @@ function ReadingBody({ state, onOpenHelp }: { state: ReadingState; onOpenHelp?: 
     return (
       <div className="panel__no-certificates">
         <div className="panel__notice-title">
-          <AlertIcon size={18} />
+          <Icon name="warning" size={18} />
           <span className="rf-title">{t("panel.signed.unrecognized.title")}</span>
         </div>
         <p className="rf-body rf-text-muted panel__notice-body">
@@ -155,7 +155,7 @@ function ReadingBody({ state, onOpenHelp }: { state: ReadingState; onOpenHelp?: 
     return (
       <div className="panel__no-certificates">
         <div className="panel__notice-title">
-          <FileIcon size={18} />
+          <Icon name="document" size={18} />
           <span className="rf-title">{t("panel.signed.none.title")}</span>
         </div>
       </div>
@@ -184,7 +184,7 @@ function SignaturesSummary({ signatures, findings, format, justSigned }: Signatu
   return (
     <section className="panel__section" aria-label={t("panel.signed.title")}>
       <Row as="p" gap="xs" className="signed-panel__title">
-        <FileIcon size={16} />
+        <Icon name="document" size={16} />
         <span>{t("panel.signed.title")}</span>
       </Row>
       {format !== undefined && (

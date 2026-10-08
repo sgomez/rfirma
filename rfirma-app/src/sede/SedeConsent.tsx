@@ -3,7 +3,7 @@
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertIcon, FileIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
 import type { Certificate } from "../signing/certificate";
 import { sitePreselection } from "../signing/certificate";
@@ -143,7 +143,7 @@ export function SedeConsent({
             {stage.sha1ToAllow && (
               <div className="sede-consent__warning">
                 <div className="sede-consent__warning-head">
-                  <AlertIcon size={20} />
+                  <Icon name="warning" size={20} />
                   <span className="rf-title">{t("sede.consent.sha1ToAllowTitle")}</span>
                 </div>
                 <p className="rf-body sede-consent__warning-body">
@@ -244,7 +244,7 @@ function BatchCard({ signs }: { signs: number }) {
     <Stack className="sede-consent__document">
       <Row gap="xs" className="sede-consent__document-head">
         <span className="sede-consent__icon">
-          <FileIcon size={20} />
+          <Icon name="document" size={20} />
         </span>
         <Stack className="sede-consent__document-text">
           <p className="rf-title">{t("sede.consent.batchTitle", { count: signs })}</p>
@@ -318,7 +318,7 @@ function DocumentCard({
     <Stack className="sede-consent__document">
       <Row gap="xs" className="sede-consent__document-head">
         <span className="sede-consent__icon">
-          <FileIcon size={20} />
+          <Icon name="document" size={20} />
         </span>
         <Stack className="sede-consent__document-text">
           <p className={`rf-title${untitled ? " sede-consent__untitled" : ""}`}>

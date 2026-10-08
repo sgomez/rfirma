@@ -4,7 +4,7 @@ import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import { AlertIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
 import { useDefaultButton } from "../design-system/useDefaultButton";
@@ -63,7 +63,7 @@ export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmPro
       <Stack className="sede-confirm">
         <Row gap="xs" className="sede-confirm__heading">
           <span className="sede-confirm__icon">
-            <AlertIcon size={18} />
+            <Icon name="warning" size={18} />
           </span>
           <p className="rf-title">{t("signAnyway.title")}</p>
         </Row>

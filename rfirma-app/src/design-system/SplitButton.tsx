@@ -11,7 +11,7 @@ import {
 } from "react";
 import { Button, type ButtonProps } from "./Button";
 import { classNames } from "./classNames";
-import { ChevronDownIcon } from "./icons";
+import { Icon } from "./icons";
 import { Menu, type MenuProps } from "./Menu";
 import "./SplitButton.css";
 
@@ -70,7 +70,7 @@ export function SplitButton({
             aria-controls={open ? menuId : undefined}
             onClick={() => setOpen((was) => !was)}
           >
-            <ChevronDownIcon size={14} strokeWidth={2} />
+            <Icon name="dropdown" size={14} strokeWidth={2} />
           </Button>
           <Menu
             open={open}

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../design-system/Badge";
 import { Card } from "../design-system/Card";
-import { AlertIcon, CheckCircleIcon, CrossCircleIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import type {
   DocumentFinding,
@@ -34,7 +34,7 @@ export function SignatureCards({ signatures, findings, justSigned = false }: Sig
           {findings.map((finding) => (
             <li className="signature-cards__finding" key={finding}>
               <span className="signature-cards__finding-icon">
-                <CrossCircleIcon size={15} />
+                <Icon name="failure" size={15} />
               </span>
               <span>{findingLabel(t, finding, justSigned)}</span>
             </li>
@@ -100,11 +100,11 @@ function CardHead({
 function validityIcon(validity: Validity): ReactNode {
   switch (validity) {
     case "valid":
-      return <CheckCircleIcon size={14} />;
+      return <Icon name="success" size={14} />;
     case "expired":
-      return <AlertIcon size={14} />;
+      return <Icon name="warning" size={14} />;
     case "invalid":
-      return <CrossCircleIcon size={14} />;
+      return <Icon name="failure" size={14} />;
   }
 }
 

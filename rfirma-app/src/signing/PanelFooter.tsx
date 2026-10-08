@@ -3,7 +3,7 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import { AlertIcon, FileIcon, FolderIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import type { Certificate, CertificateState } from "./certificate";
 import { isUsable } from "./certificate";
@@ -115,18 +115,18 @@ export function PanelFooter(props: PanelFooterProps) {
                 className="rf-text-muted panel__destination-folder"
                 title={destination.folder}
               >
-                <FolderIcon size={15} />
+                <Icon name="folder" size={15} />
                 <span className="panel__destination-ellipsis">{shortened.folder}</span>
               </Row>
             )}
             <Row as="span" gap="xs" className="panel__destination-name" title={fullName}>
-              <FileIcon size={15} />
+              <Icon name="document" size={15} />
               <span className="panel__destination-ellipsis">{shortened.name}</span>
             </Row>
           </div>
         ) : (
           <Row gap="xs" className="panel__destination-unwritable">
-            <AlertIcon size={16} />
+            <Icon name="warning" size={16} />
             <span className="panel__destination-unwritable-text" title={destination.folder}>
               {unwritableMessage(
                 t("panel.footer.unwritable", { folder: shortened.folder }),
@@ -147,7 +147,7 @@ export function PanelFooter(props: PanelFooterProps) {
             className="panel__signed-folder"
             onClick={props.onOpenFolder}
           >
-            <FolderIcon />
+            <Icon name="folder" />
           </Button>
           <Button
             variant="ghost"

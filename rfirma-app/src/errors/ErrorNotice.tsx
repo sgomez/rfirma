@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActionKeys } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
-import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { useDefaultButton } from "../design-system/useDefaultButton";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
@@ -110,7 +110,7 @@ export function ErrorNotice({
   return (
     <div className="error-notice" role="alert" ref={notice} tabIndex={-1}>
       <p className="error-notice__title">
-        <AlertIcon />
+        <Icon name="warning" />
         <span className="rf-title">
           {title ?? (documentUnchanged ? t("errors.signingFailedTitle") : text.title)}
         </span>
@@ -142,7 +142,7 @@ export function ErrorNotice({
               <Row gap="xs" className="error-notice__actions">
                 {hasHelpLink(situation) && (
                   <Button variant="ghost" className="error-notice__help" onClick={openHelp}>
-                    <ExternalLinkIcon size={14} />
+                    <Icon name="externalLink" size={14} />
                     {t("header.help")}
                   </Button>
                 )}
