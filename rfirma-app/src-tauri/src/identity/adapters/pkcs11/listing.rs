@@ -59,7 +59,7 @@ pub(super) fn list_holding_the_turn(store: &Store) -> Result<Vec<TokenCertificat
         let token_label = info.label().trim().to_owned();
         let session = context.open_ro_session(slot)?;
 
-        let logged_in = log_in_before_listing(&session, &info);
+        let logged_in = log_in_before_listing(&session, &info, store.class());
         found.extend(signable_certificates(
             &session,
             store,
@@ -75,8 +75,16 @@ pub(super) fn list_holding_the_turn(store: &Store) -> Result<Vec<TokenCertificat
 }
 
 /// Inicia sesión automáticamente antes de listar si la ranura lo requiere.
-fn log_in_before_listing(session: &Session, info: &cryptoki::slot::TokenInfo) -> bool {
-    if !should_attempt_blind_login(info.login_required(), info.protected_authentication_path()) {
+fn log_in_before_listing(
+    session: &Session,
+    info: &cryptoki::slot::TokenInfo,
+    class: StoreClass,
+) -> bool {
+    if !should_attempt_blind_login(
+        info.login_required(),
+        info.protected_authentication_path(),
+        class,
+    ) {
         return false;
     }
 
@@ -88,8 +96,12 @@ fn log_in_before_listing(session: &Session, info: &cryptoki::slot::TokenInfo) ->
 }
 
 /// Determina si procede intentar un inicio de sesión ciego para listar.
-fn should_attempt_blind_login(login_required: bool, protected_authentication_path: bool) -> bool {
-    login_required && !protected_authentication_path
+fn should_attempt_blind_login(
+    login_required: bool,
+    protected_authentication_path: bool,
+    class: StoreClass,
+) -> bool {
+    login_required && !protected_authentication_path && class != StoreClass::Card
 }
 
 /// Filtra certificados de una ranura conservando aquellos con clave privada emparejada.
@@ -205,7 +217,7 @@ pub(super) fn list_every_certificate(
         let token_label = info.label().trim().to_owned();
         let session = context.open_ro_session(slot)?;
 
-        let logged_in = log_in_before_listing(&session, &info);
+        let logged_in = log_in_before_listing(&session, &info, store.class());
         found.extend(all_certificates_in_session(&session, &store, &token_label)?);
         if logged_in {
             let _ = session.logout();
@@ -218,19 +230,37 @@ pub(super) fn list_every_certificate(
 #[cfg(test)]
 mod log_in_before_listing_tests {
     use super::should_attempt_blind_login;
+    use crate::identity::domain::store::StoreClass;
 
     #[test]
     fn skips_a_slot_that_does_not_require_login() {
-        assert!(!should_attempt_blind_login(false, false));
+        assert!(!should_attempt_blind_login(
+            false,
+            false,
+            StoreClass::Installed
+        ));
     }
 
     #[test]
     fn attempts_a_blind_login_on_a_slot_without_a_reader_keypad() {
-        assert!(should_attempt_blind_login(true, false));
+        assert!(should_attempt_blind_login(
+            true,
+            false,
+            StoreClass::Installed
+        ));
     }
 
     #[test]
     fn skips_a_slot_with_a_reader_keypad_even_if_login_is_required() {
-        assert!(!should_attempt_blind_login(true, true));
+        assert!(!should_attempt_blind_login(
+            true,
+            true,
+            StoreClass::Installed
+        ));
+    }
+
+    #[test]
+    fn skips_a_card_because_its_secret_is_never_sent_blind() {
+        assert!(!should_attempt_blind_login(true, false, StoreClass::Card));
     }
 }
