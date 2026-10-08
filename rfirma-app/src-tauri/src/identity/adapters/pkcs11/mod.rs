@@ -11,10 +11,6 @@ pub mod stores;
 use std::path::Path;
 use std::sync::Mutex;
 
-use cryptoki::error::{Error, RvError};
-use cryptoki::session::UserType;
-use cryptoki::types::AuthPin;
-
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
@@ -24,7 +20,7 @@ use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 pub use nss::{NssHost, RealNssHost};
 use session::{
-    context, pin_warning_of, refused_login, slot_of, the_store_is_really_there,
+    context, logged_in_session, pin_warning_of, slot_of, the_store_is_really_there,
     token_info_unless_locked,
 };
 
@@ -190,15 +186,9 @@ pub fn accepts_the_secret(
         let context = context(&store)?;
         let slot = slot_of(&context, reference.token_label())?;
         token_info_unless_locked(&context, slot)?;
-        let session = context.open_ro_session(slot)?;
-        match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
-            Ok(()) => {
-                let _ = session.logout();
-                Ok(())
-            }
-            Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => Ok(()),
-            Err(other) => Err(refused_login(&context, slot, other)),
-        }
+        let session = logged_in_session(&context, slot, pin)?;
+        let _ = session.logout();
+        Ok(())
     })
 }
 
