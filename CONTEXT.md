@@ -176,8 +176,26 @@ _Avoid_: clave protegida, clave bloqueada
 
 **Tarjeta criptográfica** (Rust `StoreClass::Card`):
 Dispositivo físico que custodia una clave no exportable y ejecuta la firma en su
-interior, protegido por un PIN. El caso principal en España es el **DNIe**.
+interior, protegido por un PIN. El caso principal en España es el **DNIe**. Se
+mete en un **lector**, y sus certificados se leen sin el PIN: el PIN solo se pide
+al firmar.
 _Avoid_: smartcard, token, tarjeta inteligente
+
+**DNIe**:
+La tarjeta criptográfica del documento nacional de identidad, emitida por la
+Dirección General de la Policía. Lleva dos certificados del titular, el de
+**autenticación** —para identificarse ante una sede— y el de **firma**, y el de
+la CA que los emite. En el panel de firma se ofrece solo el de firma; a una sede,
+los dos, como en AutoFirma, porque rFirma no sabe si la sede quiere autenticar o
+firmar: solo los filtros de la sede quitan uno u otro.
+_Avoid_: DNI electrónico (en la interfaz), carné, tarjeta del DNI
+
+**Lector**:
+El dispositivo donde se mete una tarjeta criptográfica. Puede estar sin
+tarjeta, con una tarjeta que se está leyendo, con una lista para usar o con una
+que rFirma no sabe leer. Meter o sacar la tarjeta no pregunta nada: sus
+certificados entran y salen de la lista.
+_Avoid_: lector DNIe, lector de chip, dispositivo PC/SC
 
 **Almacén** (Rust `Store`):
 **Un** origen de certificados, no todos: una tarjeta criptográfica, el perfil de
@@ -187,8 +205,9 @@ los demás. El mismo certificado —mismo emisor y número de serie— en varios
 almacenes se muestra una vez, con la lista de almacenes donde está; se firma con
 la copia recordada o, si no la hay, con la del primer almacén por este orden:
 tarjeta, Almacén de rFirma, NSS del sistema, Firefox, Chrome.
+No hay **almacén activo**: la persona elige un certificado, nunca un almacén.
 _Avoid_: keystore, repositorio de certificados, llavero, «el conjunto de
-certificados de la máquina»
+certificados de la máquina», almacén activo
 
 **Almacén NSS** (Rust `StoreClass::Nssdb`):
 El almacén de un navegador —el perfil de Firefox, la base de datos de Chrome—,
@@ -265,9 +284,10 @@ que firme ella misma, porque por defecto no produce firmas con una huella rota
 clave privada dentro de Java y eso lo prohíbe el ADR-0001; **no reproduce la
 XAdES explícita** (`mode=explicit`), que el propio original da por obsoleta y
 resuelve hasheando el dato con SHA1; **solo admite el lote local en JSON**, no
-el XML heredado que el original todavía acepta; y **no soporta tarjetas
-criptográficas ni el DNIe**, cuya fontanería PC/SC y PKCS#11 no se distribuye en
-ningún paquete (ADR-0004). Alcanza también a la **línea de órdenes** del
+el XML heredado que el original todavía acepta; y **en el flatpak no soporta
+tarjetas criptográficas ni el DNIe**, porque no lleva su fontanería PC/SC y
+PKCS#11 (ADR-0004); el `.deb` y el `.rpm` las usan con el OpenSC del sistema.
+Alcanza también a la **línea de órdenes** del
 original, con una desviación más propia de ella: **no acepta la contraseña como
 argumento** (ADR-0041). El `--json` de esa línea de órdenes es una **extensión**
 de rFirma, no una desviación: el original no lo tiene y nada que lo use deja de
