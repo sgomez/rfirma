@@ -52,6 +52,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0046 | El catálogo de historias se ordena por capas constructivas y la capa decide qué se publica en Claude Design |
 | 0047 | El PIN de una tarjeta nunca se envía a ciegas: las reglas del PIN, sin contador exacto de intentos y sin el DNIe real en ninguna grada automática |
 | 0048 | Una sola lista de certificados, sin almacén activo ni pregunta modal: la tarjeta entra y sale en caliente por PC/SC, con el estado del lector como vista y el PIN solo al firmar |
+| 0049 | El flatpak trae su OpenSC y usa el `pcscd` del anfitrión por `--socket=pcsc`: solo OpenSC, sin módulos de fabricante ni `opensc.conf` del anfitrión |
 
 Los ADR que solo afectan a la suite de conformidad viven en `rfirma-conformance/docs/adr/` y
 comparten la numeración: el siguiente ADR, esté donde esté, toma el número libre más alto.
@@ -70,7 +71,7 @@ ficheros más grandes del repositorio (hasta 32 KB).
 
 `ancla-y-paginas-en-el-puente` · `arrastre-bajo-el-sandbox` · `barra-de-titulo-en-linux` ·
 `ca-en-los-almacenes-de-confianza` · `ca-nss-navegador-abierto` · `campos-de-firma-vacios` ·
-`contrato-protocolo-afirma` · `coordenadas-recuadro-pades` · `dnie-en-linux` ·
+`contrato-protocolo-afirma` · `coordenadas-recuadro-pades` · `dnie-en-flatpak` · `dnie-en-linux` ·
 `exclusion-afirma-ui-utils` · `filtros-sede-unmeasured` · `firma-visible-trifasica` ·
 `flathub-libreria-nativa` · `flatpak-canal-unico` · `glibc-libreria-nativa` ·
 `graalvm-libawt-shared` · `i18next-y-el-po` · `native-image-postfirma` ·
