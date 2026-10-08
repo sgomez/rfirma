@@ -170,6 +170,7 @@ fn the_reader_news_crosses_with_its_status_as_a_kind_and_the_list_only_when_it_c
     );
     for (status, kind) in [
         (ReaderStatus::NoReader, "noReader"),
+        (ReaderStatus::Unavailable, "unavailable"),
         (ReaderStatus::NoCard, "noCard"),
         (ReaderStatus::Ready(ReadyCard::Other), "cardReady"),
         (ReaderStatus::Unreadable, "unreadable"),

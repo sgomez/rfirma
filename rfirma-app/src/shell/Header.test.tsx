@@ -6,8 +6,16 @@ import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import * as stories from "./Header.stories";
 
-const { WithoutDocuments, WithDocuments, WithAttention, NativeTitlebarWithDocuments } =
-  composeStories(stories);
+const {
+  WithoutDocuments,
+  WithDocuments,
+  WithAttention,
+  NativeTitlebarWithDocuments,
+  ReaderDetected,
+  ReaderNotDetected,
+  ReaderNotSupported,
+  ReaderWithACardOnTheNativeTitlebar,
+} = composeStories(stories);
 
 const attentionName = "Estado de rFirma: requiere atención";
 
@@ -128,5 +136,44 @@ describe("the header menu", () => {
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+});
+
+describe("the card reader indicator", () => {
+  it("says detected, with no tooltip, when there is a reader", () => {
+    renderWithCatalog(<ReaderDetected />);
+
+    const indicator = screen.getByRole("note", { name: "Lector de tarjetas: detectado" });
+    expect(indicator).not.toHaveAttribute("title");
+  });
+
+  it("says detected for every state with a reader, whatever the card", () => {
+    for (const kind of ["noCard", "reading", "dnieReady", "cardReady", "unreadable"] as const) {
+      const { unmount } = renderWithCatalog(<ReaderDetected reader={{ kind }} />);
+
+      expect(screen.getByRole("note")).toHaveAccessibleName("Lector de tarjetas: detectado");
+      unmount();
+    }
+  });
+
+  it("asks to connect a reader when none is detected", () => {
+    renderWithCatalog(<ReaderNotDetected />);
+
+    const indicator = screen.getByRole("note", { name: "Lector de tarjetas: no detectado" });
+    expect(indicator).toHaveAttribute("title", "Conecta un lector de tarjetas");
+  });
+
+  it("says not supported, dimmed, when this version cannot watch readers", () => {
+    renderWithCatalog(<ReaderNotSupported />);
+
+    const indicator = screen.getByRole("note", { name: "Lector de tarjetas: no soportado" });
+    expect(indicator).toHaveAttribute("title", "Esta versión no puede detectar lectores");
+    expect(indicator).toHaveClass("reader-indicator--unsupported");
+  });
+
+  it("sits in the tabs strip when the menu lives in the native titlebar", () => {
+    renderWithCatalog(<ReaderWithACardOnTheNativeTitlebar />);
+
+    expect(screen.getByRole("banner")).toContainElement(screen.getByRole("note"));
   });
 });

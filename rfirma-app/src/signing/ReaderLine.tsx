@@ -3,14 +3,14 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../design-system/icons";
-import type { ReaderStatus } from "./certificate";
+import { hasAReader, type ReaderStatus } from "./certificate";
 import "./ReaderLine.css";
 
 /** Lo que dice el lector, con el indicador que gira mientras se lee la tarjeta (docs/design/panel-de-firma.md § Certificado). */
 export function ReaderLine({ reader }: { reader: ReaderStatus }) {
   const { t } = useTranslation();
 
-  if (reader.kind === "noReader") return null;
+  if (!hasAReader(reader)) return null;
 
   const reading = reader.kind === "reading";
   return (
@@ -27,7 +27,10 @@ export function ReaderLine({ reader }: { reader: ReaderStatus }) {
   );
 }
 
-function readerText(reader: Exclude<ReaderStatus, { kind: "noReader" }>, t: TFunction): string {
+function readerText(
+  reader: Exclude<ReaderStatus, { kind: "noReader" | "unavailable" }>,
+  t: TFunction,
+): string {
   switch (reader.kind) {
     case "noCard":
       return t("panel.certificate.reader.noCard");

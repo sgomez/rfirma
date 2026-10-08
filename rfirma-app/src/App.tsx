@@ -222,6 +222,7 @@ export function App({
       <MainWindow
         menuAnchor={anchor}
         hasAttention={warningVisible}
+        reader={certificateListing.reader}
         onOpenStatus={() => setView("status")}
         onOpenPreferences={() => setView("preferences")}
         onOpenHelp={openHelp}

@@ -56,3 +56,13 @@ la tarjeta.
 - **Una fila provisional de «leyendo» o de «ilegible» en la lista.**
   Descartada: la lista solo contiene lo que se puede elegir, y el estado lo
   cuenta la línea del lector.
+
+## Enmienda: sin vigilante hay un estado, «no soportado»
+
+La consecuencia «sin vigilante no hay estado de lector» deja de valer. El
+estado de lectores gana `Unavailable` y es el valor inicial: solo pasa a otro
+si arranca el vigilante. Sin él, la cabecera no distinguía «he mirado y no hay
+lector» de «esta versión no mira».
+
+**Esta decisión caduca** cuando el vigilante cubra todas las plataformas y
+canales: `Unavailable` desaparece con la regla de arranque que lo sostiene.

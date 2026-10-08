@@ -255,6 +255,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       remembered: bool
 
   pub enum ReaderStatusView   (serde: etiqueta "kind")
+      Unavailable
       NoReader
       NoCard
       Reading

@@ -6,8 +6,8 @@ import {
   type Certificate,
   type CertificateStore,
   installedCertificates,
-  NO_READER,
   type ReaderStatus,
+  UNAVAILABLE_READER,
 } from "./certificate";
 
 /** Lo que hay en los tokens conectados: buscándolo, el fallo al buscar o lo encontrado. */
@@ -20,7 +20,7 @@ export type CertificateListing =
 /** Los certificados del almacén, buscados al montarse y cada vez que algo los cambia. */
 export function useCertificateListing(store: CertificateStore) {
   const [listing, setListing] = useState<CertificateListing>({ kind: "loading" });
-  const [reader, setReader] = useState<ReaderStatus>(NO_READER);
+  const [reader, setReader] = useState<ReaderStatus>(UNAVAILABLE_READER);
   const latestListing = useRef(0);
 
   const lookAgain = useCallback(async () => {

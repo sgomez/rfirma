@@ -4,6 +4,8 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::thread::JoinHandle;
 
+use crate::desktop::domain::channel::Channel;
+use crate::desktop::domain::platform::Platform;
 use crate::identity::application::certificates::{
     on_the_desktop, rows_keeping_handles, ListedCertificates,
 };
@@ -38,6 +40,11 @@ impl LastListing {
     }
 }
 
+/// Si esta plataforma y este canal pueden vigilar lectores (ADR-0048).
+pub fn watches_the_readers(platform: Platform, channel: Channel) -> bool {
+    platform == Platform::Linux && channel != Channel::Flatpak
+}
+
 /// El último estado anunciado de los lectores, para la ventana que se monta después del anuncio.
 #[derive(Debug)]
 pub struct ReaderNow {
@@ -47,7 +54,7 @@ pub struct ReaderNow {
 impl Default for ReaderNow {
     fn default() -> Self {
         Self {
-            status: Mutex::new(ReaderStatus::NoReader),
+            status: Mutex::new(ReaderStatus::Unavailable),
         }
     }
 }
@@ -58,7 +65,7 @@ impl ReaderNow {
         *lock(&self.status) = status;
     }
 
-    /// El último estado anunciado; sin anuncio todavía, sin lector.
+    /// El último estado anunciado; sin vigilante, no soportado.
     pub fn status(&self) -> ReaderStatus {
         *lock(&self.status)
     }

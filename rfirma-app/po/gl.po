@@ -274,6 +274,22 @@ msgstr "Menú"
 msgid "header.attention"
 msgstr "Estado de rFirma: require atención"
 
+#. Texto, tooltip y nombre accesible del indicador de lector de tarjetas de la cabecera.
+msgid "header.reader.detected"
+msgstr "Lector de tarxetas: detectado"
+
+msgid "header.reader.missing"
+msgstr "Lector de tarxetas: non detectado"
+
+msgid "header.reader.unsupported"
+msgstr "Lector de tarxetas: non soportado"
+
+msgid "header.reader.missingHint"
+msgstr "Conecta un lector de tarxetas"
+
+msgid "header.reader.unsupportedHint"
+msgstr "Esta versión non pode detectar lectores"
+
 msgid "header.preferences"
 msgstr "Preferencias…"
 

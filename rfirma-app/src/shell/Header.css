@@ -89,3 +89,7 @@
   height: 38px;
   padding: 0 6px;
 }
+
+.header--tabsOnly .reader-indicator {
+  margin-left: auto;
+}

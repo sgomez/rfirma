@@ -123,10 +123,10 @@ describe("useCertificateListing", () => {
 });
 
 describe("useCertificateListing · los lectores", () => {
-  it("draws no reader until the backend says there is one", async () => {
+  it("is unavailable until the backend says what it sees", async () => {
     const { result } = await listed(announcingCertificateStore([onToken]));
 
-    expect(result.current.reader).toEqual({ kind: "noReader" });
+    expect(result.current.reader).toEqual({ kind: "unavailable" });
   });
 
   it("follows what the backend says about the reader, and keeps the list while it reads", async () => {

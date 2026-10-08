@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import { classify, type NamedFailure } from "../errors/classify";
-import { type Certificate, NO_READER, type ReaderStatus } from "../signing/certificate";
+import { type Certificate, type ReaderStatus, UNAVAILABLE_READER } from "../signing/certificate";
 import type { Errand, SiteErrandPort } from "./errand";
 import { SedeView } from "./SedeView";
 
@@ -85,7 +85,7 @@ function SedeDialog({
     void externalDestinations?.open("discussions");
   };
 
-  const [reader, setReader] = useState<ReaderStatus>(NO_READER);
+  const [reader, setReader] = useState<ReaderStatus>(UNAVAILABLE_READER);
   const [live, setLive] = useState<LiveList | null>(null);
   useEffect(
     () =>

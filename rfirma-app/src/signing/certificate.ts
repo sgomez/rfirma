@@ -245,6 +245,7 @@ export interface CertificateStore {
 
 /** Lo que resume a los lectores de tarjetas: el más avanzado de todos, y «sin lector» si no hay ninguno. */
 export type ReaderStatus =
+  | { kind: "unavailable" }
   | { kind: "noReader" }
   | { kind: "noCard" }
   | { kind: "reading" }
@@ -252,7 +253,15 @@ export type ReaderStatus =
   | { kind: "cardReady" }
   | { kind: "unreadable" };
 
-export const NO_READER: ReaderStatus = { kind: "noReader" };
+/** Si el estado habla de un lector que hay; `noReader` y `unavailable` no. */
+export function hasAReader(
+  reader: ReaderStatus,
+): reader is Exclude<ReaderStatus, { kind: "noReader" | "unavailable" }> {
+  return reader.kind !== "noReader" && reader.kind !== "unavailable";
+}
+
+/** Lo que dice una ventana mientras no sabe nada: esta versión no vigila lectores. */
+export const UNAVAILABLE_READER: ReaderStatus = { kind: "unavailable" };
 
 /** Lo que llega al cambiar un lector o una tarjeta: el estado y, si ha cambiado, la lista entera. */
 export interface ReaderNews {
