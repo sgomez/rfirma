@@ -8,11 +8,13 @@ use crate::identity::ports::ReaderWatch;
 use crate::identity::IdentityRoot;
 
 use super::views::ReaderNewsView;
+use super::DesktopReaderWatch;
 
 /// Nombre del evento con el que la ventana principal recibe el estado de los lectores y la lista en caliente.
 pub const CARD_READERS: &str = "card-readers";
 
 /// Un vigilante que no puede vigilar: no hay línea de lector, y la lista se busca como siempre.
+#[derive(Default)]
 pub struct UnavailableReaderWatch;
 
 impl ReaderWatch for UnavailableReaderWatch {
@@ -26,7 +28,7 @@ pub fn follow_the_readers_for_the_main_window(app: &tauri::AppHandle) {
     let lending = app.clone();
     let announcing = app.clone();
     follow_the_readers_apart(
-        Box::new(UnavailableReaderWatch),
+        Box::new(DesktopReaderWatch::default()),
         move |use_it| use_it(&lending.state::<IdentityRoot>().card_listing()),
         move |news| {
             if let Some(window) = announcing.get_webview_window("main") {
