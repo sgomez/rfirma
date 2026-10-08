@@ -16,12 +16,14 @@ describe("classify", () => {
     });
   });
 
-  it("falls back to unknown, keeping the raw text, on a situation the window does not know", () => {
-    const failure = classify({ situation: "aSituationFromTheFuture", detail: "raw text" });
+  it("keeps a situation of the site catalogue as it came", () => {
+    expect(classify({ situation: "saveDestinationUnwritable", detail: "x" }).situation).toBe(
+      "saveDestinationUnwritable",
+    );
+  });
 
-    expect(failure.situation).toBe("unknown");
-    expect(failure.detail).toBe("raw text");
-    expect(errorText(failure.situation, t).title).toBeTruthy();
+  it("gives a situation the window does not know a retry message", () => {
+    expect(errorText("aSituationFromTheFuture", t).title).toBeTruthy();
   });
 
   it.each(["promptFailed", "secretOnTheReaderKeypad", "userCancelled"])(

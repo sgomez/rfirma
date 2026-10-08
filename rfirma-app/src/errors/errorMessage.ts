@@ -83,6 +83,10 @@ export const MESSAGE_OF = {
 /** Lo que el backend sabe nombrar de un fallo. */
 export type ErrorSituation = keyof typeof MESSAGE_OF;
 
+function isKnownSituation(situation: string): situation is ErrorSituation {
+  return Object.hasOwn(MESSAGE_OF, situation);
+}
+
 /** Un mensaje de error traducido; sin `body`, el título lo dice todo. */
 interface ErrorText {
   title: string;
@@ -90,8 +94,8 @@ interface ErrorText {
 }
 
 /** El mensaje traducido de una situación. */
-export function errorText(situation: ErrorSituation, t: TFunction): ErrorText {
-  switch (MESSAGE_OF[situation]) {
+export function errorText(situation: string, t: TFunction): ErrorText {
+  switch (isKnownSituation(situation) ? MESSAGE_OF[situation] : "retry") {
     case "retry":
       return { title: t("errors.messages.retry.title"), body: t("errors.messages.retry.body") };
     case "otherCertificate":
