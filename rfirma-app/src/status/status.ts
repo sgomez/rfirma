@@ -1,8 +1,14 @@
 //! El puerto de consulta y medición de las señales del panel de estado, con su doble en memoria `memoryStatus` y el nombre en pantalla de cada sitio. Sin React.
 
 import type { TFunction } from "i18next";
+import { hasAReader, type ReaderStatus } from "../signing/certificate";
 
-export type Signal = "version" | "siteSignature" | "localCaCertificate" | "userCertificates";
+export type Signal =
+  | "version"
+  | "siteSignature"
+  | "localCaCertificate"
+  | "userCertificates"
+  | "cardReader";
 
 export type Verdict = "correct" | "attention" | "incorrect" | "notApplicable" | "checking";
 
@@ -65,6 +71,20 @@ export interface SignalRow {
   detail: SignalDetail | null;
   candidates: SiteSignatureCandidate[] | null;
   restartFirefoxNotice: boolean;
+}
+
+/** La fila del lector de tarjetas, que sale del estado en vivo y solo informa: no tenerlo no es un aviso. */
+export function cardReaderRow(reader: ReaderStatus): SignalRow {
+  const present = hasAReader(reader);
+  return {
+    signal: "cardReader",
+    value: present ? "detected" : reader.kind === "noReader" ? "missing" : "unsupported",
+    verdict: present ? "correct" : "notApplicable",
+    action: null,
+    detail: null,
+    candidates: null,
+    restartFirefoxNotice: false,
+  };
 }
 
 /** Qué pasó al retirar algo propio de rFirma de un sitio del sistema. */

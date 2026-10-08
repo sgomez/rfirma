@@ -280,6 +280,8 @@ function actionLabel(t: TFunction, row: SignalRow): string {
       return t("status.actions.install");
     case "siteSignature":
       return t("status.actions.useRfirma");
+    case "cardReader":
+      return "";
   }
 }
 
@@ -293,6 +295,8 @@ function signalLabel(t: TFunction, signal: Signal): string {
       return t("status.signals.localCaCertificate");
     case "siteSignature":
       return t("status.signals.siteSignature");
+    case "cardReader":
+      return t("status.signals.cardReader");
   }
 }
 
@@ -315,6 +319,10 @@ function valueLabel(t: TFunction, row: SignalRow): string {
         ? t("status.values.userCertificates.none")
         : t("status.values.userCertificates.count", { count });
     }
+    case "cardReader":
+      if (row.value === "unsupported") return t("status.values.cardReader.unsupported");
+      if (row.value === "missing") return t("status.values.cardReader.missing");
+      return t("status.values.cardReader.detected");
   }
 }
 

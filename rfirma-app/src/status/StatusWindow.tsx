@@ -8,8 +8,10 @@ import type {
 } from "../desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "../desktop/externalDestination";
 import { classify, type NamedFailure } from "../errors/classify";
+import type { ReaderStatus } from "../signing/certificate";
 import { StatusView } from "./StatusView";
 import {
+  cardReaderRow,
   type Signal,
   type SignalRow,
   type StatusPort,
@@ -28,6 +30,8 @@ export interface StatusWindowProps {
    * necesite saberlas (el triángulo del menú).
    */
   onRowsChange?: (rows: SignalRow[]) => void;
+  /** El estado de los lectores, en vivo; sin él la ventana no enseña la fila del lector. */
+  reader?: ReaderStatus;
   /** Las señales cuyo detalle empieza desplegado. */
   initiallyExpanded?: Signal[];
 }
@@ -46,6 +50,7 @@ export function StatusWindow({
   statusPort,
   externalDestinations = unavailableExternalDestinationOpener(),
   onRowsChange,
+  reader,
   initiallyExpanded,
 }: StatusWindowProps) {
   const [rows, setRows] = useState<SignalRow[]>([]);
@@ -217,7 +222,7 @@ export function StatusWindow({
   return (
     <>
       <StatusView
-        rows={rows}
+        rows={reader ? [...rows, cardReaderRow(reader)] : rows}
         failure={failure}
         isRechecking={isRechecking}
         onClose={onClose}

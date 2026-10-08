@@ -277,22 +277,6 @@ msgstr "Menua"
 msgid "header.attention"
 msgstr "rFirmaren egoera: arreta behar du"
 
-#. Texto, tooltip y nombre accesible del indicador de lector de tarjetas de la cabecera.
-msgid "header.reader.detected"
-msgstr "Txartel-irakurgailua: detektatuta"
-
-msgid "header.reader.missing"
-msgstr "Txartel-irakurgailua: ez da detektatu"
-
-msgid "header.reader.unsupported"
-msgstr "Txartel-irakurgailua: ez da onartzen"
-
-msgid "header.reader.missingHint"
-msgstr "Konektatu txartel-irakurgailu bat"
-
-msgid "header.reader.unsupportedHint"
-msgstr "Bertsio honek ezin ditu irakurgailuak detektatu"
-
 msgid "header.preferences"
 msgstr "Hobespenak…"
 
@@ -949,6 +933,9 @@ msgstr "Egoitzetan sinatzeko aplikazio lehenetsia"
 msgid "status.signals.userCertificates"
 msgstr "Zure ziurtagiriak"
 
+msgid "status.signals.cardReader"
+msgstr "Txartel-irakurgailua"
+
 msgid "status.signals.localCaCertificate"
 msgstr "rFirma-ren ziurtagiria"
 
@@ -987,6 +974,15 @@ msgstr "Konfiguratu gabe"
 
 msgid "status.values.siteSignature.unavailable"
 msgstr "Zure mahaigainak kudeatzen du"
+
+msgid "status.values.cardReader.detected"
+msgstr "Detektatuta"
+
+msgid "status.values.cardReader.missing"
+msgstr "Ez da detektatu"
+
+msgid "status.values.cardReader.unsupported"
+msgstr "Ez da onartzen"
 
 msgid "status.values.userCertificates.none"
 msgstr "Bat ere ez"

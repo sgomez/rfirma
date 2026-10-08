@@ -61,7 +61,7 @@ la tarjeta.
 
 La consecuencia «sin vigilante no hay estado de lector» deja de valer. El
 estado de lectores gana `Unavailable` y es el valor inicial: solo pasa a otro
-si arranca el vigilante. Sin él, la cabecera no distinguía «he mirado y no hay
+si arranca el vigilante. Sin él, el panel de estado no distinguía «he mirado y no hay
 lector» de «esta versión no mira».
 
 **Esta decisión caduca** cuando el vigilante cubra todas las plataformas y

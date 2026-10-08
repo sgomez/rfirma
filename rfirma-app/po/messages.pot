@@ -266,22 +266,6 @@ msgstr ""
 msgid "header.attention"
 msgstr ""
 
-#. Texto, tooltip y nombre accesible del indicador de lector de tarjetas de la cabecera.
-msgid "header.reader.detected"
-msgstr ""
-
-msgid "header.reader.missing"
-msgstr ""
-
-msgid "header.reader.unsupported"
-msgstr ""
-
-msgid "header.reader.missingHint"
-msgstr ""
-
-msgid "header.reader.unsupportedHint"
-msgstr ""
-
 msgid "header.preferences"
 msgstr ""
 
@@ -937,6 +921,9 @@ msgstr ""
 msgid "status.signals.userCertificates"
 msgstr ""
 
+msgid "status.signals.cardReader"
+msgstr ""
+
 msgid "status.signals.localCaCertificate"
 msgstr ""
 
@@ -974,6 +961,15 @@ msgid "status.values.siteSignature.notConfigured"
 msgstr ""
 
 msgid "status.values.siteSignature.unavailable"
+msgstr ""
+
+msgid "status.values.cardReader.detected"
+msgstr ""
+
+msgid "status.values.cardReader.missing"
+msgstr ""
+
+msgid "status.values.cardReader.unsupported"
 msgstr ""
 
 msgid "status.values.userCertificates.none"

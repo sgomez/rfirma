@@ -6,9 +6,7 @@ import { Button } from "../design-system/Button";
 import { Icon } from "../design-system/icons";
 import { Menu, MenuItem } from "../design-system/Menu";
 import "./Header.css";
-import type { ReaderStatus } from "../signing/certificate";
 import type { MenuAnchor } from "./menuAnchor";
-import { ReaderIndicator } from "./ReaderIndicator";
 
 interface HeaderProps {
   /** Dónde va el menú. Ver [`MenuAnchor`]. */
@@ -19,8 +17,6 @@ interface HeaderProps {
    * «El aviso»).
    */
   hasAttention?: boolean;
-  /** Si hay lector de tarjetas; sin él, la cabecera no lo dice. */
-  reader?: ReaderStatus;
   /** Lo que se pinta antes del menú, o nada en las vistas sin documentos. */
   documents?: ReactNode;
   onOpenStatus: () => void;
@@ -51,7 +47,6 @@ interface HeaderProps {
 export function Header({
   menuAnchor,
   hasAttention = false,
-  reader,
   documents = null,
   onOpenStatus,
   onOpenPreferences,
@@ -72,11 +67,8 @@ export function Header({
   };
 
   if (menuAnchor === "titlebar") {
-    return documents === null && reader === undefined ? null : (
-      <header className="header header--tabsOnly">
-        {documents}
-        {reader && <ReaderIndicator reader={reader} />}
-      </header>
+    return documents === null ? null : (
+      <header className="header header--tabsOnly">{documents}</header>
     );
   }
 
@@ -85,7 +77,6 @@ export function Header({
       {documents}
       <span className="header__gap" />
       <div className="header__end">
-        {reader && <ReaderIndicator reader={reader} />}
         {hasAttention && (
           <Button
             className="header__button header__attention"

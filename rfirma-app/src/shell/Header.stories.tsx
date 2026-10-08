@@ -4,7 +4,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { DocumentTabs } from "../documents/DocumentTabs";
 import { storyRecents, storyTabs } from "../documents/testing/fixtures";
-import type { ReaderStatus } from "../signing/certificate";
 import { Header } from "./Header";
 
 const tabs = (
@@ -49,24 +48,4 @@ export const WithAttention: Story = { args: { documents: tabs, hasAttention: tru
 
 export const NativeTitlebarWithDocuments: Story = {
   args: { menuAnchor: "titlebar", documents: tabs },
-};
-
-export const ReaderDetected: Story = {
-  args: { documents: tabs, reader: { kind: "noCard" } satisfies ReaderStatus },
-};
-
-export const ReaderNotDetected: Story = {
-  args: { documents: tabs, reader: { kind: "noReader" } satisfies ReaderStatus },
-};
-
-export const ReaderNotSupported: Story = {
-  args: { documents: tabs, reader: { kind: "unavailable" } satisfies ReaderStatus },
-};
-
-export const ReaderWithACardOnTheNativeTitlebar: Story = {
-  args: {
-    menuAnchor: "titlebar",
-    documents: tabs,
-    reader: { kind: "cardReady" } satisfies ReaderStatus,
-  },
 };
