@@ -166,7 +166,9 @@ de las cabeceras de los componentes.
   componente** ([`panel-de-firma.md`](panel-de-firma.md#certificado)). La lista
   mide como mucho 300 px y queda anclada bajo el campo, flotando aunque el cuerpo
   se desplace. El rótulo es el mismo también en `selectcert`: el título y la línea
-  de qué se envía ya distinguen el caso.
+  de qué se envía ya distinguen el caso. Bajo el selector va la línea del lector
+  del panel, con los mismos textos, y la lista cambia sola al meter o sacar la
+  tarjeta con las mismas reglas de elección.
 - **La rama de identidad nombra la cesión de datos**, no una identificación que
   no ocurre. Negarla con una frase («esto no es una firma») es la verborrea que
   la regla de redacción de [design-system.md](design-system.md) ya echó de la

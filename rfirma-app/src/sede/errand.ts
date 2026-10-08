@@ -1,7 +1,7 @@
 //! El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand` y las constantes de sus relojes. Sin React.
 
 import type { ErrorSituation } from "../errors/errorMessage";
-import type { Certificate } from "../signing/certificate";
+import type { Certificate, ReaderNews } from "../signing/certificate";
 import type { SigningOrder } from "../signing/flow";
 import type { PreviousSignaturesReport } from "../signing/previousSignatures";
 import type { PdfDocument } from "../viewer/pdf";
@@ -344,6 +344,8 @@ export interface SiteErrandPort {
    * rFirma no vienen de una sede.
    */
   watch(onChange: (errand: Errand | null) => void): () => void;
+  /** Las noticias de los lectores de tarjetas: su estado y la lista de certificados con los filtros de la sede. */
+  followReaders(onNews: (news: ReaderNews) => void): () => void;
   /** La persona consiente, con el asa del certificado que ha elegido. */
   consent(certificateId: string): Promise<void>;
   /** Sigue con lo que el validador del original señaló: se vuelve a comprobar sin preguntar. */
@@ -376,6 +378,7 @@ export interface SiteErrandPort {
 export function noErrand(): SiteErrandPort {
   return {
     watch: () => () => {},
+    followReaders: () => () => {},
     consent: async () => {},
     confirmSignatures: async () => {},
     markArea: async () => {},

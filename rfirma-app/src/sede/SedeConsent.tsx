@@ -5,10 +5,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
-import type { Certificate } from "../signing/certificate";
-import { sitePreselection } from "../signing/certificate";
+import type { Certificate, CertificateState, ReaderStatus } from "../signing/certificate";
+import { keptAcrossTheReader, NO_READER, sitePreselection } from "../signing/certificate";
 import { PreviousSignaturesNotice } from "../signing/PreviousSignaturesNotice";
 import { formatSize } from "../signing/panelFormat";
+import { ReaderLine } from "../signing/ReaderLine";
 // `PreviousSignaturesNotice` no trae su propia hoja: la sede no monta `SigningPanel.tsx`.
 import "../signing/SigningPanel.css";
 import { Button } from "../design-system/Button";
@@ -33,6 +34,8 @@ interface SedeConsentProps {
   operation: SiteOperation;
   stage: Extract<ErrandStage, { kind: "consent" }>;
   countdown: boolean;
+  reader?: ReaderStatus;
+  liveCertificates?: readonly Certificate[] | null;
   onConsent: (certificateId: string) => void;
   onCancel: () => void;
 }
@@ -53,13 +56,27 @@ export function SedeConsent({
   operation,
   stage,
   countdown,
+  reader = NO_READER,
+  liveCertificates = null,
   onConsent,
   onCancel,
 }: SedeConsentProps) {
   const { t } = useTranslation();
-  const [chosen, setChosen] = useState<Certificate | null>(() =>
-    sitePreselection(stage.certificates),
-  );
+  const [held, setHeld] = useState<Held>(() => ({
+    live: null,
+    chosen: sitePreselection(stage.certificates),
+  }));
+  const certificates = liveCertificates ?? stage.certificates;
+  let current = held;
+  if (liveCertificates !== null && held.live !== liveCertificates) {
+    current = {
+      live: liveCertificates,
+      chosen: chosenAfterTheReader(held, stage.certificates, liveCertificates),
+    };
+    setHeld(current);
+  }
+  const chosen = current.chosen;
+  const setChosen = (certificate: Certificate) => setHeld({ ...current, chosen: certificate });
   // `selectcert` es una cesión de datos de identidad y todo lo demás es
   // firmar: una sola pregunta, resuelta en el vocabulario del trámite y no
   // repetida aquí.
@@ -98,6 +115,8 @@ export function SedeConsent({
         {terminalOrder !== null ? (
           <TerminalConsentBody
             order={terminalOrder}
+            certificates={certificates}
+            reader={reader}
             stage={stage}
             chosen={chosen}
             onChoose={setChosen}
@@ -121,11 +140,12 @@ export function SedeConsent({
             </p>
 
             <CertificateSelect
-              certificates={stage.certificates}
+              certificates={certificates}
               chosen={chosen}
               onChoose={setChosen}
               listMaxHeight={300}
             />
+            <ReaderLine reader={reader} />
 
             {/* Debajo del desplegable y no encima: es una nota sobre lo que la lista
             contiene, y se lee después de verla. Dice **que** la sede acotó, y
@@ -172,6 +192,26 @@ export function SedeConsent({
   );
 }
 
+/** Lo elegido y la última lista que trajo un lector, que decide si el cambio de lista pide recalcular. */
+interface Held {
+  live: readonly Certificate[] | null;
+  chosen: Certificate | null;
+}
+
+function chosenAfterTheReader(
+  held: Held,
+  initial: readonly Certificate[],
+  arrived: readonly Certificate[],
+): Certificate | null {
+  const before = held.live ?? initial;
+  const previous: CertificateState =
+    held.chosen === null
+      ? { kind: "unchosen", certificates: before }
+      : { kind: "chosen", certificate: held.chosen, certificates: before };
+  const kept = keptAcrossTheReader(previous, arrived);
+  return kept.kind === "chosen" ? kept.certificate : null;
+}
+
 const TERMINAL_NAME_MAX = 40;
 
 function baseName(path: string): string {
@@ -191,11 +231,15 @@ function shortenMiddle(name: string, max: number): string {
 /** El consentimiento de `-certgui`: el documento de la orden, el desplegable y las firmas previas. */
 function TerminalConsentBody({
   order,
+  certificates,
+  reader,
   stage,
   chosen,
   onChoose,
 }: {
   order: TerminalOrder;
+  certificates: readonly Certificate[];
+  reader: ReaderStatus;
   stage: Extract<ErrandStage, { kind: "consent" }>;
   chosen: Certificate | null;
   onChoose: (certificate: Certificate) => void;
@@ -210,11 +254,12 @@ function TerminalConsentBody({
         {t("sede.consent.terminalTitle", { name })}
       </p>
       <CertificateSelect
-        certificates={stage.certificates}
+        certificates={certificates}
         chosen={chosen}
         onChoose={onChoose}
         listMaxHeight={300}
       />
+      <ReaderLine reader={reader} />
       {previous !== undefined && previous.signatures.length > 0 && (
         <PreviousSignaturesNotice report={previous} certificate={chosen} presentation="site" />
       )}

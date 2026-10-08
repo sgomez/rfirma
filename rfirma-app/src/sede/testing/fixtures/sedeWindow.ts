@@ -2,7 +2,7 @@
 
 import type { Mock } from "storybook/test";
 import { fn } from "storybook/test";
-import type { Certificate } from "../../../signing/certificate";
+import type { Certificate, ReaderNews } from "../../../signing/certificate";
 import { NO_PREVIOUS_SIGNATURES } from "../../../signing/previousSignatures";
 import type {
   Errand,
@@ -61,8 +61,16 @@ export function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {})
     installLocalCa: fn(),
     dismissWarning: fn(),
   };
+  const listeners = new Set<(news: ReaderNews) => void>();
+  const announce = (news: ReaderNews) => {
+    for (const listener of listeners) listener(news);
+  };
   const port: SiteErrandPort = {
     ...noErrand(),
+    followReaders: (onNews) => {
+      listeners.add(onNews);
+      return () => listeners.delete(onNews);
+    },
     watch: (onChange) => {
       onChange({ origin: "sede.ejemplo.gob.es", operation: "sign", stage, ...errand });
       return () => {};
@@ -77,7 +85,7 @@ export function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {})
     installLocalCa: async () => calls.installLocalCa(),
     dismissWarning: async () => calls.dismissWarning(),
   };
-  return { port, calls };
+  return { port, calls, announce };
 }
 
 /** Los args de una historia de sede: el trámite entero o las props finas de un momento. */
