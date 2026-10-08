@@ -4,19 +4,25 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use super::stores::multiarch_subdirectories;
+use crate::desktop::domain::channel::Channel;
 
 /// El nombre de programa con el que rFirma se busca en `enable-in` y `disable-in`.
 pub const PROGRAM_NAME: &str = "rfirma";
 
 const TRUST_ONLY_LIBRARIES: &[&str] = &["p11-kit-trust.so", "p11-kit-client.so"];
 
+/// La raíz `/app` donde el paquete registra sus módulos; solo existe en el flatpak (ADR-0049).
+pub fn app_root(channel: Channel) -> Option<&'static Path> {
+    (channel == Channel::Flatpak).then(|| Path::new("/app"))
+}
+
 /// Los directorios de ficheros `.module`, de menos a más prioridad.
-pub fn configuration_directories(home: &Path) -> Vec<PathBuf> {
-    vec![
-        PathBuf::from("/usr/share/p11-kit/modules"),
-        PathBuf::from("/etc/pkcs11/modules"),
-        home.join(".config/pkcs11/modules"),
-    ]
+pub fn configuration_directories(home: &Path, channel: Channel) -> Vec<PathBuf> {
+    let mut directories = vec![PathBuf::from("/usr/share/p11-kit/modules")];
+    directories.extend(app_root(channel).map(|app| app.join("share/p11-kit/modules")));
+    directories.push(PathBuf::from("/etc/pkcs11/modules"));
+    directories.push(home.join(".config/pkcs11/modules"));
+    directories
 }
 
 /// La biblioteca que un fichero `.module` registra para rFirma, si la registra.
@@ -52,13 +58,13 @@ fn is_trust_module(module: &str) -> bool {
         .is_some_and(|name| TRUST_ONLY_LIBRARIES.contains(&name))
 }
 
-/// Las bibliotecas registradas en esos directorios, resueltas bajo `usr` e instaladas.
-pub fn registered_modules(directories: &[PathBuf], usr: &Path) -> Vec<PathBuf> {
+/// Las bibliotecas registradas en esos directorios, resueltas bajo `usr` y `app` e instaladas.
+pub fn registered_modules(directories: &[PathBuf], usr: &Path, app: Option<&Path>) -> Vec<PathBuf> {
     module_files(directories)
         .values()
         .filter_map(|file| std::fs::read_to_string(file).ok())
         .filter_map(|config| module_for_rfirma(&config))
-        .filter_map(|module| installed(&module, usr))
+        .filter_map(|module| installed(&module, usr, app))
         .collect()
 }
 
@@ -82,13 +88,14 @@ fn module_files(directories: &[PathBuf]) -> BTreeMap<String, PathBuf> {
 }
 
 /// La absoluta, si está; la relativa, en el primer directorio de módulos que la tenga.
-fn installed(module: &str, usr: &Path) -> Option<PathBuf> {
+fn installed(module: &str, usr: &Path, app: Option<&Path>) -> Option<PathBuf> {
     let module = Path::new(module);
     if module.is_absolute() {
         return module.is_file().then(|| module.to_path_buf());
     }
     module_directories(usr)
         .into_iter()
+        .chain(app.map(|app| app.join("lib/pkcs11")))
         .map(|directory| directory.join(module))
         .find(|path| path.is_file())
 }

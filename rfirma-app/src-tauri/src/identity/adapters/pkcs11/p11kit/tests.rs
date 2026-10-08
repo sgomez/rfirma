@@ -1,4 +1,5 @@
 use super::*;
+use crate::desktop::domain::channel::Channel;
 
 const P11_KIT_TRUST: &str = "\
 # This is a module config for the 'included' p11-kit trust module
@@ -67,8 +68,29 @@ impl Installation {
         std::fs::write(directory.join(file), text).expect("deberia poder escribirse el .module");
     }
 
+    fn app(&self) -> PathBuf {
+        self.root.path().join("app")
+    }
+
+    fn app_registry(&self) -> PathBuf {
+        self.app().join("share/p11-kit/modules")
+    }
+
+    fn app_library(&self, relative_to_app: &str) -> PathBuf {
+        let path = self.app().join(relative_to_app);
+        std::fs::create_dir_all(path.parent().expect("tiene padre"))
+            .expect("deberia poder crearse el directorio de la biblioteca");
+        std::fs::write(&path, b"").expect("deberia poder escribirse la biblioteca");
+        path
+    }
+
     fn registered(&self) -> Vec<PathBuf> {
-        registered_modules(&[self.system(), self.user()], &self.usr())
+        registered_modules(&[self.system(), self.user()], &self.usr(), None)
+    }
+
+    fn registered_under_app(&self) -> Vec<PathBuf> {
+        let app = self.app();
+        registered_modules(&[self.app_registry()], &self.usr(), Some(&app))
     }
 }
 
@@ -248,6 +270,7 @@ fn the_flatpak_trust_forwarding_that_overrides_the_runtime_one_is_not_a_card() {
     let registered = registered_modules(
         &[installation.system(), installation.etc()],
         &installation.usr(),
+        None,
     );
 
     assert!(registered.is_empty());
@@ -267,11 +290,43 @@ fn the_user_directory_is_read_after_the_two_of_the_system() {
     let home = Path::new("/home/alguien");
 
     assert_eq!(
-        configuration_directories(home),
+        configuration_directories(home, Channel::Native),
         vec![
             PathBuf::from("/usr/share/p11-kit/modules"),
             PathBuf::from("/etc/pkcs11/modules"),
             PathBuf::from("/home/alguien/.config/pkcs11/modules"),
         ]
     );
+}
+
+#[test]
+fn in_the_flatpak_a_relative_module_under_app_resolves_to_the_app_library() {
+    let installation = Installation::new();
+    let library = installation.app_library("lib/pkcs11/opensc-pkcs11.so");
+    installation.registers(&installation.app_registry(), "opensc.module", OPENSC);
+
+    assert_eq!(installation.registered_under_app(), vec![library]);
+}
+
+#[test]
+fn outside_the_flatpak_the_same_tree_adds_no_module() {
+    let installation = Installation::new();
+    installation.app_library("lib/pkcs11/opensc-pkcs11.so");
+    installation.registers(&installation.app_registry(), "opensc.module", OPENSC);
+
+    let registered = registered_modules(&[installation.app_registry()], &installation.usr(), None);
+
+    assert!(registered.is_empty());
+}
+
+#[test]
+fn only_the_flatpak_searches_the_app_registry_and_root() {
+    let home = Path::new("/home/alguien");
+
+    assert!(configuration_directories(home, Channel::Flatpak)
+        .contains(&PathBuf::from("/app/share/p11-kit/modules")));
+    assert!(!configuration_directories(home, Channel::Native)
+        .contains(&PathBuf::from("/app/share/p11-kit/modules")));
+    assert_eq!(app_root(Channel::Flatpak), Some(Path::new("/app")));
+    assert_eq!(app_root(Channel::Native), None);
 }

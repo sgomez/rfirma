@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use super::p11kit;
+use crate::desktop::adapters::channel::Channel;
 use crate::identity::domain::store::{Store, StoreClass};
 
 /// Rutas candidatas fijas para módulos PKCS#11 estándar.
@@ -64,8 +65,12 @@ pub fn candidate_modules_under(usr_lib: &Path) -> Vec<PathBuf> {
 }
 
 /// Los módulos PKCS#11 instalados bajo `usr`: los candidatos fijos y los registrados en p11-kit.
-pub fn discovered_modules(usr: &Path, p11kit_directories: &[PathBuf]) -> Vec<PathBuf> {
-    let registered = p11kit::registered_modules(p11kit_directories, usr);
+pub fn discovered_modules(
+    usr: &Path,
+    app: Option<&Path>,
+    p11kit_directories: &[PathBuf],
+) -> Vec<PathBuf> {
+    let registered = p11kit::registered_modules(p11kit_directories, usr, app);
     present_among(
         candidate_modules_under(&usr.join("lib"))
             .into_iter()
@@ -92,14 +97,19 @@ pub fn from_environment() -> Vec<Store> {
     }
 
     let home = std::env::var_os("HOME").map(PathBuf::from);
+    let channel = Channel::detected();
     let p11kit_directories = home
         .as_deref()
-        .map(p11kit::configuration_directories)
+        .map(|home| p11kit::configuration_directories(home, channel))
         .unwrap_or_default();
-    let mut stores: Vec<Store> = discovered_modules(Path::new("/usr"), &p11kit_directories)
-        .into_iter()
-        .map(Store::module)
-        .collect();
+    let mut stores: Vec<Store> = discovered_modules(
+        Path::new("/usr"),
+        p11kit::app_root(channel),
+        &p11kit_directories,
+    )
+    .into_iter()
+    .map(Store::module)
+    .collect();
 
     if let (Some(home), Some(softoken)) = (home, softoken()) {
         stores.extend(
