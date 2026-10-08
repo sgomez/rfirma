@@ -463,3 +463,61 @@ fn the_dialog_after_an_interference_does_not_say_the_previous_pin_was_wrong() {
     assert_eq!(typist.prompts(), 1);
     assert_eq!(typist.warnings(), vec![PinWarning::Quiet]);
 }
+
+fn context_logins(card: &FakeCard) -> Vec<String> {
+    card.calls_to("C_Login")
+        .into_iter()
+        .filter(|call| call.contains("CKU_CONTEXT_SPECIFIC"))
+        .collect()
+}
+
+#[test]
+fn a_key_that_always_authenticates_gets_a_context_login_per_signature_without_asking_again() {
+    let card = FakeCard::new()
+        .and_then(FakeCard::signals_profile)
+        .expect("la tarjeta falsa deberia montarse");
+    let typist = Typist::typing(&[FakeCard::PIN]);
+
+    let signed = the_batch_signed(&card, &typist, "");
+
+    assert!(signed.iter().all(Result::is_ok), "{signed:?}");
+    assert_eq!(typist.prompts(), 1);
+    assert_eq!(context_logins(&card).len(), 3, "{:?}", card.calls());
+    assert_eq!(card.calls_to("C_Login").len(), 4, "{:?}", card.calls());
+}
+
+#[test]
+fn a_failed_context_login_cuts_the_cycle_without_more_logins() {
+    let rehearsal = FakeCard::new()
+        .and_then(FakeCard::signals_profile)
+        .expect("la tarjeta falsa deberia montarse");
+    the_batch_signed(&rehearsal, &Typist::typing(&[FakeCard::PIN]), "");
+    let second_context_login = rehearsal
+        .calls()
+        .iter()
+        .enumerate()
+        .filter(|(_, call)| call.starts_with("C_Login CKU_CONTEXT_SPECIFIC"))
+        .nth(1)
+        .map(|(index, _)| index + 1)
+        .expect("el ensayo hace tres logins de contexto");
+    let card = FakeCard::new()
+        .and_then(FakeCard::signals_profile)
+        .and_then(|card| card.removed_from_call(second_context_login))
+        .expect("la tarjeta falsa deberia montarse");
+
+    let signed = the_batch_signed(&card, &Typist::typing(&[FakeCard::PIN]), "");
+
+    assert!(signed[0].is_ok(), "{signed:?}");
+    assert!(signed[1..].iter().all(Result::is_err), "{signed:?}");
+    assert_eq!(context_logins(&card).len(), 2, "{:?}", card.calls());
+    assert_eq!(card.calls_to("C_Login").len(), 3, "{:?}", card.calls());
+}
+
+#[test]
+fn a_dnie_profile_card_gets_no_context_login() {
+    let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
+
+    the_batch_signed(&card, &Typist::typing(&[FakeCard::PIN]), "");
+
+    assert!(context_logins(&card).is_empty(), "{:?}", card.calls());
+}

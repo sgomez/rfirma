@@ -147,10 +147,26 @@ pub(super) fn logged_in(
     secret: &ProtectedSecret,
 ) -> Result<Session, TokenError> {
     token_info_unless_locked(context, slot)?;
-    let pin = secret
+    logged_in_session(context, slot, pin_text(secret)?)
+}
+
+fn pin_text(secret: &ProtectedSecret) -> Result<&str, TokenError> {
+    secret
         .as_str()
-        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
-    logged_in_session(context, slot, pin)
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))
+}
+
+/// El login de contexto específico que una clave con `CKA_ALWAYS_AUTHENTICATE` exige antes de cada firma (ADR-0047).
+pub(super) fn context_logged_in(
+    context: &Pkcs11,
+    slot: Slot,
+    session: &Session,
+    secret: &ProtectedSecret,
+) -> Result<(), TokenError> {
+    let pin = AuthPin::new(pin_text(secret)?.into());
+    session
+        .login(UserType::ContextSpecific, Some(&pin))
+        .map_err(|error| refused_login(context, slot, error))
 }
 
 /// La clave privada del certificado emparejada por `CKA_ID`.
