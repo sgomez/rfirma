@@ -482,3 +482,20 @@ script = "signcades"
 store = "token"
 act.consent = "Elige el certificado RSA del token y teclea su PIN, 1234."
 expects.completes.conditions = ["the-signature-verifies"]
+
+[[check]]
+id = "a_dnie_in_the_reader_is_listed_without_asking_for_its_pin"
+set = "certificado"
+chapter = "13"
+citation = "ProtocolInvocationLauncherSign.java:574-629; SharedNssKeyStoreManager.java:20-50"
+statement = """
+Un DNIe en el lector, con el OpenSC del sistema registrado, se ofrece en el diálogo de selección
+sin pedir su PIN: elegirlo no necesita la tarjeta más que para leerla.
+"""
+
+[check.drive]
+mode = "v4"
+script = "selectcert"
+store = "dnie"
+act.pick_certificate = "Elige un certificado del DNIe. Si el diálogo te pide el PIN antes de elegir, cancélalo. No tecles nunca un PIN erróneo."
+expects.completes.conditions = ["a-certificate-alone"]

@@ -90,7 +90,42 @@ pub(crate) fn read_the_reference(dir: &Path, name: &str) -> Result<Reference, St
         .ok_or_else(|| format!("no hay referencia llamada «{name}»"))?;
     let raw = std::fs::read_to_string(&path)
         .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
-    toml::from_str(&raw).map_err(|error| format!("{}: {error}", path.display()))
+    the_reference_in(&raw).map_err(|complaint| format!("{}: {complaint}", path.display()))
+}
+
+fn the_reference_in(raw: &str) -> Result<Reference, String> {
+    if let Some(leak) = a_certificate_datum_in(raw) {
+        return Err(format!(
+            "lleva datos de un certificado, y la referencia solo lleva resultados: «{leak}»"
+        ));
+    }
+    toml::from_str(raw).map_err(|error| error.to_string())
+}
+
+/// La primera marca de un certificado en el texto: su PEM, su DER en Base64, su asunto o un
+/// número de documento de identidad.
+fn a_certificate_datum_in(raw: &str) -> Option<String> {
+    const SUBJECT_KEYS: [&str; 6] = [
+        "CN=",
+        "SERIALNUMBER=",
+        "GIVENNAME=",
+        "SURNAME=",
+        "O=",
+        "IDCES-",
+    ];
+    raw.split(|c: char| !(c.is_ascii_alphanumeric() || matches!(c, '+' | '/' | '=' | '-')))
+        .find(|word| {
+            word.starts_with("-----BEGIN")
+                || (word.len() >= 64 && word.starts_with("MII"))
+                || SUBJECT_KEYS.iter().any(|key| word.starts_with(key))
+                || is_an_identity_number(word)
+        })
+        .map(str::to_owned)
+}
+
+fn is_an_identity_number(word: &str) -> bool {
+    let bytes = word.as_bytes();
+    bytes.len() == 9 && bytes[..8].iter().all(u8::is_ascii_digit) && bytes[8].is_ascii_uppercase()
 }
 
 /// Los nombres de las referencias de `dir`, en orden alfabético.
@@ -286,6 +321,48 @@ note = "Guarda mal."
 
         assert!(names.contains(&"autofirma-1.9.2".to_owned()));
         assert!(names.iter().all(|name| !name.ends_with(".toml")));
+    }
+
+    fn a_reference_noting(note: &str) -> String {
+        format!(
+            "[[known]]\nid = \"a\"\noutcome = \"no-conforme\"\ncause = \"BUG-01\"\nnote = \"{note}\"\n"
+        )
+    }
+
+    #[test]
+    fn a_reference_that_only_carries_results_is_read() {
+        let reference = a_reference_noting("La firma vuelve sin sello.");
+
+        assert!(the_reference_in(&reference).is_ok());
+    }
+
+    #[test]
+    fn a_reference_that_carries_data_of_a_certificate_is_refused() {
+        for leak in [
+            "-----BEGIN CERTIFICATE-----",
+            "MIIFmjCCA4KgAwIBAgIQ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV",
+            "CN=APELLIDO NOMBRE (AUTENTICACIÓN)",
+            "SERIALNUMBER=IDCES-12345678Z",
+            "del titular 12345678Z",
+        ] {
+            let complaint = the_reference_in(&a_reference_noting(leak)).unwrap_err();
+
+            assert!(complaint.contains("datos de un certificado"), "{leak}");
+        }
+    }
+
+    #[test]
+    fn the_leak_is_refused_when_a_reference_is_read_from_its_folder() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("leaky.toml"),
+            a_reference_noting("CN=APELLIDO NOMBRE"),
+        )
+        .unwrap();
+
+        let complaint = read_the_reference(dir.path(), "leaky").unwrap_err();
+
+        assert!(complaint.contains("datos de un certificado"));
     }
 
     #[test]

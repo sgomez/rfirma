@@ -28,6 +28,9 @@ pub(crate) trait Witness: Send + Sync {
 
     fn aborted(&self) -> bool;
 
+    /// Si hay un DNIe en el lector; el testigo real lo mira en el sistema.
+    fn a_dnie_is_in_the_reader(&self) -> bool;
+
     /// Un diagnóstico de la suite, en el registro de la comprobación en curso.
     fn harness(&self, text: &str) {
         self.log_sink()
@@ -48,6 +51,7 @@ pub(crate) mod fake {
     #[derive(Default)]
     pub(crate) struct FakeWitness {
         pub(crate) refuses_to_stand_by: bool,
+        pub(crate) a_dnie_in_the_reader: bool,
         pub(crate) said: Mutex<Vec<String>>,
     }
 
@@ -90,6 +94,10 @@ pub(crate) mod fake {
 
         fn aborted(&self) -> bool {
             false
+        }
+
+        fn a_dnie_is_in_the_reader(&self) -> bool {
+            self.a_dnie_in_the_reader
         }
     }
 }

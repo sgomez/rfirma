@@ -627,6 +627,10 @@ impl Witness for ConsoleWitness {
     fn aborted(&self) -> bool {
         self.shared.lock().aborting
     }
+
+    fn a_dnie_is_in_the_reader(&self) -> bool {
+        crate::card::a_dnie_is_in_the_reader()
+    }
 }
 
 fn run_the_next_group(shared: &Arc<Shared>) {
