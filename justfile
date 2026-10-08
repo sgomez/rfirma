@@ -652,6 +652,26 @@ storybook-a11y: po-import
 dev *args: check-native po-import
     cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev -- -- {{ args }}
 
+# Como `dev`, con la tarjeta falsa de las pruebas como unico almacen: `tries` intentos (0, bloqueada)
+# y perfil `dnie` o `signals`. Cada arranque la restaura; su registro, en <target>/fake-card/calls.log.
+[group('dev')]
+[linux]
+dev-fake-card tries="3" profile="dnie" *args: check-native po-import
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "{{ tries }}" in [0-3]) ;; *) echo "tries va de 0 a 3: {{ tries }}" >&2; exit 1 ;; esac
+    case "{{ profile }}" in dnie|signals) ;; *) echo "perfil desconocido: {{ profile }} (dnie o signals)" >&2; exit 1 ;; esac
+    card="$CARGO_TARGET_DIR/fake-card"
+    (cd "{{ tauri }}" && cargo build -q -p fake-pkcs11)
+    mkdir -p "$card"
+    cp "$CARGO_TARGET_DIR/debug/libfake_pkcs11.so" "$card/"
+    rm -f "$card/calls.log" "$card/profile" "$card/interference" "$card/removed-from"
+    echo "{{ tries }}" > "$card/tries-left"
+    if [ "{{ profile }}" = "signals" ]; then echo signals > "$card/profile"; fi
+    echo "tarjeta falsa: $card (PIN 12345678)"
+    cd "{{ app }}"
+    RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" RFIRMA_PKCS11_MODULE="$card/libfake_pkcs11.so" exec pnpm exec tauri dev -- -- {{ args }}
+
 # Registra (`on`) o quita (`off`) el manejador de desarrollo de afirma://.
 [group('dev')]
 dev-handler mode="on":
