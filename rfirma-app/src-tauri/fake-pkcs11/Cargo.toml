@@ -1,0 +1,22 @@
+[package]
+name = "fake-pkcs11"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Módulo PKCS#11 falso que se porta como un DNIe, solo para las pruebas de rfirma."
+license = "EUPL-1.2"
+publish = false
+
+# `cdylib` es el módulo que carga `cryptoki`; `rlib`, la tarjeta de pruebas que lo prepara.
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# Busca su directorio con `dladdr`: no compila en Windows, y el `justfile` lo excluye allí.
+[dependencies]
+cryptoki-sys = "0.5"
+libc = "0.2"
+openssl = "0.10"
+tempfile = "3"
+
+[dev-dependencies]
+cryptoki = "0.12"
