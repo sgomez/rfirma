@@ -341,7 +341,7 @@ fn a_certificate_carries_the_issuer_that_its_own_store_has() {
 fn an_authority_is_never_offered_even_when_its_store_hands_it_over_as_signable() {
     let holder = TestAuthority::root("Raiz de pruebas").issues("Firmante de pruebas");
     let signable = vec![
-        a_certificate_in(CARD, "AC", &a_usable_certificate("AC").der().to_vec()),
+        a_certificate_in(CARD, "AC", a_usable_certificate("AC").der()),
         a_certificate_in(CARD, "FIRMA", &holder.der()),
     ];
     let token = StoresWith::holding(signable.clone(), signable);

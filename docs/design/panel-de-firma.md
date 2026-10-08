@@ -38,8 +38,8 @@ Zona que se desliza, de arriba abajo, cada bloque solo cuando toca:
 
 1. **Certificado**: el selector, siempre el primero mientras se puede firmar.
 2. **Aviso de firmas previas**, si el PDF ya trae firmas.
-3. **Sin certificados**, **el resumen** o **el error de firma**, según el
-   estado.
+3. **Las salidas de sin certificados**, **el resumen** o **el error de firma**,
+   según el estado.
 4. **Firma visible**: rótulo e interruptor; encendida, el segmentado de páginas
    y su línea o campo.
 5. **Modelo**, **rúbrica** y, con Personalizada, **la frase**.
@@ -78,8 +78,8 @@ Cada uno tiene su historia en «Flujos/Firma/SigningPanel», salvo que se diga o
 | Listo | `Ready` | Selector con el certificado elegido; firmar disponible |
 | Sin certificado elegido | `Unchosen` | Selector sin elegido, firmar al 55 %, firma visible apagada y desactivada con su ayuda |
 | Buscando certificados | `Searching` | La caja lo dice con un indicador; firmar al 55 % |
-| Sin certificados | `NoCertificates` | Aviso arriba; el pie ofrece añadir un certificado y volver a buscar. No hay selector |
-| Búsqueda fallida | `SearchFailed` | El aviso cuenta que no se pudo buscar, no que no haya ninguno |
+| Sin certificados | `NoCertificates` | El selector se queda en su sitio, desactivado y diciendo «Sin certificados»; debajo, «Añadir un certificado…» (primario, el ancho que sobra) y «Volver a buscar» (secundario); el pie deja solo «Firmar», desactivado |
+| Búsqueda fallida | `SearchFailed` | La misma forma, con el error clasificado debajo de las salidas; la caja dice que no se pudo buscar, no que no haya ninguno |
 | Varios certificados | `SeveralCertificates` | El desplegable los lista todos al abrirse |
 | Certificados abiertos | `Open` de «Dominio/Firma/CertificateSelect» | El buscador en lugar de la caja y la lista flotando |
 | Firma visible | `VisibleSignature*` | Una página, varias, todas, otra página a la vista y sin colocar |
@@ -271,7 +271,11 @@ relleno `6px 12px`, borde de 1 px en `--rf-border-strong`, `--rf-radius-md`,
 fondo `--rf-bg`, cada línea en una sola fila con elipsis. Dice **el certificado
 elegido**: el titular o, si es de representante, la entidad, y debajo la
 capacidad. Sin elegir, `panel.certificate.chooseOne`; buscando,
-`panel.certificate.loading` con el indicador.
+`panel.certificate.loading` con el indicador. Sin ningún certificado o con la
+búsqueda fallida, la caja sigue en su sitio, desactivada, y dice
+`panel.certificate.empty.title` o `panel.certificate.failed.title`: el panel no
+cambia de forma según el estado, y las salidas van justo debajo, donde está el
+problema, no en el pie.
 
 **Abierto**, la caja se convierte en el buscador —lupa, borde de 2 px en
 `--rf-primary`— y la lista cuelga justo debajo, **hacia abajo**, a 4 px y a todo
