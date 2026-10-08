@@ -12,10 +12,6 @@ pub mod stores;
 use std::path::Path;
 use std::sync::Mutex;
 
-use cryptoki::error::{Error, RvError};
-use cryptoki::session::UserType;
-use cryptoki::types::AuthPin;
-
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
@@ -26,7 +22,7 @@ use crate::identity::ports::Token;
 pub use nss::{NssHost, RealNssHost};
 use one_login::Refused;
 use session::{
-    context, logged_in, pin_warning_of, refused_login, slot_of, the_store_is_really_there,
+    context, logged_in, pin_warning_of, slot_of, the_store_is_really_there,
     token_info_unless_locked,
 };
 
@@ -191,9 +187,6 @@ pub fn accepts_the_secret(
     reference: &CertificateRef,
     secret: &crate::identity::domain::protected_secret::ProtectedSecret,
 ) -> Result<(), TokenError> {
-    let pin = secret
-        .as_str()
-        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
     with_token_turn(|| {
         if let Some(cut) = one_login::cut_short(reference) {
             return Err(cut);
@@ -208,16 +201,9 @@ pub fn accepts_the_secret(
         {
             return accepted;
         }
-        token_info_unless_locked(&context, slot)?;
-        let session = context.open_ro_session(slot)?;
-        match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
-            Ok(()) => {
-                let _ = session.logout();
-                Ok(())
-            }
-            Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => Ok(()),
-            Err(other) => Err(refused_login(&context, slot, other)),
-        }
+        let session = log_in()?;
+        let _ = session.logout();
+        Ok(())
     })
 }
 

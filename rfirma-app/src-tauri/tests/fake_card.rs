@@ -411,3 +411,55 @@ fn the_fake_module_is_not_among_the_modules_rfirma_looks_for() {
         "{candidates:?}"
     );
 }
+
+fn interfered_card() -> FakeCard {
+    FakeCard::new()
+        .and_then(FakeCard::interfered)
+        .expect("la tarjeta falsa deberia montarse")
+}
+
+#[test]
+fn another_program_using_the_card_before_the_login_makes_the_pin_travel_twice_in_two_sessions() {
+    let card = interfered_card();
+    let typist = Typist::typing(&[FakeCard::PIN]);
+
+    the_batch_secret(&card, &typist).expect("la interferencia no es un rechazo");
+
+    assert_eq!(typist.prompts(), 1);
+    assert_eq!(card.tries_left(), 3);
+    let calls = card.calls();
+    let logins: Vec<usize> = calls
+        .iter()
+        .enumerate()
+        .filter(|(_, call)| call.starts_with("C_Login"))
+        .map(|(index, _)| index)
+        .collect();
+    assert_eq!(logins.len(), 2, "{calls:?}");
+    assert!(
+        calls[logins[0]..logins[1]]
+            .iter()
+            .any(|call| call.starts_with("C_OpenSession")),
+        "{calls:?}"
+    );
+}
+
+#[test]
+fn a_second_failed_login_after_the_interference_is_not_sent_a_third_time() {
+    let card = interfered_card();
+    let typist = Typist::typing(&["00000000"]);
+
+    the_batch_secret(&card, &typist).expect_err("el PIN era incorrecto");
+
+    assert_eq!(card.calls_to("C_Login").len(), 2, "{:?}", card.calls());
+}
+
+#[test]
+fn the_dialog_after_an_interference_does_not_say_the_previous_pin_was_wrong() {
+    let card = interfered_card();
+    let typist = Typist::typing(&[FakeCard::PIN]);
+
+    the_batch_secret(&card, &typist).expect("la interferencia no es un rechazo");
+
+    assert_eq!(typist.prompts(), 1);
+    assert_eq!(typist.warnings(), vec![PinWarning::Quiet]);
+}

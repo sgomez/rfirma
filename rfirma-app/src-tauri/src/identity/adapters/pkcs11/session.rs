@@ -89,6 +89,39 @@ pub(super) fn pin_warning_of(context: &Pkcs11, slot: Slot) -> Result<PinWarning,
     ))
 }
 
+/// Abre una sesión con el usuario dentro; si otro programa se interpuso, repite una sola vez en otra (ADR-0047).
+pub(super) fn logged_in_session(
+    context: &Pkcs11,
+    slot: Slot,
+    pin: &str,
+) -> Result<Session, TokenError> {
+    let pin = AuthPin::new(pin.into());
+    let session = context.open_ro_session(slot)?;
+    match session.login(UserType::User, Some(&pin)) {
+        Err(Error::Pkcs11(RvError::UserNotLoggedIn, _)) => {
+            drop(session);
+            let again = context.open_ro_session(slot)?;
+            accepted_or_already_in(again.login(UserType::User, Some(&pin)), context, slot)?;
+            Ok(again)
+        }
+        first => {
+            accepted_or_already_in(first, context, slot)?;
+            Ok(session)
+        }
+    }
+}
+
+fn accepted_or_already_in(
+    outcome: Result<(), Error>,
+    context: &Pkcs11,
+    slot: Slot,
+) -> Result<(), TokenError> {
+    match outcome {
+        Ok(()) | Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => Ok(()),
+        Err(other) => Err(refused_login(context, slot, other)),
+    }
+}
+
 /// El fallo de un `C_Login`, con lo que la tarjeta dice de sus intentos en ese mismo proceso (ADR-0047).
 pub(super) fn refused_login(context: &Pkcs11, slot: Slot, error: Error) -> TokenError {
     let refused = TokenError::from(error);
@@ -114,15 +147,10 @@ pub(super) fn logged_in(
     secret: &ProtectedSecret,
 ) -> Result<Session, TokenError> {
     token_info_unless_locked(context, slot)?;
-    let session = context.open_ro_session(slot)?;
     let pin = secret
         .as_str()
         .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
-    match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
-        // Si otra biblioteca del proceso ya autenticó el token, se reutiliza la sesión.
-        Ok(()) | Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => Ok(session),
-        Err(other) => Err(refused_login(context, slot, other)),
-    }
+    logged_in_session(context, slot, pin)
 }
 
 /// La clave privada del certificado emparejada por `CKA_ID`.
