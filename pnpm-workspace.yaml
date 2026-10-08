@@ -30,3 +30,7 @@ minimumReleaseAgeExclude:
   - i18next-cli@1.72.4
   # Temporal: quitar cuando @tauri-apps/api@2.12.1 cumpla la edad mínima.
   - '@tauri-apps/api@2.12.1'
+
+overrides:
+  source-map-js: '>=1.2.2'
+  postcss-selector-parser: '>=7.1.6'
