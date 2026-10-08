@@ -57,9 +57,10 @@ Lo que midió está escrito en
 [`docs/research/flatpak-canal-unico.md`](../../docs/research/flatpak-canal-unico.md).
 
 El resto del manifiesto —runtime, permisos, la librería en `/app/lib/rfirma`—
-se quedó tal cual. La fontanería de tarjeta (`pcsc-lite` y `OpenSC`) se retiró
-en el [#256](https://github.com/sgomez/rfirma/issues/256): nunca se había
-publicado, y tarjetas y DNIe no están soportados en la v0.4.
+se quedó tal cual. Las tarjetas y el DNIe ([ADR-0049](../../docs/adr/0049-el-flatpak-trae-su-opensc-y-usa-el-pcscd-del-anfitrion.md))
+usan el `pcscd` del anfitrión por `--socket=pcsc` y el OpenSC que lleva dentro
+el flatpak. El anfitrión necesita `pcscd` y el driver de su lector, `libccid` en
+la mayoría de los casos.
 
 ## Verificar
 

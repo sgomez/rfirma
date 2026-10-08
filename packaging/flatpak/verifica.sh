@@ -31,6 +31,15 @@ flatpak-builder --user --force-clean --install --repo="$LAB/repo" \
 echo "OK  ($(du -sh "$AQUI/build-dir/files" | cut -f1) instalados)"
 
 echo
+echo "### 1b. el bundle declara el socket de PC/SC"
+if ! flatpak info --show-permissions "$APP" | grep -q '^sockets=.*\bpcsc\b'; then
+    echo "EL BUNDLE NO DECLARA --socket=pcsc: sin el socket del pcscd del" >&2
+    echo "anfitrion el flatpak no ve lectores ni el DNIe (ADR-0049)." >&2
+    exit 1
+fi
+echo "--socket=pcsc declarado: OK"
+
+echo
 echo "### 2. la ventana arranca (WebKitGTK del runtime)"
 # Un proceso vivo no es una ventana que se vea: el bus de sesion delata la pagina que no cargo.
 flatpak run --log-session-bus --filesystem="$LAB" "$APP" >"$LAB/gui.log" 2>&1 &
