@@ -476,7 +476,7 @@ fn a_registered_module_that_is_already_a_candidate_is_listed_once() {
     )
     .expect("deberia poder escribirse el .module");
 
-    let ours: Vec<PathBuf> = discovered_modules(&usr, &[registry])
+    let ours: Vec<PathBuf> = discovered_modules(&usr, None, &[registry])
         .into_iter()
         .filter(|module| module.starts_with(temp.path()))
         .collect();
