@@ -63,9 +63,8 @@ fn a_view() -> CertificateView {
     }
 }
 
-#[test]
-fn a_row_crosses_every_store_it_is_in_but_not_the_one_behind_its_handle() {
-    let view = CertificateView::from(ListedCertificate {
+fn a_row_in(stores: Vec<StoreClass>, from_a_dnie: bool) -> ListedCertificate {
+    ListedCertificate {
         id: "0123456789abcdef0123456789abcdef".to_owned(),
         label: "ETIQUETA".to_owned(),
         holder_name: String::new(),
@@ -77,15 +76,35 @@ fn a_row_crosses_every_store_it_is_in_but_not_the_one_behind_its_handle() {
         entity_name: None,
         issuer: String::new(),
         certificate_serial_number: String::new(),
-        store: StoreClass::Card,
-        stores: vec![StoreClass::Card, StoreClass::Firefox],
+        store: stores[0],
+        stores,
+        from_a_dnie,
         status: CertificateStatus::Valid { not_after: 0 },
         remembered: false,
-    });
+    }
+}
+
+#[test]
+fn a_row_crosses_every_store_it_is_in_but_not_the_one_behind_its_handle() {
+    let view = CertificateView::from(a_row_in(vec![StoreClass::Card, StoreClass::Firefox], false));
     let json = serde_json::to_string(&view).expect("serializa");
 
     assert!(!json.contains(r#""store":"#), "{json}");
     assert!(json.contains(r#""stores":["card","firefox"]"#), "{json}");
+}
+
+#[test]
+fn a_dnie_row_carries_the_dnie_chip_in_place_of_the_card_one() {
+    let view = CertificateView::from(a_row_in(vec![StoreClass::Card], true));
+
+    assert_eq!(view.stores, ["dnie"]);
+}
+
+#[test]
+fn a_dnie_certificate_copied_into_another_store_keeps_that_store_label() {
+    let view = CertificateView::from(a_row_in(vec![StoreClass::Firefox], true));
+
+    assert_eq!(view.stores, ["firefox"]);
 }
 
 #[test]

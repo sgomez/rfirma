@@ -51,6 +51,8 @@ export function CertificateCard({ certificate }: CertificateCardProps) {
 /** El rótulo de un almacén, del catálogo. */
 export function storeLabel(store: Store, t: TFunction): string {
   switch (store) {
+    case "dnie":
+      return t("panel.certificate.stores.dnie");
     case "card":
       return t("status.storeBrands.card");
     case "firefox":

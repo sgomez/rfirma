@@ -538,6 +538,10 @@ msgstr "pertsonal"
 msgid "panel.certificate.stores.chrome"
 msgstr "Chrome"
 
+#. Chip de la fila de un certificado del DNIe. Nombre propio: no se traduce.
+msgid "panel.certificate.stores.dnie"
+msgstr "DNIe"
+
 #. Término del dominio: NSS es el almacén de certificados de Firefox y Chrome; no se traduce la sigla.
 msgid "panel.certificate.stores.nssdb"
 msgstr "NSS biltegia"
