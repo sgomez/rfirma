@@ -3,7 +3,7 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Combobox, type ComboboxOption } from "../design-system/Combobox";
-import { SpinnerIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { CertificateCard, shortStatusWarning, storeLabel } from "./CertificateCard";
 import type { Certificate } from "./certificate";
 import {
@@ -23,6 +23,8 @@ interface CertificateSelectProps {
   listMaxHeight?: number;
   /** Mientras se listan los certificados: la caja lo dice y no se abre. */
   searching?: boolean;
+  /** Sin ninguno que elegir: la caja se queda en su sitio, desactivada, y lo dice. */
+  absent?: "empty" | "failed";
   disabled?: boolean;
   defaultOpen?: boolean;
 }
@@ -34,6 +36,7 @@ export function CertificateSelect({
   onChoose,
   listMaxHeight = 480,
   searching = false,
+  absent,
   disabled = false,
   defaultOpen = false,
 }: CertificateSelectProps) {
@@ -72,25 +75,37 @@ export function CertificateSelect({
       countLabel={(shown, total) => t("panel.certificate.matches", { shown, total })}
       listMaxHeight={listMaxHeight}
       alwaysGroupHeaders
-      disabled={searching || disabled}
+      disabled={searching || absent !== undefined || disabled}
       defaultOpen={defaultOpen}
     >
-      {closedBox(searching, chosen, t)}
+      {closedBox(searching, absent, chosen, t)}
     </Combobox>
   );
 }
 
-function closedBox(searching: boolean, chosen: Certificate | null, t: TFunction) {
+function closedBox(
+  searching: boolean,
+  absent: "empty" | "failed" | undefined,
+  chosen: Certificate | null,
+  t: TFunction,
+) {
   if (searching) {
     return (
       <>
         <span className="certificate-select__spinner">
-          <SpinnerIcon size={16} />
+          <Icon name="loading" size={16} />
         </span>
         <span className="rf-text-muted certificate-select__unchosen">
           {t("panel.certificate.loading")}
         </span>
       </>
+    );
+  }
+  if (absent !== undefined) {
+    return (
+      <span className="rf-text-muted certificate-select__unchosen">
+        {t(absent === "empty" ? "panel.certificate.empty.title" : "panel.certificate.failed.title")}
+      </span>
     );
   }
   if (chosen === null) {

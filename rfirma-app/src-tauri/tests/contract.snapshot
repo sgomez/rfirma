@@ -31,6 +31,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async open_opened_folder(document: String) -> Result<(), Failure>
   async open_signed_folder() -> Result<(), Failure>
         list_certificates() -> Result<Vec<CertificateView>, Failure>
+        read_card_readers() -> ReaderStatusView
   async install_certificate() -> Result<bool, Failure>
   async remove_certificate(id: String) -> Result<(), Failure>
   async empty_installed_store() -> Result<(), Failure>
@@ -252,6 +253,18 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       stores: Vec<String>
       status: StatusView
       remembered: bool
+
+  pub enum ReaderStatusView   (serde: etiqueta "kind")
+      NoReader
+      NoCard
+      Reading
+      DnieReady
+      CardReady
+      Unreadable
+
+  pub struct ReaderNewsView
+      reader: ReaderStatusView
+      certificates: Option<Vec<CertificateView>>
 
   pub enum DatumOrder
       Signer

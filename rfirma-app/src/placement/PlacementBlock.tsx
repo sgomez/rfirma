@@ -3,7 +3,7 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import { AlertIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Stack } from "../design-system/Stack";
 import { messageFor } from "./placementField";
 import type { PlacementState } from "./usePlacement";
@@ -96,7 +96,7 @@ export function PlacementBlock({ state }: { state: PlacementBlockState }) {
           </div>
           {rangeError !== null && (
             <p className="panel__range-error">
-              <AlertIcon size={15} />
+              <Icon name="warning" size={15} />
               <span className="rf-body">{messageFor(rangeError, t)}</span>
             </p>
           )}

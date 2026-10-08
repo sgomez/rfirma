@@ -189,6 +189,8 @@ glib = "0.18"
 # El llavero del escritorio para el PIN del Almacén de rFirma: el portal de
 # secretos dentro del flatpak, Secret Service por D-Bus fuera de él (ADR-0034).
 oo7 = "0.5"
+# El vigilante de lectores y tarjetas sobre `libpcsclite` (ADR-0048).
+pcsc = "2.9"
 
 # Windows no trae OpenSSL: se compila desde las fuentes, y solo alli (ADR-0035).
 [target.'cfg(windows)'.dependencies]

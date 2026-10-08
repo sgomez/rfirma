@@ -67,6 +67,20 @@ fn replacing_forgets_every_handle_minted_before() {
 }
 
 #[test]
+fn replacing_keeping_reuses_the_handle_of_what_stays_and_forgets_what_goes() {
+    let handles = Handles::new();
+    let before = handles.replace(["FIRMA", "TARJETA"]);
+
+    let after = handles.replace_keeping(["FIRMA", "OTRA"]);
+
+    assert_eq!(after[0], before[0]);
+    assert_eq!(handles.get(&after[0]), Some("FIRMA"));
+    assert_eq!(handles.get(&after[1]), Some("OTRA"));
+    assert_eq!(handles.get(&before[1]), None);
+    assert_eq!(handles.len(), 2);
+}
+
+#[test]
 fn replacing_paired_reuses_the_handles_given_instead_of_minting_new_ones() {
     let source = Handles::new();
     let handle = source.mint("FIRMA");

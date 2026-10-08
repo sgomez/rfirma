@@ -105,11 +105,13 @@ fails_with "argumentos: modo desconocido" "uso:" "$built" --otro
 
 if command -v dpkg-deb > /dev/null 2>&1; then
     deb() {
-        local out="$1" library="$2" staging
+        local out="$1" library="$2" relations="${3-Depends: libpcsclite1
+Recommends: opensc, pcscd
+}" staging
         staging="$(mktemp -d "$tmp/deb.XXXX")"
         mkdir -p "$staging/DEBIAN" "$staging/usr/lib/rfirma"
-        printf 'Package: rfirma\nVersion: 1.0.0\nArchitecture: amd64\nMaintainer: pruebas\nDescription: pruebas\n' \
-            > "$staging/DEBIAN/control"
+        printf 'Package: rfirma\nVersion: 1.0.0\nArchitecture: amd64\nMaintainer: pruebas\nDescription: pruebas\n%s' \
+            "$relations" > "$staging/DEBIAN/control"
         : > "$staging/usr/lib/rfirma/librfirma_crypto.so"
         [ -z "$library" ] || : > "$staging/usr/lib/rfirma/$library"
         dpkg-deb --build --root-owner-group "$staging" "$out" > /dev/null
@@ -125,6 +127,19 @@ if command -v dpkg-deb > /dev/null 2>&1; then
     deb "$awt/rfirma_1.0.0_amd64.deb" libawt.so
     "$manifest" write "$awt"
     fails_with "contenido: un .deb con libawt.so" "SOBRA libawt.so" "$awt"
+
+    bare="$tmp/bare"
+    mkdir "$bare"
+    deb "$bare/rfirma_1.0.0_amd64.deb" "" ""
+    "$manifest" write "$bare"
+    fails_with "contenido: un .deb sin depender de libpcsclite" "libpcsclite" "$bare"
+
+    unadvised="$tmp/unadvised"
+    mkdir "$unadvised"
+    deb "$unadvised/rfirma_1.0.0_amd64.deb" "" "Depends: libpcsclite1
+"
+    "$manifest" write "$unadvised"
+    fails_with "contenido: un .deb que no recomienda opensc ni pcscd" "opensc" "$unadvised"
 else
     echo "AVISO  sin dpkg-deb: se salta la puerta del contenido sobre un .deb"
 fi

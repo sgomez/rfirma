@@ -2,7 +2,7 @@
 
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { PlacementBlockState } from "../placement/PlacementBlock";
-import { CertificateNotice } from "./CertificateNotice";
+import { CertificateExits } from "./CertificateExits";
 import { CertificateSelect } from "./CertificateSelect";
 import type { CertificateSection } from "./certificate";
 import type { DestinationSection } from "./destination";
@@ -12,6 +12,7 @@ import { ModelFieldset } from "./ModelFieldset";
 import { PanelFooter } from "./PanelFooter";
 import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
 import type { PreviousSignaturesReport } from "./previousSignatures";
+import { ReaderLine } from "./ReaderLine";
 import type { RubricSection } from "./rubric";
 import "./SigningPanel.css";
 import { VisibleSignatureFieldset } from "./VisibleSignatureFieldset";
@@ -97,19 +98,32 @@ export function SigningPanel({
           />
         ) : (
           <>
-            {(certificate.kind === "loading" ||
-              certificate.kind === "unchosen" ||
-              certificate.kind === "chosen") && (
-              <div className={signing ? "panel__controls--dim" : undefined}>
-                <CertificateSelect
-                  certificates={certificate.kind === "loading" ? [] : certificate.certificates}
-                  chosen={chosen}
-                  onChoose={certificateSection.choose}
-                  searching={certificate.kind === "loading"}
-                  disabled={signing}
-                />
-              </div>
-            )}
+            <div className={signing ? "panel__controls--dim" : undefined}>
+              <CertificateSelect
+                certificates={
+                  certificate.kind === "unchosen" || certificate.kind === "chosen"
+                    ? certificate.certificates
+                    : []
+                }
+                chosen={chosen}
+                onChoose={certificateSection.choose}
+                searching={certificate.kind === "loading"}
+                absent={
+                  certificate.kind === "empty" || certificate.kind === "failed"
+                    ? certificate.kind
+                    : undefined
+                }
+                disabled={signing}
+              />
+            </div>
+            <ReaderLine reader={certificateSection.reader} />
+            <CertificateExits
+              state={certificate}
+              installFailure={certificateSection.installFailure}
+              onInstall={() => void certificateSection.install()}
+              onLookAgain={() => void certificateSection.lookAgain()}
+              onOpenHelp={onOpenHelp}
+            />
 
             {previousSignatures.signatures.length > 0 && (
               <PreviousSignaturesNotice
@@ -117,10 +131,6 @@ export function SigningPanel({
                 report={previousSignatures}
                 certificate={chosen}
               />
-            )}
-
-            {(certificate.kind === "empty" || certificate.kind === "failed") && (
-              <CertificateNotice state={certificate} onOpenHelp={onOpenHelp} />
             )}
 
             <VisibleSignatureFieldset
@@ -160,9 +170,6 @@ export function SigningPanel({
         blocked={blocked}
         closed={previousSignatures.closed === true}
         certificate={certificate}
-        onRetryCertificates={() => void certificateSection.lookAgain()}
-        installFailure={certificateSection.installFailure}
-        onInstallCertificate={() => void certificateSection.install()}
         onSign={() => void signingSection.sign()}
         onBack={signingSection.back}
       />

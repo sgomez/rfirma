@@ -1,35 +1,48 @@
-//! El certificado elegido en el desplegable, que dura lo que dura el listado del que salió y no se recuerda hasta firmar.
+//! El certificado elegido en el desplegable: una búsqueda vuelve a proponer el de por omisión, un lector no toca lo elegido, y nada se recuerda hasta firmar.
 
-import { useCallback, useMemo, useState } from "react";
-import type { Certificate, CertificateState } from "../signing/certificate";
+import { useCallback, useState } from "react";
+import {
+  type Certificate,
+  type CertificateState,
+  keptAcrossTheReader,
+} from "../signing/certificate";
 import type { CertificateListing } from "../signing/useCertificateListing";
 import { chosenFrom } from "./signingOrder";
 
 interface Choice {
   listing: CertificateListing;
-  certificate: Certificate;
+  state: CertificateState;
 }
 
-/** El estado del desplegable: cada listado nuevo vuelve a proponer el de por omisión (ADR-0010). */
+/** El estado del desplegable: cada búsqueda nueva vuelve a proponer el de por omisión (ADR-0010). */
 export function useCertificateChoice(listing: CertificateListing) {
-  const [choice, setChoice] = useState<Choice | null>(null);
+  const [choice, setChoice] = useState<Choice>(() => ({ listing, state: proposed(listing) }));
+
+  let current = choice;
+  if (choice.listing !== listing) {
+    current = { listing, state: following(choice.state, listing) };
+    setChoice(current);
+  }
 
   const chooseCertificate = useCallback(
     (certificate: Certificate) => {
-      if (listing.kind === "listed") setChoice({ listing, certificate });
+      if (listing.kind !== "listed") return;
+      setChoice({
+        listing,
+        state: { kind: "chosen", certificate, certificates: listing.certificates },
+      });
     },
     [listing],
   );
 
-  const certificate = useMemo(() => certificateStateOf(listing, choice), [listing, choice]);
-
-  return { certificate, chooseCertificate };
+  return { certificate: current.state, chooseCertificate };
 }
 
-function certificateStateOf(listing: CertificateListing, choice: Choice | null): CertificateState {
-  if (listing.kind !== "listed") return listing;
-  if (choice?.listing === listing) {
-    return { kind: "chosen", certificate: choice.certificate, certificates: listing.certificates };
-  }
-  return chosenFrom(listing.certificates);
+function proposed(listing: CertificateListing): CertificateState {
+  return listing.kind === "listed" ? chosenFrom(listing.certificates) : listing;
+}
+
+function following(previous: CertificateState, listing: CertificateListing): CertificateState {
+  if (listing.kind !== "listed" || listing.byReader !== true) return proposed(listing);
+  return keptAcrossTheReader(previous, listing.certificates);
 }

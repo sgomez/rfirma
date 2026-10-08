@@ -3,19 +3,7 @@
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
-  FileIcon,
-  FitIcon,
-  FitPageIcon,
-  MinusIcon,
-  MoveIcon,
-  PlusIcon,
-  UploadIcon,
-} from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { StampPreview } from "../signing/stampPreview";
@@ -218,7 +206,7 @@ export function DocumentViewer({
     return (
       <div className="viewer viewer--empty viewer--without-preview">
         <span className="rf-text-muted">
-          <FileIcon size={40} />
+          <Icon name="document" size={40} />
         </span>
         <span className="rf-title">{withoutPreview}</span>
         <span className="rf-body rf-text-muted">{t("viewer.noPreview")}</span>
@@ -238,7 +226,7 @@ export function DocumentViewer({
         )}
         <button type="button" className="viewer__drop-zone" onClick={onOpen}>
           <span className="viewer__drop-icon">
-            <UploadIcon size={32} />
+            <Icon name="dropFile" size={32} />
           </span>
           <span className="rf-title viewer__drop-title">{t("viewer.dropZone")}</span>
           <span className="rf-body rf-text-muted">{t("viewer.dropZoneHint")}</span>
@@ -313,7 +301,7 @@ export function DocumentViewer({
               {...gesturing(drag.box)}
             >
               <span className="viewer__handle rf-body">
-                <MoveIcon />
+                <Icon name="move" />
                 {t("viewer.dragHandle")}
               </span>
               {rubricGap && stamp && stamp.kind !== "noCertificate" && stamp.kind !== "failed" && (
@@ -383,7 +371,7 @@ export function DocumentViewer({
           disabled={page === 1}
           onClick={() => goTo(1)}
         >
-          <ChevronsLeftIcon strokeWidth={2} />
+          <Icon name="firstPage" strokeWidth={2} />
         </Button>
         <Button
           variant="ghost"
@@ -392,7 +380,7 @@ export function DocumentViewer({
           disabled={page === 1}
           onClick={() => goTo(page - 1)}
         >
-          <ChevronLeftIcon strokeWidth={2} />
+          <Icon name="previousPage" strokeWidth={2} />
         </Button>
         <Row gap="xs" className="viewer__pages">
           <input
@@ -413,7 +401,7 @@ export function DocumentViewer({
           disabled={page === pageCount}
           onClick={() => goTo(page + 1)}
         >
-          <ChevronRightIcon strokeWidth={2} />
+          <Icon name="nextPage" strokeWidth={2} />
         </Button>
         <Button
           variant="ghost"
@@ -422,7 +410,7 @@ export function DocumentViewer({
           disabled={page === pageCount}
           onClick={() => goTo(pageCount)}
         >
-          <ChevronsRightIcon strokeWidth={2} />
+          <Icon name="lastPage" strokeWidth={2} />
         </Button>
 
         <span className="viewer__divider rf-divider" />
@@ -434,7 +422,7 @@ export function DocumentViewer({
           disabled={zoom <= ZOOM_MIN}
           onClick={() => stepZoom(-1)}
         >
-          <MinusIcon />
+          <Icon name="zoomOut" />
         </Button>
         {/*
           El porcentaje se teclea: con el zoom continuo, los botones ya no
@@ -467,7 +455,7 @@ export function DocumentViewer({
           disabled={zoom >= ZOOM_MAX}
           onClick={() => stepZoom(1)}
         >
-          <PlusIcon />
+          <Icon name="zoomIn" />
         </Button>
         <Button
           variant="ghost"
@@ -476,7 +464,7 @@ export function DocumentViewer({
           aria-pressed={mode.kind === "fit-width"}
           onClick={() => setMode({ kind: "fit-width" })}
         >
-          <FitIcon />
+          <Icon name="fitWindow" />
         </Button>
         <Button
           variant="ghost"
@@ -485,7 +473,7 @@ export function DocumentViewer({
           aria-pressed={mode.kind === "fit-page"}
           onClick={() => setMode({ kind: "fit-page" })}
         >
-          <FitPageIcon />
+          <Icon name="fitPage" />
         </Button>
       </Row>
     </div>

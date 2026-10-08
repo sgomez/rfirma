@@ -3,7 +3,7 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import { SignedMarkIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { MenuItem } from "../design-system/Menu";
 import "./DocumentTabs.css";
 import type { RecentDocument } from "./recents";
@@ -42,7 +42,7 @@ export function RecentRows({ recents, openIds, onSelect, inMenu = false }: Recen
             <span className="recent-row__name">{row.name}</span>
             {row.badge === "Signed" && (
               <span className="recent-row__signed" role="img" aria-label={t("badges.signed")}>
-                <SignedMarkIcon />
+                <Icon name="signed" />
               </span>
             )}
           </span>

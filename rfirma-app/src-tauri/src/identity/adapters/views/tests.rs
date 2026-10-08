@@ -1,5 +1,7 @@
-use super::{store_name, CertificateView, SecretView, StatusView};
+use super::{store_name, CertificateView, ReaderNewsView, SecretView, StatusView};
+use crate::identity::application::readers::ReaderNews;
 use crate::identity::domain::certificate::{CertificateStatus, ListedCertificate};
+use crate::identity::domain::readers::{ReaderStatus, ReadyCard};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::StoreClass;
 
@@ -63,9 +65,8 @@ fn a_view() -> CertificateView {
     }
 }
 
-#[test]
-fn a_row_crosses_every_store_it_is_in_but_not_the_one_behind_its_handle() {
-    let view = CertificateView::from(ListedCertificate {
+fn a_row_in(stores: Vec<StoreClass>, from_a_dnie: bool) -> ListedCertificate {
+    ListedCertificate {
         id: "0123456789abcdef0123456789abcdef".to_owned(),
         label: "ETIQUETA".to_owned(),
         holder_name: String::new(),
@@ -77,15 +78,35 @@ fn a_row_crosses_every_store_it_is_in_but_not_the_one_behind_its_handle() {
         entity_name: None,
         issuer: String::new(),
         certificate_serial_number: String::new(),
-        store: StoreClass::Card,
-        stores: vec![StoreClass::Card, StoreClass::Firefox],
+        store: stores[0],
+        stores,
+        from_a_dnie,
         status: CertificateStatus::Valid { not_after: 0 },
         remembered: false,
-    });
+    }
+}
+
+#[test]
+fn a_row_crosses_every_store_it_is_in_but_not_the_one_behind_its_handle() {
+    let view = CertificateView::from(a_row_in(vec![StoreClass::Card, StoreClass::Firefox], false));
     let json = serde_json::to_string(&view).expect("serializa");
 
     assert!(!json.contains(r#""store":"#), "{json}");
     assert!(json.contains(r#""stores":["card","firefox"]"#), "{json}");
+}
+
+#[test]
+fn a_dnie_row_carries_the_dnie_chip_in_place_of_the_card_one() {
+    let view = CertificateView::from(a_row_in(vec![StoreClass::Card], true));
+
+    assert_eq!(view.stores, ["dnie"]);
+}
+
+#[test]
+fn a_dnie_certificate_copied_into_another_store_keeps_that_store_label() {
+    let view = CertificateView::from(a_row_in(vec![StoreClass::Firefox], true));
+
+    assert_eq!(view.stores, ["firefox"]);
 }
 
 #[test]
@@ -127,4 +148,35 @@ fn the_status_crosses_with_its_payload() {
         serde_json::to_string(&unreadable).expect("serializa"),
         r#"{"kind":"unreadable","detail":"PEM error"}"#
     );
+}
+
+fn news(reader: ReaderStatus, certificates: Option<Vec<ListedCertificate>>) -> String {
+    serde_json::to_string(&ReaderNewsView::from(ReaderNews {
+        reader,
+        certificates,
+    }))
+    .expect("serializa")
+}
+
+#[test]
+fn the_reader_news_crosses_with_its_status_as_a_kind_and_the_list_only_when_it_changed() {
+    assert_eq!(
+        news(ReaderStatus::Reading, None),
+        r#"{"reader":{"kind":"reading"},"certificates":null}"#
+    );
+    assert_eq!(
+        news(ReaderStatus::Ready(ReadyCard::Dnie), Some(Vec::new())),
+        r#"{"reader":{"kind":"dnieReady"},"certificates":[]}"#
+    );
+    for (status, kind) in [
+        (ReaderStatus::NoReader, "noReader"),
+        (ReaderStatus::NoCard, "noCard"),
+        (ReaderStatus::Ready(ReadyCard::Other), "cardReady"),
+        (ReaderStatus::Unreadable, "unreadable"),
+    ] {
+        assert!(
+            news(status, None).contains(&format!(r#"{{"kind":"{kind}"}}"#)),
+            "{status:?}"
+        );
+    }
 }

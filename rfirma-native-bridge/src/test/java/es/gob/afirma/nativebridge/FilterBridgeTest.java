@@ -226,13 +226,9 @@ class FilterBridgeTest {
                 FilterBridge.select(filters("filters=ssl:ffffffffffffffff"), listing));
     }
 
-    /**
-     * dnie: se acepta en el motor aunque no dispone de cobertura de veredicto
-     * en el kit FNMT al pertenecer a la jerarquia de la Direccion General de la
-     * Policia (ver docs/research/filtros-sede-unmeasured.md).
-     */
+    /** Su veredicto sobre los certificados del DNIe lo prueba la tarjeta falsa en rfirma-app/src-tauri/tests/native_fake_card.rs. */
     @Test
-    void dnie_criterion_is_accepted_without_verdict_coverage() throws Exception {
+    void dnie_criterion_leaves_out_the_certificates_of_another_hierarchy() throws Exception {
         final List<X509Certificate> listing =
                 List.of(TestFixtures.activeCertificate(), TestFixtures.expiredCertificate());
         final int[] selected = FilterBridge.select(filters("filters=dnie:true"), listing);

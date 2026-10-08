@@ -2,7 +2,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import { AlertIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
 import { useDefaultButton } from "../design-system/useDefaultButton";
@@ -29,7 +29,7 @@ export function SedeOldWebClient({ onDismiss }: { onDismiss: () => void }) {
       <Stack className="sede-outcome">
         <Row gap="xs" className="sede-outcome__head">
           <span className="sede-outcome__icon">
-            <AlertIcon size={24} />
+            <Icon name="warning" size={24} />
           </span>
           <p className="rf-title sede-outcome__title">{t("sede.oldWebClient.title")}</p>
         </Row>

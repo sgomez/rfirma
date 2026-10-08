@@ -499,3 +499,19 @@ script = "selectcert"
 store = "dnie"
 act.pick_certificate = "Elige un certificado del DNIe. Si el diálogo te pide el PIN antes de elegir, cancélalo. No teclees nunca un PIN erróneo."
 expects.completes.conditions = ["a-certificate-alone"]
+
+[[check]]
+id = "a_dnie_is_offered_with_the_certificates_each_filter_allows"
+set = "certificado"
+citation = "SigningCertificateFilter.java:23-40; AuthCertificateFilter.java:21-38"
+statement = """
+Con un DNIe en el lector y sin filtro se ofrecen el certificado de firma y el de autenticación;
+con signingcert: solo el de firma, y con authcert: el de autenticación y no el de firma.
+"""
+
+[check.drive]
+mode = "v4"
+script = "dniefilters"
+store = "dnie"
+act.pick_certificate = "En el primer diálogo elige el certificado de firma del DNIe y en el segundo el de autenticación; si uno no aparece, cancela. Si el diálogo te pide el PIN antes de elegir, cancélalo. No teclees nunca un PIN erróneo."
+expects.completes.conditions = ["the-dnie-offered-as-each-filter-allows"]

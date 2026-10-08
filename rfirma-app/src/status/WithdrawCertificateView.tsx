@@ -4,7 +4,7 @@ import { type ReactNode, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
-import { CheckCircleIcon, CheckingIcon, CrossCircleIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
 import "./WithdrawCertificateView.css";
@@ -76,7 +76,11 @@ export function WithdrawCertificateView({
       {moment === "working" && (
         <Stack as="ul" gap="xs" className="withdraw-certificate-dialog__list">
           {stores.map((store) => (
-            <StoreLine key={store.brand} brand={store.brand} icon={<CheckingIcon size={14} />}>
+            <StoreLine
+              key={store.brand}
+              brand={store.brand}
+              icon={<Icon name="checking" size={14} />}
+            >
               {t("status.withdrawal.waiting")}
             </StoreLine>
           ))}
@@ -92,9 +96,9 @@ export function WithdrawCertificateView({
                 brand={store.brand}
                 icon={
                   failed(store.outcome) ? (
-                    <CrossCircleIcon size={14} />
+                    <Icon name="failure" size={14} />
                   ) : (
-                    <CheckCircleIcon size={14} />
+                    <Icon name="success" size={14} />
                   )
                 }
               >
@@ -105,9 +109,9 @@ export function WithdrawCertificateView({
             ))}
             <Row as="li" gap="xs">
               {failed(report.handler) ? (
-                <CrossCircleIcon size={14} />
+                <Icon name="failure" size={14} />
               ) : (
-                <CheckCircleIcon size={14} />
+                <Icon name="success" size={14} />
               )}
               <span className="rf-prose">{t("status.signals.siteSignature")}</span>
               <span className="rf-body rf-text-muted">

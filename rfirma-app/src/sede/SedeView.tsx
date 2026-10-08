@@ -2,6 +2,7 @@
 
 import { useTranslation } from "react-i18next";
 import type { NamedFailure } from "../errors/classify";
+import { type Certificate, NO_READER, type ReaderStatus } from "../signing/certificate";
 import type { Errand, MarkedArea } from "./errand";
 import { SedeConfirm } from "./SedeConfirm";
 import { SedeConsent } from "./SedeConsent";
@@ -18,6 +19,8 @@ export interface SedeViewProps {
   errand: Errand;
   consentCountdown?: boolean;
   installFailure?: NamedFailure | null;
+  reader?: ReaderStatus;
+  liveCertificates?: readonly Certificate[] | null;
   onConsent: (certificateId: string) => void;
   onConfirmSignatures: () => void | Promise<void>;
   onMarkArea: (area: MarkedArea | null) => void | Promise<void>;
@@ -40,6 +43,8 @@ export function SedeView({
   errand,
   consentCountdown = true,
   installFailure = null,
+  reader = NO_READER,
+  liveCertificates = null,
   onConsent,
   onConfirmSignatures,
   onMarkArea,
@@ -85,6 +90,8 @@ export function SedeView({
             operation={errand.operation}
             stage={stage}
             countdown={consentCountdown}
+            reader={reader}
+            liveCertificates={liveCertificates}
             onConsent={onConsent}
             onCancel={onCancel}
           />

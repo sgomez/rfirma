@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use application::certificates::ListedCertificates;
+use application::readers::{CardListing, LastListing, ReaderNow};
 use domain::algorithm::SignatureAlgorithm;
 use domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use domain::error::TokenError;
@@ -28,6 +29,10 @@ pub struct IdentityRoot {
     pub listed: ListedCertificates,
     /// La copia instalada de cada fila del último listado que tenga una, aunque no sea la elegida.
     pub installed_copies: ListedCertificates,
+    /// El último listado completo, del que la lista en caliente toma lo que no es de tarjeta.
+    pub last_listing: LastListing,
+    /// El último estado anunciado de los lectores, para la ventana que se monta tarde.
+    pub reader_now: ReaderNow,
     /// Donde se recuerda el certificado con el que se firmó.
     pub memory: Arc<dyn CertificateMemory + Send + Sync>,
     /// La carpeta donde vive cada `.p12` instalado.
@@ -42,6 +47,19 @@ impl IdentityRoot {
     /// Todos los almacenes, incluidos los de los `.p12` instalados.
     pub fn all_stores(&self) -> Vec<Store> {
         every_store(self.stores.clone(), &self.installed_certificates)
+    }
+
+    /// Lo que la lista en caliente necesita para volver a listar con las tarjetas de ahora.
+    pub fn card_listing(&self) -> CardListing<'_> {
+        CardListing {
+            token: self.token.as_ref(),
+            stores: self.all_stores(),
+            installed_dir: &self.installed_certificates,
+            listed: &self.listed,
+            installed_copies: &self.installed_copies,
+            memory: self.memory.as_ref(),
+            last: &self.last_listing,
+        }
     }
 
     /// El módulo PKCS#11 descubierto que es, canonizada, la biblioteca que se nombra.
@@ -64,6 +82,22 @@ impl IdentityRoot {
             &self.all_stores(),
             &self.installed_certificates,
         )
+    }
+
+    /// Como `rows_of`, pero el certificado que ya tenía asa la conserva.
+    pub fn rows_keeping_handles(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate> {
+        application::certificates::rows_keeping_handles(
+            found,
+            &self.installed_certificates,
+            &self.listed,
+            &self.installed_copies,
+            self.memory.as_ref(),
+        )
+    }
+
+    /// Si el almacén es de tarjeta, para el estado del lector.
+    pub fn is_a_card(&self, store: &Store) -> bool {
+        application::readers::is_a_card(store, &self.installed_certificates)
     }
 
     /// Las filas con su asa acuñada y el recordado marcado.

@@ -497,6 +497,21 @@ msgstr ""
 msgid "panel.certificate.loading"
 msgstr ""
 
+msgid "panel.certificate.reader.noCard"
+msgstr ""
+
+msgid "panel.certificate.reader.reading"
+msgstr ""
+
+msgid "panel.certificate.reader.dnieReady"
+msgstr ""
+
+msgid "panel.certificate.reader.cardReady"
+msgstr ""
+
+msgid "panel.certificate.reader.unreadable"
+msgstr ""
+
 #. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
 msgstr ""
@@ -525,6 +540,10 @@ msgstr ""
 
 #. Nombre propio del navegador: no se traduce.
 msgid "panel.certificate.stores.chrome"
+msgstr ""
+
+#. Chip de la fila de un certificado del DNIe. Nombre propio: no se traduce.
+msgid "panel.certificate.stores.dnie"
 msgstr ""
 
 #. Término del dominio: NSS es el almacén de certificados de Firefox y Chrome; no se traduce la sigla.

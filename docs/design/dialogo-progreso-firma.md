@@ -47,7 +47,7 @@ aquí: se leen en `po/es.po`.
 
 ## Componentes y tokens
 
-El primitivo `Dialog`, sin salida, y `CheckIcon`; `.rf-title`, `.rf-prose`,
+El primitivo `Dialog`, sin salida, y el icono `done`; `.rf-title`, `.rf-prose`,
 `.rf-text-muted`, `--rf-primary`, `--rf-border-subtle`, `--rf-border-strong` y
 `--rf-radius-pill`. Las medidas son de `SigningProgressDialog.css`.
 

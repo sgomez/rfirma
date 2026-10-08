@@ -29,9 +29,6 @@ pub const ACCEPTED_CRITERIA: &[&str] = &[
 /// Criterio sin argumento satisfecho por construcción.
 pub const SATISFIED_BY_CONSTRUCTION: &str = "disableopeningexternalstores";
 
-/// Criterio medido sin cobertura de su veredicto al pertenecer a la jerarquía de la DGP (ver docs/research/filtros-sede-unmeasured.md).
-pub const UNMEASURED_CRITERIA: &[&str] = &["dnie:"];
-
 /// Lo que la sede pide del listado, listo para cruzar al motor.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SiteFilter {

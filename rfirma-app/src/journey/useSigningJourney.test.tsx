@@ -79,7 +79,12 @@ describe("useSigningJourney", () => {
       kind: "listed",
       certificates: [{ ...aCertificate, remembered: true }],
     };
-    const certificates = { listing, lookAgain: async () => {}, install: async () => false };
+    const certificates = {
+      listing,
+      reader: { kind: "noReader" } as const,
+      lookAgain: async () => {},
+      install: async () => false,
+    };
     const reopenDocument = vi.fn();
 
     const { result } = renderHook(

@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::documents::domain::handles::Handles;
+use crate::identity::application::readers::LastListing;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::chain::issuers_of;
 use crate::identity::domain::copies::{copies_of_each_certificate, ChosenCopy};
@@ -49,7 +50,7 @@ impl From<KeyringError> for InstallError {
     }
 }
 
-/// Certificados de los tokens conectados, ya como filas con su asa (ADR-0011).
+/// Los certificados del escritorio, sin el de autenticación del DNIe, como filas; la que ya tenía asa la conserva (ADR-0011, ADR-0048).
 pub fn listed_rows(
     token: &dyn Token,
     stores: &[Store],
@@ -57,10 +58,12 @@ pub fn listed_rows(
     listed: &ListedCertificates,
     installed_copies: &ListedCertificates,
     memory: &dyn CertificateMemory,
+    last: &LastListing,
 ) -> Result<Vec<ListedCertificate>, TokenError> {
     let found = token.list_across(stores)?;
-    Ok(rows_of(
-        found,
+    last.keep(&found);
+    Ok(rows_keeping_handles(
+        on_the_desktop(found),
         installed_dir,
         listed,
         installed_copies,
@@ -73,7 +76,7 @@ pub fn certificates_with_their_chains(
     token: &dyn Token,
     stores: &[Store],
 ) -> Result<Vec<TokenCertificate>, TokenError> {
-    let found = token.list_across(stores)?;
+    let found = holders_only(token.list_across(stores)?);
     let mut neighbours: HashMap<Store, Vec<TokenCertificate>> = HashMap::new();
 
     Ok(found
@@ -87,6 +90,21 @@ pub fn certificates_with_their_chains(
             certificate.with_its_issuers(issuers)
         })
         .collect())
+}
+
+/// Lo que se enseña en el escritorio: sin autoridades ni el de autenticación del DNIe, como AutoFirma.
+pub fn on_the_desktop(found: Vec<TokenCertificate>) -> Vec<TokenCertificate> {
+    holders_only(found)
+        .into_iter()
+        .filter(|certificate| !certificate.is_a_dnie_authentication())
+        .collect()
+}
+
+fn holders_only(found: Vec<TokenCertificate>) -> Vec<TokenCertificate> {
+    found
+        .into_iter()
+        .filter(|certificate| !certificate.is_an_authority())
+        .collect()
 }
 
 /// Cuántos certificados firmables propios tiene cada clase de almacén que tenga alguno.
@@ -120,6 +138,39 @@ pub fn rows_of(
     installed_copies: &ListedCertificates,
     memory: &dyn CertificateMemory,
 ) -> Vec<ListedCertificate> {
+    rows_handled_by(
+        found,
+        installed_dir,
+        installed_copies,
+        memory,
+        |references| listed.replace(references),
+    )
+}
+
+/// Como `rows_of`, pero el certificado que ya estaba en el listado conserva su asa.
+pub fn rows_keeping_handles(
+    found: Vec<TokenCertificate>,
+    installed_dir: &Path,
+    listed: &ListedCertificates,
+    installed_copies: &ListedCertificates,
+    memory: &dyn CertificateMemory,
+) -> Vec<ListedCertificate> {
+    rows_handled_by(
+        found,
+        installed_dir,
+        installed_copies,
+        memory,
+        |references| listed.replace_keeping(references),
+    )
+}
+
+fn rows_handled_by(
+    found: Vec<TokenCertificate>,
+    installed_dir: &Path,
+    installed_copies: &ListedCertificates,
+    memory: &dyn CertificateMemory,
+    handled: impl FnOnce(Vec<CertificateRef>) -> Vec<String>,
+) -> Vec<ListedCertificate> {
     let remembered = memory.remembered_certificate();
     let rows: Vec<ChosenCopy> = copies_of_each_certificate(found)
         .into_iter()
@@ -131,7 +182,11 @@ pub fn rows_of(
             )
         })
         .collect();
-    let handles = listed.replace(rows.iter().map(|row| row.certificate.reference().clone()));
+    let handles = handled(
+        rows.iter()
+            .map(|row| row.certificate.reference().clone())
+            .collect(),
+    );
     installed_copies.replace_paired(rows.iter().zip(&handles).filter_map(|(row, id)| {
         row.installed_reference
             .clone()
@@ -166,6 +221,7 @@ fn listed_as(row: ChosenCopy, id: String) -> ListedCertificate {
         certificate_serial_number: certificate.serial_number().unwrap_or_default(),
         store: row.store,
         stores: row.stores,
+        from_a_dnie: certificate.is_from_a_dnie(),
         status: certificate.status(),
         remembered: row.remembered,
     }

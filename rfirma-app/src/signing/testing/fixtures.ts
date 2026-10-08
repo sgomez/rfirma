@@ -1,7 +1,7 @@
 //! Las secciones de certificado, rúbrica, firma visible, destino y firmar con espías que comparten las historias y las pruebas del panel de firma.
 
 import { fn } from "storybook/test";
-import type { CertificateSection } from "../certificate";
+import { type CertificateSection, NO_READER } from "../certificate";
 import type { Destination, DestinationSection } from "../destination";
 import type { SigningSection } from "../flow";
 import type { RubricSection } from "../rubric";
@@ -12,7 +12,15 @@ export function aCertificateSection(
   state: CertificateSection["state"],
   actions: Partial<Omit<CertificateSection, "state">> = {},
 ): CertificateSection {
-  return { state, installFailure: null, install: fn(), choose: fn(), lookAgain: fn(), ...actions };
+  return {
+    state,
+    reader: NO_READER,
+    installFailure: null,
+    install: fn(),
+    choose: fn(),
+    lookAgain: fn(),
+    ...actions,
+  };
 }
 
 /** La sección de la rúbrica con espía al elegirla, salvo lo que se pase. */

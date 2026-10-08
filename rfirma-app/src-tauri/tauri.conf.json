@@ -24,18 +24,22 @@
         "files": {
           "/usr/lib/rfirma/librfirma_crypto.so": "../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so",
           "/usr/share/kio/servicemenus/rfirma-sign.desktop": "../../packaging/kde/rfirma-sign.desktop",
-          "/usr/share/nautilus-python/extensions/rfirma-sign.py": "../../packaging/gnome/rfirma-sign.py"
+          "/usr/share/nautilus-python/extensions/rfirma-sign.py": "../../packaging/gnome/rfirma-sign.py",
+          "/usr/share/doc/rfirma/licenses/heroicons-MIT.txt": "../../packaging/licenses/heroicons-MIT.txt"
         },
-        "recommends": ["python3-nautilus"],
+        "depends": ["libpcsclite1"],
+        "recommends": ["python3-nautilus", "opensc", "pcscd"],
         "desktopTemplate": "../../packaging/rfirma.desktop.hbs"
       },
       "rpm": {
         "files": {
           "/usr/lib/rfirma/librfirma_crypto.so": "../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so",
           "/usr/share/kio/servicemenus/rfirma-sign.desktop": "../../packaging/kde/rfirma-sign.desktop",
-          "/usr/share/nautilus-python/extensions/rfirma-sign.py": "../../packaging/gnome/rfirma-sign.py"
+          "/usr/share/nautilus-python/extensions/rfirma-sign.py": "../../packaging/gnome/rfirma-sign.py",
+          "/usr/share/doc/rfirma/licenses/heroicons-MIT.txt": "../../packaging/licenses/heroicons-MIT.txt"
         },
-        "recommends": ["nautilus-python"],
+        "depends": ["libpcsclite.so.1()(64bit)"],
+        "recommends": ["nautilus-python", "opensc", "pcsc-lite"],
         "desktopTemplate": "../../packaging/rfirma.desktop.hbs",
         "compression": {
           "type": "zstd",

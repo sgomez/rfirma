@@ -9,11 +9,18 @@ use fake_pkcs11::FakeCard;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::adapters::pkcs11::stores::{candidate_modules_under, CANDIDATE_MODULES};
 use rfirma_lib::identity::adapters::pkcs11::RealToken;
-use rfirma_lib::identity::domain::certificate::TokenCertificate;
+use rfirma_lib::identity::adapters::views::CertificateView;
+use rfirma_lib::identity::application::certificates::{
+    certificates_with_their_chains, listed_rows, ListedCertificates,
+};
+use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::secret::PinWarning;
 use rfirma_lib::identity::domain::store::{Store, StoreClass};
-use rfirma_lib::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
+use rfirma_lib::identity::ports::{
+    CertificateMemory, SecretPromptError, SecretPromptRequest, SecretPrompter,
+};
+use rfirma_lib::memory_error::MemoryError;
 use rfirma_lib::signing::adapters::prompted_secret::{
     batch_signed_with_one_secret, secret_for_the_batch,
 };
@@ -395,6 +402,78 @@ fn the_fake_module_is_a_card_store_that_lists_without_asking_for_the_pin() {
         card.calls_to("C_Login").is_empty(),
         "listar pidió el secreto a la tarjeta: {:?}",
         card.calls()
+    );
+}
+
+const AUTHENTICATION_CERTIFICATE: &str = "CertAutenticacion";
+
+struct NothingRemembered;
+
+impl CertificateMemory for NothingRemembered {
+    fn remembered_certificate(&self) -> Option<CertificateRef> {
+        None
+    }
+
+    fn remember_the_certificate(&self, _reference: &CertificateRef) -> Result<(), MemoryError> {
+        Ok(())
+    }
+
+    fn forget_the_certificate(&self) -> Result<(), MemoryError> {
+        Ok(())
+    }
+}
+
+/// Lo que recibe el panel de firma o Preferencias al listar la tarjeta: la etiqueta y los chips de cada fila.
+fn the_desktop_rows_of(card: &FakeCard) -> Vec<(String, Vec<String>)> {
+    let installed = tempfile::tempdir().expect("el directorio de instalados deberia crearse");
+    listed_rows(
+        &RealToken,
+        &[Store::module(card.module())],
+        installed.path(),
+        &ListedCertificates::new(),
+        &ListedCertificates::new(),
+        &NothingRemembered,
+        &Default::default(),
+    )
+    .expect("la tarjeta falsa deberia listarse")
+    .into_iter()
+    .map(CertificateView::from)
+    .map(|row| (row.label, row.stores))
+    .collect()
+}
+
+/// Las etiquetas de lo que se ofrece a una sede o a la línea de órdenes antes de su filtro.
+fn the_site_candidates_of(card: &FakeCard) -> Vec<String> {
+    let mut labels: Vec<String> =
+        certificates_with_their_chains(&RealToken, &[Store::module(card.module())])
+            .expect("la tarjeta falsa deberia listarse")
+            .iter()
+            .map(|certificate| certificate.reference().label().to_owned())
+            .collect();
+    labels.sort();
+    labels
+}
+
+#[test]
+fn the_desktop_lists_only_the_signing_certificate_of_the_dnie_with_the_dnie_chip() {
+    let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
+
+    assert_eq!(
+        the_desktop_rows_of(&card),
+        vec![(SIGNING_CERTIFICATE.to_owned(), vec!["dnie".to_owned()])]
+    );
+}
+
+#[test]
+fn a_site_is_offered_both_certificates_of_the_dnie_and_never_its_authority() {
+    let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
+
+    assert_eq!(
+        the_site_candidates_of(&card),
+        vec![
+            AUTHENTICATION_CERTIFICATE.to_owned(),
+            SIGNING_CERTIFICATE.to_owned()
+        ]
     );
 }
 

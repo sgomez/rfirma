@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useRef, useState } from "react";
 import { Field } from "./Field";
-import { ChevronDownIcon } from "./icons";
+import { Icon } from "./icons";
 import { Popover } from "./Popover";
 import "./Select.css";
 
@@ -127,7 +127,7 @@ export function Select<T extends string>({
         }}
       >
         <span className="select__value">{shown?.label ?? ""}</span>
-        <ChevronDownIcon />
+        <Icon name="dropdown" />
       </button>
       <Popover
         open={open}

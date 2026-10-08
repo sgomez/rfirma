@@ -75,3 +75,18 @@ fn the_reader_stays_but_lists_no_card() {
     assert_eq!(readers.len(), 1);
     assert!(!context.get_slot_info(readers[0]).unwrap().token_present());
 }
+
+#[test]
+fn a_card_taken_out_and_put_in_again_comes_back_to_the_same_process() {
+    let card = FakeCard::new().unwrap();
+    let context = Pkcs11::new(card.module()).unwrap();
+    context
+        .initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK))
+        .unwrap();
+
+    card.take_out().unwrap();
+    assert!(context.get_slots_with_token().unwrap().is_empty());
+
+    card.put_in().unwrap();
+    assert_eq!(context.get_slots_with_token().unwrap().len(), 1);
+}

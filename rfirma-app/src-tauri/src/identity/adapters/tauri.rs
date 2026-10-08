@@ -1,11 +1,11 @@
-//! Las órdenes de identidad: listar los certificados e instalar o quitar un `.p12`.
+//! Las órdenes de identidad: listar los certificados, leer el estado de los lectores e instalar o quitar un `.p12`.
 
 use tauri::State;
 
 use crate::identity::IdentityRoot;
 use crate::signing::SigningRoot;
 
-use super::views::CertificateView;
+use super::views::{CertificateView, ReaderStatusView};
 use crate::crossing::Failure;
 use crate::identity::application::certificates::PasswordPrompt;
 use crate::identity::ports::OriginWindow;
@@ -22,10 +22,17 @@ pub fn list_certificates(
         &identity.listed,
         &identity.installed_copies,
         identity.memory.as_ref(),
+        &identity.last_listing,
     )?
     .into_iter()
     .map(CertificateView::from)
     .collect())
+}
+
+/// El último estado anunciado de los lectores, para la ventana que se monta después del anuncio (ADR-0048).
+#[tauri::command]
+pub fn read_card_readers(identity: State<'_, IdentityRoot>) -> ReaderStatusView {
+    identity.reader_now.status().into()
 }
 
 /// Abre el selector de fichero y, con el elegido, pide su contraseña e instala el `.p12`.

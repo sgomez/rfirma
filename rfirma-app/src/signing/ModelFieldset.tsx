@@ -3,7 +3,7 @@
 import { useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import { RubricIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Switch } from "../design-system/Switch";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { Certificate } from "./certificate";
@@ -72,7 +72,7 @@ export function ModelFieldset({
     signature.withRubric &&
     (rubric ? (
       <span className="panel__model-rubric">
-        <RubricIcon />
+        <Icon name="rubric" />
       </span>
     ) : (
       <span className="panel__model-rubric--empty" title={noImageTitle} />
@@ -127,7 +127,7 @@ export function ModelFieldset({
             <span className="panel__model-thumbnail" aria-hidden="true">
               {rule.rubricOnlySelectable && rubric ? (
                 <span className="panel__model-rubric panel__model-rubric--full">
-                  <RubricIcon />
+                  <Icon name="rubric" />
                 </span>
               ) : (
                 <span

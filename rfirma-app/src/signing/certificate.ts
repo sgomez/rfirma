@@ -47,7 +47,14 @@ export type CertificateStatus =
  * la `situation` de un fallo. Un nombre compuesto en Rust se saltaría los
  * catálogos y saldría en castellano en la versión en inglés.
  */
-type CertificateStoreClass = "card" | "firefox" | "chrome" | "nssdb" | "installed" | "windows";
+type CertificateStoreClass =
+  | "dnie"
+  | "card"
+  | "firefox"
+  | "chrome"
+  | "nssdb"
+  | "installed"
+  | "windows";
 
 /** Un certificado elegible, con lo justo para pintarlo y para firmar con él. */
 export interface Certificate {
@@ -232,6 +239,25 @@ export interface CertificateStore {
   remove(id: string): Promise<void>;
   /** Vacía el Almacén de rFirma entero, ya confirmado por la persona (ADR-0034). */
   emptyStore(): Promise<void>;
+  /** Escucha las noticias de los lectores de tarjetas hasta que se llame a lo que devuelve. */
+  followReaders(onNews: (news: ReaderNews) => void): () => void;
+}
+
+/** Lo que resume a los lectores de tarjetas: el más avanzado de todos, y «sin lector» si no hay ninguno. */
+export type ReaderStatus =
+  | { kind: "noReader" }
+  | { kind: "noCard" }
+  | { kind: "reading" }
+  | { kind: "dnieReady" }
+  | { kind: "cardReady" }
+  | { kind: "unreadable" };
+
+export const NO_READER: ReaderStatus = { kind: "noReader" };
+
+/** Lo que llega al cambiar un lector o una tarjeta: el estado y, si ha cambiado, la lista entera. */
+export interface ReaderNews {
+  reader: ReaderStatus;
+  certificates: readonly Certificate[] | null;
 }
 
 /**
@@ -247,6 +273,7 @@ export function emptyCertificateStore(): CertificateStore {
     install: async () => false,
     remove: async () => {},
     emptyStore: async () => {},
+    followReaders: () => () => {},
   };
 }
 
@@ -295,6 +322,8 @@ export type CertificateState =
 /** La sección del certificado: su estado y las tres cosas que se hacen con él. */
 export interface CertificateSection {
   state: CertificateState;
+  /** Lo que dice la línea del lector, bajo el selector. */
+  reader: ReaderStatus;
   /** El último fallo al instalar un `.p12` desde el panel, `null` si no hay. */
   installFailure: NamedFailure | null;
   /** Instala un `.p12` en rFirma; cancelar no es un fallo. */
@@ -303,4 +332,25 @@ export interface CertificateSection {
   choose: (certificate: Certificate) => void;
   /** Vuelve a buscar los certificados, que es también cambiar de módulo. */
   lookAgain: () => void | Promise<void>;
+}
+
+/** Lo elegido sigue si su tarjeta sigue; sin elegido, se elige el recordado que acaba de llegar. */
+export function keptAcrossTheReader(
+  previous: CertificateState,
+  found: readonly Certificate[],
+): CertificateState {
+  if (found.length === 0) return { kind: "empty" };
+  if (previous.kind === "chosen") {
+    const still = found.find((one) => one.id === previous.certificate.id);
+    return still === undefined
+      ? { kind: "unchosen", certificates: found }
+      : { kind: "chosen", certificate: still, certificates: found };
+  }
+  const before = previous.kind === "unchosen" ? previous.certificates : [];
+  const arrived = found.find(
+    (one) => one.remembered && isUsable(one.status) && !before.some((known) => known.id === one.id),
+  );
+  return arrived === undefined
+    ? { kind: "unchosen", certificates: found }
+    : { kind: "chosen", certificate: arrived, certificates: found };
 }

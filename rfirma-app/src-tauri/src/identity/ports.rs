@@ -1,15 +1,16 @@
-//! Puertos del contexto de identidad: el token, el almacén de los `.p12` instalados, el certificado recordado, el diálogo interactivo que pide un secreto y el llavero del PIN del Almacén de rFirma (ADR-0001, ADR-0014, ADR-0034).
+//! Puertos del contexto de identidad: el token, el vigilante de los lectores, el almacén de los `.p12` instalados, el certificado recordado, el diálogo que pide un secreto y el llavero del PIN del Almacén de rFirma (ADR-0001, ADR-0014, ADR-0034).
 
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::identity::domain::algorithm::SignatureAlgorithm;
-use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
+use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::PromptedHolder;
 use crate::identity::domain::keyring::KeyringError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::readers::{Reader, ReadyCard};
 use crate::identity::domain::secret::{PinWarning, SecretName, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::memory_error::MemoryError;
@@ -112,6 +113,18 @@ pub trait Token {
             _ => Ok(found),
         }
     }
+}
+
+/// El vigilante de los lectores de tarjetas: dice cómo quedan tras cada cambio, y nada más (ADR-0048).
+pub trait ReaderWatch: Send {
+    /// Cómo están ahora la primera vez; después, espera a que llegue o se vaya un lector o una tarjeta. `None`, si ya no se puede vigilar.
+    fn next_change(&mut self) -> Option<Vec<Reader>>;
+}
+
+/// Quien vuelve a listar para una ventana cuando cambian las tarjetas: la principal o la de sede (ADR-0048).
+pub trait Relisting {
+    /// La lista nueva, si la ventana enseña una que cambiar, y la tarjeta que ha enseñado certificados.
+    fn relisted(&self) -> (Option<Vec<ListedCertificate>>, Option<ReadyCard>);
 }
 
 /// La carpeta del Almacén de rFirma y el directorio desechable donde se prueba un `.p12`, con sus permisos (ADR-0011).

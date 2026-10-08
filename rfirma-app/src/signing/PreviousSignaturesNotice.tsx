@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import { AlertIcon, CrossCircleIcon, InfoIcon, PersonIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import type { Certificate } from "./certificate";
 import type { PreviousSignaturesReport } from "./previousSignatures";
 import { SignaturesDialog } from "./SignaturesDialog";
@@ -31,11 +31,11 @@ function problemsOf(report: PreviousSignaturesReport): Problems {
 function worstIcon(worst: Worst): ReactNode {
   switch (worst) {
     case "valid":
-      return <InfoIcon />;
+      return <Icon name="info" />;
     case "expired":
-      return <AlertIcon />;
+      return <Icon name="warning" />;
     case "invalid":
-      return <CrossCircleIcon size={20} />;
+      return <Icon name="failure" size={20} />;
   }
 }
 
@@ -91,7 +91,7 @@ export function PreviousSignaturesNotice({
       {closed && (
         <div className="panel__co-signature-footer">
           <span className="panel__notice-icon">
-            <AlertIcon />
+            <Icon name="warning" />
           </span>
           <span className="rf-body">{t("panel.previousSignatures.closed")}</span>
         </div>
@@ -99,7 +99,7 @@ export function PreviousSignaturesNotice({
       {notice !== null && (
         <div className="panel__co-signature-footer">
           <span className="panel__notice-icon">
-            <PersonIcon />
+            <Icon name="signedByYou" />
           </span>
           <span className="rf-body">
             {notice === "sameCertificate"

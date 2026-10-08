@@ -70,6 +70,8 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         installed_certificates: paths.installed_certificates_dir(),
         listed: identity::application::certificates::ListedCertificates::new(),
         installed_copies: identity::application::certificates::ListedCertificates::new(),
+        last_listing: identity::application::readers::LastListing::default(),
+        reader_now: identity::application::readers::ReaderNow::default(),
         memory: memory.clone(),
         folder: Arc::new(identity::adapters::folder::RealInstalledFolder),
         prompter: prompter.clone(),
@@ -231,6 +233,7 @@ fn with_the_five_roots(
         })
         .invoke_handler(tauri::generate_handler![
             identity::adapters::tauri::list_certificates,
+            identity::adapters::tauri::read_card_readers,
             signing::adapters::tauri::begin_signing,
             signing::adapters::tauri::sign_with_pin,
             signing::adapters::tauri::finish_signing,
@@ -361,6 +364,7 @@ fn run_desktop(
             dialogs.attach(app.handle().clone());
             prompter.attach(app.handle().clone());
             open_the_main_window(app.handle());
+            identity::adapters::readers::follow_the_readers_for_the_main_window(app.handle());
             serving.window_is_up.store(true, Ordering::SeqCst);
             Ok(())
         }
@@ -392,6 +396,7 @@ fn run_site(
             dialogs.attach(app.handle().clone());
             prompter.attach(app.handle().clone());
             say(said_by_the_role);
+            site::adapters::readers::follow_the_readers_for_the_site_window(app.handle());
 
             let handle = app.handle().clone();
             let window = Arc::new(site::adapters::window::TauriSiteWindow::new(handle.clone()));

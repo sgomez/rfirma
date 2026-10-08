@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import { PlusIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Menu, MenuItem } from "../design-system/Menu";
 import {
   datumOf,
@@ -202,7 +202,7 @@ export function PhraseEditor({ phrase, samples, onChange }: PhraseEditorProps) {
           aria-controls={menuOpen ? menuId : undefined}
           onClick={() => setMenuOpen((open) => !open)}
         >
-          <PlusIcon size={14} strokeWidth={2} />
+          <Icon name="add" size={14} strokeWidth={2} />
           {t("panel.visibleSignature.phrase.addDatum")}
         </Button>
       </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import { CopyIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
 import { useDefaultButton } from "../design-system/useDefaultButton";
@@ -138,7 +138,7 @@ function ChromeRecipe() {
             variant="ghost"
             onClick={() => void navigator.clipboard.writeText(CHROME_LOCAL_NETWORK_SETTINGS)}
           >
-            <CopyIcon size={14} />
+            <Icon name="copy" size={14} />
             {t("actions.copy")}
           </Button>
         </Row>
