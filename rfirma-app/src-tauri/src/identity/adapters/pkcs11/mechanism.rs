@@ -1,11 +1,8 @@
 //! Elección del mecanismo de firma que ofrece la ranura y firma efectiva con la clave privada.
 
-use cryptoki::error::{Error, RvError};
 use cryptoki::mechanism::{Mechanism, MechanismType};
 use cryptoki::object::{Attribute, AttributeType, KeyType};
-use cryptoki::session::UserType;
 use cryptoki::slot::Slot;
-use cryptoki::types::AuthPin;
 use cryptoki::{context::Pkcs11, session::Session};
 
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
@@ -15,7 +12,7 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 
 use super::session::{
-    context, private_key, refused_login, slot_of, the_store_is_really_there,
+    context, logged_in_session, private_key, slot_of, the_store_is_really_there,
     token_info_unless_locked,
 };
 
@@ -31,17 +28,10 @@ pub(super) fn sign_holding_the_turn(
     let slot = slot_of(&context, reference.token_label())?;
     let offered = the_slot_offers(&context, slot, algorithm)?;
     token_info_unless_locked(&context, slot)?;
-    let session = context.open_ro_session(slot)?;
     let pin = secret
         .as_str()
         .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
-
-    match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
-        Ok(()) => {}
-        // Si otra biblioteca del proceso ya autenticó el token, se reutiliza la sesión.
-        Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => {}
-        Err(other) => return Err(refused_login(&context, slot, other)),
-    }
+    let session = logged_in_session(&context, slot, pin)?;
 
     let signature = private_key(&session, reference)
         .and_then(|key| {
