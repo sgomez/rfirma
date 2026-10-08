@@ -976,7 +976,7 @@ statement = "Se rechaza."
 mode = "v4"
 script = "signwithoutaformat"
 store = "dnie"
-act.type_password = "Teclea el PIN. No tecles nunca un PIN erróneo."
+act.type_password = "Teclea el PIN. No teclees nunca un PIN erróneo."
 expects.code = "SAF_03"
 "#,
         )

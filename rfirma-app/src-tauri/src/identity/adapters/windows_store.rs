@@ -10,7 +10,7 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 
@@ -93,6 +93,13 @@ impl Token for WindowsToken {
             return Ok(StoreSecret::NotNeeded);
         }
         RealToken.secret_of(reference)
+    }
+
+    fn pin_warning(&self, reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+        if is_the_user_store(&reference.store()) {
+            return Ok(PinWarning::Quiet);
+        }
+        RealToken.pin_warning(reference)
     }
 
     fn offers(

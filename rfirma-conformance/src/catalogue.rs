@@ -552,7 +552,7 @@ fn greetings_that_need_a_person(checks: &[Check]) -> Vec<String> {
 
 /// El aviso que toda comprobación con el DNIe real lleva a la persona: una tarjeta se bloquea al
 /// tercer PIN erróneo.
-pub(crate) const THE_WRONG_PIN_WARNING: &str = "No tecles nunca un PIN erróneo.";
+pub(crate) const THE_WRONG_PIN_WARNING: &str = "No teclees nunca un PIN erróneo.";
 
 fn dnie_checks_off_the_happy_path(checks: &[Check]) -> Vec<String> {
     checks

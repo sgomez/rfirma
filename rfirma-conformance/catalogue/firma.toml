@@ -1489,5 +1489,5 @@ de su certificado.
 mode = "v4"
 script = "signcades"
 store = "dnie"
-act.type_password = "Elige el certificado de firma del DNIe y teclea su PIN una sola vez. No tecles nunca un PIN erróneo. Si no lo recuerdas, cancela."
+act.type_password = "Elige el certificado de firma del DNIe y teclea su PIN una sola vez. No teclees nunca un PIN erróneo. Si no lo recuerdas, cancela."
 expects.completes.conditions = ["the-signature-verifies"]

@@ -200,7 +200,7 @@ fn a_card_that_declares_its_pin_locked_receives_no_login_and_is_not_asked_for_th
 }
 
 #[test]
-fn a_site_hears_a_locked_keystore_with_no_attempts_left() {
+fn the_batch_adapter_refuses_a_locked_card_as_a_locked_keystore_with_no_attempts_left() {
     let card = FakeCard::locked()
         .and_then(FakeCard::signals_profile)
         .expect("la tarjeta falsa deberia montarse");

@@ -497,5 +497,5 @@ sin pedir su PIN: elegirlo no necesita la tarjeta más que para leerla.
 mode = "v4"
 script = "selectcert"
 store = "dnie"
-act.pick_certificate = "Elige un certificado del DNIe. Si el diálogo te pide el PIN antes de elegir, cancélalo. No tecles nunca un PIN erróneo."
+act.pick_certificate = "Elige un certificado del DNIe. Si el diálogo te pide el PIN antes de elegir, cancélalo. No teclees nunca un PIN erróneo."
 expects.completes.conditions = ["a-certificate-alone"]
