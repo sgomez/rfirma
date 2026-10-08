@@ -124,6 +124,12 @@ reapuntarla y a comprobar con un cebo que sigue poniéndose roja. Entre ellas,
 la guarda de `token_and_launch.rs` que comprueba que `headless` y
 `mandatoryCertSelection` solo los lee el protocolo.
 
+`tests/single_cfg_os_site.rs` recorre todos los `*.rs` versionados, no solo
+`src/`: un `#![cfg(unix)]` o un `#[cfg(not(windows))]` fuera de
+`AUTHORISED_SITES` la pone roja. Para una prueba de `src/`, usa un submódulo de
+prueba dado de alta en esa lista; para un crate solo Unix, exclúyelo en el
+`justfile` (`rust_workspace`) en vez de usar `cfg`.
+
 ## Lo que no va en un comentario
 
 La regla de los comentarios está en el `AGENTS.md` raíz; aquí, adónde va lo que
