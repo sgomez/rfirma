@@ -10,6 +10,11 @@ disable-in: p11-kit-proxy
 x-init-reserved:
 ";
 
+const FLATPAK_TRUST_FORWARDING: &str = "\
+# This overrides the runtime p11-kit-trusted module with a client one talking to the trust module on the host
+module: p11-kit-client.so
+";
+
 const GNOME_KEYRING: &str = "\
 # The file is installed/loaded from the default module p11-kit directory
 module: gnome-keyring-pkcs11.so
@@ -39,6 +44,10 @@ impl Installation {
 
     fn system(&self) -> PathBuf {
         self.root.path().join("usr/share/p11-kit/modules")
+    }
+
+    fn etc(&self) -> PathBuf {
+        self.root.path().join("etc/pkcs11/modules")
     }
 
     fn user(&self) -> PathBuf {
@@ -74,6 +83,14 @@ fn a_module_file_names_its_library() {
 #[test]
 fn a_trust_policy_module_is_a_ca_store_and_not_a_key_store() {
     assert_eq!(module_for_rfirma(P11_KIT_TRUST), None);
+}
+
+#[test]
+fn the_trust_forwarding_client_named_by_its_absolute_path_is_not_a_card() {
+    assert_eq!(
+        module_for_rfirma("module: /usr/lib/x86_64-linux-gnu/pkcs11/p11-kit-client.so\n"),
+        None
+    );
 }
 
 #[test]
@@ -210,6 +227,30 @@ fn the_system_ca_store_and_the_keyring_of_p11_kit_never_reach_the_listing() {
     installation.registers(&installation.system(), "opensc-pkcs11.module", OPENSC);
 
     assert_eq!(installation.registered(), vec![opensc]);
+}
+
+#[test]
+fn the_flatpak_trust_forwarding_that_overrides_the_runtime_one_is_not_a_card() {
+    let installation = Installation::new();
+    installation.library("lib/x86_64-linux-gnu/pkcs11/p11-kit-trust.so");
+    installation.library("lib/x86_64-linux-gnu/pkcs11/p11-kit-client.so");
+    installation.registers(
+        &installation.system(),
+        "p11-kit-trust.module",
+        P11_KIT_TRUST,
+    );
+    installation.registers(
+        &installation.etc(),
+        "p11-kit-trust.module",
+        FLATPAK_TRUST_FORWARDING,
+    );
+
+    let registered = registered_modules(
+        &[installation.system(), installation.etc()],
+        &installation.usr(),
+    );
+
+    assert!(registered.is_empty());
 }
 
 #[test]

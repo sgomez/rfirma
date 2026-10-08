@@ -8,6 +8,8 @@ use super::stores::multiarch_subdirectories;
 /// El nombre de programa con el que rFirma se busca en `enable-in` y `disable-in`.
 pub const PROGRAM_NAME: &str = "rfirma";
 
+const TRUST_ONLY_LIBRARIES: &[&str] = &["p11-kit-trust.so", "p11-kit-client.so"];
+
 /// Los directorios de ficheros `.module`, de menos a más prioridad.
 pub fn configuration_directories(home: &Path) -> Vec<PathBuf> {
     vec![
@@ -40,7 +42,14 @@ pub fn module_for_rfirma(config: &str) -> Option<String> {
     if value("disable-in").is_some_and(names_rfirma) {
         return None;
     }
-    value("module").filter(|module| !module.is_empty())
+    value("module").filter(|module| !module.is_empty() && !is_trust_module(module))
+}
+
+fn is_trust_module(module: &str) -> bool {
+    Path::new(module)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| TRUST_ONLY_LIBRARIES.contains(&name))
 }
 
 /// Las bibliotecas registradas en esos directorios, resueltas bajo `usr` e instaladas.
