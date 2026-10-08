@@ -10,75 +10,127 @@ use crate::identity::ports::ReaderWatch;
 
 const RETRY_WITHOUT_PCSC: Duration = Duration::from_secs(5);
 
+type ReaderStates = Vec<(CString, State)>;
+
+/// De dónde salen los estados de los lectores: espera a que cambien respecto a los conocidos.
+pub trait StatusSource: Send {
+    /// Los estados tras el cambio; `None`, si PC/SC no responde.
+    fn wait_for_a_change(&mut self, known: &[(CString, State)]) -> Option<ReaderStates>;
+}
+
 /// Vigila los lectores por PC/SC; sin `pcscd`, cuenta cero lectores y vuelve a intentarlo.
-#[derive(Default)]
-pub struct PcscReaderWatch {
-    context: Option<Context>,
-    known: Vec<(CString, State)>,
+pub type PcscReaderWatch = StatusWatch<PcscSource>;
+
+/// Convierte los cambios de estado de una fuente en la vista de lectores del puerto.
+pub struct StatusWatch<S> {
+    source: S,
+    retry: Duration,
+    known: ReaderStates,
     last: Option<Vec<Reader>>,
 }
 
-impl ReaderWatch for PcscReaderWatch {
+impl<S: StatusSource + Default> Default for StatusWatch<S> {
+    fn default() -> Self {
+        Self::new(S::default(), RETRY_WITHOUT_PCSC)
+    }
+}
+
+impl<S: StatusSource> StatusWatch<S> {
+    fn new(source: S, retry: Duration) -> Self {
+        Self {
+            source,
+            retry,
+            known: Vec::new(),
+            last: None,
+        }
+    }
+
+    fn look(&mut self) -> (Vec<Reader>, bool) {
+        let Some(states) = self.source.wait_for_a_change(&self.known) else {
+            self.known.clear();
+            return (Vec::new(), false);
+        };
+        self.known = states;
+        (readers_in(&self.known), true)
+    }
+}
+
+impl<S: StatusSource> ReaderWatch for StatusWatch<S> {
     fn next_change(&mut self) -> Option<Vec<Reader>> {
         loop {
-            let readers = match self.observe() {
-                Some(readers) => readers,
-                None if self.last.as_deref() == Some(&[]) => {
-                    std::thread::sleep(RETRY_WITHOUT_PCSC);
-                    continue;
-                }
-                None => Vec::new(),
-            };
+            let (readers, available) = self.look();
             if self.last.as_ref() != Some(&readers) {
                 self.last = Some(readers.clone());
                 return Some(readers);
+            }
+            if !available {
+                std::thread::sleep(self.retry);
             }
         }
     }
 }
 
-impl PcscReaderWatch {
-    fn observe(&mut self) -> Option<Vec<Reader>> {
-        let observed = self.wait_for_a_change();
+/// La fuente real: `libpcsclite`.
+#[derive(Default)]
+pub struct PcscSource {
+    context: Option<Context>,
+}
+
+impl StatusSource for PcscSource {
+    fn wait_for_a_change(&mut self, known: &[(CString, State)]) -> Option<ReaderStates> {
+        let context = self.context()?;
+        let names = reader_names(context)?;
+        let observed = status_change(context, &names, known);
         if observed.is_none() {
             self.context = None;
-            self.known.clear();
         }
         observed
     }
+}
 
-    fn wait_for_a_change(&mut self) -> Option<Vec<Reader>> {
+impl PcscSource {
+    fn context(&mut self) -> Option<&Context> {
         if self.context.is_none() {
-            self.context = Some(Context::establish(Scope::System).ok()?);
+            self.context = Context::establish(Scope::System).ok();
         }
-        let context = self.context.as_ref()?;
-        let names = match context.list_readers_owned() {
-            Ok(names) => names,
-            Err(pcsc::Error::NoReadersAvailable) => Vec::new(),
-            Err(_) => return None,
-        };
-        let mut states = self.states_for(&names);
-        context.get_status_change(None, &mut states).ok()?;
-        self.known = states
+        self.context.as_ref()
+    }
+}
+
+fn reader_names(context: &Context) -> Option<Vec<CString>> {
+    match context.list_readers_owned() {
+        Ok(names) => Some(names),
+        Err(pcsc::Error::NoReadersAvailable) => Some(Vec::new()),
+        Err(_) => None,
+    }
+}
+
+fn status_change(
+    context: &Context,
+    names: &[CString],
+    known: &[(CString, State)],
+) -> Option<ReaderStates> {
+    let mut states: Vec<ReaderState> = std::iter::once(pcsc::PNP_NOTIFICATION().to_owned())
+        .chain(names.iter().cloned())
+        .map(|name| {
+            let state = state_known_for(known, &name);
+            ReaderState::new(name, state)
+        })
+        .collect();
+    context.get_status_change(None, &mut states).ok()?;
+    Some(
+        states
             .iter()
             .map(|state| (state.name().to_owned(), state.event_state()))
-            .collect();
-        Some(readers_in(&self.known))
-    }
+            .collect(),
+    )
+}
 
-    fn states_for(&self, names: &[CString]) -> Vec<ReaderState> {
-        std::iter::once(pcsc::PNP_NOTIFICATION().to_owned())
-            .chain(names.iter().cloned())
-            .map(|name| {
-                let known = self
-                    .known
-                    .iter()
-                    .find(|(known_name, _)| *known_name == name)
-                    .map_or(State::UNAWARE, |(_, state)| *state);
-                ReaderState::new(name, known)
-            })
-            .collect()
-    }
+fn state_known_for(known: &[(CString, State)], name: &CString) -> State {
+    known
+        .iter()
+        .find(|(known_name, _)| known_name == name)
+        .map_or(State::UNAWARE, |(_, state)| *state)
 }
 
 fn readers_in(states: &[(CString, State)]) -> Vec<Reader> {
