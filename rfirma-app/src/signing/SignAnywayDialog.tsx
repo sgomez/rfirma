@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
-import { AlertIcon, CrossCircleIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import type { SigningProblem } from "./previousSignatures";
 import { findingText, validityReasonText } from "./validityReasons";
@@ -74,7 +74,7 @@ function ProblemRow({ problem, locale }: { problem: SigningProblem; locale: stri
     return (
       <li className="sign-anyway-dialog__row">
         <div className="sign-anyway-dialog__heading">
-          <CrossCircleIcon size={15} />
+          <Icon name="failure" size={15} />
           <span>{findingText(t, problem.finding)}</span>
         </div>
       </li>
@@ -88,7 +88,11 @@ function ProblemRow({ problem, locale }: { problem: SigningProblem; locale: stri
   return (
     <li className="sign-anyway-dialog__row">
       <div className="sign-anyway-dialog__heading">
-        {signature.validity === "expired" ? <AlertIcon size={15} /> : <CrossCircleIcon size={15} />}
+        {signature.validity === "expired" ? (
+          <Icon name="warning" size={15} />
+        ) : (
+          <Icon name="failure" size={15} />
+        )}
         <span>{t("signAnyway.signature", { number, name: signature.name })}</span>
       </div>
       {reason !== null && (

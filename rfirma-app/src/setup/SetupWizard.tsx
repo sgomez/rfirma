@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useActionKeys } from "../design-system/actionKeys";
 import { Button } from "../design-system/Button";
 import { Card } from "../design-system/Card";
-import { AlertIcon, CheckIcon, SpinnerIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Select } from "../design-system/Select";
 import { Stack } from "../design-system/Stack";
@@ -308,21 +308,21 @@ function StepMarker({ number, state }: { number: 1 | 2; state: StepMarkerState }
   if (state === "done") {
     return (
       <span className="setup-wizard__step-marker setup-wizard__step-marker--done">
-        <CheckIcon size={14} />
+        <Icon name="done" size={14} />
       </span>
     );
   }
   if (state === "working") {
     return (
       <span className="setup-wizard__step-marker setup-wizard__step-marker--working">
-        <SpinnerIcon size={14} />
+        <Icon name="loading" size={14} />
       </span>
     );
   }
   if (state === "failed") {
     return (
       <span className="setup-wizard__step-marker">
-        <AlertIcon size={14} />
+        <Icon name="warning" size={14} />
       </span>
     );
   }

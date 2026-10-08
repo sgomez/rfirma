@@ -3,7 +3,7 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Combobox, type ComboboxOption } from "../design-system/Combobox";
-import { SpinnerIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { CertificateCard, shortStatusWarning, storeLabel } from "./CertificateCard";
 import type { Certificate } from "./certificate";
 import {
@@ -93,7 +93,7 @@ function closedBox(
     return (
       <>
         <span className="certificate-select__spinner">
-          <SpinnerIcon size={16} />
+          <Icon name="loading" size={16} />
         </span>
         <span className="rf-text-muted certificate-select__unchosen">
           {t("panel.certificate.loading")}

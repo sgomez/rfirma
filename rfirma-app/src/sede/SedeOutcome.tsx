@@ -3,14 +3,7 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
-import {
-  AlertIcon,
-  CheckCircleIcon,
-  CopyIcon,
-  CrossCircleIcon,
-  ExternalLinkIcon,
-  FileIcon,
-} from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import { Stack } from "../design-system/Stack";
 import { useDefaultButton } from "../design-system/useDefaultButton";
@@ -149,7 +142,7 @@ export function SedeOutcome({ origin, outcome, onClose, onOpenHelp }: SedeOutcom
               <Row gap="xs" className="sede-outcome__report">
                 <p className="rf-hint">{t("sede.outcome.reportHint")}</p>
                 <Button variant="ghost" className="sede-outcome__help" onClick={openHelp}>
-                  <ExternalLinkIcon size={14} />
+                  <Icon name="externalLink" size={14} />
                   {t("header.help")}
                 </Button>
               </Row>
@@ -168,11 +161,11 @@ function OutcomeIcon({ kind }: { kind: SiteOutcome["kind"] }) {
     case "batchSigned":
     case "saved":
     case "loaded":
-      return <CheckCircleIcon size={24} />;
+      return <Icon name="success" size={24} />;
     case "cancelled":
-      return <CrossCircleIcon size={24} />;
+      return <Icon name="failure" size={24} />;
     default:
-      return <AlertIcon size={24} />;
+      return <Icon name="warning" size={24} />;
   }
 }
 
@@ -188,7 +181,7 @@ function DocumentRow({ document }: { document: SiteDocument }) {
   return (
     <Row gap="xs" className="sede-outcome__document">
       <span className="sede-outcome__icon">
-        <FileIcon size={18} />
+        <Icon name="document" size={18} />
       </span>
       <p className={`rf-prose sede-outcome__document-title${untitled ? " rf-text-muted" : ""}`}>
         {untitled ? t("sede.consent.untitled") : document.title}
@@ -251,7 +244,7 @@ function TechnicalDetail({ situation, detail }: { situation: RefusalSituation; d
           className="sede-outcome__copy"
           onClick={() => void navigator.clipboard.writeText(copiedDetail)}
         >
-          <CopyIcon size={14} />
+          <Icon name="copy" size={14} />
           {t("actions.copy")}
         </Button>
       </Row>

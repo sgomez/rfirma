@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../design-system/Button";
 import { Dialog } from "../design-system/Dialog";
-import { AlertIcon } from "../design-system/icons";
+import { Icon } from "../design-system/icons";
 import { Row } from "../design-system/Row";
 import "./UnsealedPagesDialog.css";
 
@@ -44,7 +44,7 @@ export function UnsealedPagesDialog({ fallen, onConfirm, onCancel }: UnsealedPag
     >
       <div className="unsealed-pages-dialog__heading">
         <span className="unsealed-pages-dialog__alert" aria-hidden="true">
-          <AlertIcon size={24} />
+          <Icon name="warning" size={24} />
         </span>
         <p className="rf-title">{t("sealLoss.title", { count: fallen })}</p>
       </div>
