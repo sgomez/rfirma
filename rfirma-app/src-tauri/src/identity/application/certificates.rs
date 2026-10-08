@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::documents::domain::handles::Handles;
+use crate::identity::application::readers::LastListing;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::chain::issuers_of;
 use crate::identity::domain::copies::{copies_of_each_certificate, ChosenCopy};
@@ -57,8 +58,10 @@ pub fn listed_rows(
     listed: &ListedCertificates,
     installed_copies: &ListedCertificates,
     memory: &dyn CertificateMemory,
+    last: &LastListing,
 ) -> Result<Vec<ListedCertificate>, TokenError> {
     let found = token.list_across(stores)?;
+    last.keep(&found);
     Ok(rows_of(
         found,
         installed_dir,
@@ -120,6 +123,39 @@ pub fn rows_of(
     installed_copies: &ListedCertificates,
     memory: &dyn CertificateMemory,
 ) -> Vec<ListedCertificate> {
+    rows_handled_by(
+        found,
+        installed_dir,
+        installed_copies,
+        memory,
+        |references| listed.replace(references),
+    )
+}
+
+/// Como `rows_of`, pero el certificado que ya estaba en el listado conserva su asa.
+pub fn rows_keeping_handles(
+    found: Vec<TokenCertificate>,
+    installed_dir: &Path,
+    listed: &ListedCertificates,
+    installed_copies: &ListedCertificates,
+    memory: &dyn CertificateMemory,
+) -> Vec<ListedCertificate> {
+    rows_handled_by(
+        found,
+        installed_dir,
+        installed_copies,
+        memory,
+        |references| listed.replace_keeping(references),
+    )
+}
+
+fn rows_handled_by(
+    found: Vec<TokenCertificate>,
+    installed_dir: &Path,
+    installed_copies: &ListedCertificates,
+    memory: &dyn CertificateMemory,
+    handled: impl FnOnce(Vec<CertificateRef>) -> Vec<String>,
+) -> Vec<ListedCertificate> {
     let remembered = memory.remembered_certificate();
     let rows: Vec<ChosenCopy> = copies_of_each_certificate(found)
         .into_iter()
@@ -131,7 +167,11 @@ pub fn rows_of(
             )
         })
         .collect();
-    let handles = listed.replace(rows.iter().map(|row| row.certificate.reference().clone()));
+    let handles = handled(
+        rows.iter()
+            .map(|row| row.certificate.reference().clone())
+            .collect(),
+    );
     installed_copies.replace_paired(rows.iter().zip(&handles).filter_map(|(row, id)| {
         row.installed_reference
             .clone()

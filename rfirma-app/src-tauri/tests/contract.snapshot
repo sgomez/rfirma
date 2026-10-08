@@ -253,6 +253,18 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       status: StatusView
       remembered: bool
 
+  pub enum ReaderStatusView   (serde: etiqueta "kind")
+      NoReader
+      NoCard
+      Reading
+      DnieReady
+      CardReady
+      Unreadable
+
+  pub struct ReaderNewsView
+      reader: ReaderStatusView
+      certificates: Option<Vec<CertificateView>>
+
   pub enum DatumOrder
       Signer
       Issuer

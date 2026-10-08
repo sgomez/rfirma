@@ -1,5 +1,7 @@
-use super::{store_name, CertificateView, SecretView, StatusView};
+use super::{store_name, CertificateView, ReaderNewsView, SecretView, StatusView};
+use crate::identity::application::readers::ReaderNews;
 use crate::identity::domain::certificate::{CertificateStatus, ListedCertificate};
+use crate::identity::domain::readers::{ReaderStatus, ReadyCard};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::StoreClass;
 
@@ -127,4 +129,35 @@ fn the_status_crosses_with_its_payload() {
         serde_json::to_string(&unreadable).expect("serializa"),
         r#"{"kind":"unreadable","detail":"PEM error"}"#
     );
+}
+
+fn news(reader: ReaderStatus, certificates: Option<Vec<ListedCertificate>>) -> String {
+    serde_json::to_string(&ReaderNewsView::from(ReaderNews {
+        reader,
+        certificates,
+    }))
+    .expect("serializa")
+}
+
+#[test]
+fn the_reader_news_crosses_with_its_status_as_a_kind_and_the_list_only_when_it_changed() {
+    assert_eq!(
+        news(ReaderStatus::Reading, None),
+        r#"{"reader":{"kind":"reading"},"certificates":null}"#
+    );
+    assert_eq!(
+        news(ReaderStatus::Ready(ReadyCard::Dnie), Some(Vec::new())),
+        r#"{"reader":{"kind":"dnieReady"},"certificates":[]}"#
+    );
+    for (status, kind) in [
+        (ReaderStatus::NoReader, "noReader"),
+        (ReaderStatus::NoCard, "noCard"),
+        (ReaderStatus::Ready(ReadyCard::Other), "cardReady"),
+        (ReaderStatus::Unreadable, "unreadable"),
+    ] {
+        assert!(
+            news(status, None).contains(&format!(r#"{{"kind":"{kind}"}}"#)),
+            "{status:?}"
+        );
+    }
 }

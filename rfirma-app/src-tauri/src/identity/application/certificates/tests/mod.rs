@@ -5,6 +5,7 @@ use super::{
     certificate_behind, certificates_by_class, certificates_with_their_chains, listed_rows,
     remember_the_certificate, rows_of, usable_certificate,
 };
+use crate::identity::application::readers::LastListing;
 use crate::identity::application::tests::{
     a_certificate, a_certificate_with_id, a_representative_certificate,
     a_representative_certificate_of_a_natural_person, listed_from, NoToken, TestAuthority,
@@ -30,6 +31,7 @@ fn with_nowhere_to_look_the_listing_says_so_instead_of_coming_back_empty() {
         &ListedCertificates::new(),
         &ListedCertificates::new(),
         &a_memory(home.path()),
+        &LastListing::default(),
     )
     .expect_err("no hay donde buscar");
 
