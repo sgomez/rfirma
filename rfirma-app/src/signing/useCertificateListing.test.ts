@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { anInstalledCertificate } from "../preferences/testing/fixtures";
 import type { Certificate, CertificateStore } from "./certificate";
+import { announcingCertificateStore } from "./testing/readers";
 import { useCertificateListing } from "./useCertificateListing";
 
 const installed = anInstalledCertificate({ id: "installed" });
@@ -13,9 +14,12 @@ function aStore(found: Certificate[], overrides: Partial<CertificateStore> = {})
     install: vi.fn(async () => false),
     remove: vi.fn(async () => {}),
     emptyStore: vi.fn(async () => {}),
+    followReaders: () => () => {},
     ...overrides,
   };
 }
+
+const dnie = anInstalledCertificate({ id: "dnie", stores: ["dnie"] });
 
 async function listed(store: CertificateStore) {
   const hook = renderHook(() => useCertificateListing(store));
@@ -115,5 +119,58 @@ describe("useCertificateListing", () => {
     await act(() => result.current.emptyStore());
 
     expect(result.current.listing).toEqual({ kind: "listed", certificates: [onToken] });
+  });
+});
+
+describe("useCertificateListing · los lectores", () => {
+  it("draws no reader until the backend says there is one", async () => {
+    const { result } = await listed(announcingCertificateStore([onToken]));
+
+    expect(result.current.reader).toEqual({ kind: "noReader" });
+  });
+
+  it("follows what the backend says about the reader, and keeps the list while it reads", async () => {
+    const store = announcingCertificateStore([onToken]);
+    const { result } = await listed(store);
+
+    act(() => store.announce({ reader: { kind: "reading" }, certificates: null }));
+
+    expect(result.current.reader).toEqual({ kind: "reading" });
+    expect(result.current.listing).toMatchObject({ kind: "listed", certificates: [onToken] });
+  });
+
+  it("changes the list by itself when the card arrives and when it leaves", async () => {
+    const store = announcingCertificateStore([onToken]);
+    const { result } = await listed(store);
+
+    act(() => store.announce({ reader: { kind: "dnieReady" }, certificates: [onToken, dnie] }));
+    expect(result.current.listing).toMatchObject({ certificates: [onToken, dnie] });
+
+    act(() => store.announce({ reader: { kind: "noCard" }, certificates: [onToken] }));
+    expect(result.current.listing).toMatchObject({ certificates: [onToken] });
+    expect(result.current.reader).toEqual({ kind: "noCard" });
+  });
+
+  it("keeps the list the card brought when the first search answers later", async () => {
+    let answer: (found: Certificate[]) => void = () => {};
+    const store = {
+      ...announcingCertificateStore(),
+      list: () => new Promise<Certificate[]>((resolve) => (answer = resolve)),
+    };
+    const { result } = renderHook(() => useCertificateListing(store));
+
+    act(() => store.announce({ reader: { kind: "dnieReady" }, certificates: [dnie] }));
+    await act(async () => answer([onToken]));
+
+    expect(result.current.listing).toMatchObject({ kind: "listed", certificates: [dnie] });
+  });
+
+  it("stops listening to the readers when it goes away", async () => {
+    const stop = vi.fn();
+    const { unmount } = await listed(aStore([], { followReaders: () => stop }));
+
+    unmount();
+
+    expect(stop).toHaveBeenCalledOnce();
   });
 });

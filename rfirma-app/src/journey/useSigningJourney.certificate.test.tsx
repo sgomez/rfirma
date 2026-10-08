@@ -7,11 +7,13 @@ import {
   type Certificate,
   type CertificateStore,
   emptyCertificateStore,
+  type ReaderNews,
 } from "../signing/certificate";
 import type { DestinationSource } from "../signing/destination";
 import type { SigningBackend, SigningOrder } from "../signing/flow";
 import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import { unavailableStampComposer } from "../signing/stampPreview";
+import { announcingCertificateStore } from "../signing/testing/readers";
 import { useCertificateListing } from "../signing/useCertificateListing";
 import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "../signing/visibleSignature";
 import {
@@ -263,6 +265,71 @@ describe("useSigningJourney · el certificado", () => {
       certificate: { id: grace.id },
     });
     expect(rendered.result.current.journey.signature.value.enabled).toBe(true);
+  });
+});
+
+describe("useSigningJourney · la lista que cambia sola", () => {
+  const dnie: Certificate = {
+    ...aCertificate,
+    id: "dnie-firma",
+    holderName: "Margaret Hamilton",
+    givenName: "Margaret",
+    surname: "Hamilton",
+    stores: ["dnie"],
+  };
+  const cardArrives = (certificates: readonly Certificate[]): ReaderNews => ({
+    reader: { kind: "dnieReady" },
+    certificates,
+  });
+  const cardLeaves = (certificates: readonly Certificate[]): ReaderNews => ({
+    reader: { kind: "noCard" },
+    certificates,
+  });
+
+  async function withReaders(...found: Certificate[]) {
+    const store = announcingCertificateStore(found);
+    const rendered = renderJourney({ store });
+    await listed(rendered);
+    return { rendered, store };
+  }
+
+  const stateOf = (rendered: Rendered) => rendered.result.current.journey.certificate.state;
+
+  it("hands the reader on to the panel", async () => {
+    const { rendered, store } = await withReaders(aCertificate);
+
+    act(() => store.announce({ reader: { kind: "reading" }, certificates: null }));
+
+    expect(rendered.result.current.journey.certificate.reader).toEqual({ kind: "reading" });
+  });
+
+  it("leaves no certificate chosen when the card of the chosen one leaves", async () => {
+    const { rendered, store } = await withReaders(remembered(aCertificate), dnie);
+    act(() => rendered.result.current.journey.certificate.choose(dnie));
+
+    act(() => store.announce(cardLeaves([remembered(aCertificate)])));
+
+    expect(stateOf(rendered)).toMatchObject({
+      kind: "unchosen",
+      certificates: [{ id: aCertificate.id }],
+    });
+  });
+
+  it("never changes a choice already made when a card arrives", async () => {
+    const { rendered, store } = await withReaders(aCertificate, grace);
+    act(() => rendered.result.current.journey.certificate.choose(grace));
+
+    act(() => store.announce(cardArrives([aCertificate, grace, remembered(dnie)])));
+
+    expect(stateOf(rendered)).toMatchObject({ kind: "chosen", certificate: { id: grace.id } });
+  });
+
+  it("chooses the remembered one when its card arrives and none is chosen", async () => {
+    const { rendered, store } = await withReaders(aCertificate);
+
+    act(() => store.announce(cardArrives([aCertificate, remembered(dnie)])));
+
+    expect(stateOf(rendered)).toMatchObject({ kind: "chosen", certificate: { id: dnie.id } });
   });
 });
 

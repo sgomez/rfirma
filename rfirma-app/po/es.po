@@ -507,6 +507,21 @@ msgstr "Certificado"
 msgid "panel.certificate.loading"
 msgstr "Buscando certificados…"
 
+msgid "panel.certificate.reader.noCard"
+msgstr "Lector conectado, sin tarjeta"
+
+msgid "panel.certificate.reader.reading"
+msgstr "Leyendo la tarjeta…"
+
+msgid "panel.certificate.reader.dnieReady"
+msgstr "DNIe listo"
+
+msgid "panel.certificate.reader.cardReady"
+msgstr "Tarjeta lista"
+
+msgid "panel.certificate.reader.unreadable"
+msgstr "rFirma no puede leer la tarjeta del lector"
+
 #. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
 msgstr "Emitido por {{issuer}}"

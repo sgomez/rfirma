@@ -35,6 +35,12 @@ const {
   UnwritableDestination,
   LongDestinationName,
   SigningFailed,
+  ReaderWithoutCard,
+  ReadingTheCard,
+  DnieReady,
+  CardReady,
+  UnreadableCard,
+  NoCertificatesWithReader,
 } = composed;
 
 const text = (value: string) => screen.getByText(value);
@@ -117,6 +123,64 @@ describe("the signing panel, by state", () => {
       expect(text("Guardar en")).toBeInTheDocument();
       expect(button("Cambiar")).toBeInTheDocument();
       expect(button("Firmar")).toBeEnabled();
+    });
+  });
+
+  describe("the reader line", () => {
+    const cases = [
+      { Story: ReaderWithoutCard, said: "Lector conectado, sin tarjeta" },
+      { Story: ReadingTheCard, said: "Leyendo la tarjeta…" },
+      { Story: DnieReady, said: "DNIe listo" },
+      { Story: CardReady, said: "Tarjeta lista" },
+      { Story: UnreadableCard, said: "rFirma no puede leer la tarjeta del lector" },
+    ] as const;
+
+    for (const { Story, said } of cases) {
+      it(`says «${said}» right below the selector`, () => {
+        renderWithCatalog(<Story />);
+
+        const line = text(said);
+        expect(line.closest("[role=status]")).not.toBeNull();
+        expect(
+          combobox().compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+      });
+    }
+
+    it("draws no line without a reader", () => {
+      renderWithCatalog(<Ready />);
+
+      expect(document.querySelector(".reader-line")).toBeNull();
+      for (const { said } of cases) expect(screen.queryByText(said)).toBeNull();
+    });
+
+    it("turns the indicator only while the card is read", () => {
+      const { unmount } = renderWithCatalog(<ReadingTheCard />);
+      expect(document.querySelector(".reader-line__spinner")).not.toBeNull();
+      unmount();
+
+      renderWithCatalog(<DnieReady />);
+      expect(document.querySelector(".reader-line__spinner")).toBeNull();
+    });
+
+    it("keeps the other certificates to choose while the card is read", () => {
+      renderWithCatalog(<ReadingTheCard />);
+
+      expect(combobox()).toBeEnabled();
+    });
+
+    it("goes under the disabled selector, before the ways out, when there are no certificates", () => {
+      renderWithCatalog(<NoCertificatesWithReader />);
+
+      const line = text("Lector conectado, sin tarjeta");
+      expect(combobox()).toBeDisabled();
+      expect(
+        combobox().compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        line.compareDocumentPosition(button("Añadir un certificado…")) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
   });
 

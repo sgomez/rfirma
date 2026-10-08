@@ -1,0 +1,25 @@
+/* La línea del lector bajo el selector de certificado: docs/design/panel-de-firma.md § Certificado. */
+
+.reader-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reader-line__spinner {
+  display: flex;
+  flex: none;
+  animation: reader-line-spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-line__spinner {
+    animation: none;
+  }
+}
+
+@keyframes reader-line-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
