@@ -127,7 +127,7 @@ historias.
 | Linux | solo la tira bajo la barra GTK | ídem | ídem | `NativeTitlebar` |
 | Con documento | el documento | documento, con o sin firma visible | editable | visor: `WithDocument`, `WithSignatureBox` |
 | Buscando certificados | el documento | documento | el selector dice que busca, y firmar está inactivo. Encima, el diálogo de secreto si el almacén lo pide para listar | `Searching` de «Flujos/Firma/SigningPanel» |
-| Sin certificados | ídem | documento | el aviso de que no hay certificados arriba; el pie ofrece añadir uno y volver a buscar | `NoCertificates` de «Flujos/Firma/SigningPanel» |
+| Sin certificados | ídem | documento | el selector desactivado diciendo que no hay, con añadir uno y volver a buscar debajo; el pie deja solo «Firmar», desactivado | `NoCertificates` de «Flujos/Firma/SigningPanel» |
 | Sin certificado elegido | ídem | documento, sin firma visible: su interruptor está desactivado hasta elegir | el selector pide elegir | `Unchosen` de «Flujos/Firma/SigningPanel» |
 | Listo | ídem | documento, con la firma visible si está encendida | el selector con el certificado elegido, y firmar | `Ready` de «Flujos/Firma/SigningPanel» |
 | Certificados abiertos | ídem | ídem | el buscador en el selector y la lista flotando sobre el panel | `Open` de «Dominio/Firma/CertificateSelect» |

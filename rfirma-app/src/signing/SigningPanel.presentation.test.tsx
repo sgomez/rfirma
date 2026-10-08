@@ -141,20 +141,47 @@ describe("the signing panel, by state", () => {
       });
     }
 
-    it("offers two ways out in the footer when none turned up, and no selector", () => {
+    it("keeps the selector in place, disabled, with the two ways out right below it", () => {
       renderWithCatalog(<NoCertificates />);
 
-      expect(text("Sin certificados")).toBeInTheDocument();
-      expect(button("Añadir un certificado…")).toBeInTheDocument();
-      expect(button("Volver a buscar")).toBeInTheDocument();
-      expect(screen.queryByRole("combobox", { name: "Certificado" })).not.toBeInTheDocument();
+      expect(combobox()).toBeDisabled();
+      expect(combobox()).toHaveTextContent("Sin certificados");
+      const select = combobox();
+      const add = button("Añadir un certificado…");
+      const again = button("Volver a buscar");
+      const footer = button("Firmar").closest("footer") as HTMLElement;
+      expect(select.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(add.compareDocumentPosition(again) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(footer).not.toContainElement(add);
+      expect(footer).not.toContainElement(again);
+      expect(add).toHaveClass("rf-btn--primary");
+      expect(again).toHaveClass("rf-btn--secondary");
     });
 
-    it("tells the search failure apart from having none", () => {
+    it("leaves only a disabled «Firmar» in the footer when none turned up", () => {
+      renderWithCatalog(<NoCertificates />);
+
+      const footer = button("Firmar").closest("footer") as HTMLElement;
+      expect(
+        within(footer)
+          .getAllByRole("button")
+          .map((each) => each.textContent),
+      ).toEqual(expect.arrayContaining(["Firmar"]));
+      expect(within(footer).queryByRole("button", { name: "Volver a buscar" })).toBeNull();
+      expect(button("Firmar")).toBeDisabled();
+    });
+
+    it("has the same shape when the search failed, with the error below the ways out", () => {
       renderWithCatalog(<SearchFailed />);
 
+      expect(combobox()).toBeDisabled();
       expect(screen.queryByText("Sin certificados")).not.toBeInTheDocument();
-      expect(screen.getByText("CKR_TOKEN_NOT_PRESENT")).toBeInTheDocument();
+      expect(button("Firmar")).toBeDisabled();
+      const again = button("Volver a buscar");
+      const error = screen.getByText("CKR_TOKEN_NOT_PRESENT");
+      expect(again.compareDocumentPosition(error) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      const footer = button("Firmar").closest("footer") as HTMLElement;
+      expect(footer).not.toContainElement(again);
     });
 
     it("keeps the visible-signature switch off and disabled, with a notice, until one is chosen", () => {
