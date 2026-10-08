@@ -83,5 +83,28 @@ impl fmt::Display for SecretOnTheReaderKeypad {
 
 impl std::error::Error for SecretOnTheReaderKeypad {}
 
+/// Lo que la tarjeta deja saber de sus intentos antes de teclear el PIN (ADR-0047).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PinWarning {
+    /// La tarjeta no da ninguna señal: el diálogo de siempre.
+    #[default]
+    Quiet,
+    /// Ya ha habido algún intento fallido (`CKF_USER_PIN_COUNT_LOW`).
+    CountLow,
+    /// Un PIN incorrecto bloquea la tarjeta (`CKF_USER_PIN_FINAL_TRY`).
+    FinalTry,
+}
+
+impl PinWarning {
+    /// El aviso que dan las banderas del token; el último intento manda sobre el contador bajo.
+    pub fn of_token(count_low: bool, final_try: bool) -> Self {
+        match (count_low, final_try) {
+            (_, true) => Self::FinalTry,
+            (true, false) => Self::CountLow,
+            (false, false) => Self::Quiet,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;

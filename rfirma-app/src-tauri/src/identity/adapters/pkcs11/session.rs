@@ -10,11 +10,14 @@ use std::sync::{Arc, Mutex, OnceLock};
 use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::error::{Error, RvError};
 use cryptoki::object::{Attribute, ObjectClass};
-use cryptoki::session::Session;
-use cryptoki::slot::Slot;
+use cryptoki::session::{Session, UserType};
+use cryptoki::slot::{Slot, TokenInfo};
+use cryptoki::types::AuthPin;
 
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::PinWarning;
 use crate::identity::domain::store::Store;
 
 /// Comprueba si existe la base de datos NSS antes de inicializar el módulo.
@@ -60,6 +63,110 @@ pub(super) fn slot_of(context: &Pkcs11, token_label: &str) -> Result<Slot, Token
         Situation::TokenAbsent,
         format!("no hay ningun token etiquetado {token_label}"),
     ))
+}
+
+/// Las banderas de la tarjeta de la ranura, salvo que declare el PIN bloqueado: entonces no se pide ni se envía (ADR-0047).
+pub(super) fn token_info_unless_locked(
+    context: &Pkcs11,
+    slot: Slot,
+) -> Result<TokenInfo, TokenError> {
+    let info = context.get_token_info(slot)?;
+    if info.user_pin_locked() {
+        return Err(TokenError::new(
+            Situation::PinLocked,
+            "CKF_USER_PIN_LOCKED: la tarjeta declara el PIN bloqueado",
+        ));
+    }
+    Ok(info)
+}
+
+/// El aviso del PIN que dan las banderas de la ranura, o el bloqueo si lo declaran (ADR-0047).
+pub(super) fn pin_warning_of(context: &Pkcs11, slot: Slot) -> Result<PinWarning, TokenError> {
+    let info = token_info_unless_locked(context, slot)?;
+    Ok(PinWarning::of_token(
+        info.user_pin_count_low(),
+        info.user_pin_final_try(),
+    ))
+}
+
+/// Abre una sesión con el usuario dentro; si otro programa se interpuso, repite una sola vez en otra (ADR-0047).
+pub(super) fn logged_in_session(
+    context: &Pkcs11,
+    slot: Slot,
+    pin: &str,
+) -> Result<Session, TokenError> {
+    let pin = AuthPin::new(pin.into());
+    let session = context.open_ro_session(slot)?;
+    match session.login(UserType::User, Some(&pin)) {
+        Err(Error::Pkcs11(RvError::UserNotLoggedIn, _)) => {
+            drop(session);
+            let again = context.open_ro_session(slot)?;
+            accepted_or_already_in(again.login(UserType::User, Some(&pin)), context, slot)?;
+            Ok(again)
+        }
+        first => {
+            accepted_or_already_in(first, context, slot)?;
+            Ok(session)
+        }
+    }
+}
+
+fn accepted_or_already_in(
+    outcome: Result<(), Error>,
+    context: &Pkcs11,
+    slot: Slot,
+) -> Result<(), TokenError> {
+    match outcome {
+        Ok(()) | Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => Ok(()),
+        Err(other) => Err(refused_login(context, slot, other)),
+    }
+}
+
+/// El fallo de un `C_Login`, con lo que la tarjeta dice de sus intentos en ese mismo proceso (ADR-0047).
+pub(super) fn refused_login(context: &Pkcs11, slot: Slot, error: Error) -> TokenError {
+    let refused = TokenError::from(error);
+    let Ok(info) = context.get_token_info(slot) else {
+        return refused;
+    };
+    if info.user_pin_locked() && refused.situation() == Situation::IncorrectPin {
+        return TokenError::new(
+            Situation::PinLocked,
+            format!("{}: el intento ha bloqueado la tarjeta", refused.detail()),
+        );
+    }
+    if info.user_pin_final_try() {
+        return refused.on_the_final_try();
+    }
+    refused
+}
+
+/// Una sesión de la ranura con el usuario dentro, tras comprobar que la tarjeta no declara el PIN bloqueado (ADR-0047).
+pub(super) fn logged_in(
+    context: &Pkcs11,
+    slot: Slot,
+    secret: &ProtectedSecret,
+) -> Result<Session, TokenError> {
+    token_info_unless_locked(context, slot)?;
+    logged_in_session(context, slot, pin_text(secret)?)
+}
+
+fn pin_text(secret: &ProtectedSecret) -> Result<&str, TokenError> {
+    secret
+        .as_str()
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))
+}
+
+/// El login de contexto específico que una clave con `CKA_ALWAYS_AUTHENTICATE` exige antes de cada firma (ADR-0047).
+pub(super) fn context_logged_in(
+    context: &Pkcs11,
+    slot: Slot,
+    session: &Session,
+    secret: &ProtectedSecret,
+) -> Result<(), TokenError> {
+    let pin = AuthPin::new(pin_text(secret)?.into());
+    session
+        .login(UserType::ContextSpecific, Some(&pin))
+        .map_err(|error| refused_login(context, slot, error))
 }
 
 /// La clave privada del certificado emparejada por `CKA_ID`.

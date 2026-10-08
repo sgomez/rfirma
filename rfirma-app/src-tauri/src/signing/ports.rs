@@ -6,7 +6,7 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
 pub use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
 use crate::signing::domain::document_signatures::DocumentSignatures;
 use crate::signing::domain::isolate_gone::IsolateGone;
@@ -40,6 +40,11 @@ pub trait Signer {
     /// Cómo hay que pedirle el secreto al almacén del certificado.
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError>;
 
+    /// Lo que la tarjeta del certificado dice de sus intentos; sin señales, el diálogo de siempre (ADR-0047).
+    fn pin_warning(&self, _reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+        Ok(PinWarning::Quiet)
+    }
+
     /// Comprueba que el token ofrece el mecanismo del algoritmo, antes de pedir el secreto.
     fn offers(
         &self,
@@ -62,6 +67,24 @@ pub trait Signer {
         algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError>;
+
+    /// Hasta `release_the_login`, las firmas del certificado comparten un solo login, y el primer fallo corta las que quedan (ADR-0047).
+    fn hold_one_login(&self, _reference: &CertificateRef) {}
+
+    /// Cierra el login que compartían las firmas del certificado.
+    fn release_the_login(&self, _reference: &CertificateRef) {}
+}
+
+/// Corre `work` con un solo login para todas las firmas del certificado, y lo cierra al acabar (ADR-0047).
+pub fn in_one_login<T>(
+    signer: &dyn Signer,
+    reference: &CertificateRef,
+    work: impl FnOnce() -> T,
+) -> T {
+    signer.hold_one_login(reference);
+    let done = work();
+    signer.release_the_login(reference);
+    done
 }
 
 /// El documento que se va a firmar, leído de donde esté.

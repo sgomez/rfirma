@@ -10,7 +10,7 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 
@@ -95,6 +95,13 @@ impl Token for WindowsToken {
         RealToken.secret_of(reference)
     }
 
+    fn pin_warning(&self, reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+        if is_the_user_store(&reference.store()) {
+            return Ok(PinWarning::Quiet);
+        }
+        RealToken.pin_warning(reference)
+    }
+
     fn offers(
         &self,
         reference: &CertificateRef,
@@ -128,6 +135,14 @@ impl Token for WindowsToken {
             return cng::sign(reference, algorithm, data);
         }
         RealToken.sign_with_secret(reference, secret, algorithm, data)
+    }
+
+    fn hold_one_login(&self, reference: &CertificateRef) {
+        RealToken.hold_one_login(reference);
+    }
+
+    fn release_the_login(&self, reference: &CertificateRef) {
+        RealToken.release_the_login(reference);
     }
 
     fn import_pkcs12(

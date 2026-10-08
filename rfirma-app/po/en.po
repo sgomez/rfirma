@@ -112,10 +112,12 @@ msgid "errors.messages.incorrectPin.body"
 msgstr "The card locks after a few failed attempts."
 
 msgid "errors.messages.pinLocked.title"
-msgstr "The card is locked"
+msgstr "The card's PIN is locked"
 
 msgid "errors.messages.pinLocked.body"
-msgstr "Unlock it with the PUK."
+msgstr ""
+"You can't sign with it until the PIN is unlocked. A DNIe is unlocked at a "
+"DNIe update point."
 
 #. Mensaje genérico: revisar la tarjeta y volver a buscar. Lo usan tokenAbsent y certificateNotFound.
 msgid "errors.messages.checkToken.title"
@@ -980,7 +982,9 @@ msgstr "Diagnose problems"
 
 #. Antes de la orden que dice qué aplicación abre `afirma://`.
 msgid "status.detail.diagnoseIntro"
-msgstr "If another application opens without asking when you sign on a site, check which one is the default:"
+msgstr ""
+"If another application opens without asking when you sign on a site, check "
+"which one is the default:"
 
 #. {{file}} es el nombre del fichero de escritorio de rFirma; va antes de la orden que lo fija como predeterminado.
 msgid "status.detail.diagnoseFix"

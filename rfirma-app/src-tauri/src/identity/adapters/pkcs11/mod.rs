@@ -3,6 +3,7 @@
 mod listing;
 mod mechanism;
 pub mod nss;
+mod one_login;
 pub mod p11kit;
 mod removal;
 mod session;
@@ -11,19 +12,19 @@ pub mod stores;
 use std::path::Path;
 use std::sync::Mutex;
 
-use cryptoki::error::{Error, RvError};
-use cryptoki::session::UserType;
-use cryptoki::types::AuthPin;
-
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 pub use nss::{NssHost, RealNssHost};
-use session::{context, slot_of, the_store_is_really_there};
+use one_login::Refused;
+use session::{
+    context, logged_in, pin_warning_of, slot_of, the_store_is_really_there,
+    token_info_unless_locked,
+};
 
 /// El adaptador del puerto [`Token`] sobre los módulos PKCS#11 del sistema.
 #[derive(Clone, Copy, Debug, Default)]
@@ -50,6 +51,10 @@ impl Token for RealToken {
         store_secret(reference)
     }
 
+    fn pin_warning(&self, reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+        pin_warning(reference)
+    }
+
     fn offers(
         &self,
         reference: &CertificateRef,
@@ -74,6 +79,14 @@ impl Token for RealToken {
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
         sign_with_secret(reference, secret, algorithm, data)
+    }
+
+    fn hold_one_login(&self, reference: &CertificateRef) {
+        one_login::hold(reference);
+    }
+
+    fn release_the_login(&self, reference: &CertificateRef) {
+        with_token_turn(|| one_login::release(reference));
     }
 
     fn import_pkcs12(
@@ -129,11 +142,22 @@ pub fn store_secret(reference: &CertificateRef) -> Result<StoreSecret, TokenErro
         the_store_is_really_there(&store)?;
         let context = context(&store)?;
         let slot = slot_of(&context, reference.token_label())?;
-        let info = context.get_token_info(slot)?;
+        let info = token_info_unless_locked(&context, slot)?;
         Ok(StoreSecret::of_token(
             info.login_required(),
             info.protected_authentication_path(),
         ))
+    })
+}
+
+/// Lo que la tarjeta del certificado dice de sus intentos, leído ahora (ADR-0047).
+pub fn pin_warning(reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+    with_token_turn(|| {
+        let store = reference.store();
+        the_store_is_really_there(&store)?;
+        let context = context(&store)?;
+        let slot = slot_of(&context, reference.token_label())?;
+        pin_warning_of(&context, slot)
     })
 }
 
@@ -163,23 +187,23 @@ pub fn accepts_the_secret(
     reference: &CertificateRef,
     secret: &crate::identity::domain::protected_secret::ProtectedSecret,
 ) -> Result<(), TokenError> {
-    let pin = secret
-        .as_str()
-        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
     with_token_turn(|| {
+        if let Some(cut) = one_login::cut_short(reference) {
+            return Err(cut);
+        }
         let store = reference.store();
         the_store_is_really_there(&store)?;
         let context = context(&store)?;
         let slot = slot_of(&context, reference.token_label())?;
-        let session = context.open_ro_session(slot)?;
-        match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
-            Ok(()) => {
-                let _ = session.logout();
-                Ok(())
-            }
-            Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => Ok(()),
-            Err(other) => Err(other.into()),
+        let log_in = || logged_in(&context, slot, secret);
+        if let Some(accepted) =
+            one_login::within(reference, secret, log_in, |_| Ok(()), Refused::LeavesItOpen)
+        {
+            return accepted;
         }
+        let session = log_in()?;
+        let _ = session.logout();
+        Ok(())
     })
 }
 

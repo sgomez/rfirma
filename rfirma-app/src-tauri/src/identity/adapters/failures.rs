@@ -43,7 +43,10 @@ pub fn code_of_token(situation: Situation) -> SafCode {
 
 impl From<TokenError> for Failure {
     fn from(error: TokenError) -> Self {
-        Self::new(situation_name(error.situation()), error.detail())
+        Self {
+            attempts_left: error.attempts_left(),
+            ..Self::new(situation_name(error.situation()), error.detail())
+        }
     }
 }
 

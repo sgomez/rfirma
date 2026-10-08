@@ -49,6 +49,7 @@ Las decisiones están en `docs/adr/`; cada zona tiene su mapa con sus trampas. L
 * **Especificación:** el [issue #46](https://github.com/sgomez/rfirma/issues/46); cada sub-issue copia sus decisiones (`ID-NN`, `TD-NN`) en su `## Spec extract`.
 * **Puente Java:** `rfirma-native-bridge/src/main/java/es/gob/afirma/nativebridge/NativeBridge.java`
 * **App Rust/Tauri:** `rfirma-app/src-tauri/` · **Frontend:** `rfirma-app/src/` (React 19 + Vite + TypeScript, pnpm)
+* **Tarjeta falsa de pruebas:** `rfirma-app/src-tauri/fake-pkcs11/` (solo pruebas, nunca se empaqueta)
 * **Empaquetado:** `packaging/flatpak/`, `packaging/windows/` (ADR-0035, ADR-0040), `packaging/macos/`
 * **Punto de entrada de todo:** `justfile` (ADR-0013).
 

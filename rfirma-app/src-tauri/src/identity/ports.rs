@@ -10,7 +10,7 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::PromptedHolder;
 use crate::identity::domain::keyring::KeyringError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::{SecretName, StoreSecret};
+use crate::identity::domain::secret::{PinWarning, SecretName, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::memory_error::MemoryError;
 use crate::signing::domain::Language;
@@ -32,6 +32,11 @@ pub trait Token {
 
     /// Cómo hay que pedirle el secreto al almacén del certificado.
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError>;
+
+    /// Lo que la tarjeta del certificado dice de sus intentos; sin señales, el diálogo de siempre (ADR-0047).
+    fn pin_warning(&self, _reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+        Ok(PinWarning::Quiet)
+    }
 
     /// Comprueba que la ranura del certificado ofrece el mecanismo del algoritmo, sin pedir el secreto.
     fn offers(
@@ -55,6 +60,12 @@ pub trait Token {
         algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError>;
+
+    /// Hasta `release_the_login`, las firmas del certificado comparten un solo login, y el primer fallo corta las que quedan (ADR-0047).
+    fn hold_one_login(&self, _reference: &CertificateRef) {}
+
+    /// Cierra el login que compartían las firmas del certificado.
+    fn release_the_login(&self, _reference: &CertificateRef) {}
 
     /// Importa un `.p12` al Almacén de rFirma en ese directorio, cifrado con `pin`, y lo devuelve.
     fn import_pkcs12(
@@ -184,6 +195,8 @@ pub struct SecretPromptRequest {
     pub language: Language,
     /// Indica si se trata de un reintento tras un secreto erróneo.
     pub incorrect_secret: bool,
+    /// Lo que la tarjeta dice de sus intentos, leído justo antes de este diálogo (ADR-0047).
+    pub pin_warning: PinWarning,
     /// La ventana que pidió el secreto, o su ausencia si no se conoce.
     pub origin_window: Option<OriginWindow>,
 }
@@ -222,18 +235,20 @@ pub trait SecretPrompter: Send + Sync {
 pub enum PromptedError<E> {
     /// La solicitud interactiva del secreto fue cancelada o falló.
     Prompt(SecretPromptError),
-    /// El intento rechazó el secreto y `rejected` dijo que no merecía la pena reintentarlo.
+    /// El intento o la lectura del aviso fallaron, y `rejected` dijo que no merecía la pena reintentarlo.
     Attempt(E),
 }
 
-/// Pide el secreto hasta que `attempt` lo acepta; `rejected` decide si el rechazo merece reintentarlo (ADR-0001, ADR-0014).
+/// Pide el secreto hasta que `attempt` lo acepta, releyendo antes de cada diálogo el aviso del PIN; un secreto rechazado no se reenvía (ADR-0001, ADR-0047).
 pub fn prompted_until_accepted<T, E>(
     prompter: &dyn SecretPrompter,
     mut request: SecretPromptRequest,
+    mut warning: impl FnMut() -> Result<PinWarning, E>,
     mut attempt: impl FnMut(&ProtectedSecret) -> Result<T, E>,
     rejected: impl Fn(&E) -> bool,
 ) -> Result<(ProtectedSecret, T), PromptedError<E>> {
     loop {
+        request.pin_warning = warning().map_err(PromptedError::Attempt)?;
         let secret = prompter
             .prompt_secret(&request)
             .map_err(PromptedError::Prompt)?;

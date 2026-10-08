@@ -15,7 +15,7 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::Situation;
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 use crate::signing::adapters::ffi::{locate, NativeBridge};
@@ -53,6 +53,21 @@ fn the_user_store_asks_windows_for_the_pin_and_not_rfirma() {
         WindowsToken.accepts_the_secret(&reference, &ProtectedSecret::new(b"")),
         Ok(())
     );
+}
+
+#[test]
+fn the_user_store_never_warns_about_the_pin() {
+    let reference = CertificateRef::new(user_store(), "CurrentUser\\MY", "x", Some(vec![0; 20]));
+
+    assert_eq!(WindowsToken.pin_warning(&reference), Ok(PinWarning::Quiet));
+}
+
+#[test]
+fn a_pkcs11_module_is_asked_for_its_pin_warning() {
+    let module = Store::module(r"C:\rfirma-no-such-module\opensc-pkcs11.dll");
+    let reference = CertificateRef::new(module, "DNI electrónico", "x", Some(vec![0; 20]));
+
+    assert!(WindowsToken.pin_warning(&reference).is_err());
 }
 
 #[test]

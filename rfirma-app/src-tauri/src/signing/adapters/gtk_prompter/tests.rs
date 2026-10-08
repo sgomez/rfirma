@@ -1,7 +1,7 @@
 use super::{localize, MockSecretPrompter, PreconfiguredSecretPrompter};
 use crate::identity::domain::holder::PromptedHolder;
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::SecretName;
+use crate::identity::domain::secret::{PinWarning, SecretName};
 use crate::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
 use crate::signing::domain::Language;
 
@@ -11,6 +11,7 @@ fn a_request(holder: Option<PromptedHolder>, language: Language) -> SecretPrompt
         holder,
         language,
         incorrect_secret: false,
+        pin_warning: PinWarning::Quiet,
         origin_window: None,
     }
 }
@@ -115,6 +116,56 @@ fn no_text_of_the_dialog_ever_counts_attempts() {
             );
         }
     }
+}
+
+#[test]
+fn a_card_on_its_final_try_is_warned_before_typing_and_one_with_failed_tries_more_softly() {
+    let mut request = a_request(None, Language::Spanish);
+
+    request.pin_warning = PinWarning::FinalTry;
+    assert_eq!(
+        localize(&request).pin_warning.as_deref(),
+        Some("Último intento: si el PIN no es correcto, la tarjeta se bloqueará.")
+    );
+
+    request.pin_warning = PinWarning::CountLow;
+    assert_eq!(
+        localize(&request).pin_warning.as_deref(),
+        Some("Ya ha habido algún intento fallido con esta tarjeta.")
+    );
+
+    request.pin_warning = PinWarning::Quiet;
+    assert_eq!(localize(&request).pin_warning, None);
+}
+
+#[test]
+fn the_pin_warnings_are_in_all_five_languages_and_count_nothing() {
+    for lang in Language::ALL {
+        let mut request = a_request(None, lang);
+        request.pin_warning = PinWarning::FinalTry;
+        let last = localize(&request)
+            .pin_warning
+            .expect("aviso de último intento");
+        request.pin_warning = PinWarning::CountLow;
+        let soft = localize(&request).pin_warning.expect("aviso suave");
+
+        assert_ne!(last, soft, "{lang:?}");
+        for warning in [&last, &soft] {
+            assert!(
+                !warning.contains(|c: char| c.is_ascii_digit()),
+                "PKCS#11 no cuenta intentos: {warning}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_password_is_never_asked_with_a_card_warning() {
+    let mut request = a_request(None, Language::Spanish);
+    request.secret = SecretName::Password;
+    request.pin_warning = PinWarning::FinalTry;
+
+    assert_eq!(localize(&request).pin_warning, None);
 }
 
 #[test]

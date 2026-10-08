@@ -7,6 +7,7 @@ use super::{
 };
 use crate::identity::domain::keyring::{generate_pin, KeyringError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::PinWarning;
 use crate::signing::domain::Language;
 
 /// Un prompter que devuelve, en orden, los secretos o fallos programados.
@@ -40,6 +41,7 @@ fn a_request() -> SecretPromptRequest {
         holder: None,
         language: Language::Spanish,
         incorrect_secret: false,
+        pin_warning: PinWarning::Quiet,
         origin_window: None,
     }
 }
@@ -51,6 +53,7 @@ fn accepts_the_secret_on_the_first_try() {
     let (secret, done) = prompted_until_accepted(
         &prompter,
         a_request(),
+        || Ok(PinWarning::Quiet),
         |secret| -> Result<(), &'static str> {
             assert_eq!(secret.expose_secret(), Ok("1234"));
             Ok(())
@@ -74,6 +77,7 @@ fn retries_only_when_the_attempt_says_the_secret_was_rejected() {
     let (secret, ()) = prompted_until_accepted(
         &prompter,
         a_request(),
+        || Ok(PinWarning::Quiet),
         |secret| {
             if secret.expose_secret() == Ok("right") {
                 Ok(())
@@ -102,6 +106,7 @@ fn stops_without_retrying_when_the_attempt_is_not_a_rejection() {
     let error = prompted_until_accepted(
         &prompter,
         a_request(),
+        || Ok(PinWarning::Quiet),
         |_| -> Result<(), &'static str> { Err("unrelated failure") },
         |error| *error == "rejected",
     )
@@ -122,6 +127,7 @@ fn a_cancelled_prompt_stops_the_loop_without_attempting() {
     let error = prompted_until_accepted(
         &prompter,
         a_request(),
+        || Ok(PinWarning::Quiet),
         |_| -> Result<(), &'static str> { unreachable!("cancelar no llega a intentarlo") },
         |_| true,
     )

@@ -7,6 +7,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::{Duration, Instant};
 
 use crate::catalogue::{Assistance, Check, Provocation};
+use crate::client::Store;
 use crate::errand::{ErrandKey, ErrandOutcome, ObservedErrand, THE_DRIVER_CRASH};
 use crate::harness::THE_HARNESSES;
 use crate::judge::{judge, Verdict};
@@ -92,7 +93,7 @@ impl Probe {
                 .into();
             }
         }
-        if let Some(why) = the_unmet_precondition_of(head) {
+        if let Some(why) = self.the_unmet_precondition_of(head) {
             self.witness.harness(&format!("no se ejecuta: {why}"));
             return vec![Settlement::pending(head, why)].into();
         }
@@ -240,9 +241,16 @@ fn all_pending(group: &[&Check], why: &str) -> Vec<Settlement> {
         .collect()
 }
 
-/// Lo que la comprobación necesita y el equipo no le da; `None` si no le falta nada.
-fn the_unmet_precondition_of(check: &Check) -> Option<String> {
-    the_occupied_port_complaint(check)
+const THE_NO_DNIE_COMPLAINT: &str = "no hay un DNIe en el lector";
+
+impl Probe {
+    /// Lo que la comprobación necesita y el equipo no le da; `None` si no le falta nada.
+    fn the_unmet_precondition_of(&self, check: &Check) -> Option<String> {
+        the_occupied_port_complaint(check).or_else(|| {
+            (check.store() == Store::Dnie && !self.witness.a_dnie_is_in_the_reader())
+                .then(|| THE_NO_DNIE_COMPLAINT.to_owned())
+        })
+    }
 }
 
 /// Las comprobaciones que comparten trámite con `head` y pueden resolverse del mismo trámite: las
@@ -952,6 +960,68 @@ expects.completes.conditions = ["a-candidate-port-bound"]
         ))
         .unwrap()
         .remove(0)
+    }
+
+    fn a_dnie_check() -> Vec<Check> {
+        the_catalogue_in(
+            r#"
+[[check]]
+id = "a_dnie_one"
+set = "errores"
+chapter = "15"
+citation = "A.java:1"
+statement = "Se rechaza."
+
+[check.drive]
+mode = "v4"
+script = "signwithoutaformat"
+store = "dnie"
+act.type_password = "Teclea el PIN. No teclees nunca un PIN erróneo."
+expects.code = "SAF_03"
+"#,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn without_a_dnie_in_the_reader_the_check_is_pending_with_its_reason_and_the_client_is_not_launched(
+    ) {
+        let witness = Arc::new(FakeWitness::default());
+        let runner = a_runner(false);
+        let catalogue = a_dnie_check();
+        let group: Vec<&Check> = catalogue.iter().collect();
+
+        let settled = a_probe(&witness, &runner).run_group(&group, None, None);
+
+        assert_eq!(pending(&settled), [("a_dnie_one", THE_NO_DNIE_COMPLAINT)]);
+        assert_eq!(runner.runs(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn with_a_dnie_in_the_reader_the_check_is_driven() {
+        let witness = Arc::new(FakeWitness {
+            a_dnie_in_the_reader: true,
+            ..FakeWitness::default()
+        });
+        let runner = a_runner(false);
+        let catalogue = a_dnie_check();
+        let group: Vec<&Check> = catalogue.iter().collect();
+
+        let settled = a_probe(&witness, &runner).run_group(&group, None, None);
+
+        assert_eq!(resolved(&settled), [("a_dnie_one", Outcome::Compliant)]);
+    }
+
+    #[test]
+    fn a_check_of_another_store_does_not_ask_for_a_dnie() {
+        let witness = Arc::new(FakeWitness::default());
+        let runner = a_runner(false);
+        let catalogue = a_rejection(CLICKED);
+        let group: Vec<&Check> = catalogue.iter().take(1).collect();
+
+        let settled = a_probe(&witness, &runner).run_group(&group, None, None);
+
+        assert_eq!(resolved(&settled), [("a_rejection", Outcome::Compliant)]);
     }
 
     #[test]

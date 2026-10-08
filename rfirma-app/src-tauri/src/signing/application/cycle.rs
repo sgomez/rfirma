@@ -15,7 +15,7 @@ use crate::signing::domain::{
     to_java_properties, AdmissibleDocument, CompletedCycle, Format, Refusal, SealMismatch,
     SessionSeal, SignatureConfig,
 };
-use crate::signing::ports::{Bridge, Signer};
+use crate::signing::ports::{in_one_login, Bridge, Signer};
 
 use crate::signing::domain::TokenSignatures;
 
@@ -195,8 +195,10 @@ impl OpenCycle {
         signer: &dyn Signer,
         secret: &ProtectedSecret,
     ) -> Result<TokenSignatures, CycleError> {
-        Ok(self.presigned.signed_one_by_one(|pre| {
-            signer.sign_with_secret(&self.certificate, secret, self.algorithm, pre)
+        Ok(in_one_login(signer, &self.certificate, || {
+            self.presigned.signed_one_by_one(|pre| {
+                signer.sign_with_secret(&self.certificate, secret, self.algorithm, pre)
+            })
         })?)
     }
 

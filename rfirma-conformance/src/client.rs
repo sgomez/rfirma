@@ -38,7 +38,8 @@ impl ClientKind {
 /// El almacén de un perfil aislado: `rsa` y `ec`, una NSS sin contraseña con un solo certificado;
 /// `token`, SoftHSM con PIN; `token_apart`, el token sin registrar junto a una NSS con otro; `ed25519`,
 /// un token sin registrar con una sola clave Ed25519; `several` y `expired`, NSS con varios, para los
-/// filtros.
+/// filtros; `dnie`, la NSS vacía con el OpenSC del sistema registrado, para el DNIe que la persona
+/// tiene en el lector.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
@@ -51,10 +52,11 @@ pub(crate) enum Store {
     Ed25519,
     Several,
     Expired,
+    Dnie,
 }
 
 impl Store {
-    pub(crate) const ALL: [Self; 7] = [
+    pub(crate) const ALL: [Self; 8] = [
         Self::Rsa,
         Self::Ec,
         Self::Token,
@@ -62,6 +64,7 @@ impl Store {
         Self::Ed25519,
         Self::Several,
         Self::Expired,
+        Self::Dnie,
     ];
 
     pub(crate) fn named(name: &str) -> Option<Self> {
@@ -77,6 +80,7 @@ impl Store {
             Self::Ed25519 => "ed25519",
             Self::Several => "several",
             Self::Expired => "expired",
+            Self::Dnie => "dnie",
         }
     }
 }
@@ -344,6 +348,12 @@ mod tests {
             the_isolated_store_in("rfirma\n/p/launch-subject\n\nsofthsm2:/m.so\n").unwrap_err();
 
         assert!(complaint.contains("softhsm2:/m.so"));
+    }
+
+    #[test]
+    fn the_dnie_store_is_found_by_its_name() {
+        assert_eq!(Store::named("dnie"), Some(Store::Dnie));
+        assert_eq!(Store::Dnie.name(), "dnie");
     }
 
     #[test]

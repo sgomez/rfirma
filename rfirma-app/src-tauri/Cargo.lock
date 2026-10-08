@@ -1374,6 +1374,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fake-pkcs11"
+version = "0.1.0"
+dependencies = [
+ "cryptoki",
+ "cryptoki-sys",
+ "libc",
+ "openssl",
+ "tempfile",
+]
+
+[[package]]
 name = "fancy-regex"
 version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4133,6 +4144,7 @@ dependencies = [
  "cryptoki",
  "des",
  "ecb",
+ "fake-pkcs11",
  "flate2",
  "futures-util",
  "getrandom 0.3.4",

@@ -112,10 +112,12 @@ msgid "errors.messages.incorrectPin.body"
 msgstr "Txartela blokeatu egiten da hainbat saiakera huts eginda."
 
 msgid "errors.messages.pinLocked.title"
-msgstr "Txartela blokeatuta dago"
+msgstr "Txartelaren PINa blokeatuta dago"
 
 msgid "errors.messages.pinLocked.body"
-msgstr "Desblokeatu ezazu PUKarekin."
+msgstr ""
+"Ezin duzu harekin sinatu PINa desblokeatu arte. DNIe bat bada, DNIe "
+"eguneratzeko puntu batean desblokeatzen da."
 
 #. Mensaje genérico: revisar la tarjeta y volver a buscar. Lo usan tokenAbsent y certificateNotFound.
 msgid "errors.messages.checkToken.title"
@@ -981,7 +983,9 @@ msgstr "Arazoak diagnostikatu"
 
 #. Antes de la orden que dice qué aplicación abre `afirma://`.
 msgid "status.detail.diagnoseIntro"
-msgstr "Egoitza batean sinatzean beste aplikazio bat galdetu gabe irekitzen bada, begiratu zein den lehenetsia:"
+msgstr ""
+"Egoitza batean sinatzean beste aplikazio bat galdetu gabe irekitzen bada, "
+"begiratu zein den lehenetsia:"
 
 #. {{file}} es el nombre del fichero de escritorio de rFirma; va antes de la orden que lo fija como predeterminado.
 msgid "status.detail.diagnoseFix"

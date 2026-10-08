@@ -172,6 +172,16 @@ impl crate::signing::ports::Signer for TokenSigner<'_> {
         self.token.secret_of(reference)
     }
 
+    fn pin_warning(
+        &self,
+        reference: &CertificateRef,
+    ) -> Result<domain::secret::PinWarning, TokenError> {
+        if self.is_installed(reference) {
+            return Ok(domain::secret::PinWarning::Quiet);
+        }
+        self.token.pin_warning(reference)
+    }
+
     fn offers(
         &self,
         reference: &CertificateRef,
@@ -200,6 +210,14 @@ impl crate::signing::ports::Signer for TokenSigner<'_> {
         self.token
             .sign_with_secret(reference, &secret, algorithm, data)
     }
+
+    fn hold_one_login(&self, reference: &CertificateRef) {
+        self.token.hold_one_login(reference);
+    }
+
+    fn release_the_login(&self, reference: &CertificateRef) {
+        self.token.release_the_login(reference);
+    }
 }
 
 impl<T: ports::Token + ?Sized> crate::signing::ports::Signer for T {
@@ -208,6 +226,13 @@ impl<T: ports::Token + ?Sized> crate::signing::ports::Signer for T {
         reference: &domain::certificate::CertificateRef,
     ) -> Result<domain::secret::StoreSecret, domain::error::TokenError> {
         ports::Token::secret_of(self, reference)
+    }
+
+    fn pin_warning(
+        &self,
+        reference: &domain::certificate::CertificateRef,
+    ) -> Result<domain::secret::PinWarning, domain::error::TokenError> {
+        ports::Token::pin_warning(self, reference)
     }
 
     fn offers(
@@ -234,6 +259,14 @@ impl<T: ports::Token + ?Sized> crate::signing::ports::Signer for T {
         data: &[u8],
     ) -> Result<Vec<u8>, domain::error::TokenError> {
         ports::Token::sign_with_secret(self, reference, secret, algorithm, data)
+    }
+
+    fn hold_one_login(&self, reference: &domain::certificate::CertificateRef) {
+        ports::Token::hold_one_login(self, reference);
+    }
+
+    fn release_the_login(&self, reference: &domain::certificate::CertificateRef) {
+        ports::Token::release_the_login(self, reference);
     }
 }
 

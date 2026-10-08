@@ -1,11 +1,8 @@
 //! Elección del mecanismo de firma que ofrece la ranura y firma efectiva con la clave privada.
 
-use cryptoki::error::{Error, RvError};
 use cryptoki::mechanism::{Mechanism, MechanismType};
 use cryptoki::object::{Attribute, AttributeType, KeyType};
-use cryptoki::session::UserType;
 use cryptoki::slot::Slot;
-use cryptoki::types::AuthPin;
 use cryptoki::{context::Pkcs11, session::Session};
 
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
@@ -14,7 +11,10 @@ use crate::identity::domain::ecdsa;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 
-use super::session::{context, private_key, slot_of, the_store_is_really_there};
+use super::one_login::{self, Refused};
+use super::session::{
+    context, context_logged_in, logged_in, private_key, slot_of, the_store_is_really_there,
+};
 
 pub(super) fn sign_holding_the_turn(
     reference: &CertificateRef,
@@ -22,44 +22,64 @@ pub(super) fn sign_holding_the_turn(
     algorithm: SignatureAlgorithm,
     data: &[u8],
 ) -> Result<Vec<u8>, TokenError> {
+    if let Some(cut) = one_login::cut_short(reference) {
+        return Err(cut);
+    }
     let store = reference.store();
     the_store_is_really_there(&store)?;
     let context = context(&store)?;
     let slot = slot_of(&context, reference.token_label())?;
     let offered = the_slot_offers(&context, slot, algorithm)?;
-    let session = context.open_ro_session(slot)?;
-    let pin = secret
-        .as_str()
-        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
+    let log_in = || logged_in(&context, slot, secret);
+    let context_login = |session: &Session| context_logged_in(&context, slot, session, secret);
+    let sign =
+        |session: &Session| signed_in(session, reference, offered, algorithm, data, &context_login);
 
-    match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
-        Ok(()) => {}
-        // Si otra biblioteca del proceso ya autenticó el token, se reutiliza la sesión.
-        Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => {}
-        Err(other) => return Err(other.into()),
+    if let Some(signature) = one_login::within(reference, secret, log_in, sign, Refused::CutsIt) {
+        return signature;
     }
-
-    let signature = private_key(&session, reference)
-        .and_then(|key| {
-            the_key_is_of_the_kind(&session, key, algorithm)?;
-            Ok(key)
-        })
-        .and_then(|key| match offered {
-            Offered::Composed => session
-                .sign(&algorithm.mechanism(), key, data)
-                .map_err(TokenError::from),
-            Offered::EcdsaOverTheDigest => session
-                .sign(&Mechanism::Ecdsa, key, &ecdsa::digest(algorithm, data)?)
-                .map_err(TokenError::from),
-        })
-        .and_then(|signature| match algorithm.key_kind() {
-            KeyKind::Ec => ecdsa::der_encoded(&signature),
-            KeyKind::Rsa => Ok(signature),
-        });
-
+    let session = log_in()?;
+    let signature = sign(&session);
     let _ = session.logout();
-
     signature
+}
+
+fn signed_in(
+    session: &Session,
+    reference: &CertificateRef,
+    offered: Offered,
+    algorithm: SignatureAlgorithm,
+    data: &[u8],
+    context_login: &dyn Fn(&Session) -> Result<(), TokenError>,
+) -> Result<Vec<u8>, TokenError> {
+    let key = private_key(session, reference)?;
+    the_key_is_of_the_kind(session, key, algorithm)?;
+    let (mechanism, bytes) = match offered {
+        Offered::Composed => (algorithm.mechanism(), data.to_vec()),
+        Offered::EcdsaOverTheDigest => (Mechanism::Ecdsa, ecdsa::digest(algorithm, data)?),
+    };
+    let signature = if the_key_always_authenticates(session, key)? {
+        session.sign_init(&mechanism, key)?;
+        context_login(session)?;
+        session.sign_update(&bytes)?;
+        session.sign_final()?
+    } else {
+        session.sign(&mechanism, key, &bytes)?
+    };
+    match algorithm.key_kind() {
+        KeyKind::Ec => ecdsa::der_encoded(&signature),
+        KeyKind::Rsa => Ok(signature),
+    }
+}
+
+fn the_key_always_authenticates(
+    session: &Session,
+    key: cryptoki::object::ObjectHandle,
+) -> Result<bool, TokenError> {
+    Ok(session
+        .get_attributes(key, &[AttributeType::AlwaysAuthenticate])?
+        .into_iter()
+        .any(|attribute| matches!(attribute, Attribute::AlwaysAuthenticate(true))))
 }
 
 /// Con qué mecanismo de la ranura se cumple el algoritmo, y sobre qué bytes.

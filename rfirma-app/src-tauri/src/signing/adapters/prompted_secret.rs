@@ -5,14 +5,14 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::prompted_holder_of;
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::{SecretName, StoreSecret};
+use crate::identity::domain::secret::{PinWarning, SecretName, StoreSecret};
 use crate::identity::ports::{
     prompted_until_accepted, OriginWindow, PromptedError, SecretPromptRequest, SecretPrompter,
 };
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{self, CycleFailure, SigningSession};
 use crate::signing::domain::Language;
-use crate::signing::ports::Signer;
+use crate::signing::ports::{in_one_login, Signer};
 
 fn secret_was_rejected(failure: &CycleFailure) -> bool {
     matches!(
@@ -50,11 +50,13 @@ pub fn sign_on_token_with_prompter(
         holder,
         language,
         incorrect_secret: false,
+        pin_warning: PinWarning::Quiet,
         origin_window: Some(origin_window),
     };
     prompted_until_accepted(
         prompter,
         request,
+        || Ok(signer.pin_warning(&certificate)?),
         |typed| session::sign_on_token(signer, session, typed),
         secret_was_rejected,
     )
@@ -101,11 +103,13 @@ pub fn secret_for_the_batch(
         holder: prompted_holder_of(certificate.der()),
         language,
         incorrect_secret: false,
+        pin_warning: PinWarning::Quiet,
         origin_window: Some(OriginWindow::Site),
     };
     let (secret, ()) = prompted_until_accepted(
         prompter,
         request,
+        || signer.pin_warning(certificate.reference()),
         |secret| signer.accepts_the_secret(certificate.reference(), secret),
         token_secret_rejected,
     )
@@ -114,6 +118,21 @@ pub fn secret_for_the_batch(
         PromptedError::Attempt(token_error) => Failure::from(token_error),
     })?;
     Ok(secret)
+}
+
+/// El lote entero con el secreto del lote: lo pide una vez, o toma el tecleado, y firma con él cada elemento (ADR-0047).
+pub fn batch_signed_with_one_secret(
+    signer: &dyn Signer,
+    certificate: &TokenCertificate,
+    prompter: &dyn SecretPrompter,
+    language: Language,
+    typed: &ProtectedSecret,
+    sign_the_batch: impl FnOnce(&ProtectedSecret) -> Result<(), Failure>,
+) -> Result<(), Failure> {
+    in_one_login(signer, certificate.reference(), || {
+        let secret = secret_for_the_batch(signer, certificate, prompter, language, typed)?;
+        sign_the_batch(&secret)
+    })
 }
 
 #[cfg(test)]

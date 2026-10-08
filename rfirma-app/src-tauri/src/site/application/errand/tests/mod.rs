@@ -2,6 +2,7 @@
 
 mod support;
 mod support_requests;
+mod support_token;
 mod support_window;
 
 mod automatic_selection;
