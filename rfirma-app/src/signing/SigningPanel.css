@@ -116,8 +116,7 @@
 }
 
 /* Sin caja ni borde: el triángulo y el título en una fila, el cuerpo debajo
-   sangrado hasta la columna del texto (docs/design/panel-de-firma.md §
-   Estados → Sin certificados). */
+   sangrado hasta la columna del texto. */
 .panel__no-certificates {
   display: flex;
   flex-direction: column;
@@ -128,12 +127,10 @@
   padding-left: 26px;
 }
 
-/* La fila del pie cuando no hay certificados: «Añadir un certificado…» se
-   lleva el ancho que sobra y «Volver a buscar» solo el suyo, altura de 44 px
-   como el botón partido que sustituye. */
+/* La fila bajo el selector sin certificados: «Añadir un certificado…» se
+   lleva el ancho que sobra y «Volver a buscar» solo el suyo. */
 .panel__certificate-actions {
   align-items: stretch;
-  height: 44px;
 }
 
 .panel__add-certificate {
