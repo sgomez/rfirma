@@ -98,6 +98,18 @@ es la de un worktree que ya no existe, el `build.rs` de `rfirma` se compiló
 desde ese worktree y el target compartido (ADR-0014) lo conserva. Un
 `touch rfirma-app/src-tauri/build.rs` en el tuyo obliga a recompilarlo.
 
+## La tarjeta falsa
+
+`fake-pkcs11/`, al lado de `src/`, es un crate del workspace con un módulo
+PKCS#11 que se porta como un DNIe. Entra en las pruebas como dev-dependency y
+por la misma costura que SoftHSM: `Store::module(card.module())` es un almacén
+de clase tarjeta. **No lo añadas a `CANDIDATE_MODULES` ni a un paquete**
+(ADR-0004), y no pongas ningún trait entre el adaptador y `cryptoki`. Cada
+`FakeCard` es independiente y registra sus llamadas (`calls_to("C_Login")`).
+Sus pruebas de conducta están en `fake-pkcs11/tests/`; las del backend contra
+él, en `tests/fake_card.rs` (grada B) y `tests/native_fake_card.rs` (grada C).
+Un almacén de clase tarjeta nunca hace el login a ciegas al listar.
+
 ## Las pruebas que se leen a sí mismas
 
 Leen el código **como texto**: `signing/application/cycle/tests.rs`,
