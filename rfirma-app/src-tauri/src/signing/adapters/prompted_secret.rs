@@ -12,7 +12,7 @@ use crate::identity::ports::{
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{self, CycleFailure, SigningSession};
 use crate::signing::domain::Language;
-use crate::signing::ports::Signer;
+use crate::signing::ports::{in_one_login, Signer};
 
 fn secret_was_rejected(failure: &CycleFailure) -> bool {
     matches!(
@@ -118,6 +118,21 @@ pub fn secret_for_the_batch(
         PromptedError::Attempt(token_error) => Failure::from(token_error),
     })?;
     Ok(secret)
+}
+
+/// El lote entero con el secreto del lote: lo pide una vez, o toma el tecleado, y firma con él cada elemento (ADR-0047).
+pub fn batch_signed_with_one_secret(
+    signer: &dyn Signer,
+    certificate: &TokenCertificate,
+    prompter: &dyn SecretPrompter,
+    language: Language,
+    typed: &ProtectedSecret,
+    sign_the_batch: impl FnOnce(&ProtectedSecret) -> Result<(), Failure>,
+) -> Result<(), Failure> {
+    in_one_login(signer, certificate.reference(), || {
+        let secret = secret_for_the_batch(signer, certificate, prompter, language, typed)?;
+        sign_the_batch(&secret)
+    })
 }
 
 #[cfg(test)]

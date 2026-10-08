@@ -67,6 +67,24 @@ pub trait Signer {
         algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError>;
+
+    /// Hasta `release_the_login`, las firmas del certificado comparten un solo login, y el primer fallo corta las que quedan (ADR-0047).
+    fn hold_one_login(&self, _reference: &CertificateRef) {}
+
+    /// Cierra el login que compartían las firmas del certificado.
+    fn release_the_login(&self, _reference: &CertificateRef) {}
+}
+
+/// Corre `work` con un solo login para todas las firmas del certificado, y lo cierra al acabar (ADR-0047).
+pub fn in_one_login<T>(
+    signer: &dyn Signer,
+    reference: &CertificateRef,
+    work: impl FnOnce() -> T,
+) -> T {
+    signer.hold_one_login(reference);
+    let done = work();
+    signer.release_the_login(reference);
+    done
 }
 
 /// El documento que se va a firmar, leído de donde esté.

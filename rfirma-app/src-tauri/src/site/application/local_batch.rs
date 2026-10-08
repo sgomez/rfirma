@@ -58,7 +58,8 @@ pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine>(
 
         match sign_one(desk, certificate, algorithm, secret, sign) {
             Ok(signature) => results.push(LocalBatchResult::signed(sign.id(), signature)),
-            Err(refusal) => {
+            Err(ItemFailure::OfTheCard(refusal)) => return Err(SiteRefusal::Signing(refusal)),
+            Err(ItemFailure::OfTheItem(refusal)) => {
                 results.push(LocalBatchResult::failed(sign.id(), refusal.description()));
                 if batch.stops_on_error() {
                     let last = results.len() - 1;
@@ -74,6 +75,18 @@ pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine>(
     Ok(results)
 }
 
+/// Por qué no salió la firma de un elemento: el elemento mismo, o la tarjeta, que corta el lote entero (ADR-0047).
+enum ItemFailure {
+    OfTheItem(SiteRefusal),
+    OfTheCard(SigningRefusal),
+}
+
+impl From<SiteRefusal> for ItemFailure {
+    fn from(refusal: SiteRefusal) -> Self {
+        Self::OfTheItem(refusal)
+    }
+}
+
 /// El ciclo de una firma para un elemento: abre, firma con el secreto ya conocido y cierra, borrando su documento de paso al terminar, salga bien o mal.
 fn sign_one<E: FilterEngine, P: PolicyEngine>(
     desk: &ErrandDesk<'_, E, P>,
@@ -81,7 +94,7 @@ fn sign_one<E: FilterEngine, P: PolicyEngine>(
     algorithm: AskedAlgorithm,
     secret: &ProtectedSecret,
     sign: &LocalSingleSign,
-) -> Result<Vec<u8>, SiteRefusal> {
+) -> Result<Vec<u8>, ItemFailure> {
     refuse_a_countersignature_outside_cades_and_xades(sign.round(), sign.effective_format())
         .map_err(|refusal| SiteRefusal::LocalBatch(refusal.to_string()))?;
     let format = Format::from(sign.effective_format());
@@ -91,19 +104,23 @@ fn sign_one<E: FilterEngine, P: PolicyEngine>(
     let from_the_site: BTreeMap<String, String> = sign.extra_params().iter().cloned().collect();
 
     let result = (|| {
-        desk.neighbours.begin(SiteSigningRequest {
-            document: &document,
-            certificate,
-            format,
-            algorithm,
-            operation: sign.round().into(),
-            from_the_site: &from_the_site,
-            allow_unregistered_signatures: false,
-        })?;
+        desk.neighbours
+            .begin(SiteSigningRequest {
+                document: &document,
+                certificate,
+                format,
+                algorithm,
+                operation: sign.round().into(),
+                from_the_site: &from_the_site,
+                allow_unregistered_signatures: false,
+            })
+            .map_err(SiteRefusal::from)?;
 
-        desk.neighbours.sign_on_token(secret)?;
+        desk.neighbours
+            .sign_on_token(secret)
+            .map_err(ItemFailure::OfTheCard)?;
 
-        let signed = desk.neighbours.finish()?;
+        let signed = desk.neighbours.finish().map_err(SiteRefusal::from)?;
         Ok(signed.signature)
     })();
 

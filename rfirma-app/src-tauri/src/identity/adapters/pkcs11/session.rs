@@ -16,6 +16,7 @@ use cryptoki::types::AuthPin;
 
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::PinWarning;
 use crate::identity::domain::store::Store;
 
@@ -137,6 +138,19 @@ pub(super) fn refused_login(context: &Pkcs11, slot: Slot, error: Error) -> Token
         return refused.on_the_final_try();
     }
     refused
+}
+
+/// Una sesión de la ranura con el usuario dentro, tras comprobar que la tarjeta no declara el PIN bloqueado (ADR-0047).
+pub(super) fn logged_in(
+    context: &Pkcs11,
+    slot: Slot,
+    secret: &ProtectedSecret,
+) -> Result<Session, TokenError> {
+    token_info_unless_locked(context, slot)?;
+    let pin = secret
+        .as_str()
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
+    logged_in_session(context, slot, pin)
 }
 
 /// La clave privada del certificado emparejada por `CKA_ID`.

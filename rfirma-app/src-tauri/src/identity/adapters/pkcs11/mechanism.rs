@@ -11,10 +11,8 @@ use crate::identity::domain::ecdsa;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 
-use super::session::{
-    context, logged_in_session, private_key, slot_of, the_store_is_really_there,
-    token_info_unless_locked,
-};
+use super::one_login::{self, Refused};
+use super::session::{context, logged_in, private_key, slot_of, the_store_is_really_there};
 
 pub(super) fn sign_holding_the_turn(
     reference: &CertificateRef,
@@ -22,38 +20,45 @@ pub(super) fn sign_holding_the_turn(
     algorithm: SignatureAlgorithm,
     data: &[u8],
 ) -> Result<Vec<u8>, TokenError> {
+    if let Some(cut) = one_login::cut_short(reference) {
+        return Err(cut);
+    }
     let store = reference.store();
     the_store_is_really_there(&store)?;
     let context = context(&store)?;
     let slot = slot_of(&context, reference.token_label())?;
     let offered = the_slot_offers(&context, slot, algorithm)?;
-    token_info_unless_locked(&context, slot)?;
-    let pin = secret
-        .as_str()
-        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
-    let session = logged_in_session(&context, slot, pin)?;
+    let log_in = || logged_in(&context, slot, secret);
+    let sign = |session: &Session| signed_in(session, reference, offered, algorithm, data);
 
-    let signature = private_key(&session, reference)
-        .and_then(|key| {
-            the_key_is_of_the_kind(&session, key, algorithm)?;
-            Ok(key)
-        })
-        .and_then(|key| match offered {
-            Offered::Composed => session
-                .sign(&algorithm.mechanism(), key, data)
-                .map_err(TokenError::from),
-            Offered::EcdsaOverTheDigest => session
-                .sign(&Mechanism::Ecdsa, key, &ecdsa::digest(algorithm, data)?)
-                .map_err(TokenError::from),
-        })
-        .and_then(|signature| match algorithm.key_kind() {
-            KeyKind::Ec => ecdsa::der_encoded(&signature),
-            KeyKind::Rsa => Ok(signature),
-        });
-
+    if let Some(signature) = one_login::within(reference, secret, log_in, sign, Refused::CutsIt) {
+        return signature;
+    }
+    let session = log_in()?;
+    let signature = sign(&session);
     let _ = session.logout();
-
     signature
+}
+
+fn signed_in(
+    session: &Session,
+    reference: &CertificateRef,
+    offered: Offered,
+    algorithm: SignatureAlgorithm,
+    data: &[u8],
+) -> Result<Vec<u8>, TokenError> {
+    let key = private_key(session, reference)?;
+    the_key_is_of_the_kind(session, key, algorithm)?;
+    let signature = match offered {
+        Offered::Composed => session.sign(&algorithm.mechanism(), key, data)?,
+        Offered::EcdsaOverTheDigest => {
+            session.sign(&Mechanism::Ecdsa, key, &ecdsa::digest(algorithm, data)?)?
+        }
+    };
+    match algorithm.key_kind() {
+        KeyKind::Ec => ecdsa::der_encoded(&signature),
+        KeyKind::Rsa => Ok(signature),
+    }
 }
 
 /// Con qué mecanismo de la ranura se cumple el algoritmo, y sobre qué bytes.
