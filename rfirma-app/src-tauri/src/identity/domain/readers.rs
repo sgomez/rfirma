@@ -1,7 +1,5 @@
 //! Los lectores de tarjetas y el estado que la ventana enseña de ellos: el de cada uno y el que los resume.
 
-use crate::identity::domain::holder::attribute;
-
 /// Un lector tal como lo ve PC/SC: su nombre y si tiene una tarjeta dentro.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Reader {
@@ -77,14 +75,6 @@ pub fn status_of(readers: &[Reader], listing: Listing) -> ReaderStatus {
             Listing::Done(None) => ReaderStatus::Unreadable,
         }
     }))
-}
-
-/// Si el emisor es una CA del DNIe: `CN=AC DNIE *`, `OU=DNIE`, la Dirección General de la Policía y `C=ES`.
-pub fn is_issued_for_a_dnie(issuer: &str) -> bool {
-    attribute("CN=", issuer).starts_with("AC DNIE ")
-        && attribute("OU=", issuer) == "DNIE"
-        && attribute("O=", issuer) == "DIRECCION GENERAL DE LA POLICIA"
-        && attribute("C=", issuer) == "ES"
 }
 
 #[cfg(test)]

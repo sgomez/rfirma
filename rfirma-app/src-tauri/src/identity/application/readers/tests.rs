@@ -3,7 +3,7 @@ use std::sync::Mutex;
 
 use super::*;
 use crate::identity::application::certificates::listed_rows;
-use crate::identity::application::tests::{a_usable_certificate, NoMemory, NoToken};
+use crate::identity::application::tests::{NoMemory, NoToken, TestAuthority};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
@@ -32,10 +32,10 @@ impl Counting {
 }
 
 fn a_certificate_in(store: &Store) -> TokenCertificate {
-    let certificate = a_usable_certificate("FIRMA");
+    let certificate = TestAuthority::root("Firmante de pruebas");
     TokenCertificate::new(
         CertificateRef::new(store.clone(), "token", "FIRMA", vec![0x01]),
-        certificate.der().to_vec(),
+        certificate.der(),
     )
 }
 

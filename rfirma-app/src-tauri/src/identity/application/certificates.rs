@@ -50,7 +50,7 @@ impl From<KeyringError> for InstallError {
     }
 }
 
-/// Certificados de los tokens conectados, ya como filas con su asa (ADR-0011).
+/// Los certificados del escritorio, ya como filas con su asa: sin el de autenticación del DNIe, como AutoFirma (ADR-0011).
 pub fn listed_rows(
     token: &dyn Token,
     stores: &[Store],
@@ -63,7 +63,7 @@ pub fn listed_rows(
     let found = token.list_across(stores)?;
     last.keep(&found);
     Ok(rows_of(
-        found,
+        on_the_desktop(found),
         installed_dir,
         listed,
         installed_copies,
@@ -76,7 +76,7 @@ pub fn certificates_with_their_chains(
     token: &dyn Token,
     stores: &[Store],
 ) -> Result<Vec<TokenCertificate>, TokenError> {
-    let found = token.list_across(stores)?;
+    let found = holders_only(token.list_across(stores)?);
     let mut neighbours: HashMap<Store, Vec<TokenCertificate>> = HashMap::new();
 
     Ok(found
@@ -90,6 +90,21 @@ pub fn certificates_with_their_chains(
             certificate.with_its_issuers(issuers)
         })
         .collect())
+}
+
+/// Lo que se enseña en el escritorio: sin autoridades ni el de autenticación del DNIe, como AutoFirma.
+pub fn on_the_desktop(found: Vec<TokenCertificate>) -> Vec<TokenCertificate> {
+    holders_only(found)
+        .into_iter()
+        .filter(|certificate| !certificate.is_a_dnie_authentication())
+        .collect()
+}
+
+fn holders_only(found: Vec<TokenCertificate>) -> Vec<TokenCertificate> {
+    found
+        .into_iter()
+        .filter(|certificate| !certificate.is_an_authority())
+        .collect()
 }
 
 /// Cuántos certificados firmables propios tiene cada clase de almacén que tenga alguno.
@@ -206,6 +221,7 @@ fn listed_as(row: ChosenCopy, id: String) -> ListedCertificate {
         certificate_serial_number: certificate.serial_number().unwrap_or_default(),
         store: row.store,
         stores: row.stores,
+        from_a_dnie: certificate.is_from_a_dnie(),
         status: certificate.status(),
         remembered: row.remembered,
     }

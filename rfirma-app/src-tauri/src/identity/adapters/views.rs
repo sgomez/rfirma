@@ -129,7 +129,10 @@ impl From<ListedCertificate> for CertificateView {
             stores: certificate
                 .stores
                 .into_iter()
-                .map(|class| store_name(class).to_owned())
+                .map(|class| match class {
+                    StoreClass::Card if certificate.from_a_dnie => "dnie".to_owned(),
+                    _ => store_name(class).to_owned(),
+                })
                 .collect(),
             status: certificate.status.into(),
             remembered: certificate.remembered,

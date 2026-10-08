@@ -4,11 +4,11 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::thread::JoinHandle;
 
-use crate::identity::application::certificates::{rows_keeping_handles, ListedCertificates};
-use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
-use crate::identity::domain::readers::{
-    is_issued_for_a_dnie, status_of, Listing, Reader, ReaderStatus, ReadyCard,
+use crate::identity::application::certificates::{
+    on_the_desktop, rows_keeping_handles, ListedCertificates,
 };
+use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+use crate::identity::domain::readers::{status_of, Listing, Reader, ReaderStatus, ReadyCard};
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{CertificateMemory, ReaderWatch, Token};
 
@@ -80,7 +80,7 @@ impl CardListing<'_> {
         found.extend(on_the_cards);
         self.last.keep(&found);
         let rows = rows_keeping_handles(
-            found,
+            on_the_desktop(found),
             self.installed_dir,
             self.listed,
             self.installed_copies,
@@ -156,11 +156,7 @@ fn ready_card_among(on_the_cards: &[TokenCertificate]) -> Option<ReadyCard> {
     if on_the_cards.is_empty() {
         return None;
     }
-    let a_dnie = on_the_cards.iter().any(|certificate| {
-        certificate
-            .issuer()
-            .is_some_and(|issuer| is_issued_for_a_dnie(&issuer))
-    });
+    let a_dnie = on_the_cards.iter().any(TokenCertificate::is_from_a_dnie);
     Some(if a_dnie {
         ReadyCard::Dnie
     } else {

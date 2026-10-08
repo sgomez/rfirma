@@ -159,11 +159,8 @@ fn putting_the_card_in_reads_it_and_then_lists_its_certificates_as_a_ready_dnie(
         .certificates
         .as_deref()
         .expect("la lista con la tarjeta");
-    assert!(
-        labels(listed).contains(&SIGNING_CERTIFICATE),
-        "{:?}",
-        labels(listed)
-    );
+    assert_eq!(labels(listed), vec![SIGNING_CERTIFICATE]);
+    assert!(listed[0].from_a_dnie);
 }
 
 #[test]
