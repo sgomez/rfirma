@@ -333,3 +333,24 @@ export interface CertificateSection {
   /** Vuelve a buscar los certificados, que es también cambiar de módulo. */
   lookAgain: () => void | Promise<void>;
 }
+
+/** Lo elegido sigue si su tarjeta sigue; sin elegido, se elige el recordado que acaba de llegar. */
+export function keptAcrossTheReader(
+  previous: CertificateState,
+  found: readonly Certificate[],
+): CertificateState {
+  if (found.length === 0) return { kind: "empty" };
+  if (previous.kind === "chosen") {
+    const still = found.find((one) => one.id === previous.certificate.id);
+    return still === undefined
+      ? { kind: "unchosen", certificates: found }
+      : { kind: "chosen", certificate: still, certificates: found };
+  }
+  const before = previous.kind === "unchosen" ? previous.certificates : [];
+  const arrived = found.find(
+    (one) => one.remembered && isUsable(one.status) && !before.some((known) => known.id === one.id),
+  );
+  return arrived === undefined
+    ? { kind: "unchosen", certificates: found }
+    : { kind: "chosen", certificate: arrived, certificates: found };
+}

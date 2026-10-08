@@ -3,8 +3,15 @@
 import { useEffect, useState } from "react";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import { classify, type NamedFailure } from "../errors/classify";
+import { type Certificate, NO_READER, type ReaderStatus } from "../signing/certificate";
 import type { Errand, SiteErrandPort } from "./errand";
 import { SedeView } from "./SedeView";
+
+/** La lista que trajo un lector para el momento del trámite en que llegó; otro momento vuelve a la de la sede. */
+interface LiveList {
+  errand: Errand;
+  certificates: readonly Certificate[];
+}
 
 interface SedeWindowProps {
   errands: SiteErrandPort;
@@ -78,6 +85,17 @@ function SedeDialog({
     void externalDestinations?.open("discussions");
   };
 
+  const [reader, setReader] = useState<ReaderStatus>(NO_READER);
+  const [live, setLive] = useState<LiveList | null>(null);
+  useEffect(
+    () =>
+      errands.followReaders((news) => {
+        setReader(news.reader);
+        if (news.certificates !== null) setLive({ errand, certificates: news.certificates });
+      }),
+    [errands, errand],
+  );
+
   const [installFailure, setInstallFailure] = useState<NamedFailure | null>(null);
   // Un fallo al instalar se enseña en línea, con la misma clasificación que
   // Preferencias; cancelar el selector de fichero no rechaza nada.
@@ -95,6 +113,8 @@ function SedeDialog({
       errand={errand}
       consentCountdown={consentCountdown}
       installFailure={installFailure}
+      reader={reader}
+      liveCertificates={live?.errand === errand ? live.certificates : null}
       onConsent={(certificateId) => void errands.consent(certificateId)}
       onConfirmSignatures={() => errands.confirmSignatures()}
       onMarkArea={(area) => errands.markArea(area)}

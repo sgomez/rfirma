@@ -42,6 +42,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
   let emit: ((view: SiteErrandView) => void) | null = null;
   const calls: Record<keyof SiteCommands, Mock> = {
     watch: fn(),
+    followReaders: fn(),
     readErrand: fn(),
     identify: fn(),
     confirmSignatures: fn(),
@@ -68,6 +69,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
       emit = onView;
       return stop;
     },
+    followReaders: () => () => {},
     readErrand: async () => {
       calls.readErrand();
       return null;

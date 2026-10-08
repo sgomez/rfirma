@@ -41,6 +41,14 @@ const terminalOrder = { documentPath: "/home/ada/contratos/convenio.pdf" };
 
 export const Consent: Story = { args: { ...consentProps(consentStage()) } };
 
+export const ReaderWithCard: Story = {
+  args: { ...consentProps(consentStage()), reader: { kind: "dnieReady" } },
+};
+
+export const ReadingTheCard: Story = {
+  args: { ...consentProps(consentStage()), reader: { kind: "reading" } },
+};
+
 export const Countdown: Story = {
   args: { ...consentProps(consentStage()), countdown: true },
 };

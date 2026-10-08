@@ -9,6 +9,7 @@ import {
   type PreviousSignaturesReport,
 } from "./signing/previousSignatures";
 import type { StoreSecret } from "./signing/secret";
+import { tauriCertificateStore } from "./tauriSigning";
 import { stage } from "./tauriStage";
 import { pdfjsLoader } from "./viewer/pdfjsLoader";
 
@@ -52,6 +53,7 @@ export function tauriSiteErrands(): SiteErrandPort {
         void stopping.then((stop) => stop());
       };
     },
+    followReaders: (onNews) => tauriCertificateStore().followReaders(onNews),
     readErrand: () => invoke<SiteErrandView | null>("read_site_errand"),
     identify: (certificate) => stage(() => invoke<void>("site_identify", { certificate })),
     confirmSignatures: () => stage(() => invoke<void>("site_confirm_signatures")),

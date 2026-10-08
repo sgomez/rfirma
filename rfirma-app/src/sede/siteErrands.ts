@@ -1,6 +1,6 @@
 //! El adaptador de `SiteErrandPort` sobre las órdenes del backend (`SiteCommands`): la suscripción y el recorrido de marcar, confirmar, consentir, firmar, guardar, cargar y cancelar. Sin React y sin Tauri.
 
-import type { Certificate } from "../signing/certificate";
+import type { Certificate, ReaderNews } from "../signing/certificate";
 import type { StageResult } from "../signing/flow";
 import type { PreviousSignaturesReport } from "../signing/previousSignatures";
 import type { StoreSecret } from "../signing/secret";
@@ -72,6 +72,8 @@ export interface SiteCommands {
    * respuesta normal.
    */
   watch(onView: (view: SiteErrandView) => void): () => void;
+  /** Las noticias de los lectores de tarjetas, hasta que se llame a lo que devuelve. */
+  followReaders(onNews: (news: ReaderNews) => void): () => void;
   /**
    * `read_site_errand`: en qué momento está el trámite **ahora**, para la
    * ventana que acaba de montarse.
@@ -317,6 +319,8 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
         stop();
       };
     },
+
+    followReaders: (onNews) => commands.followReaders(onNews),
 
     consent,
 
