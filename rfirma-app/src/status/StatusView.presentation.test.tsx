@@ -23,6 +23,8 @@ const table: Record<keyof typeof stories, Expected> = {
       "rFirma",
       "5 certificados",
       "2 de 2 navegadores",
+      "Lector de tarjetas",
+      "Detectado",
     ],
     buttons: ["Retirar…", "Ver navegadores", "Ver dónde"],
     absent: ["Atención", "Incorrecto"],
@@ -101,6 +103,20 @@ const table: Record<keyof typeof stories, Expected> = {
   SomeUserCertificates: {
     texts: ["5 certificados", "Correcto"],
     buttons: ["Ver dónde"],
+  },
+  CardReaderDetected: {
+    texts: ["Lector de tarjetas", "Detectado", "Correcto"],
+    buttons: [],
+  },
+  CardReaderMissing: {
+    texts: ["Lector de tarjetas", "No detectado"],
+    absent: ["Atención", "No aplica"],
+    buttons: [],
+  },
+  CardReaderNotSupported: {
+    texts: ["Lector de tarjetas", "No soportado"],
+    buttons: [],
+    absent: ["No aplica"],
   },
   UserCertificatesDetailExpanded: {
     texts: ["Almacén de Windows", "Firefox", "Tarjeta", "Fichero instalado"],

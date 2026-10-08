@@ -1,6 +1,6 @@
 //! Las filas y los informes de ejemplo de las historias del panel de estado y de la retirada.
 
-import type { SignalRow, StoreDetail, WithdrawalReport } from "../status";
+import { cardReaderRow, type SignalRow, type StoreDetail, type WithdrawalReport } from "../status";
 
 const base = { action: null, detail: null, candidates: null, restartFirefoxNotice: false };
 
@@ -145,6 +145,12 @@ export const someUserCertificates: SignalRow = {
     ],
   },
 };
+
+export const cardReaderDetected = cardReaderRow({ kind: "noCard" });
+
+export const cardReaderMissing = cardReaderRow({ kind: "noReader" });
+
+export const cardReaderNotSupported = cardReaderRow({ kind: "unavailable" });
 
 export const withdrawalStores: StoreDetail[] = [
   { brand: "firefox", trusted: true },

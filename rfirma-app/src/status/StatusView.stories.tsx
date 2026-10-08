@@ -11,6 +11,9 @@ import {
   caInstalledEverywhere,
   caInstalledNeedsFirefoxRestart,
   caMissing,
+  cardReaderDetected,
+  cardReaderMissing,
+  cardReaderNotSupported,
   noUserCertificates,
   sitesHandledByRfirma,
   sitesNotConfigured,
@@ -56,6 +59,7 @@ export const EverythingCorrect = panel([
   sitesHandledByRfirma,
   caInstalledEverywhere,
   someUserCertificates,
+  cardReaderDetected,
 ]);
 
 export const SomethingToRepair = panel([
@@ -63,6 +67,7 @@ export const SomethingToRepair = panel([
   sitesNotConfigured,
   caMissing,
   noUserCertificates,
+  cardReaderMissing,
 ]);
 
 export const Checking = panel([versionChecking, sitesHandledByRfirma, caChecking]);
@@ -102,6 +107,12 @@ export const CertificateDetailExpanded = panel([caHalfInstalled], {
 export const NoUserCertificates = panel([noUserCertificates]);
 
 export const SomeUserCertificates = panel([someUserCertificates]);
+
+export const CardReaderDetected = panel([cardReaderDetected]);
+
+export const CardReaderMissing = panel([cardReaderMissing]);
+
+export const CardReaderNotSupported = panel([cardReaderNotSupported]);
 
 export const UserCertificatesDetailExpanded = panel([someUserCertificates], {
   initiallyExpanded: ["userCertificates"],

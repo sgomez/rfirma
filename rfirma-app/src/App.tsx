@@ -222,7 +222,6 @@ export function App({
       <MainWindow
         menuAnchor={anchor}
         hasAttention={warningVisible}
-        reader={certificateListing.reader}
         onOpenStatus={() => setView("status")}
         onOpenPreferences={() => setView("preferences")}
         onOpenHelp={openHelp}
@@ -234,6 +233,7 @@ export function App({
               externalDestinations={externalDestinations}
               onClose={() => setView(null)}
               onRowsChange={setStatusRows}
+              reader={certificateListing.reader}
             />
           ) : view === "preferences" && settings !== null ? (
             <PreferencesView

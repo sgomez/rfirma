@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { ReaderStatus } from "../signing/certificate";
 import { Header } from "./Header";
 import "./MainWindow.css";
 import type { MenuAnchor } from "./menuAnchor";
@@ -12,8 +11,6 @@ interface MainWindowProps {
   menuAnchor: MenuAnchor;
   /** Si «Estado de rFirma» lleva el triángulo de aviso. Ver [`Header`]. */
   hasAttention?: boolean;
-  /** El estado de los lectores de tarjetas, para el indicador de la cabecera. Ver [`Header`]. */
-  reader?: ReaderStatus;
   onOpenStatus?: () => void;
   onOpenPreferences: () => void;
   onOpenHelp?: () => void;
@@ -63,7 +60,6 @@ interface MainWindowProps {
 export function MainWindow({
   menuAnchor,
   hasAttention = false,
-  reader,
   onOpenStatus = () => {},
   onOpenPreferences,
   onOpenHelp = () => {},
@@ -87,7 +83,6 @@ export function MainWindow({
       <Header
         menuAnchor={menuAnchor}
         hasAttention={hasAttention}
-        reader={reader}
         onOpenStatus={onOpenStatus}
         onOpenPreferences={onOpenPreferences}
         onOpenHelp={onOpenHelp}

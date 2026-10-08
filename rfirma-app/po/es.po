@@ -276,22 +276,6 @@ msgstr "Menú"
 msgid "header.attention"
 msgstr "Estado de rFirma: requiere atención"
 
-#. Texto, tooltip y nombre accesible del indicador de lector de tarjetas de la cabecera.
-msgid "header.reader.detected"
-msgstr "Lector de tarjetas: detectado"
-
-msgid "header.reader.missing"
-msgstr "Lector de tarjetas: no detectado"
-
-msgid "header.reader.unsupported"
-msgstr "Lector de tarjetas: no soportado"
-
-msgid "header.reader.missingHint"
-msgstr "Conecta un lector de tarjetas"
-
-msgid "header.reader.unsupportedHint"
-msgstr "Esta versión no puede detectar lectores"
-
 msgid "header.preferences"
 msgstr "Preferencias…"
 
@@ -948,6 +932,9 @@ msgstr "Aplicación predeterminada para firmar en sedes"
 msgid "status.signals.userCertificates"
 msgstr "Tus certificados"
 
+msgid "status.signals.cardReader"
+msgstr "Lector de tarjetas"
+
 msgid "status.signals.localCaCertificate"
 msgstr "Certificado de rFirma"
 
@@ -986,6 +973,15 @@ msgstr "Sin configurar"
 
 msgid "status.values.siteSignature.unavailable"
 msgstr "Gestionada por tu escritorio"
+
+msgid "status.values.cardReader.detected"
+msgstr "Detectado"
+
+msgid "status.values.cardReader.missing"
+msgstr "No detectado"
+
+msgid "status.values.cardReader.unsupported"
+msgstr "No soportado"
 
 msgid "status.values.userCertificates.none"
 msgstr "Ninguno"
