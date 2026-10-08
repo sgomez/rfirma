@@ -43,6 +43,8 @@ static FUNCTIONS: CK_FUNCTION_LIST = {
     list.C_FindObjectsFinal = Some(find_objects_final);
     list.C_SignInit = Some(sign_init);
     list.C_Sign = Some(sign);
+    list.C_SignUpdate = Some(sign_update);
+    list.C_SignFinal = Some(sign_final);
     list
 };
 
@@ -81,11 +83,40 @@ fn entry(
     detail: &str,
     body: impl FnOnce(&mut Module) -> Result<(), CK_RV>,
 ) -> CK_RV {
+    run(function, detail, true, body)
+}
+
+/// Como `entry`, para lo que responde el lector aunque no tenga tarjeta.
+fn reader_entry(
+    function: &str,
+    detail: &str,
+    body: impl FnOnce(&mut Module) -> Result<(), CK_RV>,
+) -> CK_RV {
+    run(function, detail, false, body)
+}
+
+fn run(
+    function: &str,
+    detail: &str,
+    needs_card: bool,
+    body: impl FnOnce(&mut Module) -> Result<(), CK_RV>,
+) -> CK_RV {
     let rv = match state().as_mut() {
         None => CKR_CRYPTOKI_NOT_INITIALIZED,
+        Some(_) if needs_card && card::card_removed(card::card_dir()) => removed_card_rv(function),
         Some(module) => body(module).err().unwrap_or(CKR_OK),
     };
     record(function, detail, rv)
+}
+
+/// Lo que responde un lector sin tarjeta a una pregunta sobre ella, o sobre una sesión que tuvo.
+fn removed_card_rv(function: &str) -> CK_RV {
+    match function {
+        "C_GetTokenInfo" | "C_GetMechanismList" | "C_GetMechanismInfo" | "C_OpenSession" => {
+            CKR_TOKEN_NOT_PRESENT
+        }
+        _ => CKR_DEVICE_REMOVED,
+    }
 }
 
 fn out<'a, T>(pointer: *mut T) -> Result<&'a mut T, CK_RV> {
@@ -138,24 +169,35 @@ unsafe extern "C" fn finalize(reserved: *mut c_void) -> CK_RV {
 }
 
 unsafe extern "C" fn get_info(target: *mut CK_INFO) -> CK_RV {
-    entry("C_GetInfo", "", |_| {
+    reader_entry("C_GetInfo", "", |_| {
         *out(target)? = info::library();
         Ok(())
     })
 }
 
 unsafe extern "C" fn get_slot_list(
-    _token_present: CK_BBOOL,
+    token_present: CK_BBOOL,
     list: *mut CK_SLOT_ID,
     count: *mut CK_ULONG,
 ) -> CK_RV {
-    entry("C_GetSlotList", "", |_| write_list(&[SLOT], list, count))
+    reader_entry("C_GetSlotList", "", |_| {
+        let slots: &[CK_SLOT_ID] = if token_present != CK_FALSE && card_removed() {
+            &[]
+        } else {
+            &[SLOT]
+        };
+        write_list(slots, list, count)
+    })
+}
+
+fn card_removed() -> bool {
+    card::card_removed(card::card_dir())
 }
 
 unsafe extern "C" fn get_slot_info(slot: CK_SLOT_ID, target: *mut CK_SLOT_INFO) -> CK_RV {
-    entry("C_GetSlotInfo", "", |_| {
+    reader_entry("C_GetSlotInfo", "", |_| {
         check_slot(slot)?;
-        *out(target)? = info::slot();
+        *out(target)? = info::slot(!card_removed());
         Ok(())
     })
 }
@@ -389,13 +431,54 @@ unsafe extern "C" fn sign(
             return Err(CKR_ARGUMENTS_BAD);
         }
         let produced = module.sign(session, slice::from_raw_parts(data, data_len as usize))?;
-        if (*capacity as usize) < produced.len() {
-            *capacity = produced.len() as CK_ULONG;
-            return Err(CKR_BUFFER_TOO_SMALL);
-        }
-        slice::from_raw_parts_mut(signature, produced.len()).copy_from_slice(&produced);
-        *capacity = produced.len() as CK_ULONG;
-        module.sign_done(session);
-        Ok(())
+        deliver(module, session, &produced, signature, capacity)
     })
+}
+
+unsafe extern "C" fn sign_update(
+    session: CK_SESSION_HANDLE,
+    part: *mut CK_BYTE,
+    part_len: CK_ULONG,
+) -> CK_RV {
+    entry("C_SignUpdate", "", |module| {
+        if part.is_null() {
+            module.sign_done(session);
+            return Err(CKR_ARGUMENTS_BAD);
+        }
+        module.sign_update(session, slice::from_raw_parts(part, part_len as usize))
+    })
+}
+
+unsafe extern "C" fn sign_final(
+    session: CK_SESSION_HANDLE,
+    signature: *mut CK_BYTE,
+    signature_len: *mut CK_ULONG,
+) -> CK_RV {
+    entry("C_SignFinal", "", |module| {
+        let capacity = out(signature_len)?;
+        if signature.is_null() {
+            *capacity = module.signature_len(session)? as CK_ULONG;
+            return Ok(());
+        }
+        let produced = module.sign_final(session)?;
+        deliver(module, session, &produced, signature, capacity)
+    })
+}
+
+/// Entrega la firma si cabe, y cierra la operación; si no cabe, la deja abierta para repetir con más sitio.
+unsafe fn deliver(
+    module: &mut Module,
+    session: CK_SESSION_HANDLE,
+    produced: &[u8],
+    signature: *mut CK_BYTE,
+    capacity: &mut CK_ULONG,
+) -> Result<(), CK_RV> {
+    if (*capacity as usize) < produced.len() {
+        *capacity = produced.len() as CK_ULONG;
+        return Err(CKR_BUFFER_TOO_SMALL);
+    }
+    slice::from_raw_parts_mut(signature, produced.len()).copy_from_slice(produced);
+    *capacity = produced.len() as CK_ULONG;
+    module.sign_done(session);
+    Ok(())
 }
