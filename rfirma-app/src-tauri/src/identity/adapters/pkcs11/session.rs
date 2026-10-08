@@ -11,7 +11,7 @@ use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::error::{Error, RvError};
 use cryptoki::object::{Attribute, ObjectClass};
 use cryptoki::session::Session;
-use cryptoki::slot::Slot;
+use cryptoki::slot::{Slot, TokenInfo};
 
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
@@ -60,6 +60,21 @@ pub(super) fn slot_of(context: &Pkcs11, token_label: &str) -> Result<Slot, Token
         Situation::TokenAbsent,
         format!("no hay ningun token etiquetado {token_label}"),
     ))
+}
+
+/// Las banderas de la tarjeta de la ranura, salvo que declare el PIN bloqueado: entonces no se pide ni se envía (ADR-0047).
+pub(super) fn token_info_unless_locked(
+    context: &Pkcs11,
+    slot: Slot,
+) -> Result<TokenInfo, TokenError> {
+    let info = context.get_token_info(slot)?;
+    if info.user_pin_locked() {
+        return Err(TokenError::new(
+            Situation::PinLocked,
+            "CKF_USER_PIN_LOCKED: la tarjeta declara el PIN bloqueado",
+        ));
+    }
+    Ok(info)
 }
 
 /// La clave privada del certificado emparejada por `CKA_ID`.
