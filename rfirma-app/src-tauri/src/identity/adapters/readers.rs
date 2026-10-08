@@ -2,8 +2,10 @@
 
 use tauri::{Emitter as _, Manager as _};
 
-use crate::identity::application::readers::follow_the_readers_apart;
-use crate::identity::domain::readers::Reader;
+use crate::desktop::adapters::channel::Channel;
+use crate::desktop::adapters::paths::Platform;
+use crate::identity::application::readers::{follow_the_readers_apart, watches_the_readers};
+use crate::identity::domain::readers::{Reader, ReaderStatus};
 use crate::identity::ports::{ReaderWatch, Relisting};
 use crate::identity::IdentityRoot;
 
@@ -37,7 +39,15 @@ pub fn follow_the_readers_for(
     window: &'static str,
     lend: impl Fn(&mut dyn FnMut(&dyn Relisting)) + Send + 'static,
 ) {
+    let channel = Channel::detected();
+    if !watches_the_readers(Platform::CURRENT, channel) {
+        return;
+    }
     let announcing = app.clone();
+    announcing
+        .state::<IdentityRoot>()
+        .reader_now
+        .note(ReaderStatus::NoReader);
     follow_the_readers_apart(Box::<DesktopReaderWatch>::default(), lend, move |news| {
         announcing
             .state::<IdentityRoot>()

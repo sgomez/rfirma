@@ -23,6 +23,8 @@ pub enum ReadyCard {
 /// El estado de un lector, o el que resume a varios.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReaderStatus {
+    /// Esta versión no vigila lectores: no se sabe si los hay.
+    Unavailable,
     /// No hay ningún lector, o PC/SC no responde.
     NoReader,
     /// Hay lector, pero sin tarjeta.
@@ -55,7 +57,7 @@ impl ReaderStatus {
 
     fn advance(self) -> u8 {
         match self {
-            Self::NoReader => 0,
+            Self::Unavailable | Self::NoReader => 0,
             Self::NoCard => 1,
             Self::Unreadable => 2,
             Self::Ready(ReadyCard::Other) => 3,

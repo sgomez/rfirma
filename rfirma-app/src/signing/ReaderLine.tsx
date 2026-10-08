@@ -10,7 +10,7 @@ import "./ReaderLine.css";
 export function ReaderLine({ reader }: { reader: ReaderStatus }) {
   const { t } = useTranslation();
 
-  if (reader.kind === "noReader") return null;
+  if (reader.kind === "noReader" || reader.kind === "unavailable") return null;
 
   const reading = reader.kind === "reading";
   return (
@@ -27,7 +27,10 @@ export function ReaderLine({ reader }: { reader: ReaderStatus }) {
   );
 }
 
-function readerText(reader: Exclude<ReaderStatus, { kind: "noReader" }>, t: TFunction): string {
+function readerText(
+  reader: Exclude<ReaderStatus, { kind: "noReader" | "unavailable" }>,
+  t: TFunction,
+): string {
   switch (reader.kind) {
     case "noCard":
       return t("panel.certificate.reader.noCard");

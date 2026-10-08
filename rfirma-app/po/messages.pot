@@ -266,6 +266,22 @@ msgstr ""
 msgid "header.attention"
 msgstr ""
 
+#. Texto, tooltip y nombre accesible del indicador de lector de tarjetas de la cabecera.
+msgid "header.reader.detected"
+msgstr ""
+
+msgid "header.reader.missing"
+msgstr ""
+
+msgid "header.reader.unsupported"
+msgstr ""
+
+msgid "header.reader.missingHint"
+msgstr ""
+
+msgid "header.reader.unsupportedHint"
+msgstr ""
+
 msgid "header.preferences"
 msgstr ""
 

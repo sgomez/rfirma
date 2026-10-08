@@ -277,6 +277,22 @@ msgstr "Menua"
 msgid "header.attention"
 msgstr "rFirmaren egoera: arreta behar du"
 
+#. Texto, tooltip y nombre accesible del indicador de lector de tarjetas de la cabecera.
+msgid "header.reader.detected"
+msgstr "Txartel-irakurgailua: detektatuta"
+
+msgid "header.reader.missing"
+msgstr "Txartel-irakurgailua: ez da detektatu"
+
+msgid "header.reader.unsupported"
+msgstr "Txartel-irakurgailua: ez da onartzen"
+
+msgid "header.reader.missingHint"
+msgstr "Konektatu txartel-irakurgailu bat"
+
+msgid "header.reader.unsupportedHint"
+msgstr "Bertsio honek ezin ditu irakurgailuak detektatu"
+
 msgid "header.preferences"
 msgstr "Hobespenak…"
 

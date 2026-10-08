@@ -195,7 +195,7 @@ fn a_full_listing_after_the_readers_relisted_keeps_the_handles_they_announced() 
 #[test]
 fn a_window_that_mounts_late_reads_the_last_status_announced() {
     let now = ReaderNow::default();
-    assert_eq!(now.status(), ReaderStatus::NoReader);
+    assert_eq!(now.status(), ReaderStatus::Unavailable);
 
     now.note(ReaderStatus::NoCard);
 
@@ -210,4 +210,15 @@ fn with_no_full_listing_yet_every_store_is_opened() {
 
     assert_eq!(arranged.token.asked().len(), 2);
     assert_eq!(rows.map(|rows| rows.len()), Some(2));
+}
+
+#[test]
+fn the_readers_are_watched_only_on_linux_outside_flatpak() {
+    use crate::desktop::domain::channel::Channel;
+    use crate::desktop::domain::platform::Platform;
+
+    assert!(watches_the_readers(Platform::Linux, Channel::Native));
+    assert!(!watches_the_readers(Platform::Linux, Channel::Flatpak));
+    assert!(!watches_the_readers(Platform::MacOs, Channel::Native));
+    assert!(!watches_the_readers(Platform::Windows, Channel::Windows));
 }

@@ -145,6 +145,7 @@ crossing! {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
     #[serde(tag = "kind", rename_all = "camelCase")]
     pub enum ReaderStatusView {
+        Unavailable,
         NoReader,
         NoCard,
         Reading,
@@ -157,6 +158,7 @@ crossing! {
 impl From<ReaderStatus> for ReaderStatusView {
     fn from(status: ReaderStatus) -> Self {
         match status {
+            ReaderStatus::Unavailable => Self::Unavailable,
             ReaderStatus::NoReader => Self::NoReader,
             ReaderStatus::NoCard => Self::NoCard,
             ReaderStatus::Reading => Self::Reading,
