@@ -14,11 +14,16 @@ Repo-specific facts:
 
 - **Change ref**: the PR number.
 - **Base branch**: `main`. Start work from `origin/main`
-  (`git fetch origin main && git checkout -b <branch> origin/main`) —
-  never `git checkout main`.
+  (`git fetch origin main`, then `git checkout -b <branch> origin/main` as
+  a separate command) — never `git checkout main`. When the job names
+  another base — `/developer` builds a spec's sub-issues on its integration
+  branch, `agent/developer/spec-<N>` — that branch replaces `main` here and in the
+  change's target.
 - **Issue auto-close**: yes — `Closes #<n>` in the PR body closes issue
-  `#<n>` when the PR merges. This repo's issues live in this repo's GitHub
-  Issues (see `docs/agents/issue-tracker.md`), so auto-close applies.
+  `#<n>` when the PR merges **into `main`** (a PR into an integration branch
+  closes nothing — the spec PR closes the spec and its sub-issues). This
+  repo's issues live in this repo's GitHub Issues (see
+  `docs/agents/issue-tracker.md`), so auto-close applies.
 - **PR title is the changelog line**: `just release` writes `CHANGELOG.md`
   from the titles of `feat`, `fix` and `perf` PRs merged into `main`. After
   the conventional prefix, reuse the title of the issue the PR closes; with
@@ -26,7 +31,8 @@ Repo-specific facts:
   change, not as the code does it.
 - **Merge policy support**: both `merge: auto` and `merge: manual`.
 - **Publishing commits**: `git push origin <branch>` (from a local
-  `fix/pr-<PR>` branch: `git push origin HEAD:<pr-branch>`).
+  fix branch — `fix/pr-<PR>`, or `agent/developer/fix-pr-<PR>` under /developer:
+  `git push origin HEAD:<pr-branch>`).
 - **Bodies passed as files** (`gh … -F body=@<file>`, `--body-file`): create
   the file with `mktemp`, never a fixed path like `/tmp/review_body.txt`.
   Concurrent workers share `/tmp`; a fixed name let one overwrite another's
