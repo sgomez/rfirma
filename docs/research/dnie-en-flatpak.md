@@ -17,7 +17,9 @@ del sandbox negocia con todo `pcscd` desde la 1.8.24, que cubre todas las distri
 solo falla contra la 1.8.23 o anteriores, y lo hace con un error limpio que el vigilante cuenta como
 cero lectores. `--socket=pcsc` monta el socket del anfitrión, y polkit autoriza al proceso del sandbox
 por la sesión gráfica del usuario. Con el DNIe en el lector (apartado 5), la sonda lee la tarjeta, ve sus
-tres certificados sin PIN y sigue en caliente al lector y a la tarjeta en un mismo sandbox abierto.
+tres certificados sin PIN y sigue en caliente al lector y a la tarjeta en un mismo sandbox abierto,
+contra un `pcscd` 4:5 y contra uno 4:4; y el flatpak de rFirma firma con el DNIe, con el PIN en su
+propio diálogo.
 
 Tres cosas cambian el manifiesto o lo que se promete:
 
@@ -39,7 +41,9 @@ Tres cosas cambian el manifiesto o lo que se promete:
 | Flatpak | flatpak 1.16.6, flatpak-builder 1.4.8, `org.gnome.Platform//50` y su SDK |
 | Sonda | `me.sgomez.RfirmaDnieProbe`, desechable: pcsc-lite 2.5.1 (solo cliente) y OpenSC 0.27.1, con `--socket=pcsc` |
 | Demonios de prueba | `pcscd` 1.8.23, 1.9.9, 2.3.3, 2.4.1 y 2.5.1 de las etiquetas de [LudovicRousseau/PCSC](https://github.com/LudovicRousseau/PCSC), compilados en el SDK sin USB ni polkit y lanzados como usuario |
-| Lector y tarjeta | Las mediciones de los apartados 1 a 4 se hicieron sin lector: se desenchufó antes de entrar en el sandbox (`usb 1-1: USB disconnect` en el journal). Las del apartado 5 las hizo una persona con la sonda, con un lector Alcor Micro AU9540 y un DNIe |
+| Lector y tarjeta | Las mediciones de los apartados 1 a 4 se hicieron sin lector: se desenchufó antes de entrar en el sandbox (`usb 1-1: USB disconnect` en el journal). Las del apartado 5 las hizo una persona con la sonda y con el flatpak de rFirma, con un lector Alcor Micro AU9540 y un DNIe |
+| Equipo 4:4 | Ubuntu 24.04.5 en una VM de libvirt, `pcscd` 2.0.3-1build1 con polkit, flatpak-builder 1.4.2; el lector, por `hostdev` USB |
+| Flatpak de rFirma | El bundle de `just flatpak` del #1765, lanzado con `WEBKIT_DISABLE_DMABUF_RENDERER=1`: sin ella, en esta máquina (NVIDIA 580, Wayland) se cierra al abrirse con `Error 71`, aun con el paliativo del manifiesto |
 
 ## 1. El protocolo entre `libpcsclite` y `pcscd`
 
@@ -317,11 +321,27 @@ del anfitrión (4:5 tolerante), con el lector enchufado y el DNIe dentro:
 | Certificados sin login | `CertAutenticacion`, `CertCAIntermediaDGP` y `CertFirmaDigital`: el canal seguro y la descompresión funcionan dentro del sandbox |
 | En caliente, un sandbox abierto | `Yes` → `No` (tarjeta fuera) → `sin lector` (lector fuera) → `No` (lector dentro) → `Yes` (tarjeta dentro), cada cambio en menos de 2 s |
 
+La misma sonda en el equipo 4:4, con el `pcscd` 2.0.3:
+
+| Paso | Resultado |
+| --- | --- |
+| Protocolo | `Server is protocol version 4:4`, `Client is protocol version 4:6`, `Using backward compatibility`; contexto concedido. Un `Communication protocol mismatch!` por conexión en el journal, sin rechazo |
+| Lectura sin PIN | La misma que contra la 2.4.1: el lector con tarjeta, ATR leído, driver `dnie`, la ranura del `DNI electrónico` y sus tres certificados |
+| En caliente, un sandbox abierto | `Yes` → `No` (t=4 s) → `sin lector` (t=19 s) → `No` (t=29 s) → `Yes` (t=35 s). El lector se quitó y se devolvió a la VM a los 19 s y a los 29 s exactos: la notificación por el número de lectores llega en menos de un segundo |
+
+El flatpak de rFirma, a mano en esta máquina:
+
+| Comprobación | Resultado |
+| --- | --- |
+| La línea del lector | Sin tarjeta, leyendo, «DNIe listo», y vuelve al sacarla |
+| La fila «Lector de tarjetas» del panel «Estado de rFirma» | «detectado» y «no detectado» al enchufar y desenchufar, sin «Volver a comprobar»; nunca «no soportado» |
+| La lista de certificados | El DNIe aparece con su chip y desaparece al sacarlo |
+| Una firma PAdES con el certificado de firma | El PIN lo pide el diálogo de rFirma, sin la ventana de OpenSC; `pdfsig` y VALIDe la dan por válida |
+
 ### Lo que no se ha medido
 
-- **La detección en caliente contra un `pcscd` 4:4** (Debian 12, Ubuntu 22.04 y 24.04), donde la
-  notificación PnP va por el número de lectores.
-- **La firma con PIN desde el flatpak de rFirma**, que además necesita el manifiesto del #1765.
+- **La firma con PIN desde el flatpak de rFirma contra un `pcscd` 4:4**: en ese equipo solo corrió la
+  sonda.
 - **Una sesión inactiva** (otro usuario en primer plano o una sesión remota): `allow_active` no la
   cubre, igual que en el `.deb`.
 - **Qué hace cada distribución con `pcscd.socket` al actualizar el paquete.** Si lo reinicia, los
@@ -343,7 +363,10 @@ PIN, y redacta los números de serie del token y del lector. Pasos:
    `CertCAIntermediaDGP`, y los avisos del `pcscd` del anfitrión.
 3. En el paso 8, durante los 40 s de la cuenta: sacar el DNIe, desenchufar el lector, enchufarlo y
    meter el DNIe. Cada cambio debe salir en una línea `t=…s`, en el mismo sandbox.
-4. Repetirla en un equipo con Debian 12 o Ubuntu 24.04 mide el caso 4:4.
+4. Repetirla en un equipo con Debian 12 o Ubuntu 24.04 mide el caso 4:4. En una VM, el `pcscd` del
+   anfitrión tiene que estar parado antes de pasarle el lector (si lo tiene abierto, la VM se queda
+   en `can't set config #1, error -32`), y el lector se pasa después de iniciar sesión, porque GDM
+   con un lector a la vista solo ofrece el inicio con tarjeta.
 5. Con el flatpak de rFirma del #1765, a mano: la línea de estado del lector sigue al lector y a la
    tarjeta, el DNIe aparece en la lista con su chip de tarjeta, y una firma con
    `CertFirmaDigital` pide el PIN en el diálogo de rFirma, sin la ventana de OpenSC, y valida.
@@ -352,7 +375,7 @@ PIN, y redacta los números de serie del token y del lector. Pasos:
 
 | Decisión | Estado | Qué cambia |
 | --- | --- | --- |
-| El flatpak hace con tarjetas lo mismo que el `.deb` | **Se sostiene, con tres diferencias** | No hay ventana «Signature Requested» de OpenSC (como en Fedora, no como en Debian y Ubuntu); un `pcscd.socket` reiniciado con rFirma abierto obliga a reabrirlo; y contra un `pcscd` 4:4 la notificación PnP va por el número de lectores. Con el DNIe, medidos la lectura sin PIN y la detección en caliente contra un `pcscd` 4:5; falta la firma con PIN |
+| El flatpak hace con tarjetas lo mismo que el `.deb` | **Se sostiene, con dos diferencias** | No hay ventana «Signature Requested» de OpenSC (como en Fedora, no como en Debian y Ubuntu), y un `pcscd.socket` reiniciado con rFirma abierto obliga a reabrirlo. Contra un `pcscd` 4:4 la notificación PnP va por el número de lectores, y llega igual de rápido. Con el DNIe, medidas la lectura sin PIN y la detección en caliente contra un `pcscd` 4:5 y uno 4:4, y la firma con PIN desde el flatpak de rFirma contra el 4:5 |
 | `pcscd` del anfitrión por `--socket=pcsc`, ni demonio propio ni `--device=all` | **Se sostiene** | Medidos el socket, la variable, el protocolo y `access_pcsc`. Sin `pcscd` en el anfitrión, el estado es «sin lector» desde el arranque y hasta reabrir |
 | Solo se empaqueta OpenSC, con versión y `sha256` fijos | **Se sostiene** | 0.27.1 con el `sha256` de [`flatpak-canal-unico.md`](flatpak-canal-unico.md), comprobado. Añadir `--enable-zlib --enable-openssl --enable-sm` para que falte lo que falte la construcción se pare; `--disable-openpace` y `--disable-readline` quitan lo que el DNIe no usa. Subir de versión con la siguiente publicación |
 | rFirma lo descubre por un `.module` en `/app/share/p11-kit/modules`, con raíz `/app` solo en el canal flatpak | **Se sostiene** | El `.module` lo instala el propio OpenSC con `--enable-p11_system_config_modules=/app/share/p11-kit/modules`; no hace falta escribirlo en el manifiesto. Resuelve a `/app/lib/pkcs11/opensc-pkcs11.so` con el código actual de `p11kit` |
