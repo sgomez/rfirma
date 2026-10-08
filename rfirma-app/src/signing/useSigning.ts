@@ -84,27 +84,35 @@ export function useSigning(backend: SigningBackend): Signing {
       setState({ kind: "failed", failure: refusal, origin: order.document });
       return;
     }
+    const fail = (failure: SigningFailure) => {
+      if (failure.situation === "userCancelled") {
+        cancel();
+        return;
+      }
+      setState({ kind: "failed", failure, origin: order.document });
+    };
+
     setState({ kind: "running", stage: "presign" });
     const presigned = await backend.presign(order);
     if (!presigned.ok) {
-      setState({ kind: "failed", failure: presigned.failure, origin: order.document });
+      fail(presigned.failure);
       return;
     }
 
     setState({ kind: "running", stage: "sign" });
     const signed = await backend.sign("");
     if (!signed.ok) {
-      setState({ kind: "failed", failure: signed.failure, origin: order.document });
+      fail(signed.failure);
       return;
     }
 
     setState({ kind: "running", stage: "postsign" });
     const assembled = await backend.postsign(singleDestinationId);
-    setState(
-      assembled.ok
-        ? { kind: "signed", document: assembled.value, origin: order.document }
-        : { kind: "failed", failure: assembled.failure, origin: order.document },
-    );
+    if (!assembled.ok) {
+      fail(assembled.failure);
+      return;
+    }
+    setState({ kind: "signed", document: assembled.value, origin: order.document });
   };
 
   const cancel = () => {
