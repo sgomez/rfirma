@@ -22,18 +22,19 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/witness.rs` | El testigo, el seam entre quien corre las comprobaciones y la persona, que le cuenta lo que tiene que hacer y espera a que dé paso; con su falso para las pruebas. |
 | `src/report_view.rs` | La vista de un informe, igual lo corra la sesión o no: conjuntos en el orden del catálogo con sus recuentos; no sabe de la sesión. |
 | `src/snapshot.rs` | El estado de la sesión activa que recibe la página: la vista de su informe más cliente, cola, comprobación en curso y la llamada a la persona. |
-| `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`, `token_apart`, `ed25519`, `several`, `expired`), cada uno con su envoltorio y su raíz de confianza. |
+| `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`, `token_apart`, `ed25519`, `several`, `expired`, `dnie`), cada uno con su envoltorio y su raíz de confianza. |
 | `src/catalogue.rs` | La comprobación como tipo —exigencia, cómo se provoca, qué hace la persona y una sola expectativa— y la lectura del catálogo con lo que el tipo no puede decir: ids repetidos, dos comprobaciones que miden lo mismo y lo que no casa con el manifiesto de la sede. |
 | `src/saf_table.rs` | La lectura de la tabla SAF y su cruce con el catálogo: ids que no miden su fila, comprobaciones de un SAF sin fila y dos que observan el mismo rechazo. |
 | `src/manifest.rs` | El vocabulario de la sede que publica `driver.mjs --manifest`: modos y guiones con su sede, su familia y sus condiciones. |
 | `src/matrix.rs` | La lectura de la matriz de happy paths y lo que no casa con el catálogo: celdas sin estado, repetidas o fuera de todo plano, y comprobaciones que no miden la celda que cubren. |
-| `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo o se juzga con un trámite ya observado, la parada entre tramos, la guarda de las comprobaciones sin persona y los saludos por familia, sin escribir el informe. |
+| `src/card.rs` | Si hay un DNIe en el lector, mirado desde el sistema con el OpenSC instalado; la guarda del almacén `dnie` en `checks.rs` la consulta por el testigo. |
+| `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo o se juzga con un trámite ya observado, la parada entre tramos, la guarda de las comprobaciones sin persona, las condiciones previas (puertos libres, DNIe en el lector) y los saludos por familia, sin escribir el informe. |
 | `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: lo que una comprobación monta alrededor del trámite —puertos ocupados, ficheros preparados—; no juzga. |
 | `src/judge.rs` | El juez: lo observado frente a la expectativa declarada, a un resultado; con el vocabulario cerrado de expectativas, y sin lanzar trámites ni preguntar a nadie. |
 | `src/known_bug.rs` | La lectura del registro de bugs conocidos, con el que se resuelve la etiqueta `autofirma:bug:1.9.2`. |
 | `src/label.rs` | Las etiquetas de una comprobación, su lista cerrada y su lectura del `explained_by` del catálogo; no cambian el resultado. |
 | `src/outcome.rs` | El resultado de una comprobación, sus nombres en pantalla y PENDIENTE. |
-| `src/validation.rs` | La validación de un informe contra una referencia: validado o sus discrepancias, que son fallos de la suite o de la referencia. |
+| `src/validation.rs` | La validación de un informe contra una referencia: validado o sus discrepancias, que son fallos de la suite o de la referencia; rechaza una referencia que lleve datos de un certificado. |
 | `src/errand.rs` | El trámite: su clave, lo observado que se guarda con sus peticiones, el seam `ErrandRunner` con su adaptador de Node y su falso de tramas grabadas, y lo que se extrae de cada evento. |
 | `src/report.rs` | El informe en disco, `reports/conformance/<nombre>/dossier.json`, con el estado de cada comprobación y los trámites observados por clave: lo ve cualquiera, lo continúa solo su cliente. |
 | `src/transcript.rs` | Las tramas y el registro de cada comprobación, en `transcripts/` dentro del informe. |

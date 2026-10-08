@@ -4,6 +4,7 @@
  * El almacén de un perfil aislado: `rsa` y `ec`, una NSS sin contraseña con un solo certificado;
  * `token`, SoftHSM con PIN; `token_apart`, el token sin registrar junto a una NSS con otro; `ed25519`,
  * un token sin registrar con una sola clave Ed25519; `several` y `expired`, NSS con varios, para los
- * filtros.
+ * filtros; `dnie`, la NSS vacía con el OpenSC del sistema registrado, para el DNIe que la persona
+ * tiene en el lector.
  */
-export type Store = "rsa" | "ec" | "token" | "token_apart" | "ed25519" | "several" | "expired";
+export type Store = "rsa" | "ec" | "token" | "token_apart" | "ed25519" | "several" | "expired" | "dnie";

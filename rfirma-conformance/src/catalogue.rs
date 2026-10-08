@@ -94,6 +94,7 @@ pub(crate) enum Act {
     PickFile(String),
     SaveAsProposed(String),
     TypePassword(String),
+    PickCertificate(String),
     MarkArea(String),
 }
 
@@ -114,6 +115,7 @@ impl Act {
             | Self::PickFile(said)
             | Self::SaveAsProposed(said)
             | Self::TypePassword(said)
+            | Self::PickCertificate(said)
             | Self::MarkArea(said) => Some(said),
         }
     }
@@ -416,6 +418,7 @@ fn complaints_about(checks: &[Check]) -> Vec<String> {
         repeated_ids(checks),
         empty_fields(checks),
         greetings_that_need_a_person(checks),
+        dnie_checks_off_the_happy_path(checks),
         checks_that_measure_the_same(checks),
     ]
     .concat()
@@ -544,6 +547,35 @@ fn greetings_that_need_a_person(checks: &[Check]) -> Vec<String> {
         .iter()
         .filter(|check| check.greeting() && check.needs_a_person())
         .map(|check| format!("{}: saludo que necesita a una persona", check.id))
+        .collect()
+}
+
+/// El aviso que toda comprobación con el DNIe real lleva a la persona: una tarjeta se bloquea al
+/// tercer PIN erróneo.
+pub(crate) const THE_WRONG_PIN_WARNING: &str = "No tecles nunca un PIN erróneo.";
+
+fn dnie_checks_off_the_happy_path(checks: &[Check]) -> Vec<String> {
+    checks
+        .iter()
+        .filter(|check| check.store() == Store::Dnie)
+        .filter_map(|check| {
+            if !check.needs_a_person() {
+                Some(format!(
+                    "{}: el DNIe real necesita a una persona que teclee el PIN",
+                    check.id
+                ))
+            } else if !check
+                .instruction()
+                .is_some_and(|said| said.contains(THE_WRONG_PIN_WARNING))
+            {
+                Some(format!(
+                    "{}: su aviso a la persona no dice que nunca se teclea un PIN erróneo",
+                    check.id
+                ))
+            } else {
+                None
+            }
+        })
         .collect()
 }
 
@@ -693,6 +725,7 @@ expects.code = "SAF_47"
             "save_as_proposed",
             "type_password",
             "mark_area",
+            "pick_certificate",
         ] {
             assert_eq!(
                 assistance_of(&format!("act.{named} = \"Haz esto.\"")),
@@ -700,6 +733,56 @@ expects.code = "SAF_47"
                 "{named}"
             );
         }
+    }
+
+    fn a_dnie_entry(drive_extra: &str) -> Vec<Check> {
+        the_catalogue_in(&format!(
+            r#"
+[[check]]
+id = "a_dnie_one"
+set = "certificado"
+chapter = "09"
+citation = "A.java:1"
+statement = "Algo."
+
+[check.drive]
+mode = "v4"
+script = "selectcert"
+store = "dnie"
+expects.completes.conditions = ["a-certificate-alone"]
+{drive_extra}
+"#
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn a_dnie_check_with_a_person_who_is_told_not_to_type_a_wrong_pin_is_well_formed() {
+        let checks = a_dnie_entry(&format!(
+            "act.pick_certificate = \"Elige el certificado. {THE_WRONG_PIN_WARNING}\""
+        ));
+
+        assert_eq!(complaints_about(&checks), Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_dnie_check_that_needs_nobody_is_a_complaint() {
+        let checks = a_dnie_entry("");
+
+        assert_eq!(
+            complaints_about(&checks),
+            ["a_dnie_one: el DNIe real necesita a una persona que teclee el PIN"]
+        );
+    }
+
+    #[test]
+    fn a_dnie_check_whose_notice_does_not_forbid_a_wrong_pin_is_a_complaint() {
+        let checks = a_dnie_entry("act.pick_certificate = \"Elige el certificado.\"");
+
+        assert_eq!(
+            complaints_about(&checks),
+            ["a_dnie_one: su aviso a la persona no dice que nunca se teclea un PIN erróneo"]
+        );
     }
 
     #[test]

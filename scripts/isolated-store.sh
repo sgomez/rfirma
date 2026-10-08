@@ -19,6 +19,8 @@
 # * ed25519: la NSS vacia y un token propio sin registrar con un solo
 #   certificado, el Ed25519 de testdata/site-driver/, con su clave; el PIN es
 #   1234.
+# * dnie: la NSS vacia con el OpenSC del sistema registrado; del DNIe no se
+#   copia nada: la tarjeta esta en el lector y la persona teclea el PIN.
 #
 # Ningun envoltorio apunta nunca al SOFTHSM2_CONF de quien corre la suite:
 # cada perfil monta el suyo, este lo use o no.
@@ -42,7 +44,7 @@ module="${RFIRMA_PKCS11_MODULE:-/usr/lib/softhsm/libsofthsm2.so}"
 subject="${1:-}"
 store="${3:-rsa}"
 if [ ! -x "$subject" ]; then
-    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token|token_apart|ed25519|several|expired]" >&2
+    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token|token_apart|ed25519|several|expired|dnie]" >&2
     exit 2
 fi
 
@@ -60,8 +62,9 @@ case "$store" in
     ed25519) p12s="" ;;
     several) p12s="active-rsa.p12 active-ecc.p12 pseudonym-rsa.p12" ;;
     expired) p12s="active-ecc.p12 expired-rsa.p12" ;;
+    dnie) p12s="" ;;
     *)
-        echo "almacen desconocido: $store (rsa, ec, token, token_apart, ed25519, several o expired)" >&2
+        echo "almacen desconocido: $store (rsa, ec, token, token_apart, ed25519, several, expired o dnie)" >&2
         exit 2
         ;;
 esac
@@ -78,6 +81,29 @@ done
 
 with_token=false
 case "$store" in token | token_apart | ed25519) with_token=true ;; esac
+
+the_opensc_module() {
+    local candidate
+    for candidate in "${RFIRMA_OPENSC_MODULE:-}" \
+        /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so \
+        /usr/lib/aarch64-linux-gnu/opensc-pkcs11.so \
+        /usr/lib64/pkcs11/opensc-pkcs11.so \
+        /usr/lib/opensc-pkcs11.so; do
+        if [ -n "$candidate" ] && [ -f "$candidate" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+if [ "$store" = dnie ]; then
+    opensc_module="$(the_opensc_module)" || {
+        echo "falta el modulo PKCS#11 de OpenSC (RFIRMA_OPENSC_MODULE lo fija a mano)" >&2
+        echo "  sudo apt install -y opensc-pkcs11" >&2
+        exit 1
+    }
+fi
 
 if $with_token; then
     for tool in softhsm2-util pkcs11-tool openssl; do
@@ -143,6 +169,10 @@ if $with_token; then
         import_token_object "$fnmt/active-ecc.p12" "$(the_password_of active-ecc.p12)" \
             "02" "FNMT-ACTIVO-ECC-99949991H"
     fi
+fi
+
+if [ "$store" = dnie ]; then
+    modutil -dbdir "sql:$nssdb" -add opensc -libfile "$opensc_module" -force >/dev/null
 fi
 
 for p12 in $p12s; do

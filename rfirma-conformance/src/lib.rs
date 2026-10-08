@@ -1,6 +1,7 @@
 //! Suite de conformidad: el cliente publicado bajo Node corre un guion del banco contra el
 //! binario declarado y transcribe lo que viajó, y una consola web local la lanza y la sigue.
 
+mod card;
 pub mod catalogue;
 mod checks;
 mod client;

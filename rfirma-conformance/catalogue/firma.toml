@@ -1475,3 +1475,19 @@ mode = "v4"
 script = "signpadessha1"
 act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma firma sin enseñar nada; rFirma enseña el rechazo antes de contestar a la sede."
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
+
+[[check]]
+id = "a_dnie_signs_once_with_the_right_pin_and_the_site_accepts_the_signature"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:574-629; SharedNssKeyStoreManager.java:20-50"
+statement = """
+Un DNIe en el lector firma una vez con el PIN correcto: la firma se completa y verifica con la clave
+de su certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signcades"
+store = "dnie"
+act.type_password = "Elige el certificado de firma del DNIe y teclea su PIN una sola vez. No tecles nunca un PIN erróneo. Si no lo recuerdas, cancela."
+expects.completes.conditions = ["the-signature-verifies"]
