@@ -64,6 +64,22 @@ Bajo flatpak, rFirma solo ve las carpetas que le das a través del portal del
 sistema. Por eso, en [Preferencias](/manual/preferencias/), el destino de los
 documentos firmados es siempre una carpeta elegida: no existe «junto al original».
 
+### Por qué GNOME Software dice «potencialmente insegura»
+
+Si abres rFirma en GNOME Software verás la etiqueta «Potencialmente insegura». Es
+esperable y no indica que haya un problema: GNOME Software la pone a cualquier
+aplicación que pide acceso a carpetas concretas de tu equipo, y no distingue para qué.
+
+rFirma pide esos accesos porque los necesita para firmar:
+
+* **Certificados de tus navegadores.** Para ofrecerte los que ya tienes instalados en
+  Firefox (también si es Snap o Flatpak), LibreWolf, Chrome y Chromium.
+* **Lector de tarjetas.** Para hablar con él cuando firmas con el DNIe.
+* **Tu navegador.** Para que pueda llegar a rFirma en tu equipo cuando una web te pide
+  firmar.
+* **Versiones nuevas.** Para avisarte cuando hay una disponible.
+* **La carpeta Documentos.** Para guardar en ella los documentos firmados.
+
 ## Windows
 
 Descarga el instalador `rFirma_*_x64-setup.exe` de la
