@@ -144,7 +144,7 @@ fn with_nothing_remembered_the_row_signs_with_the_copy_of_the_preferred_store() 
 }
 
 #[test]
-fn the_windows_copy_is_preferred_to_the_same_card_seen_through_pkcs11() {
+fn the_card_copy_is_preferred_to_a_windows_copy_that_does_not_say_where_its_key_is() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let der = TestAuthority::root("EIDAS CERTIFICADO PRUEBAS - 99999999R").der();
 
@@ -159,8 +159,8 @@ fn the_windows_copy_is_preferred_to_the_same_card_seen_through_pkcs11() {
         &a_memory(home.path()),
     );
 
-    assert_eq!(rows[0].store, StoreClass::Windows);
-    assert_eq!(rows[0].stores, vec![StoreClass::Windows, StoreClass::Card]);
+    assert_eq!(rows[0].store, StoreClass::Card);
+    assert_eq!(rows[0].stores, vec![StoreClass::Card, StoreClass::Windows]);
 }
 
 #[test]

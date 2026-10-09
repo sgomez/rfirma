@@ -16,7 +16,7 @@ use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::Situation;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
-use crate::identity::domain::store::Store;
+use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::Token;
 use crate::signing::adapters::ffi::{locate, NativeBridge};
 use crate::signing::application::cycle::{self, SigningRequest};
@@ -135,6 +135,32 @@ fn lists_a_certificate_of_the_user_store_with_its_private_key() {
     assert!(listed
         .subject()
         .is_some_and(|subject| subject.contains(&temporary.subject)));
+}
+
+#[test]
+fn a_certificate_of_the_user_store_names_the_provider_of_its_key_and_stays_in_windows() {
+    let temporary = TemporaryCertificate::create(RSA_IN_CNG);
+
+    let reference = temporary.listed().reference().clone();
+
+    assert_eq!(
+        reference.key_provider(),
+        Some("Microsoft Software Key Storage Provider")
+    );
+    assert_eq!(
+        reference.class_under(Path::new("/nowhere")),
+        StoreClass::Windows
+    );
+}
+
+#[test]
+fn a_certificate_with_its_key_in_a_legacy_csp_names_that_provider() {
+    let temporary = TemporaryCertificate::create(RSA_IN_A_LEGACY_CSP);
+
+    assert_eq!(
+        temporary.listed().reference().key_provider(),
+        Some("Microsoft Enhanced RSA and AES Cryptographic Provider")
+    );
 }
 
 #[test]

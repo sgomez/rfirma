@@ -177,7 +177,7 @@ fn rows_handled_by(
         .map(|copies| {
             ChosenCopy::among(
                 copies,
-                |reference| reference.store().class_under(installed_dir),
+                |reference| reference.class_under(installed_dir),
                 remembered.as_ref(),
             )
         })
