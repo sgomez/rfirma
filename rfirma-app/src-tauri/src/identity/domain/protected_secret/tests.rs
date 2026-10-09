@@ -45,3 +45,22 @@ fn mlock_executes_without_panic() {
     let secret = ProtectedSecret::new(b"test_pin");
     let _ = secret.is_locked();
 }
+
+fn locked_kib() -> Option<usize> {
+    std::fs::read_to_string("/proc/self/status")
+        .ok()?
+        .lines()
+        .find_map(|l| l.strip_prefix("VmLck:"))
+        .and_then(|v| v.split_whitespace().next())
+        .and_then(|n| n.parse().ok())
+}
+
+#[test]
+fn dropping_the_secret_unlocks_its_memory() {
+    let secret = ProtectedSecret::new(vec![7u8; 48 * 1024]);
+    let Some(while_alive) = locked_kib().filter(|_| secret.is_locked()) else {
+        return;
+    };
+    drop(secret);
+    assert!(locked_kib().unwrap() + 40 <= while_alive);
+}
