@@ -522,6 +522,12 @@ msgstr "Tarjeta lista"
 msgid "panel.certificate.reader.unreadable"
 msgstr "rFirma no puede leer la tarjeta del lector"
 
+msgid "panel.certificate.reader.unreadableHelp.windows"
+msgstr "Si Windows no la reconoce, llega por Windows Update al meter la tarjeta o se descarga de la página de la DGP."
+
+msgid "panel.certificate.reader.unreadableHelp.linux"
+msgstr "Instala OpenSC para que rFirma pueda leerla."
+
 #. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
 msgstr "Emitido por {{issuer}}"

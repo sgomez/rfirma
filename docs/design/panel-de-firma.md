@@ -82,7 +82,7 @@ Cada uno tiene su historia en «Flujos/Firma/SigningPanel», salvo que se diga o
 | Sin certificados | `NoCertificates` | El selector se queda en su sitio, desactivado y diciendo «Sin certificados»; debajo, «Añadir un certificado…» (primario, el ancho que sobra) y «Volver a buscar» (secundario); el pie deja solo «Firmar», desactivado |
 | Sin certificados, con lector | `NoCertificatesWithReader` | La misma forma, con la línea del lector entre el selector desactivado y las salidas |
 | Búsqueda fallida | `SearchFailed` | La misma forma, con el error clasificado debajo de las salidas; la caja dice que no se pudo buscar, no que no haya ninguno |
-| Lector sin tarjeta, leyendo, tarjeta lista e ilegible | `ReaderWithoutCard`, `ReadingTheCard`, `DnieReady`, `CardReady`, `UnreadableCard` | La línea del lector bajo el selector; sin lector (`Ready`), no hay línea. Mientras se lee, los demás certificados se siguen pudiendo elegir |
+| Lector sin tarjeta, leyendo, tarjeta lista e ilegible | `ReaderWithoutCard`, `ReadingTheCard`, `DnieReady`, `CardReady`, `UnreadableCardOnWindows`, `UnreadableCardOnLinux` | La línea del lector bajo el selector; sin lector (`Ready`), no hay línea. Ilegible, añade la ayuda de la plataforma: Windows Update o la página de la DGP en Windows, OpenSC en Linux. Mientras se lee, los demás certificados se siguen pudiendo elegir |
 | Varios certificados | `SeveralCertificates` | El desplegable los lista todos al abrirse |
 | Certificados abiertos | `Open` de «Dominio/Firma/CertificateSelect» | El buscador en lugar de la caja y la lista flotando |
 | Firma visible | `VisibleSignature*` | Una página, varias, todas, otra página a la vista y sin colocar |
