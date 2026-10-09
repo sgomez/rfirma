@@ -27,11 +27,8 @@ finish-args:
   - --socket=fallback-x11
   - --share=ipc
   - --device=dri
-  # Paliativo medido en #22: sin el, GTK3 del runtime commitea un buffer que
-  # no es dmabuf con sincronizacion explicita negociada y Mutter mata el
-  # proceso ("Explicit Sync only supported on dmabuf buffers", Error 71).
-  # Reproducido igual en org.gnome.Platform 49 y 50.
-  - --env=WEBKIT_DISABLE_COMPOSITING_MODE=1
+  # Ninguna variable de renderizado: que le quita rFirma a WebKitGTK en cada
+  # sesion lo decide desktop/adapters/webkit_renderer.rs (ADR-0007).
   # SIN ESTO LA VENTANA SE ABRE CON UN ERROR DE DBUS DENTRO Y NADA MAS.
   # WebKitGTK pide un proxy para CADA carga, tambien para el esquema propio de
   # Tauri, y sin --share=network el portal contesta a ProxyResolver.Lookup con

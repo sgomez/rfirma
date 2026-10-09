@@ -1,27 +1,37 @@
-//! Si WebKitGTK debe componer sin la GPU en esta sesión (ADR-0007): solo la decisión, que fija `titlebar.rs`; no elige nada más del webview.
+//! Qué le quita rFirma a WebKitGTK en esta sesión (ADR-0007): solo la decisión, que fija `titlebar.rs`; no elige nada más del webview.
 
 /// La variable de WebKitGTK que apaga la composición acelerada.
 pub const COMPOSITING_SWITCH: &str = "WEBKIT_DISABLE_COMPOSITING_MODE";
 
+/// La variable de WebKitGTK que apaga el renderizador DMA-BUF.
+pub const DMABUF_SWITCH: &str = "WEBKIT_DISABLE_DMABUF_RENDERER";
+
 const RENDERER_CHOICES: [&str; 4] = [
     COMPOSITING_SWITCH,
-    "WEBKIT_DISABLE_DMABUF_RENDERER",
+    DMABUF_SWITCH,
     "WEBKIT_DMABUF_RENDERER_FORCE_SHM",
     "__NV_DISABLE_EXPLICIT_SYNC",
 ];
 
-/// Si la sesión es X11 y el entorno no elige ya el renderizador.
-pub fn compositing_must_be_turned_off(variable: impl Fn(&str) -> Option<String>) -> bool {
+/// La variable que hay que fijar en esta sesión, o ninguna si el entorno ya elige el renderizador.
+pub fn the_switch_for_this_session(
+    variable: impl Fn(&str) -> Option<String>,
+) -> Option<&'static str> {
     if RENDERER_CHOICES.iter().any(|name| variable(name).is_some()) {
-        return false;
+        return None;
     }
     let forced = variable("GDK_BACKEND")
         .and_then(|backends| backends.split(',').next().map(str::trim).map(String::from))
         .filter(|backend| !backend.is_empty() && backend != "*");
-    match forced {
+    let on_x11 = match forced {
         Some(backend) => backend == "x11",
         None => variable("WAYLAND_DISPLAY").is_none_or(|display| display.is_empty()),
-    }
+    };
+    Some(if on_x11 {
+        COMPOSITING_SWITCH
+    } else {
+        DMABUF_SWITCH
+    })
 }
 
 #[cfg(test)]
