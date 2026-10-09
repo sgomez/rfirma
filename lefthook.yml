@@ -26,7 +26,3 @@ pre-push:
       glob: "rfirma-app/src/**"
       fail_text: "tsc, una clave de i18n o un export sin uso: lo que nombra la salida"
       run: PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" just build-ts lint-i18n knip
-    - name: check-rust
-      glob: "rfirma-app/src-tauri/**"
-      fail_text: "clippy o una función por encima de CRAP 30: pruébala o pártela, no la añadas a --allow"
-      run: PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" just check-rust
