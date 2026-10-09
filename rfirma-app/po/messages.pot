@@ -512,6 +512,12 @@ msgstr ""
 msgid "panel.certificate.reader.unreadable"
 msgstr ""
 
+msgid "panel.certificate.reader.unreadableHelp.windows"
+msgstr ""
+
+msgid "panel.certificate.reader.unreadableHelp.linux"
+msgstr ""
+
 #. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
 msgstr ""

@@ -11,7 +11,7 @@ use x509_cert::ext::pkix::{BasicConstraints, KeyUsage};
 use x509_cert::Certificate;
 
 use crate::identity::domain::algorithm::KeyKind;
-use crate::identity::domain::store::Store;
+use crate::identity::domain::store::{is_a_card_key_provider, Store, StoreClass};
 
 const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
 const EC_PUBLIC_KEY: &str = "1.2.840.10045.2.1";
@@ -32,6 +32,9 @@ pub struct CertificateRef {
     /// Parámetros de inicialización requeridos por el módulo.
     #[serde(default)]
     init_args: Option<String>,
+    /// El proveedor que guarda la clave, en el Almacén de Windows.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    key_provider: Option<String>,
 }
 
 impl CertificateRef {
@@ -49,6 +52,28 @@ impl CertificateRef {
             label: label.into(),
             cka_id: cka_id.into(),
             init_args: store.init_args().map(str::to_owned),
+            key_provider: None,
+        }
+    }
+
+    /// La misma referencia, con el proveedor que guarda su clave, leído sin abrirla.
+    pub fn with_key_provider(mut self, provider: impl Into<String>) -> Self {
+        self.key_provider = Some(provider.into());
+        self
+    }
+
+    /// El proveedor que guarda su clave, si su almacén lo dice.
+    pub fn key_provider(&self) -> Option<&str> {
+        self.key_provider.as_deref()
+    }
+
+    /// La clase de su copia: la de su almacén, salvo en Windows con la clave en una tarjeta (ADR-0035).
+    pub fn class_under(&self, installed_dir: &Path) -> StoreClass {
+        match self.store().class_under(installed_dir) {
+            StoreClass::Windows if self.key_provider().is_some_and(is_a_card_key_provider) => {
+                StoreClass::Card
+            }
+            class => class,
         }
     }
 

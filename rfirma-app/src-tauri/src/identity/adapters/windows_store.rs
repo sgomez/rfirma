@@ -1,17 +1,18 @@
-//! `WindowsToken`, los almacenes de Windows detrás del puerto `Token`: el del usuario por CNG y, para lo demás, los módulos PKCS#11 y dónde se buscan (ADR-0035).
+//! `WindowsToken`, el Almacén de Windows detrás del puerto `Token`, por CNG (ADR-0035).
 
 mod cng;
+mod smart_card;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use super::pkcs11::stores::present_among;
 use super::pkcs11::RealToken;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::readers::with_the_cards_present;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
-use crate::identity::domain::store::Store;
+use crate::identity::domain::store::{is_a_card_key_provider, Store};
 use crate::identity::ports::Token;
 
 /// La ruta con la que se nombra `CurrentUser\MY`: ningún módulo PKCS#11 puede llamarse así.
@@ -26,46 +27,37 @@ fn is_the_user_store(store: &Store) -> bool {
     store.path() == Path::new(USER_STORE)
 }
 
-/// Los módulos PKCS#11 conocidos de OpenSC y del DNIe bajo `Program Files` y `System32`.
-pub fn candidate_modules(program_files: &Path, system32: &Path) -> Vec<PathBuf> {
-    vec![
-        program_files.join("OpenSC Project/OpenSC/pkcs11/opensc-pkcs11.dll"),
-        system32.join("opensc-pkcs11.dll"),
-        system32.join("DNIe_P11_priv.dll"),
-        system32.join("UsrPkcs11.dll"),
-    ]
-}
-
-/// Los almacenes de esta máquina: primero el del usuario, que gana a las copias de PKCS#11 (ADR-0035).
-pub fn from_environment() -> Vec<Store> {
-    if let Some(module) = std::env::var_os(crate::PKCS11_MODULE_VARIABLE) {
-        return vec![Store::module(module)];
+/// Los certificados con clave del almacén del usuario, sin las copias de una tarjeta que no está en el lector (ADR-0048).
+fn signable_with_the_cards_present() -> Result<Vec<TokenCertificate>, TokenError> {
+    let found = cng::signable_certificates()?;
+    let copied_from_a_card = found.iter().any(|certificate| {
+        certificate
+            .reference()
+            .key_provider()
+            .is_some_and(is_a_card_key_provider)
+    });
+    if !copied_from_a_card {
+        return Ok(found);
     }
-    let program_files = folder_from("ProgramFiles", r"C:\Program Files");
-    let system32 = folder_from("SystemRoot", r"C:\Windows").join("System32");
-    std::iter::once(user_store())
-        .chain(
-            present_among(candidate_modules(&program_files, &system32), Path::is_file)
-                .into_iter()
-                .map(Store::module),
-        )
-        .collect()
+    Ok(with_the_cards_present(
+        found,
+        &smart_card::certificates_on_the_cards(),
+    ))
 }
 
-fn folder_from(variable: &str, otherwise: &str) -> PathBuf {
-    std::env::var_os(variable)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(otherwise))
+/// Los almacenes de esta máquina: solo el del usuario (ADR-0035).
+pub fn from_environment() -> Vec<Store> {
+    vec![user_store()]
 }
 
-/// El adaptador de [`Token`] en Windows: CNG para el almacén del usuario y [`RealToken`] para los módulos.
+/// El adaptador de [`Token`] en Windows: CNG para el almacén del usuario y [`RealToken`] para los demás.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WindowsToken;
 
 impl Token for WindowsToken {
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         if is_the_user_store(store) {
-            return cng::signable_certificates();
+            return signable_with_the_cards_present();
         }
         RealToken.list(store)
     }
@@ -83,7 +75,7 @@ impl Token for WindowsToken {
         pin: &ProtectedSecret,
     ) -> Result<Vec<TokenCertificate>, TokenError> {
         if is_the_user_store(store) {
-            return cng::signable_certificates();
+            return signable_with_the_cards_present();
         }
         RealToken.list_authenticated(store, pin)
     }

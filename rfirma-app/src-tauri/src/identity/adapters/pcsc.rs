@@ -1,4 +1,4 @@
-//! El vigilante PC/SC de Linux: espera a `SCardGetStatusChange` sobre todos los lectores y las notificaciones PnP (ADR-0048).
+//! El vigilante PC/SC de Linux y Windows: espera a `SCardGetStatusChange` sobre todos los lectores y las notificaciones PnP (ADR-0048).
 
 use std::ffi::CString;
 use std::time::Duration;
@@ -70,7 +70,7 @@ impl<S: StatusSource> ReaderWatch for StatusWatch<S> {
     }
 }
 
-/// La fuente real: `libpcsclite`.
+/// La fuente real: `libpcsclite` en Linux, `winscard.dll` en Windows.
 #[derive(Default)]
 pub struct PcscSource {
     context: Option<Context>,

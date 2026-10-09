@@ -119,8 +119,12 @@ export const CardReady: Story = {
   args: { certificate: withReader({ kind: "cardReady" }) },
 };
 
-export const UnreadableCard: Story = {
-  args: { certificate: withReader({ kind: "unreadable" }) },
+export const UnreadableCardOnWindows: Story = {
+  args: { certificate: withReader({ kind: "unreadable" }), platform: "windows" },
+};
+
+export const UnreadableCardOnLinux: Story = {
+  args: { certificate: withReader({ kind: "unreadable" }), platform: "linux" },
 };
 
 export const NoCertificatesWithReader: Story = {

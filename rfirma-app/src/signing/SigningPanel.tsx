@@ -12,7 +12,7 @@ import { ModelFieldset } from "./ModelFieldset";
 import { PanelFooter } from "./PanelFooter";
 import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
 import type { PreviousSignaturesReport } from "./previousSignatures";
-import { ReaderLine } from "./ReaderLine";
+import { type CardHelpPlatform, ReaderLine } from "./ReaderLine";
 import type { RubricSection } from "./rubric";
 import "./SigningPanel.css";
 import { VisibleSignatureFieldset } from "./VisibleSignatureFieldset";
@@ -42,6 +42,8 @@ interface SigningPanelProps {
   onOpenHelp?: () => void;
   /** Vacía el Almacén de rFirma, ofrecido cuando `failure` es `keyringPinMissing` (ADR-0034). */
   onEmptyStore?: () => void;
+  /** La plataforma de la ayuda para una tarjeta ilegible; sin ella, la del WebView. */
+  platform?: CardHelpPlatform;
 }
 
 /**
@@ -72,6 +74,7 @@ export function SigningPanel({
   failure,
   onOpenHelp,
   onEmptyStore,
+  platform,
 }: SigningPanelProps) {
   const certificate = certificateSection.state;
   const { value: signature, change: onChangeSignature } = signatureSection;
@@ -116,7 +119,7 @@ export function SigningPanel({
                 disabled={signing}
               />
             </div>
-            <ReaderLine reader={certificateSection.reader} />
+            <ReaderLine reader={certificateSection.reader} platform={platform} />
             <CertificateExits
               state={certificate}
               installFailure={certificateSection.installFailure}

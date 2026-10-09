@@ -3,7 +3,7 @@
 use tauri::Manager as _;
 
 use crate::identity::adapters::readers::follow_the_readers_for;
-use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+use crate::identity::domain::certificate::ListedCertificate;
 use crate::identity::domain::readers::{ready_card_among, ReadyCard};
 use crate::identity::ports::Relisting;
 use crate::identity::IdentityRoot;
@@ -20,7 +20,7 @@ impl Relisting for ForTheSiteWindow {
     fn relisted(&self) -> (Option<Vec<ListedCertificate>>, Option<ReadyCard>) {
         let identity = self.app.state::<IdentityRoot>();
         let found = identity.certificates().unwrap_or_default();
-        let ready = ready_card_among(&on_the_cards(&identity, &found));
+        let ready = ready_card_among(&identity.only_on_a_card(&found));
         let after = with_the_desk(&self.app, |desk, live| after_the_readers(desk, found, live));
         let rows = match after {
             AfterTheReaders::Accepted(accepted) => Some(identity.rows_keeping_handles(accepted)),
@@ -28,14 +28,6 @@ impl Relisting for ForTheSiteWindow {
         };
         (rows, ready)
     }
-}
-
-fn on_the_cards(identity: &IdentityRoot, found: &[TokenCertificate]) -> Vec<TokenCertificate> {
-    found
-        .iter()
-        .filter(|certificate| identity.is_a_card(&certificate.reference().store()))
-        .cloned()
-        .collect()
 }
 
 /// Arranca en su propio hilo la lista en caliente de la ventana de sede.

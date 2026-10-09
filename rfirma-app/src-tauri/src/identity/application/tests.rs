@@ -236,6 +236,60 @@ fn certificate_with_subject(label: &str, name: X509Name) -> TokenCertificate {
     a_certificate(label, &der)
 }
 
+/// Un certificado vigente de un DNIe, en DER: el de firma lleva `nonRepudiation`; el de autenticación, no.
+pub(crate) fn a_dnie_der(common_name: &str, for_signing: bool) -> Vec<u8> {
+    let key = generate_key().expect("la clave de pruebas deberia generarse");
+    let mut subject = X509Name::builder().expect("deberia poder construirse un nombre");
+    subject
+        .append_entry_by_nid(Nid::COMMONNAME, common_name)
+        .expect("el nombre comun deberia entrar");
+    let mut issuer = X509Name::builder().expect("deberia poder construirse un nombre");
+    for (field, value) in [
+        ("C", "ES"),
+        ("O", "DIRECCION GENERAL DE LA POLICIA"),
+        ("OU", "DNIE"),
+        ("CN", "AC DNIE 004"),
+    ] {
+        issuer
+            .append_entry_by_text(field, value)
+            .expect("el atributo del emisor deberia entrar");
+    }
+    let mut usage = openssl::x509::extension::KeyUsage::new();
+    usage.critical().digital_signature();
+    if for_signing {
+        usage.non_repudiation();
+    }
+
+    let mut builder = X509::builder().expect("deberia poder construirse un certificado");
+    builder.set_version(2).expect("la version deberia ponerse");
+    builder
+        .set_serial_number(&random_serial().expect("el serie deberia generarse"))
+        .expect("el serie deberia ponerse");
+    builder
+        .set_subject_name(&subject.build())
+        .expect("el titular deberia ponerse");
+    builder
+        .set_issuer_name(&issuer.build())
+        .expect("el emisor deberia ponerse");
+    builder.set_pubkey(&key).expect("la clave deberia ponerse");
+    builder
+        .set_not_before(&Asn1Time::days_from_now(0).expect("deberia haber fecha"))
+        .expect("el inicio deberia ponerse");
+    builder
+        .set_not_after(&Asn1Time::days_from_now(30).expect("deberia haber fecha"))
+        .expect("el fin deberia ponerse");
+    builder
+        .append_extension(usage.build().expect("keyUsage deberia construirse"))
+        .expect("keyUsage deberia anadirse");
+    builder
+        .sign(&key, MessageDigest::sha256())
+        .expect("el certificado de pruebas deberia firmarse");
+    builder
+        .build()
+        .to_der()
+        .expect("el certificado deberia poder salir en DER")
+}
+
 fn unix_time(instant: SystemTime) -> Asn1Time {
     let secs = instant
         .duration_since(UNIX_EPOCH)

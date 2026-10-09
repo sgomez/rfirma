@@ -9,7 +9,7 @@ use crate::desktop::domain::platform::Platform;
 use crate::identity::application::certificates::{
     on_the_desktop, rows_keeping_handles, ListedCertificates,
 };
-use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::readers::{
     ready_card_among, status_of, Listing, Reader, ReaderStatus, ReadyCard,
 };
@@ -28,12 +28,12 @@ impl LastListing {
         *lock(&self.found) = Some(found.to_vec());
     }
 
-    /// Los certificados del último listado que no son de tarjeta, si ya hubo alguno.
+    /// Los certificados del último listado de los almacenes que no enseñan tarjetas, si ya hubo alguno.
     fn other_than_cards(&self, installed_dir: &Path) -> Option<Vec<TokenCertificate>> {
         lock(&self.found).as_ref().map(|found| {
             found
                 .iter()
-                .filter(|certificate| !is_a_card(&certificate.reference().store(), installed_dir))
+                .filter(|certificate| !shows_cards(&certificate.reference().store(), installed_dir))
                 .cloned()
                 .collect()
         })
@@ -42,7 +42,11 @@ impl LastListing {
 
 /// Si esta plataforma y este canal pueden vigilar lectores (ADR-0048).
 pub fn watches_the_readers(platform: Platform, channel: Channel) -> bool {
-    platform == Platform::Linux && matches!(channel, Channel::Native | Channel::Flatpak)
+    match platform {
+        Platform::Linux => matches!(channel, Channel::Native | Channel::Flatpak),
+        Platform::Windows => channel == Channel::Windows,
+        Platform::MacOs => false,
+    }
 }
 
 /// El último estado anunciado de los lectores, para la ventana que se monta después del anuncio.
@@ -104,9 +108,9 @@ impl Relisting for CardListing<'_> {
             .stores
             .iter()
             .cloned()
-            .partition(|store| is_a_card(store, self.installed_dir));
+            .partition(|store| shows_cards(store, self.installed_dir));
         let on_the_cards = listed_in(self.token, &cards);
-        let ready = ready_card_among(&on_the_cards);
+        let ready = ready_card_among(&only_on_a_card(&on_the_cards, self.installed_dir));
         let mut found = self
             .last
             .other_than_cards(self.installed_dir)
@@ -186,9 +190,26 @@ fn listed_in(token: &dyn Token, stores: &[Store]) -> Vec<TokenCertificate> {
     token.list_across(stores).unwrap_or_default()
 }
 
-/// Si el almacén es de tarjeta; los `.p12` instalados también son módulos, y no lo son.
-pub fn is_a_card(store: &Store, installed_dir: &Path) -> bool {
-    store.class_under(installed_dir) == StoreClass::Card
+/// Si el almacén se vuelve a listar al cambiar los lectores: uno de tarjeta, o el de Windows, que copia las suyas.
+fn shows_cards(store: &Store, installed_dir: &Path) -> bool {
+    matches!(
+        store.class_under(installed_dir),
+        StoreClass::Card | StoreClass::Windows
+    )
+}
+
+/// Si el certificado es de una tarjeta; los `.p12` instalados también son módulos, y no lo son.
+fn is_on_a_card(reference: &CertificateRef, installed_dir: &Path) -> bool {
+    reference.class_under(installed_dir) == StoreClass::Card
+}
+
+/// Los certificados que son de una tarjeta, de entre los que enseñan los almacenes.
+pub fn only_on_a_card(found: &[TokenCertificate], installed_dir: &Path) -> Vec<TokenCertificate> {
+    found
+        .iter()
+        .filter(|certificate| is_on_a_card(certificate.reference(), installed_dir))
+        .cloned()
+        .collect()
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {

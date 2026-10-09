@@ -1,8 +1,9 @@
 use super::*;
 
-const EVERY_SITUATION: [Situation; 12] = [
+const EVERY_SITUATION: [Situation; 13] = [
     Situation::IncorrectPin,
     Situation::PinLocked,
+    Situation::PinEntryCancelled,
     Situation::TokenAbsent,
     Situation::ExpiredSession,
     Situation::ModuleNotFound,
@@ -133,4 +134,18 @@ fn a_p12_the_token_refuses_crosses_with_the_situation_of_the_token() {
     let failure = installed_unless_cancelled(outcome).unwrap_err();
 
     assert_eq!(failure.situation, "pkcs12NoPrivateKey");
+}
+
+#[test]
+fn a_pin_window_the_person_cancels_crosses_as_her_cancellation_and_not_as_a_failure() {
+    let failure = Failure::from(TokenError::new(
+        Situation::PinEntryCancelled,
+        "has cancelado la petición del PIN de Windows",
+    ));
+
+    assert_eq!(failure.situation, "userCancelled");
+    assert_eq!(
+        code_of_token(Situation::PinEntryCancelled),
+        SafCode::CannotAccessKeystore
+    );
 }
