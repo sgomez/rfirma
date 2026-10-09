@@ -16,10 +16,18 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Falla si OpenSC o pcsc-lite tienen una version publicada mas nueva
+      - name: Instala el comprobador de Flathub
         run: |
           set -euo pipefail
-          docker run --rm \
-            --volume "$PWD/packaging/flatpak:/manifest:ro" \
-            ghcr.io/flathub-infra/flatpak-external-data-checker:latest \
-            --check-outdated /manifest/me.sgomez.rfirma.yml
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak
+          flatpak remote-add --user --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive flathub \
+            org.flathub.flatpak-external-data-checker
+
+      - name: Falla si OpenSC o pcsc-lite tienen una version publicada mas nueva
+        run: |
+          flatpak run --filesystem="$PWD/packaging/flatpak:ro" \
+            org.flathub.flatpak-external-data-checker \
+            --check-outdated "$PWD/packaging/flatpak/me.sgomez.rfirma.yml"
