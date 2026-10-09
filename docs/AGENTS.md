@@ -71,7 +71,7 @@ ficheros más grandes del repositorio (hasta 32 KB).
 
 `ancla-y-paginas-en-el-puente` · `arrastre-bajo-el-sandbox` · `barra-de-titulo-en-linux` ·
 `ca-en-los-almacenes-de-confianza` · `ca-nss-navegador-abierto` · `campos-de-firma-vacios` ·
-`contrato-protocolo-afirma` · `coordenadas-recuadro-pades` · `dnie-en-flatpak` · `dnie-en-linux` ·
+`contrato-protocolo-afirma` · `coordenadas-recuadro-pades` · `dnie-en-flatpak` · `dnie-en-linux` · `dnie-en-windows` ·
 `exclusion-afirma-ui-utils` · `filtros-sede-unmeasured` · `firma-visible-trifasica` ·
 `flathub-libreria-nativa` · `flatpak-canal-unico` · `glibc-libreria-nativa` ·
 `graalvm-libawt-shared` · `i18next-y-el-po` · `native-image-postfirma` ·
