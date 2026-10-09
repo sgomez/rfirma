@@ -38,8 +38,7 @@ impl ClientKind {
 /// El almacén de un perfil aislado: `rsa` y `ec`, una NSS sin contraseña con un solo certificado;
 /// `token`, SoftHSM con PIN; `token_apart`, el token sin registrar junto a una NSS con otro; `ed25519`,
 /// un token sin registrar con una sola clave Ed25519; `several` y `expired`, NSS con varios, para los
-/// filtros; `dnie`, la NSS vacía con el OpenSC del sistema registrado, para el DNIe que la persona
-/// tiene en el lector.
+/// filtros; `dnie`, el DNIe que la persona tiene en el lector, por la vía de la plataforma.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
