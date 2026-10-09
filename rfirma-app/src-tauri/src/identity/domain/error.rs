@@ -12,6 +12,8 @@ pub enum Situation {
     IncorrectPin,
     /// El token ha bloqueado el PIN tras demasiados intentos fallidos.
     PinLocked,
+    /// La persona ha cancelado la petición del PIN que muestra el sistema.
+    PinEntryCancelled,
     /// No se detecta el token criptográfico.
     TokenAbsent,
     /// La sesión con el token ha caducado.
