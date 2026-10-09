@@ -46,6 +46,14 @@ tarjeta de verdad queda bloqueada:
    `CKF_USER_PIN_LOCKED` el caso de uso termina como PIN bloqueado (regla 2) y
    no vuelve a pedir el PIN.
 
+## En el Almacén de Windows, las reglas del PIN son las de Windows
+
+Las reglas de arriba son las del camino PKCS#11. En el Almacén de Windows, tarjetas incluidas,
+el PIN lo pide Windows con su diálogo (ADR-0035) y los intentos que quedan y el bloqueo son cosa
+del minidriver: rFirma no lee ni el contador ni el estado de bloqueo, ni tiene diálogo propio
+del PIN. Traduce el error que devuelve Windows: PIN incorrecto, tarjeta bloqueada o diálogo
+cancelado por la persona.
+
 ## Por qué no hay contador exacto de intentos
 
 PKCS#11 no tiene contador de reintentos: solo las tres banderas de la regla 3 y

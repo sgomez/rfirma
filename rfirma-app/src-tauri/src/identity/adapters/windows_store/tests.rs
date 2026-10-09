@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -10,7 +10,7 @@ use openssl::sign::{RsaPssSaltlen, Verifier};
 use openssl::x509::X509;
 
 use super::cng::{cancelled_by_the_person, hash_name, padding_of, situation_of, Padding};
-use super::{candidate_modules, is_the_user_store, user_store, WindowsToken};
+use super::{from_environment, is_the_user_store, user_store, WindowsToken};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::Situation;
@@ -32,13 +32,8 @@ fn the_user_store_is_told_apart_from_a_pkcs11_module() {
 }
 
 #[test]
-fn the_pkcs11_candidates_live_under_program_files_and_system32() {
-    let candidates = candidate_modules(Path::new("P"), Path::new("S"));
-
-    assert!(candidates.contains(&PathBuf::from(
-        "P/OpenSC Project/OpenSC/pkcs11/opensc-pkcs11.dll"
-    )));
-    assert!(candidates.contains(&Path::new("S").join("DNIe_P11_priv.dll")));
+fn the_windows_store_offers_no_store_but_its_own() {
+    assert_eq!(from_environment(), vec![user_store()]);
 }
 
 #[test]
