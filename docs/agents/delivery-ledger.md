@@ -443,3 +443,7 @@ siguen en `.scratch/archive/`.
 2026-10-08 spec=#899 sub=#903 model=opus effort=medium pr=#1783 verdict=CLEAN cycles=0 mergefix=0 wave=5 outcome=integrated
 2026-10-08 spec=#899 sub=#1763 model=sonnet effort=medium pr=#1784 verdict=CLEAN cycles=0 mergefix=0 wave=6 outcome=integrated
 2026-10-08 spec=#899 sub=#899 model=opus effort=medium pr=#1785 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-10-09 spec=#1734 sub=#1837 model=sonnet effort=medium pr=#1841 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=integrated
+2026-10-09 spec=#1734 sub=#1836 model=sonnet effort=medium pr=#1842 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=integrated
+2026-10-09 spec=#1734 sub=#1838 model=sonnet effort=medium pr=#1843 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=integrated
+2026-10-09 spec=#1734 sub=#1839 model=sonnet effort=medium pr=#1844 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=integrated
