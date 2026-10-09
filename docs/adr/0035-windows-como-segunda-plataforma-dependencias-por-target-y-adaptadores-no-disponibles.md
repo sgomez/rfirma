@@ -5,6 +5,22 @@ referencia: en Linux no cambian ni el código activo, ni el comportamiento, ni l
 Windows entra por fases, y hasta que una fase lo implementa, cada pieza que solo existe en un
 escritorio Linux tiene en Windows un **adaptador pendiente**.
 
+## En Windows, la API de Windows siempre que se pueda
+
+Para certificados, PIN, lectores y tarjetas, rFirma usa lo que Windows ofrece: es lo que la
+persona ya conoce y le da más confianza, y evita mantener un camino propio. De la regla salen:
+
+- **Los certificados, solo del Almacén de Windows** (`CurrentUser\MY`, por CNG). rFirma no busca
+  ni carga módulos PKCS#11 (OpenSC, el de la Policía, el de otras tarjetas), así que cada
+  certificado sale una vez y nunca se firma con una copia que acabaría en un diálogo del PIN que
+  en Windows no existe.
+- **El DNIe entra solo por el minidriver**, que Windows instala para la tarjeta y que copia sus
+  certificados al Almacén de Windows.
+- **El PIN lo pide Windows**, con su ventana. rFirma no tiene diálogo propio del PIN en Windows ni
+  lee los intentos que quedan o el bloqueo: lo resuelve el minidriver, y rFirma traduce el error
+  que devuelve (ADR-0047).
+- **El instalador no trae controladores de tarjeta** (ADR-0004).
+
 ## Las dependencias de escritorio Linux van por target
 
 `gtk`, `glib`, `gio` y `oo7` se declaran en `[target.'cfg(target_os = "linux")'.dependencies]`:
@@ -45,7 +61,7 @@ dice qué falta. La fase 4 sustituyó todos menos uno:
 
 | Pieza en Linux | En Windows |
 | --- | --- |
-| Diálogo GTK del PIN | `PendingWindowsPinDialog`: falla con un mensaje en castellano. Solo lo alcanza un módulo PKCS#11, porque con CNG el PIN lo pide Windows. |
+| Diálogo GTK del PIN | `PendingWindowsPinDialog`: falla con un mensaje en castellano. Con CNG el PIN lo pide Windows, así que solo lo alcanzaría un almacén de rFirma que pida el suyo. |
 | Llavero `oo7` (ADR-0034) | `WindowsCredentialManager`: una credencial genérica `rfirma/almacen-pin` del usuario en el Administrador de credenciales. |
 | Manejadores de `afirma://` por GIO y `mimeapps.list` | `HKCU\Software\Classes\afirma`, leído junto al de `HKLM` (§ *`afirma://` en el registro*). |
 | Diálogo GTK de fallo de arranque | `MessageBoxW` con el mismo texto. |
@@ -111,12 +127,11 @@ nuevo por cada `afirma://`; la instancia única sigue siendo solo la del escrito
 del registro se cuentan con las situaciones de `mimeapps.list`, porque el dominio no distingue
 dónde vive la lista.
 
-## La firma en Windows: CNG para el almacén del usuario, PKCS#11 para lo demás
+## La firma en Windows: CNG para el Almacén de Windows
 
 En Windows, el puerto `Token` lo sirve `WindowsToken`. El almacén personal del usuario
-(`CurrentUser\MY`) entra como un `Store` más, con una ruta que ningún módulo PKCS#11 puede
-tener (`cng:CurrentUser/MY`), y va el primero de la lista. Cualquier otro almacén se lo pasa a
-`RealToken`, el mismo PKCS#11 de Linux.
+(`CurrentUser\MY`) entra como un `Store`, con la ruta `cng:CurrentUser/MY`, y es el único que
+ofrece `from_environment`.
 
 - **Listar**: CryptoAPI enumera `MY` y se queda con los certificados que tienen
   `CERT_KEY_PROV_INFO_PROP_ID`, sin abrir la clave ni tocar la tarjeta. La cadena se completa
@@ -134,15 +149,12 @@ tener (`cng:CurrentUser/MY`), y va el primero de la lista. Cualquier otro almac�
   en primer plano si es del proceso o, si no, la primera visible del proceso. Cancelarla sigue
   llegando como `Situation::Unknown`, con el detalle «has cancelado la petición del PIN de
   Windows»: ninguna situación del catálogo dice «cancelado» sin mentir, y añadirla cambia el
-  dominio también en Linux. El diálogo propio del PIN solo haría falta en el camino PKCS#11, y
-  ahí sigue pendiente.
+  dominio también en Linux. rFirma no usa `NCRYPT_SILENT_FLAG` ni `NCRYPT_PIN_PROPERTY`, y no
+  lee los intentos que quedan ni el bloqueo (ADR-0047).
 
-El **DNIe** llega por las dos vías. Con el minidriver que Windows instala para la tarjeta, sus
-certificados aparecen en `CurrentUser\MY` y se firman por CNG con el PIN pedido por Windows: es
-la vía preferente. Además se buscan los módulos PKCS#11 de OpenSC y del DNIe en
-`%ProgramFiles%` y `%SystemRoot%\System32` (`RFIRMA_PKCS11_MODULE` los sustituye a todos, como
-en Linux); si el mismo certificado sale por los dos, la fila única se queda con la copia de CNG
-porque su clase, `Windows`, se prefiere a `Card`, y la ventana la rotula «Almacén de Windows».
+El **DNIe** llega solo por el minidriver que Windows instala para la tarjeta: sus certificados
+aparecen en `CurrentUser\MY` y se firman por CNG con el PIN pedido por Windows. Como no se cargan
+módulos PKCS#11, cada certificado sale una vez.
 
 ## Las recetas corren en Git Bash
 
@@ -345,11 +357,6 @@ tenga Git, y los scripts de `scripts/` son de `bash`.
 
 **Un alias de `cfg` desde `build.rs`** (`cfg(gtk_desktop)`) para no tocar la guarda: esconde el
 sistema operativo tras un nombre que la guarda no ve. Se descartó por eso mismo.
-
-**El DNIe solo por PKCS#11 en Windows**, como en Linux: reutiliza todo el código, pero exige
-instalar OpenSC o el módulo de la Policía y el diálogo propio del PIN, que en Windows no existe.
-El minidriver ya lo trae el sistema y su PIN lo pide Windows, así que PKCS#11 queda como segunda
-vía.
 
 **`CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG`** en vez de `ONLY`: devolvería un `HCRYPTPROV` de
 CryptoAPI para las claves de un CSP antiguo, y habría que firmar también con `CryptSignHash`.
