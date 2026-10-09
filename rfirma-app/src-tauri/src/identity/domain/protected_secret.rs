@@ -102,18 +102,18 @@ impl From<&str> for ProtectedSecret {
 
 impl Drop for ProtectedSecret {
     fn drop(&mut self) {
+        let ptr = self.bytes.as_mut_ptr();
+        let cap = self.bytes.capacity();
         self.bytes.zeroize();
-        if self.locked && !self.bytes.is_empty() {
+        if self.locked && cap > 0 {
             #[cfg(unix)]
             unsafe {
-                let ptr = self.bytes.as_mut_ptr() as *mut libc::c_void;
-                let cap = self.bytes.capacity();
-                libc::munlock(ptr, cap);
+                libc::munlock(ptr as *mut libc::c_void, cap);
             }
             #[cfg(windows)]
             unsafe {
                 use windows_sys::Win32::System::Memory::VirtualUnlock;
-                VirtualUnlock(self.bytes.as_mut_ptr().cast(), self.bytes.capacity());
+                VirtualUnlock(ptr.cast(), cap);
             }
         }
     }
