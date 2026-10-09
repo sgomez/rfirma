@@ -23,3 +23,7 @@
     transform: rotate(360deg);
   }
 }
+
+.reader-line__help {
+  display: block;
+}

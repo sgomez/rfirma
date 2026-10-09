@@ -49,6 +49,14 @@ export const ReadingTheCard: Story = {
   args: { ...consentProps(consentStage()), reader: { kind: "reading" } },
 };
 
+export const UnreadableCardOnWindows: Story = {
+  args: { ...consentProps(consentStage()), reader: { kind: "unreadable" }, platform: "windows" },
+};
+
+export const UnreadableCardOnLinux: Story = {
+  args: { ...consentProps(consentStage()), reader: { kind: "unreadable" }, platform: "linux" },
+};
+
 export const Countdown: Story = {
   args: { ...consentProps(consentStage()), countdown: true },
 };

@@ -9,7 +9,7 @@ use openssl::rsa::Padding as RsaPadding;
 use openssl::sign::{RsaPssSaltlen, Verifier};
 use openssl::x509::X509;
 
-use super::cng::{cancelled_by_the_person, hash_name, padding_of, situation_of, Padding};
+use super::cng::{hash_name, padding_of, situation_of, Padding};
 use super::{from_environment, is_the_user_store, user_store, WindowsToken};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -96,17 +96,19 @@ fn each_algorithm_gets_its_own_cng_hash_name() {
 #[test]
 fn smart_card_codes_map_to_their_situations() {
     assert_eq!(situation_of(0x8010_006B), Situation::IncorrectPin);
+    assert_eq!(situation_of(0x8009_0033), Situation::IncorrectPin);
     assert_eq!(situation_of(0x8010_006C), Situation::PinLocked);
     assert_eq!(situation_of(0x8010_000C), Situation::TokenAbsent);
     assert_eq!(situation_of(0x8009_0016), Situation::CertificateNotFound);
+    assert_eq!(situation_of(0x8010_001F), Situation::Unknown);
     assert_eq!(situation_of(0x1234_5678), Situation::Unknown);
 }
 
 #[test]
-fn cancelling_the_windows_pin_window_is_told_apart() {
-    assert!(cancelled_by_the_person(0x8010_006E));
-    assert!(cancelled_by_the_person(0x8007_04C7));
-    assert!(!cancelled_by_the_person(0x8010_006B));
+fn cancelling_the_windows_pin_window_is_the_person_cancelling() {
+    for cancelled in [0x8010_006E, 0x8010_0002, 0x8009_0036, 0x8007_04C7] {
+        assert_eq!(situation_of(cancelled), Situation::PinEntryCancelled);
+    }
 }
 
 #[test]
@@ -164,12 +166,19 @@ fn a_certificate_with_its_key_in_a_legacy_csp_names_that_provider() {
 }
 
 #[test]
-fn signs_with_rsa_through_cng() {
+fn signs_with_rsa_pkcs1_through_cng_with_every_hash() {
     let temporary = TemporaryCertificate::create(RSA_IN_CNG);
 
-    let signature = temporary.signed(SignatureAlgorithm::Sha256Rsa);
+    for algorithm in [
+        SignatureAlgorithm::Sha1Rsa,
+        SignatureAlgorithm::Sha256Rsa,
+        SignatureAlgorithm::Sha384Rsa,
+        SignatureAlgorithm::Sha512Rsa,
+    ] {
+        let signature = temporary.signed(algorithm);
 
-    assert!(temporary.verifies(SignatureAlgorithm::Sha256Rsa, &signature));
+        assert!(temporary.verifies(algorithm, &signature), "{algorithm:?}");
+    }
 }
 
 #[test]
@@ -201,6 +210,22 @@ fn signs_with_ecdsa_through_cng_in_der() {
 }
 
 #[test]
+fn signs_with_ecdsa_on_p384_through_cng_with_every_hash() {
+    let temporary = TemporaryCertificate::create(ECDSA_P384_IN_CNG);
+
+    for algorithm in [
+        SignatureAlgorithm::Sha1Ecdsa,
+        SignatureAlgorithm::Sha256Ecdsa,
+        SignatureAlgorithm::Sha384Ecdsa,
+        SignatureAlgorithm::Sha512Ecdsa,
+    ] {
+        let signature = temporary.signed(algorithm);
+
+        assert!(temporary.verifies(algorithm, &signature), "{algorithm:?}");
+    }
+}
+
+#[test]
 fn an_rsa_key_does_not_offer_ecdsa() {
     let temporary = TemporaryCertificate::create(RSA_IN_CNG);
     let reference = temporary.listed().reference().clone();
@@ -221,6 +246,8 @@ const RSA_IN_CNG: &str =
     "-Provider 'Microsoft Software Key Storage Provider' -KeyAlgorithm RSA -KeyLength 2048";
 const ECDSA_IN_CNG: &str =
     "-Provider 'Microsoft Software Key Storage Provider' -KeyAlgorithm ECDSA_nistP256";
+const ECDSA_P384_IN_CNG: &str =
+    "-Provider 'Microsoft Software Key Storage Provider' -KeyAlgorithm ECDSA_nistP384";
 const RSA_IN_A_LEGACY_CSP: &str =
     "-Provider 'Microsoft Enhanced RSA and AES Cryptographic Provider' -KeyAlgorithm RSA -KeyLength 2048";
 
@@ -295,12 +322,14 @@ impl TemporaryCertificate {
         let key = X509::from_der(self.listed().der())
             .and_then(|certificate| certificate.public_key())
             .expect("el certificado deberia traer su clave publica");
-        let digest = match algorithm {
-            SignatureAlgorithm::Sha384RsaPss => MessageDigest::sha384(),
+        let digest = match wide_text(hash_name(algorithm)).as_str() {
+            "SHA1" => MessageDigest::sha1(),
+            "SHA384" => MessageDigest::sha384(),
+            "SHA512" => MessageDigest::sha512(),
             _ => MessageDigest::sha256(),
         };
         let mut verifier = Verifier::new(digest, &key).expect("verificador");
-        if algorithm == SignatureAlgorithm::Sha384RsaPss {
+        if padding_of(algorithm) == Padding::Pss {
             verifier.set_rsa_padding(RsaPadding::PKCS1_PSS).unwrap();
             verifier
                 .set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)

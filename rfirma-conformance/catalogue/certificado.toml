@@ -489,7 +489,7 @@ set = "certificado"
 chapter = "13"
 citation = "ProtocolInvocationLauncherSign.java:574-629; SharedNssKeyStoreManager.java:20-50"
 statement = """
-Un DNIe en el lector, con el OpenSC del sistema registrado, se ofrece en el diálogo de selección
+Un DNIe en el lector, por la vía de la plataforma (el minidriver en Windows, OpenSC en Linux), se ofrece en el diálogo de selección
 sin pedir su PIN: elegirlo no necesita la tarjeta más que para leerla.
 """
 

@@ -6,8 +6,24 @@ import { Icon } from "../design-system/icons";
 import { hasAReader, type ReaderStatus } from "./certificate";
 import "./ReaderLine.css";
 
+/** La plataforma de la que depende la ayuda para una tarjeta ilegible. */
+export type CardHelpPlatform = "windows" | "linux" | "other";
+
+/** La plataforma que corresponde al `userAgent` del WebView. */
+function cardHelpPlatformFor(userAgent: string): CardHelpPlatform {
+  if (/windows/i.test(userAgent)) return "windows";
+  if (/linux/i.test(userAgent) && !/android/i.test(userAgent)) return "linux";
+  return "other";
+}
+
 /** Lo que dice el lector, con el indicador que gira mientras se lee la tarjeta (docs/design/panel-de-firma.md § Certificado). */
-export function ReaderLine({ reader }: { reader: ReaderStatus }) {
+export function ReaderLine({
+  reader,
+  platform = cardHelpPlatformFor(navigator.userAgent),
+}: {
+  reader: ReaderStatus;
+  platform?: CardHelpPlatform;
+}) {
   const { t } = useTranslation();
 
   if (!hasAReader(reader)) return null;
@@ -22,7 +38,10 @@ export function ReaderLine({ reader }: { reader: ReaderStatus }) {
       ) : (
         <Icon name="smartCard" size={14} />
       )}
-      {readerText(reader, t)}
+      <span>
+        {readerText(reader, t)}
+        {reader.kind === "unreadable" && <CardHelp platform={platform} />}
+      </span>
     </span>
   );
 }
@@ -43,4 +62,16 @@ function readerText(
     case "unreadable":
       return t("panel.certificate.reader.unreadable");
   }
+}
+
+function CardHelp({ platform }: { platform: CardHelpPlatform }) {
+  const { t } = useTranslation();
+  if (platform === "other") return null;
+  return (
+    <span className="reader-line__help">
+      {platform === "windows"
+        ? t("panel.certificate.reader.unreadableHelp.windows")
+        : t("panel.certificate.reader.unreadableHelp.linux")}
+    </span>
+  );
 }

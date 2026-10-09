@@ -522,6 +522,12 @@ msgstr "Card ready"
 msgid "panel.certificate.reader.unreadable"
 msgstr "rFirma cannot read the card in the reader"
 
+msgid "panel.certificate.reader.unreadableHelp.windows"
+msgstr "If Windows does not recognise it, the card software arrives through Windows Update when you insert the card, or can be downloaded from the DGP page."
+
+msgid "panel.certificate.reader.unreadableHelp.linux"
+msgstr "Install OpenSC so that rFirma can read it."
+
 #. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
 msgstr "Issued by {{issuer}}"

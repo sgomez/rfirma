@@ -9,7 +9,7 @@ import type { Certificate, CertificateState, ReaderStatus } from "../signing/cer
 import { keptAcrossTheReader, sitePreselection, UNAVAILABLE_READER } from "../signing/certificate";
 import { PreviousSignaturesNotice } from "../signing/PreviousSignaturesNotice";
 import { formatSize } from "../signing/panelFormat";
-import { ReaderLine } from "../signing/ReaderLine";
+import { type CardHelpPlatform, ReaderLine } from "../signing/ReaderLine";
 // `PreviousSignaturesNotice` no trae su propia hoja: la sede no monta `SigningPanel.tsx`.
 import "../signing/SigningPanel.css";
 import { Button } from "../design-system/Button";
@@ -35,6 +35,7 @@ interface SedeConsentProps {
   stage: Extract<ErrandStage, { kind: "consent" }>;
   countdown: boolean;
   reader?: ReaderStatus;
+  platform?: CardHelpPlatform;
   liveCertificates?: readonly Certificate[] | null;
   onConsent: (certificateId: string) => void;
   onCancel: () => void;
@@ -57,6 +58,7 @@ export function SedeConsent({
   stage,
   countdown,
   reader = UNAVAILABLE_READER,
+  platform,
   liveCertificates = null,
   onConsent,
   onCancel,
@@ -117,6 +119,7 @@ export function SedeConsent({
             order={terminalOrder}
             certificates={certificates}
             reader={reader}
+            platform={platform}
             stage={stage}
             chosen={chosen}
             onChoose={setChosen}
@@ -145,7 +148,7 @@ export function SedeConsent({
               onChoose={setChosen}
               listMaxHeight={300}
             />
-            <ReaderLine reader={reader} />
+            <ReaderLine reader={reader} platform={platform} />
 
             {/* Debajo del desplegable y no encima: es una nota sobre lo que la lista
             contiene, y se lee después de verla. Dice **que** la sede acotó, y
@@ -233,6 +236,7 @@ function TerminalConsentBody({
   order,
   certificates,
   reader,
+  platform,
   stage,
   chosen,
   onChoose,
@@ -240,6 +244,7 @@ function TerminalConsentBody({
   order: TerminalOrder;
   certificates: readonly Certificate[];
   reader: ReaderStatus;
+  platform: CardHelpPlatform | undefined;
   stage: Extract<ErrandStage, { kind: "consent" }>;
   chosen: Certificate | null;
   onChoose: (certificate: Certificate) => void;
@@ -259,7 +264,7 @@ function TerminalConsentBody({
         onChoose={onChoose}
         listMaxHeight={300}
       />
-      <ReaderLine reader={reader} />
+      <ReaderLine reader={reader} platform={platform} />
       {previous !== undefined && previous.signatures.length > 0 && (
         <PreviousSignaturesNotice report={previous} certificate={chosen} presentation="site" />
       )}

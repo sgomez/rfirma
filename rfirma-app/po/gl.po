@@ -520,6 +520,12 @@ msgstr "Tarxeta lista"
 msgid "panel.certificate.reader.unreadable"
 msgstr "rFirma non pode ler a tarxeta do lector"
 
+msgid "panel.certificate.reader.unreadableHelp.windows"
+msgstr "Se Windows non a recoñece, o software da tarxeta chega por Windows Update ao inserila ou descárgase da páxina da DGP."
+
+msgid "panel.certificate.reader.unreadableHelp.linux"
+msgstr "Instala OpenSC para que rFirma poida lela."
+
 #. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
 msgstr "Emitido por {{issuer}}"

@@ -39,7 +39,8 @@ const {
   ReadingTheCard,
   DnieReady,
   CardReady,
-  UnreadableCard,
+  UnreadableCardOnLinux,
+  UnreadableCardOnWindows,
   NoCertificatesWithReader,
 } = composed;
 
@@ -132,7 +133,8 @@ describe("the signing panel, by state", () => {
       { Story: ReadingTheCard, said: "Leyendo la tarjeta…" },
       { Story: DnieReady, said: "DNIe listo" },
       { Story: CardReady, said: "Tarjeta lista" },
-      { Story: UnreadableCard, said: "rFirma no puede leer la tarjeta del lector" },
+      { Story: UnreadableCardOnWindows, said: "rFirma no puede leer la tarjeta del lector" },
+      { Story: UnreadableCardOnLinux, said: "rFirma no puede leer la tarjeta del lector" },
     ] as const;
 
     for (const { Story, said } of cases) {
