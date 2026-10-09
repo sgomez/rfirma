@@ -222,25 +222,26 @@ fi
 if [ -f "$RELEASE" ]; then
     linea_de() { grep -n "$1" "$RELEASE" | grep -vE ':[0-9]+:[[:space:]]*#' | head -1 | cut -d: -f1; }
     firma_rpm="$(linea_de 'rpmsign --addsign')"
+    firma_flatpak="$(linea_de 'packaging/flatpak/sign-bundle.sh')"
     resumenes="$(linea_de 'sha256sum -- \*')"
     atestacion="$(linea_de 'attest-build-provenance')"
     adjuntar="$(linea_de 'gh release create')"
 
-    for paso in firma_rpm resumenes atestacion adjuntar; do
+    for paso in firma_rpm firma_flatpak resumenes atestacion adjuntar; do
         if [ -z "${!paso}" ]; then
             echo "$RELEASE ya no tiene el paso '$paso' de la cadena de firma (ADR-0015)" >&2
             exit 1
         fi
     done
-    if [ "$firma_rpm" -ge "$resumenes" ] || [ "$resumenes" -ge "$atestacion" ] \
+    if [ "$firma_rpm" -ge "$resumenes" ] || [ "$firma_flatpak" -ge "$resumenes" ] || [ "$resumenes" -ge "$atestacion" ] \
         || [ "$atestacion" -ge "$adjuntar" ]; then
         echo "$RELEASE tiene los pasos en otro orden (ADR-0015)." >&2
-        echo "Firmar un .rpm lo MODIFICA, asi que el orden es obligatorio:" >&2
-        echo "  firmar cada .rpm -> SHA256SUMS -> atestar -> adjuntar" >&2
-        echo "  y aqui estan en las lineas $firma_rpm, $resumenes, $atestacion, $adjuntar" >&2
+        echo "Firmar un .rpm o un .flatpak lo MODIFICA, asi que el orden es obligatorio:" >&2
+        echo "  firmar cada .rpm y cada .flatpak -> SHA256SUMS -> atestar -> adjuntar" >&2
+        echo "  y aqui estan en las lineas $firma_rpm, $firma_flatpak, $resumenes, $atestacion, $adjuntar" >&2
         exit 1
     fi
-    echo "OK  $RELEASE firma cada .rpm antes de resumir, atestar y adjuntar"
+    echo "OK  $RELEASE firma cada .rpm y cada .flatpak antes de resumir, atestar y adjuntar"
 fi
 
 docker="$(grep -rniE 'docker|ghcr\.io|container-registry' .github/workflows | sin_comentarios || true)"

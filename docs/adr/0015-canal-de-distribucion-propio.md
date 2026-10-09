@@ -382,3 +382,24 @@ misma cosa en la misma apertura del panel.
   la minisign del *updater*, y aprovisionar los **cinco secretos** —subclave GPG, clave SSH
   con orden forzada, token de Coolify que sólo redespliega esa aplicación, y la privada
   minisign con su contraseña— es **trabajo humano y bloqueante**.
+
+## Enmienda: el `.flatpak` de la Release se firma en la Release
+
+El `.flatpak` adjunto a cada Release lleva el origen (el remoto de `rfirma.sgomez.me`, rama
+`stable`), la clave pública y la firma de su commit con la subclave GPG que ya firma los
+`.rpm`. Quien lo instala recibe las versiones nuevas, como quien usa el `.flatpakref`. No hay
+secreto nuevo.
+
+**No puede hacerse en la construcción.** Un bundle con la clave dentro y sin firma no se
+instala: Flatpak exige que su commit venga firmado con ella, y la construcción no tiene
+secretos. Por eso `build.yml` sigue produciendo un bundle sin origen ni firma y `release.yml`
+lo firma con `packaging/flatpak/sign-bundle.sh`.
+
+**Firmar cambia el fichero, no el commit.** El `.flatpak` pasa a ser un paquete firmable del
+manifiesto, igual que el `.rpm`: `--against` lo da por bueno aunque su resumen cambie, y el
+orden obligatorio es firmar el `.rpm` y el `.flatpak`, calcular `SHA256SUMS`, atestar y
+adjuntar. Como el commit no cambia, el repositorio ostree se sigue montando a partir de estos
+bundles sin que nadie tenga que descargar de nuevo.
+
+**No se avisa a quien instaló antes un `.flatpak` suelto.** Flatpak no migra el origen de una
+instalación existente, y quien la tiene llegó desde la web, donde está el `.flatpakref`.

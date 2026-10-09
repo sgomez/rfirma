@@ -51,10 +51,10 @@ jobs:
           name: pdf-puerta-manual
           path: puerta-manual
 
-      - name: rpmsign, gnupg y minisign
+      - name: rpmsign, gnupg, minisign y flatpak
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends rpm gnupg minisign
+          sudo apt-get install -y --no-install-recommends rpm gnupg minisign flatpak ostree
 
       - name: Subclave de firma
         id: gpg
@@ -81,7 +81,7 @@ jobs:
             echo "OK  $fichero publica la huella de la clave que firma"
           done
 
-      # El orden firmar el `.rpm`, resumir, atestar y adjuntar es obligatorio: firmar un `.rpm` lo modifica (ADR-0015).
+      # El orden firmar el `.rpm` y el `.flatpak`, resumir, atestar y adjuntar es obligatorio: firmar un `.rpm` lo modifica (ADR-0015).
       - name: Firma cada .rpm
         run: |
           set -euo pipefail
@@ -105,6 +105,15 @@ jobs:
           for paquete in "${rpms[@]}"; do
             rpm --checksig "$paquete"
           done
+
+      # Se firma aqui y no en la construccion, que no tiene secretos: con la clave dentro y sin firma, Flatpak no lo instala (ADR-0015).
+      - name: Firma cada .flatpak
+        run: |
+          set -euo pipefail
+          while read -r bundle; do
+            packaging/flatpak/sign-bundle.sh "paquetes/$bundle" \
+              "${{ steps.gpg.outputs.fingerprint }}" "${{ steps.gpg.outputs.passphrase-file }}"
+          done < <(scripts/packages-manifest.sh files paquetes flatpak)
 
       - name: Digests, contra los de la construccion
         env:
