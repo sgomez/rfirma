@@ -16,24 +16,8 @@ pub fn certificates_on_the_cards() -> Vec<Vec<u8>> {
     };
     let mut found = Vec::new();
     let mut state: *mut c_void = ptr::null_mut();
-    loop {
-        let mut name: *mut NCryptKeyName = ptr::null_mut();
-        let status = unsafe {
-            NCryptEnumKeys(
-                provider.0,
-                ptr::null(),
-                &mut name,
-                &mut state,
-                NCRYPT_SILENT_FLAG,
-            )
-        };
-        if status != 0 || name.is_null() {
-            break;
-        }
-        if let Some(der) = provider.certificate_of(unsafe { &*name }) {
-            found.push(der);
-        }
-        unsafe { NCryptFreeBuffer(name.cast()) };
+    while let Some(certificate) = provider.certificate_of_the_next_key(&mut state) {
+        found.extend(certificate);
     }
     if !state.is_null() {
         unsafe { NCryptFreeBuffer(state) };
@@ -50,6 +34,20 @@ impl Provider {
             NCryptOpenStorageProvider(&mut handle, MS_SMART_CARD_KEY_STORAGE_PROVIDER, 0)
         };
         (status == 0).then_some(Self(handle))
+    }
+
+    /// La siguiente clave de la enumeración, con su certificado si lo trae; `None` al acabar.
+    fn certificate_of_the_next_key(&self, state: &mut *mut c_void) -> Option<Option<Vec<u8>>> {
+        let mut name: *mut NCryptKeyName = ptr::null_mut();
+        let status =
+            unsafe { NCryptEnumKeys(self.0, ptr::null(), &mut name, state, NCRYPT_SILENT_FLAG) };
+        if status != 0 {
+            return None;
+        }
+        let key = unsafe { name.as_ref() }?;
+        let certificate = self.certificate_of(key);
+        unsafe { NCryptFreeBuffer(name.cast()) };
+        Some(certificate)
     }
 
     fn certificate_of(&self, key: &NCryptKeyName) -> Option<Vec<u8>> {

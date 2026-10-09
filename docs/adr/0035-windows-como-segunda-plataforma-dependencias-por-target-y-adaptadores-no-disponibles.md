@@ -134,7 +134,10 @@ En Windows, el puerto `Token` lo sirve `WindowsToken`. El almacén personal del 
 ofrece `from_environment`.
 
 - **Listar**: CryptoAPI enumera `MY` y se queda con los certificados que tienen
-  `CERT_KEY_PROV_INFO_PROP_ID`, sin abrir la clave ni tocar la tarjeta. La cadena se completa
+  `CERT_KEY_PROV_INFO_PROP_ID`. `MY` conserva las copias de las tarjetas que ya no están, así
+  que, si alguno tiene la clave en el KSP de tarjeta, el listado enumera ese KSP y abre en
+  silencio cada clave para leer su certificado: de esas copias, solo quedan las que enseña
+  ahora alguna tarjeta. Sin PIN y sin ventana. La cadena se completa
   con `MY`, `CA` y `Root` del usuario. El `CKA_ID` de la referencia es la huella SHA-1, y la
   etiqueta, el nombre descriptivo o, si no hay, el sujeto.
 - **Firmar (ADR-0001)**: Rust resume lo que manda Java y firma el resumen con `NCryptSignHash`
@@ -146,11 +149,11 @@ ofrece `from_environment`.
   rFirma no enseña su diálogo, y el proveedor de la tarjeta (KSP o minidriver) pide el PIN con
   su propia ventana. Esa ventana es modal sobre la de rFirma: la clave se abre con
   `CRYPT_ACQUIRE_WINDOW_HANDLE_FLAG` y se le pone `NCRYPT_WINDOW_HANDLE_PROPERTY`, con la ventana
-  en primer plano si es del proceso o, si no, la primera visible del proceso. Cancelarla sigue
-  llegando como `Situation::Unknown`, con el detalle «has cancelado la petición del PIN de
-  Windows»: ninguna situación del catálogo dice «cancelado» sin mentir, y añadirla cambia el
-  dominio también en Linux. rFirma no usa `NCRYPT_SILENT_FLAG` ni `NCRYPT_PIN_PROPERTY`, y no
-  lee los intentos que quedan ni el bloqueo (ADR-0047).
+  en primer plano si es del proceso o, si no, la primera visible del proceso. Cancelarla llega
+  como `Situation::PinEntryCancelled`, que cruza como `userCancelled`, igual que cancelar el
+  diálogo del PIN en Linux. Al firmar, rFirma no usa `NCRYPT_SILENT_FLAG` ni
+  `NCRYPT_PIN_PROPERTY`, y no lee los intentos que quedan ni el bloqueo (ADR-0047); la bandera
+  solo la usa el listado, donde es justo lo que evita pedir nada.
 
 El **DNIe** llega solo por el minidriver que Windows instala para la tarjeta: sus certificados
 aparecen en `CurrentUser\MY` y se firman por CNG con el PIN pedido por Windows. Como no se cargan

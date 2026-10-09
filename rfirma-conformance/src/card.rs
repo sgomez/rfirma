@@ -21,21 +21,40 @@ pub(crate) fn a_dnie_is_in_the_reader() -> bool {
     }
 }
 
-/// Si el Almacén de Windows del usuario trae un certificado del DNIe cuya clave es la del KSP de tarjeta.
+/// Si el KSP de tarjeta enseña ahora la clave de un certificado del DNIe del Almacén de Windows, que conserva las copias de las tarjetas que no están.
 fn a_dnie_is_in_the_windows_store() -> bool {
-    Command::new("certutil")
-        .args(["-user", "-store", "My"])
-        .output()
-        .map(|output| a_dnie_certificate_in(&String::from_utf8_lossy(&output.stdout)))
-        .unwrap_or(false)
+    let card_keys = silent_certutil(&["-csp", THE_SMART_CARD_KEY_PROVIDER, "-key"]);
+    a_dnie_certificate_in(&silent_certutil(&["-user", "-store", "My"]), &card_keys)
 }
 
-/// Si el listado de `certutil` trae un certificado emitido para el DNIe con la clave en la tarjeta.
-fn a_dnie_certificate_in(listing: &str) -> bool {
-    listing.split("================").any(|certificate| {
-        certificate.contains(THE_SMART_CARD_KEY_PROVIDER)
-            && certificate.to_lowercase().contains("dnie")
-    })
+/// La salida de `certutil` con `-silent`, que no abre ninguna ventana de la tarjeta; vacía si no corre.
+fn silent_certutil(arguments: &[&str]) -> String {
+    Command::new("certutil")
+        .arg("-silent")
+        .args(arguments)
+        .output()
+        .map(|output| String::from_utf8_lossy(&output.stdout).into_owned())
+        .unwrap_or_default()
+}
+
+/// Si el listado del almacén trae un certificado del DNIe cuya clave lista ahora el KSP de tarjeta.
+fn a_dnie_certificate_in(store: &str, card_keys: &str) -> bool {
+    store
+        .split("================")
+        .filter(|certificate| {
+            certificate.contains(THE_SMART_CARD_KEY_PROVIDER)
+                && certificate.to_lowercase().contains("dnie")
+        })
+        .any(|certificate| a_key_of(certificate, card_keys))
+}
+
+/// Si algún valor del certificado (`<etiqueta> = <valor>`, en el idioma del sistema) es una clave del listado del KSP.
+fn a_key_of(certificate: &str, card_keys: &str) -> bool {
+    certificate
+        .lines()
+        .filter_map(|line| line.split_once(" = ").map(|(_, value)| value.trim()))
+        .filter(|value| !value.is_empty() && *value != THE_SMART_CARD_KEY_PROVIDER)
+        .any(|value| card_keys.lines().any(|key| key.trim() == value))
 }
 
 /// Si el OpenSC del sistema ve un DNIe en algún lector; `false` si no hay módulo ni `pkcs11-tool`.
@@ -80,25 +99,43 @@ mod tests {
         assert!(a_dnie_in(listing));
     }
 
-    #[test]
-    fn a_certificate_of_the_dnie_with_its_key_on_the_card_is_a_dnie_in_the_reader() {
-        let listing = "================ Certificate 0 ================\nIssuer: CN=AC DNIE 004\n  Provider = Microsoft Smart Card Key Storage Provider\n";
+    const CARD_KEYS: &str =
+        "Microsoft Smart Card Key Storage Provider:\n  dnie-firma-0001\n  RSA\n    AT_SIGNATURE\n";
 
-        assert!(a_dnie_certificate_in(listing));
+    #[test]
+    fn a_certificate_of_the_dnie_whose_key_the_card_shows_is_a_dnie_in_the_reader() {
+        let store = "================ Certificate 0 ================\nIssuer: CN=AC DNIE 004\n  Key Container = dnie-firma-0001\n  Provider = Microsoft Smart Card Key Storage Provider\n";
+
+        assert!(a_dnie_certificate_in(store, CARD_KEYS));
+    }
+
+    #[test]
+    fn a_copy_of_the_dnie_in_the_store_without_the_card_is_not_a_dnie_in_the_reader() {
+        let store = "================ Certificate 0 ================\nIssuer: CN=AC DNIE 004\n  Key Container = dnie-firma-0001\n  Provider = Microsoft Smart Card Key Storage Provider\n";
+
+        assert!(!a_dnie_certificate_in(store, ""));
+    }
+
+    #[test]
+    fn a_copy_of_the_dnie_while_another_card_is_in_is_not_a_dnie_in_the_reader() {
+        let store = "================ Certificate 0 ================\nIssuer: CN=AC DNIE 004\n  Key Container = dnie-firma-0001\n  Provider = Microsoft Smart Card Key Storage Provider\n";
+        let other_card = "Microsoft Smart Card Key Storage Provider:\n  otra-tarjeta-0002\n  RSA\n";
+
+        assert!(!a_dnie_certificate_in(store, other_card));
     }
 
     #[test]
     fn a_certificate_of_another_card_is_not_a_dnie_in_the_reader() {
-        let listing = "================ Certificate 0 ================\nIssuer: CN=Otra CA\n  Provider = Microsoft Smart Card Key Storage Provider\n";
+        let store = "================ Certificate 0 ================\nIssuer: CN=Otra CA\n  Key Container = dnie-firma-0001\n  Provider = Microsoft Smart Card Key Storage Provider\n";
 
-        assert!(!a_dnie_certificate_in(listing));
+        assert!(!a_dnie_certificate_in(store, CARD_KEYS));
     }
 
     #[test]
     fn a_dnie_certificate_with_a_software_key_is_not_a_dnie_in_the_reader() {
-        let listing = "================ Certificate 0 ================\nIssuer: CN=AC DNIE 004\n  Provider = Microsoft Software Key Storage Provider\n";
+        let store = "================ Certificate 0 ================\nIssuer: CN=AC DNIE 004\n  Key Container = dnie-firma-0001\n  Provider = Microsoft Software Key Storage Provider\n";
 
-        assert!(!a_dnie_certificate_in(listing));
+        assert!(!a_dnie_certificate_in(store, CARD_KEYS));
     }
 
     #[test]

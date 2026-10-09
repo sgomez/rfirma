@@ -322,12 +322,7 @@ impl TemporaryCertificate {
         let key = X509::from_der(self.listed().der())
             .and_then(|certificate| certificate.public_key())
             .expect("el certificado deberia traer su clave publica");
-        let digest = match wide_text(hash_name(algorithm)).as_str() {
-            "SHA1" => MessageDigest::sha1(),
-            "SHA384" => MessageDigest::sha384(),
-            "SHA512" => MessageDigest::sha512(),
-            _ => MessageDigest::sha256(),
-        };
+        let digest = digest_of(algorithm);
         let mut verifier = Verifier::new(digest, &key).expect("verificador");
         if padding_of(algorithm) == Padding::Pss {
             verifier.set_rsa_padding(RsaPadding::PKCS1_PSS).unwrap();
@@ -337,6 +332,15 @@ impl TemporaryCertificate {
             verifier.set_rsa_mgf1_md(digest).unwrap();
         }
         verifier.verify_oneshot(signature, DATA).unwrap_or(false)
+    }
+}
+
+fn digest_of(algorithm: SignatureAlgorithm) -> MessageDigest {
+    match wide_text(hash_name(algorithm)).as_str() {
+        "SHA1" => MessageDigest::sha1(),
+        "SHA384" => MessageDigest::sha384(),
+        "SHA512" => MessageDigest::sha512(),
+        _ => MessageDigest::sha256(),
     }
 }
 
