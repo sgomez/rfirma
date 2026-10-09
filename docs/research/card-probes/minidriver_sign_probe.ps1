@@ -14,6 +14,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+trap {
+    Write-Host "Error interno en la línea $($_.InvocationInfo.ScriptLineNumber): $($_.FullyQualifiedErrorId)"
+    exit 3
+}
+
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -218,8 +223,8 @@ function Describe([int] $code) {
     if ($name) { '0x{0:X8} {1}' -f $code, $name } else { '0x{0:X8}' -f $code }
 }
 
-function Test-Usage($certificate, [string] $usage) {
-    $extension = $certificate.Extensions | Where-Object { $_ -is [System.Security.Cryptography.X509Certificates.X509KeyUsageExtension] }
+function Test-Usage($signer, [string] $usage) {
+    $extension = $signer.Extensions | Where-Object { $_ -is [System.Security.Cryptography.X509Certificates.X509KeyUsageExtension] }
     if (-not $extension) { return $false }
     $nonRepudiation = ($extension.KeyUsages -band [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::NonRepudiation) -ne 0
     if ($usage -eq 'Signing') { $nonRepudiation } else { -not $nonRepudiation }
@@ -238,8 +243,8 @@ if ($candidates.Count -ne 1) {
     Say 'Hace falta exactamente uno: inserta el DNIe, espera a que Windows lo propague y vuelve a ejecutar.'
     exit 2
 }
-$certificate = $candidates[0]
-Say "Proveedor de la clave: $([MinidriverProbe]::ProviderOf($certificate.Handle))"
+$signer = $candidates[0]
+Say "Proveedor de la clave: $([MinidriverProbe]::ProviderOf($signer.Handle))"
 Say "Vía: $Path"
 
 $digest = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes('rfirma-sonda-1817'))
@@ -251,13 +256,13 @@ if ((Read-Host 'Escribe FIRMAR para seguir') -cne 'FIRMAR') {
 }
 
 $outcome = if ($Path -eq 'Ksp') {
-    [MinidriverProbe]::SignWithKsp($certificate.Handle, $digest)
+    [MinidriverProbe]::SignWithKsp($signer.Handle, $digest)
 } else {
-    [MinidriverProbe]::SignWithCapi($certificate.Handle, $digest)
+    [MinidriverProbe]::SignWithCapi($signer.Handle, $digest)
 }
 
 if ($outcome.Signature) {
-    $rsa = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPublicKey($certificate)
+    $rsa = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPublicKey($signer)
     $valid = $rsa.VerifyHash($digest, $outcome.Signature,
         [System.Security.Cryptography.HashAlgorithmName]::SHA256,
         [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
