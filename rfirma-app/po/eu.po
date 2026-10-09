@@ -523,6 +523,12 @@ msgstr "Txartela prest"
 msgid "panel.certificate.reader.unreadable"
 msgstr "rFirmak ezin du irakurgailuko txartela irakurri"
 
+msgid "panel.certificate.reader.unreadableHelp.windows"
+msgstr "Windowsek ez badu ezagutzen, txartelaren softwarea Windows Update bidez iristen da txartela sartzean, edo DGPren orritik deskarga daiteke."
+
+msgid "panel.certificate.reader.unreadableHelp.linux"
+msgstr "Instalatu OpenSC rFirmak txartela irakur dezan."
+
 #. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
 msgstr "Jaulkitzailea: {{issuer}}"

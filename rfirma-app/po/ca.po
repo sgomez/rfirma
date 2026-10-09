@@ -522,6 +522,12 @@ msgstr "Targeta a punt"
 msgid "panel.certificate.reader.unreadable"
 msgstr "L'rFirma no pot llegir la targeta del lector"
 
+msgid "panel.certificate.reader.unreadableHelp.windows"
+msgstr "Si Windows no la reconeix, el programari de la targeta arriba per Windows Update en inserir-la o es descarrega de la pàgina de la DGP."
+
+msgid "panel.certificate.reader.unreadableHelp.linux"
+msgstr "Instal·la OpenSC perquè l'rFirma la pugui llegir."
+
 #. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
 msgstr "Emès per {{issuer}}"
