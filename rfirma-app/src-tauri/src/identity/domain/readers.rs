@@ -1,6 +1,7 @@
 //! Los lectores de tarjetas y el estado que la ventana enseña de ellos: el de cada uno y el que los resume.
 
 use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::store::is_a_card_key_provider;
 
 /// Un lector tal como lo ve PC/SC: su nombre y si tiene una tarjeta dentro.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -92,6 +93,23 @@ pub fn ready_card_among(on_the_cards: &[TokenCertificate]) -> Option<ReadyCard> 
     } else {
         ReadyCard::Other
     })
+}
+
+/// Sin las copias que Windows guarda de una tarjeta que ya no está: las que su proveedor de tarjeta no enseña ahora (ADR-0048).
+pub fn with_the_cards_present(
+    found: Vec<TokenCertificate>,
+    on_the_cards: &[Vec<u8>],
+) -> Vec<TokenCertificate> {
+    found
+        .into_iter()
+        .filter(|certificate| {
+            let copied_from_a_card = certificate
+                .reference()
+                .key_provider()
+                .is_some_and(is_a_card_key_provider);
+            !copied_from_a_card || on_the_cards.iter().any(|der| der == certificate.der())
+        })
+        .collect()
 }
 
 #[cfg(test)]

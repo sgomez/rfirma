@@ -4,7 +4,7 @@ pub mod failures;
 pub mod folder;
 #[cfg(target_os = "linux")]
 pub mod keyring;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub mod pcsc;
 #[cfg(target_os = "macos")]
 pub mod pending_macos_keychain;
@@ -28,10 +28,10 @@ pub use pending_macos_keychain::PendingMacosKeychain as DesktopKeyring;
 pub use windows_credential_manager::WindowsCredentialManager as DesktopKeyring;
 
 /// El vigilante de lectores de esta plataforma.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub use pcsc::PcscReaderWatch as DesktopReaderWatch;
 /// El vigilante de lectores de esta plataforma.
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", windows)))]
 pub use readers::UnavailableReaderWatch as DesktopReaderWatch;
 
 /// El token de esta plataforma.

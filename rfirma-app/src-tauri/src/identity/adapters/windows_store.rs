@@ -1,6 +1,7 @@
 //! `WindowsToken`, el Almacén de Windows detrás del puerto `Token`, por CNG (ADR-0035).
 
 mod cng;
+mod smart_card;
 
 use std::path::Path;
 
@@ -9,8 +10,9 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::readers::with_the_cards_present;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
-use crate::identity::domain::store::Store;
+use crate::identity::domain::store::{is_a_card_key_provider, Store};
 use crate::identity::ports::Token;
 
 /// La ruta con la que se nombra `CurrentUser\MY`: ningún módulo PKCS#11 puede llamarse así.
@@ -25,6 +27,24 @@ fn is_the_user_store(store: &Store) -> bool {
     store.path() == Path::new(USER_STORE)
 }
 
+/// Los certificados con clave del almacén del usuario, sin las copias de una tarjeta que no está en el lector (ADR-0048).
+fn signable_with_the_cards_present() -> Result<Vec<TokenCertificate>, TokenError> {
+    let found = cng::signable_certificates()?;
+    let copied_from_a_card = found.iter().any(|certificate| {
+        certificate
+            .reference()
+            .key_provider()
+            .is_some_and(is_a_card_key_provider)
+    });
+    if !copied_from_a_card {
+        return Ok(found);
+    }
+    Ok(with_the_cards_present(
+        found,
+        &smart_card::certificates_on_the_cards(),
+    ))
+}
+
 /// Los almacenes de esta máquina: solo el del usuario (ADR-0035).
 pub fn from_environment() -> Vec<Store> {
     vec![user_store()]
@@ -37,7 +57,7 @@ pub struct WindowsToken;
 impl Token for WindowsToken {
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         if is_the_user_store(store) {
-            return cng::signable_certificates();
+            return signable_with_the_cards_present();
         }
         RealToken.list(store)
     }
@@ -55,7 +75,7 @@ impl Token for WindowsToken {
         pin: &ProtectedSecret,
     ) -> Result<Vec<TokenCertificate>, TokenError> {
         if is_the_user_store(store) {
-            return cng::signable_certificates();
+            return signable_with_the_cards_present();
         }
         RealToken.list_authenticated(store, pin)
     }

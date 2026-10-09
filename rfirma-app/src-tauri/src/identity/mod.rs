@@ -95,9 +95,9 @@ impl IdentityRoot {
         )
     }
 
-    /// Si el almacén es de tarjeta, para el estado del lector.
-    pub fn is_a_card(&self, store: &Store) -> bool {
-        application::readers::is_a_card(store, &self.installed_certificates)
+    /// Los certificados que son de una tarjeta, para el estado del lector.
+    pub fn only_on_a_card(&self, found: &[TokenCertificate]) -> Vec<TokenCertificate> {
+        application::readers::only_on_a_card(found, &self.installed_certificates)
     }
 
     /// Las filas con su asa acuñada y el recordado marcado.

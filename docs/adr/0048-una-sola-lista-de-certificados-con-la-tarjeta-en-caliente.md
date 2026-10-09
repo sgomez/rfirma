@@ -66,3 +66,14 @@ lector» de «esta versión no mira».
 
 **Esta decisión caduca** cuando el vigilante cubra todas las plataformas y
 canales: `Unavailable` desaparece con la regla de arranque que lo sostiene.
+
+## Enmienda: en Windows, el vigilante es `winscard.dll` y se vuelve a listar el Almacén de Windows
+
+En Windows el vigilante PC/SC es el mismo, sobre `winscard.dll`. Las tarjetas
+entran por su minidriver y Windows copia sus certificados al Almacén de
+Windows, así que al cambiar los lectores se vuelve a listar ese almacén junto a
+los de clase tarjeta. Windows no retira esas copias al sacar la tarjeta
+(`docs/research/dnie-en-windows.md`): un certificado del almacén con la clave en
+el proveedor de tarjeta solo se lista si el KSP de tarjeta lo enseña en ese
+momento, leído sin abrir la clave ni pedir el PIN. «Ilegible» es una tarjeta
+presente que no aporta ningún certificado de clase tarjeta (ADR-0035).
