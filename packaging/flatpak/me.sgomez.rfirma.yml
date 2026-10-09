@@ -8,9 +8,8 @@
 # libreria nativa en /app/lib/rfirma— es lo que midio el #22 y se queda tal
 # cual.
 #
-# LA FONTANERIA DE TARJETA SE BORRO EN EL #256: pcsc-lite y OpenSC nunca se
-# publicaron, tarjetas y DNIe no estan soportados en la v0.4, y el manifiesto
-# solo compila la biblioteca de pcsc-lite que enlaza el vigilante de lectores.
+# TARJETAS Y DNIE (ADR-0049): el demonio pcscd es el del anfitrion, por
+# --socket=pcsc; dentro van el cliente de pcsc-lite y un OpenSC propio.
 app-id: me.sgomez.rfirma
 # Rama fija: la version de cada entrega va en <releases> del metainfo, no en
 # la rama. Asi el usuario que instala 'stable' sigue recibiendo las siguientes.
@@ -61,9 +60,14 @@ finish-args:
   - --filesystem=xdg-documents
   # NI --filesystem=host-os NI --filesystem=home NI --filesystem=host: la
   # ENTRADA de ficheros sigue entrando por portales, y --filesystem=home
-  # tampoco devolveria la ruta real del original (ADR-0011). Tarjetas y DNIe
-  # no estan soportados en la v0.4 (#256): no hay modulo PKCS#11 de tarjeta
-  # que empaquetar ni justificar aqui.
+  # tampoco devolveria la ruta real del original (ADR-0011).
+  #
+  # El socket del pcscd del anfitrion (ADR-0049, ID-466). Lo que concede, sin
+  # adornos: hablar con CUALQUIER tarjeta de CUALQUIER lector del anfitrion,
+  # no solo con el DNIe que se va a firmar. No hay alternativa mas estrecha:
+  # Flatpak no tiene un portal de tarjetas, y --device=all daria mas, no menos.
+  # Sin pcscd en el anfitrion el flatpak arranca igual y enseña «sin lector».
+  - --socket=pcsc
   # EXCEPCION CONSCIENTE (#95, #101): un almacen de certificados NSS no es un
   # documento y no hay portal que lo sirva. Sin esto el flatpak no ve ningun
   # certificado de Firefox. NO se declara --filesystem=home. No hace falta
@@ -161,12 +165,17 @@ modules:
       - type: dir
         path: ../../rfirma-native-bridge/target/lib/rfirma
 
-  # 1b. Solo la biblioteca de pcsc-lite, que el vigilante de lectores enlaza
-  #     (ID-447). Sin demonio ni OpenSC ni socket: dentro del flatpak no hay
-  #     tarjetas y el vigilante cuenta cero lectores.
+  # 1b. Solo el cliente de pcsc-lite, sin demonio (ID-466): habla con el pcscd
+  #     del anfitrion por el socket de --socket=pcsc. NO bajar de la 2.4.1, la
+  #     primera que reintenta con la version de protocolo del servidor (ID-467).
+  #     Versiones nuevas: https://pcsclite.apdu.fr/files/ (ID-471); se sube a
+  #     la siguiente publicada, nunca a un commit de master.
   - name: pcsc-lite
     buildsystem: meson
     config-opts:
+      # flatpak-builder 1.4.2 (Ubuntu 24.04) no se lo pasa a meson: sin el,
+      # pcsc-lite va a /app/lib64 y OpenSC no encuentra winscard.h.
+      - --libdir=lib
       - -Dlibsystemd=false
       - -Dlibudev=false
       - -Dlibusb=false
@@ -177,11 +186,96 @@ modules:
       - type: archive
         url: https://pcsclite.apdu.fr/files/pcsc-lite-2.5.1.tar.xz
         sha256: bfcfe38a20afc49849c6bf55325e38f449fc4b26d3923fdc32b969ae41a8741b
+        x-checker-data:
+          type: html
+          url: https://pcsclite.apdu.fr/files/
+          pattern: pcsc-lite-([\d.]+)\.tar\.xz"
+          url-template: https://pcsclite.apdu.fr/files/pcsc-lite-$version.tar.xz
     cleanup:
       - /bin
       - /sbin
       - /include
       - /lib/pkgconfig
+      - /share/man
+
+  # 1c. OpenSC, con version y sha256 fijos (ID-469). zlib, openssl y sm se piden
+  #     para que la construccion pare si falta alguno: sin zlib el driver del
+  #     DNIe carga pero no lee sus certificados. SIN --enable-dnie-ui (la
+  #     ventana de confirmacion; el PIN lo pide rFirma) y con el opensc.conf
+  #     por omision. El propio OpenSC instala su .module (ID-470); el manifiesto
+  #     no escribe ninguno. Versiones nuevas: https://github.com/OpenSC/OpenSC/releases
+  #     (ID-471); se sube a la siguiente publicada, nunca a un commit de master.
+  - name: opensc
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+      - --disable-notify
+      - --disable-doc
+      - --disable-strict
+      - --disable-tests
+      - --enable-pcsc
+      - --enable-zlib
+      - --enable-openssl
+      - --enable-sm
+      - --disable-readline
+      - --disable-openpace
+      - --with-pcsc-provider=libpcsclite.so.1
+      - --enable-p11_system_config_modules=/app/share/p11-kit/modules
+    make-install-args:
+      - completiondir=/app/share/bash-completion/completions
+    post-install:
+      # La invariante, comprobada DURANTE LA CONSTRUCCION (TD-124): sin el
+      # .module o sin el modulo rfirma no veria el DNIe y el bundle saldria
+      # igual de bien.
+      - |
+        set -eu
+        for falta in /app/share/p11-kit/modules/opensc.module \
+                     /app/lib/pkcs11/opensc-pkcs11.so; do
+            if [ ! -e "$falta" ]; then
+                echo "ERROR: falta $falta" >&2
+                echo "Sin el, rfirma no descubre OpenSC y el DNIe no aparece" >&2
+                echo "(ADR-0049). Revisa las opciones de configure de OpenSC." >&2
+                exit 1
+            fi
+        done
+        echo "OK: opensc.module y opensc-pkcs11.so en /app"
+    sources:
+      - type: archive
+        url: https://github.com/OpenSC/OpenSC/releases/download/0.27.1/opensc-0.27.1.tar.gz
+        sha256: 976f4a23eaf3397a1a2c3a7aac80bf971a8c3d829c9a79f06145bfaeeae5eca7
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/OpenSC/OpenSC/releases/latest
+          tag-query: .tag_name
+          version-query: .tag_name
+          timestamp-query: .published_at
+          url-query: '"https://github.com/OpenSC/OpenSC/releases/download/" + $version + "/opensc-" + $version + ".tar.gz"'
+    cleanup:
+      # Se quedan opensc-tool y pkcs11-tool, para diagnosticar; el resto no
+      # lo usa rFirma.
+      - /bin/cardos-tool
+      - /bin/cryptoflex-tool
+      - /bin/dnie-tool
+      - /bin/egk-tool
+      - /bin/eidenv
+      - /bin/gids-tool
+      - /bin/goid-tool
+      - /bin/iasecc-tool
+      - /bin/netkey-tool
+      - /bin/npa-tool
+      - /bin/openpgp-tool
+      - /bin/opensc-asn1
+      - /bin/opensc-explorer
+      - /bin/opensc-notify
+      - /bin/piv-tool
+      - /bin/pkcs15-*
+      - /bin/sc-hsm-tool
+      - /bin/westcos-tool
+      - /include
+      - /lib/pkgconfig
+      - /share/applications
+      - /share/bash-completion
+      - /share/doc
       - /share/man
 
   # 2. La aplicacion. El binario se llama `rfirma` y coincide con `command:` de

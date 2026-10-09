@@ -42,7 +42,7 @@ impl LastListing {
 
 /// Si esta plataforma y este canal pueden vigilar lectores (ADR-0048).
 pub fn watches_the_readers(platform: Platform, channel: Channel) -> bool {
-    platform == Platform::Linux && channel != Channel::Flatpak
+    platform == Platform::Linux && matches!(channel, Channel::Native | Channel::Flatpak)
 }
 
 /// El último estado anunciado de los lectores, para la ventana que se monta después del anuncio.

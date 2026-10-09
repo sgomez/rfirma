@@ -1,0 +1,33 @@
+# Avisa de versiones nuevas de OpenSC y pcsc-lite, que van dentro del flatpak (ADR-0049).
+name: Versiones del flatpak
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  outdated:
+    name: Versiones del flatpak
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Instala el comprobador de Flathub
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak
+          flatpak remote-add --user --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive flathub \
+            org.flathub.flatpak-external-data-checker
+
+      - name: Falla si OpenSC o pcsc-lite tienen una version publicada mas nueva
+        run: |
+          flatpak run --filesystem="$PWD/packaging/flatpak:ro" \
+            org.flathub.flatpak-external-data-checker \
+            --check-outdated "$PWD/packaging/flatpak/me.sgomez.rfirma.yml"

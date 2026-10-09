@@ -16,6 +16,11 @@ Los nativos no se empaquetan aquí: los produce el *bundler* de Tauri
 | `sources.lock` | El sello del `Cargo.lock` contra el que se generó |
 | `check-sources.sh` | Falla si esas fuentes se han quedado atrás |
 
+OpenSC y `pcsc-lite` llevan `x-checker-data` en el manifiesto, y el workflow
+`flatpak-versions.yml` (lunes y a mano) sale en rojo cuando se publica una
+versión nueva de cualquiera de los dos. La subida es a mano, a la siguiente
+versión publicada y nunca a un commit de `master`.
+
 ## Instalar
 
 El bundle **no trae el runtime**, pero lleva dentro la dirección de **Flathub**
@@ -57,9 +62,10 @@ Lo que midió está escrito en
 [`docs/research/flatpak-canal-unico.md`](../../docs/research/flatpak-canal-unico.md).
 
 El resto del manifiesto —runtime, permisos, la librería en `/app/lib/rfirma`—
-se quedó tal cual. La fontanería de tarjeta (`pcsc-lite` y `OpenSC`) se retiró
-en el [#256](https://github.com/sgomez/rfirma/issues/256): nunca se había
-publicado, y tarjetas y DNIe no están soportados en la v0.4.
+se quedó tal cual. Las tarjetas y el DNIe ([ADR-0049](../../docs/adr/0049-el-flatpak-trae-su-opensc-y-usa-el-pcscd-del-anfitrion.md))
+usan el `pcscd` del anfitrión por `--socket=pcsc` y el OpenSC que lleva dentro
+el flatpak. El anfitrión necesita `pcscd` y el driver de su lector, `libccid` en
+la mayoría de los casos.
 
 ## Verificar
 
