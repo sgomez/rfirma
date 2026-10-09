@@ -47,7 +47,7 @@ finish-args:
 modules:
   - name: pcsc-lite
     buildsystem: meson
-    config-opts: [-Dlibsystemd=false, -Dlibudev=false, -Dlibusb=false, -Dpolkit=false,
+    config-opts: [--libdir=lib, -Dlibsystemd=false, -Dlibudev=false, -Dlibusb=false, -Dpolkit=false,
                   -Dipcdir=/run/pcscd, -Dusbdropdir=/app/lib/pcsc/drivers]
     sources:
       - type: archive
