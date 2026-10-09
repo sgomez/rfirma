@@ -20,7 +20,7 @@ Las decisiones están en `docs/adr/`; cada zona tiene su mapa con sus trampas. L
 
 * **Un comando por llamada, sin prefijos:** `just <receta>` a secas, sin `PATH=…`, `CARGO_TARGET_DIR=…`, `cd … &&` ni `; echo $?`. Las recetas ya ponen `~/.cargo/bin` en el `PATH` y el árbol de compilación.
 * **GraalVM JDK 25** (`GRAALVM_HOME`, ADR-0004); la trampa del 21 de SDKMAN, en `rfirma-native-bridge/AGENTS.md`.
-* **Token PKCS#11 de pruebas:** `softhsm2`, tokens `rfirma-test` (RSA) y `rfirma-test-ecc` (curva elíptica), PIN `1234`, módulo `/usr/lib/softhsm/libsofthsm2.so`, con certificados de pruebas de la FNMT; el kit, en `~/.local/share/rfirma-test-certs` (`docs/research/token-pkcs11-pruebas.md`). **El certificado personal del titular no se usa en ningún punto del proyecto.**
+* **Token PKCS#11 de pruebas:** `softhsm2`, tokens `rfirma-test` (RSA) y `rfirma-test-ecc` (curva elíptica), PIN `1234`, módulo `/usr/lib/softhsm/libsofthsm2.so`, con certificados de pruebas de la FNMT; el kit, en `~/.local/share/rfirma-test-certs` (`docs/research/token-pkcs11-pruebas.md`). **El certificado personal del titular no se usa en ningún punto del proyecto, salvo en las sondas manuales del DNIe del #1798**, que ejecuta el titular, con un solo intento de PIN por sonda, siempre el correcto, y con la salida anonimizada (ID-485).
 * Un `pkg-config exited with status code 1` en `javascriptcore-rs-sys` es una biblioteca de sistema de Tauri que falta: la lista, en el paso «Dependencias de sistema de Tauri» de `.github/workflows/ci.yml`.
 * Desde un worktree, las recetas compilan en `.claude/worktrees/target`, compartido (ADR-0014).
 
