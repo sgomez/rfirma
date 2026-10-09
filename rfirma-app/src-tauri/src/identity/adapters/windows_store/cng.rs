@@ -91,8 +91,9 @@ pub fn sign(
 /// La situación del catálogo que corresponde a un código de error de CryptoAPI, CNG o la tarjeta.
 pub fn situation_of(code: u32) -> Situation {
     match code {
-        0x8010_006B => Situation::IncorrectPin,
+        0x8010_006B | 0x8009_0033 => Situation::IncorrectPin,
         0x8010_006C => Situation::PinLocked,
+        0x8010_006E | 0x8010_0002 | 0x8009_0036 | 0x8007_04C7 => Situation::PinEntryCancelled,
         0x8010_000C | 0x8010_0069 | 0x8010_002E | 0x8010_0017 => Situation::TokenAbsent,
         0x8009_0016 | 0x8009_000D | 0x8009_2004 => Situation::CertificateNotFound,
         0x8009_0029 | 0x8009_0008 => Situation::MechanismNotOffered,
@@ -100,22 +101,14 @@ pub fn situation_of(code: u32) -> Situation {
     }
 }
 
-/// Si el código es de la persona que ha cancelado la ventana del PIN de Windows.
-pub fn cancelled_by_the_person(code: u32) -> bool {
-    matches!(code, 0x8010_006E | 0x8010_0002 | 0x8009_0036 | 0x8007_04C7)
-}
-
 fn failure(code: u32, doing: &str) -> TokenError {
-    if cancelled_by_the_person(code) {
-        return TokenError::new(
-            situation_of(code),
-            format!("has cancelado la petición del PIN de Windows (0x{code:08X})"),
-        );
-    }
-    TokenError::new(
-        situation_of(code),
-        format!("Windows ha devuelto 0x{code:08X} al {doing}"),
-    )
+    let situation = situation_of(code);
+    let detail = if situation == Situation::PinEntryCancelled {
+        format!("has cancelado la petición del PIN de Windows (0x{code:08X})")
+    } else {
+        format!("Windows ha devuelto 0x{code:08X} al {doing}")
+    };
+    TokenError::new(situation, detail)
 }
 
 fn last_failure(doing: &str) -> TokenError {
