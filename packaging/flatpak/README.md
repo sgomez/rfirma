@@ -37,6 +37,24 @@ flatpak install --user packaging/flatpak/me.sgomez.rfirma.flatpak
 versionar) y de ahí saca `me.sgomez.rfirma.flatpak`, que es **el entregable del
 v0.1** (ID-42). No se publica en ningún sitio.
 
+## Un bundle firmado con origen, para mirarlo a mano
+
+`packaging/flatpak/sign-bundle.sh <bundle> <huella> <fichero-de-la-contraseña>`
+deja el bundle firmado y con el origen de rFirma, tal como lo hará la release.
+Para verlo en GNOME Software sin la clave real, se firma con una desechable:
+
+```bash
+just flatpak
+export GNUPGHOME="$(mktemp -d)"
+printf desechable > "$GNUPGHOME/pass"
+gpg --batch --pinentry-mode loopback --passphrase-file "$GNUPGHOME/pass" \
+    --quick-gen-key "rfirma prueba <prueba@example.invalid>" ed25519 sign never
+packaging/flatpak/sign-bundle.sh packaging/flatpak/me.sgomez.rfirma.flatpak \
+    "$(gpg --list-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')" "$GNUPGHOME/pass"
+```
+
+Después se abre `me.sgomez.rfirma.flatpak` con GNOME Software.
+
 ## Ficheros fuera de `~/Documents`
 
 El manifiesto no abre ninguna otra carpeta de documentos que `xdg-documents`. Para
