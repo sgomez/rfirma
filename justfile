@@ -114,6 +114,7 @@ check: tools check-repo check-java check-ts check-landing check-rust
 check-repo: check-version fmt-check
     set -euo pipefail
     {{ root }}/packaging/flatpak/check-sources.sh
+    appstreamcli validate --no-net {{ root }}/packaging/flatpak/me.sgomez.rfirma.metainfo.xml
     {{ root }}/.github/check-workflows.sh
     {{ root }}/scripts/check-versions.sh
     {{ root }}/packaging/repo/build-tree.test.sh
