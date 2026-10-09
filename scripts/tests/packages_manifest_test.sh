@@ -25,7 +25,7 @@ done
 jq -e 'all(.[]; has("platform") and has("file") and has("format") and has("signable") and has("warning"))' \
     "$full/paquetes.json" > /dev/null || fail "entrega completa: campos de cada fila"
 
-[ "$("$script" signable "$full")" = "rfirma-1.0.0-1.x86_64.rpm" ] || fail "solo el rpm es firmable"
+[ "$("$script" signable "$full" | tr '\n' ' ')" = "me.sgomez.rfirma.flatpak rfirma-1.0.0-1.x86_64.rpm " ] || fail "el flatpak y el rpm son firmables"
 [ "$("$script" files "$full" deb)" = "rfirma_1.0.0_amd64.deb" ] || fail "filtro por formato"
 [ "$("$script" files "$full" | wc -l | tr -d ' ')" = 5 ] || fail "files lista los paquetes y no el SHA256SUMS"
 

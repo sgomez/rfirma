@@ -48,6 +48,7 @@ built="$(delivery built)"
 (cd "$built" && sha256sum -- * > "$tmp/SHA256SUMS.build")
 
 echo signature >> "$built/rfirma-1.0.0-1.x86_64.rpm"
+echo signature >> "$built/me.sgomez.rfirma.flatpak"
 passes "entrega: un firmable puede cambiar" "$built" --against "$tmp/SHA256SUMS.build"
 
 extra="$(delivery extra)"

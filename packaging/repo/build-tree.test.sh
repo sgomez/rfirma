@@ -52,7 +52,7 @@ versiones=(0.4.0 0.4.2 0.4.10)
 # Las herramientas
 # ---------------------------------------------------------------------------
 faltan=()
-for herramienta in ostree flatpak dpkg-deb dpkg-scanpackages apt-ftparchive createrepo_c rpmbuild rpm; do
+for herramienta in gpg ostree flatpak dpkg-deb dpkg-scanpackages apt-ftparchive createrepo_c rpmbuild rpm; do
     command -v "$herramienta" > /dev/null 2>&1 || faltan+=("$herramienta")
 done
 
@@ -202,6 +202,19 @@ EOF
     ostree --repo="$obra/repo" rev-parse app/me.sgomez.rfirma/x86_64/stable
 }
 
+# La version mas nueva viaja firmada y con origen, como sale de la Release (ID-501).
+firmar_bundle() {
+    local bundle="$1" casa="$tmp/gnupg-firma"
+    mkdir -p -m 700 "$casa"
+    printf 'desechable' > "$tmp/passphrase-firma"
+    GNUPGHOME="$casa" gpg --batch --pinentry-mode loopback --passphrase-file "$tmp/passphrase-firma" \
+        --quick-gen-key "rfirma prueba <prueba@example.invalid>" ed25519 sign never > /dev/null 2>&1
+    local huella
+    huella="$(GNUPGHOME="$casa" gpg --batch --list-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')"
+    GNUPGHOME="$casa" "$raiz/packaging/flatpak/sign-bundle.sh" "$bundle" "$huella" "$tmp/passphrase-firma" > /dev/null 2>&1
+    GNUPGHOME="$casa" gpgconf --kill gpg-agent > /dev/null 2>&1 || true
+}
+
 deb_de_prueba() {
     local version="$1" destino="$2" obra="$tmp/obra/deb-$version"
     rm -rf "$obra"
@@ -247,6 +260,7 @@ for version in "${versiones[@]}"; do
     dir="$serie/v$version"
     mkdir -p "$dir"
     commit_de[$version]="$(bundle_de_prueba "$version" "$dir/rfirma-$version.flatpak")"
+    [ "$version" = 0.4.10 ] && firmar_bundle "$dir/rfirma-$version.flatpak"
     deb_de_prueba "$version" "$dir/rfirma_${version}_amd64.deb"
     rpm_de_prueba "$version" "$dir/rfirma-$version.x86_64.rpm"
     instalador_de_pega "$dir" "$version"
