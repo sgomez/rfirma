@@ -613,3 +613,4 @@ fn an_entity_certificate_without_a_natural_person_holder_carries_no_entity_name(
 
 mod copies;
 mod removal;
+mod windows_store;

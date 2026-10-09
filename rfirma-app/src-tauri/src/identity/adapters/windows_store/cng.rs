@@ -14,9 +14,9 @@ use windows_sys::Win32::Security::Cryptography::{
     CERT_FIND_SHA1_HASH, CERT_FRIENDLY_NAME_PROP_ID, CERT_HASH_PROP_ID, CERT_KEY_PROV_INFO_PROP_ID,
     CERT_STORE_OPEN_EXISTING_FLAG, CERT_STORE_PROV_SYSTEM_W, CERT_STORE_READONLY_FLAG,
     CERT_SYSTEM_STORE_CURRENT_USER, CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG,
-    CRYPT_ACQUIRE_WINDOW_HANDLE_FLAG, CRYPT_INTEGER_BLOB, HCERTSTORE, NCRYPT_KEY_HANDLE,
-    NCRYPT_PAD_PKCS1_FLAG, NCRYPT_PAD_PSS_FLAG, NCRYPT_WINDOW_HANDLE_PROPERTY, PKCS_7_ASN_ENCODING,
-    X509_ASN_ENCODING,
+    CRYPT_ACQUIRE_WINDOW_HANDLE_FLAG, CRYPT_INTEGER_BLOB, CRYPT_KEY_PROV_INFO, HCERTSTORE,
+    NCRYPT_KEY_HANDLE, NCRYPT_PAD_PKCS1_FLAG, NCRYPT_PAD_PSS_FLAG, NCRYPT_WINDOW_HANDLE_PROPERTY,
+    PKCS_7_ASN_ENCODING, X509_ASN_ENCODING,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetAncestor, GetForegroundWindow, GetWindowThreadProcessId, IsWindowVisible,
@@ -128,11 +128,13 @@ struct Entry {
     thumbprint: Vec<u8>,
     friendly_name: Option<String>,
     has_private_key: bool,
+    key_provider: Option<String>,
 }
 
 impl Entry {
     unsafe fn of(context: *const CERT_CONTEXT) -> Self {
         let encoded = &*context;
+        let key_info = property(context, CERT_KEY_PROV_INFO_PROP_ID);
         Self {
             der: std::slice::from_raw_parts(encoded.pbCertEncoded, encoded.cbCertEncoded as usize)
                 .to_vec(),
@@ -140,7 +142,8 @@ impl Entry {
             friendly_name: property(context, CERT_FRIENDLY_NAME_PROP_ID)
                 .map(|bytes| utf16_text(&bytes))
                 .filter(|name| !name.is_empty()),
-            has_private_key: property(context, CERT_KEY_PROV_INFO_PROP_ID).is_some(),
+            has_private_key: key_info.is_some(),
+            key_provider: key_info.as_deref().and_then(|info| provider_named_in(info)),
         }
     }
 
@@ -150,8 +153,29 @@ impl Entry {
             .or_else(|| subject_of(&self.der))
             .unwrap_or_else(|| hex(&self.thumbprint));
         let reference = CertificateRef::new(user_store(), TOKEN_LABEL, label, self.thumbprint);
+        let reference = match self.key_provider {
+            Some(provider) => reference.with_key_provider(provider),
+            None => reference,
+        };
         TokenCertificate::new(reference, self.der)
     }
+}
+
+/// El proveedor que nombra `CERT_KEY_PROV_INFO_PROP_ID`: se lee de la propiedad, sin abrir la clave.
+unsafe fn provider_named_in(key_info: &[u8]) -> Option<String> {
+    if key_info.len() < std::mem::size_of::<CRYPT_KEY_PROV_INFO>() {
+        return None;
+    }
+    let info = ptr::read_unaligned(key_info.as_ptr().cast::<CRYPT_KEY_PROV_INFO>());
+    let name = info.pwszProvName.cast_const();
+    if name.is_null() {
+        return None;
+    }
+    let units: Vec<u16> = (0..)
+        .map(|offset| ptr::read_unaligned(name.add(offset)))
+        .take_while(|unit| *unit != 0)
+        .collect();
+    Some(String::from_utf16_lossy(&units)).filter(|provider| !provider.is_empty())
 }
 
 fn subject_of(der: &[u8]) -> Option<String> {

@@ -79,8 +79,29 @@ fn a_cng_store_is_the_windows_store_and_not_a_card() {
 }
 
 #[test]
-fn a_windows_copy_is_preferred_over_the_same_certificate_on_a_card() {
-    assert!(StoreClass::Windows.preference() < StoreClass::Card.preference());
+fn the_stores_are_preferred_card_windows_installed_system_nss_firefox_chrome() {
+    let mut classes = [
+        StoreClass::Chrome,
+        StoreClass::Firefox,
+        StoreClass::Nssdb,
+        StoreClass::Installed,
+        StoreClass::Windows,
+        StoreClass::Card,
+    ];
+
+    classes.sort_by_key(|class| class.preference());
+
+    assert_eq!(
+        classes,
+        [
+            StoreClass::Card,
+            StoreClass::Windows,
+            StoreClass::Installed,
+            StoreClass::Nssdb,
+            StoreClass::Firefox,
+            StoreClass::Chrome,
+        ]
+    );
 }
 
 #[test]

@@ -5,10 +5,23 @@ use std::path::{Path, PathBuf};
 /// Prefijo con el que se nombran los almacenes de Windows: ningún módulo PKCS#11 se llama así.
 pub const WINDOWS_STORE_PREFIX: &str = "cng:";
 
+/// Los proveedores de Windows que guardan la clave en una tarjeta: el KSP de los minidrivers y su CSP.
+const CARD_KEY_PROVIDERS: [&str; 2] = [
+    "Microsoft Smart Card Key Storage Provider",
+    "Microsoft Base Smart Card Crypto Provider",
+];
+
+/// Si el proveedor de una clave del Almacén de Windows la guarda en una tarjeta (ADR-0035).
+pub fn is_a_card_key_provider(provider: &str) -> bool {
+    CARD_KEY_PROVIDERS
+        .iter()
+        .any(|card| card.eq_ignore_ascii_case(provider))
+}
+
 /// Clasificación del tipo de almacén para presentación en la interfaz (ADR-0011).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum StoreClass {
-    /// Módulo PKCS#11 de tarjeta o token físico.
+    /// Tarjeta o token físico: un módulo PKCS#11, o una clave del Almacén de Windows en un proveedor de tarjeta.
     Card,
     /// Perfil de usuario del navegador Firefox.
     Firefox,
@@ -23,13 +36,11 @@ pub enum StoreClass {
 }
 
 impl StoreClass {
-    /// Qué copia de un mismo certificado se prefiere: Windows, tarjeta, Almacén de rFirma, NSS del sistema, Firefox, Chrome.
+    /// Qué copia de un mismo certificado se prefiere: tarjeta, Windows, Almacén de rFirma, NSS del sistema, Firefox, Chrome.
     pub fn preference(self) -> u8 {
         match self {
-            // La copia de Windows gana: el DNIe con su minidriver sale también por PKCS#11, y por
-            // CNG es Windows quien pide el PIN y el consentimiento (ADR-0035).
-            Self::Windows => 0,
-            Self::Card => 1,
+            Self::Card => 0,
+            Self::Windows => 1,
             Self::Installed => 2,
             Self::Nssdb => 3,
             Self::Firefox => 4,
