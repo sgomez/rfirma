@@ -5,15 +5,17 @@ use std::path::PathBuf;
 use crate::desktop::adapters::installation::{this_glibc, this_installation, this_webview};
 use crate::desktop::adapters::registry::this_desktop;
 use crate::desktop::application::debug_report::{
-    DebugReport, LinuxEnvironment, NativeLibrary, NativeLibraryStatus, ProtocolHandlerStatus,
-    ReportOwner,
+    DebugReport, LinuxEnvironment, NativeLibrary, NativeLibraryStatus, PcscStatus,
+    ProtocolHandlerStatus, ReportOwner,
 };
 use crate::desktop::domain::channel::Channel;
+use crate::identity::adapters as identity_adapters;
 use crate::signing::adapters::ffi::{locate, NativeBridge};
 use crate::signing::domain::bridge::{BridgeError, LIBRARY_DIRECTORY_VARIABLE};
 use crate::PKCS11_MODULE_VARIABLE;
 
 const SCHEME: &str = "afirma";
+const BUNDLED_PCSC_LITE_VERSION: &str = "/app/share/rfirma/pcsc-lite-version";
 const UNKNOWN: &str = "desconocido";
 
 /// El informe de este proceso, con la librería nativa realmente cargada.
@@ -32,6 +34,8 @@ pub fn this_process_report() -> DebugReport {
         native_library: native_library(),
         library_directory_override: defined_path(LIBRARY_DIRECTORY_VARIABLE),
         pkcs11_module_override: defined_path(PKCS11_MODULE_VARIABLE),
+        pcsc: pcsc_status(),
+        bundled_pcsc_lite: bundled_pcsc_lite(channel),
     }
 }
 
@@ -141,6 +145,23 @@ fn without_directories(identifier: &str) -> String {
         .next()
         .unwrap_or(identifier)
         .to_owned()
+}
+
+fn pcsc_status() -> Option<PcscStatus> {
+    identity_adapters::SPEAKS_PCSC.then(|| match identity_adapters::survey_readers() {
+        Some(readers) => PcscStatus::Responding(readers),
+        None => PcscStatus::NotResponding,
+    })
+}
+
+fn bundled_pcsc_lite(channel: Channel) -> Option<String> {
+    if channel != Channel::Flatpak {
+        return None;
+    }
+    std::fs::read_to_string(BUNDLED_PCSC_LITE_VERSION)
+        .ok()
+        .map(|version| version.trim().to_owned())
+        .filter(|version| !version.is_empty())
 }
 
 fn native_library() -> NativeLibrary {
