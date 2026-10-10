@@ -2,7 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::site::domain::local_ca::{LocalCa, COMMON_NAME};
+use crate::desktop::domain::channel::Channel;
+use crate::site::domain::local_ca::{ChannelMark, LocalCa, COMMON_NAME};
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
 use crate::site::domain::trust::is_trusted_ssl_ca;
 use crate::site::domain::trust::{
@@ -34,6 +35,11 @@ impl TrustOutcome {
     /// Indica si se llegó a comprobar algún almacén.
     pub fn looked(&self) -> bool {
         !matches!(self.work, Work::Nothing)
+    }
+
+    /// Indica si la CA vigente ha cambiado por una con la marca del canal.
+    pub fn replaced_the_local_ca(&self) -> bool {
+        self.work == Work::ReplaceTheUnmarkedOne
     }
 }
 
@@ -76,26 +82,37 @@ pub fn narrate_startup_outcome(mut outcome: TrustOutcome, profiles: &[PathBuf]) 
     lines
 }
 
+/// La marca que lleva la CA local de cada canal de distribución.
+pub fn mark_of(channel: Channel) -> ChannelMark {
+    match channel {
+        Channel::Native => ChannelMark::Native,
+        Channel::Flatpak => ChannelMark::Flatpak,
+        Channel::Windows => ChannelMark::Windows,
+    }
+}
+
 /// Registra y renueva la CA local en los almacenes NSS indicados (ADR-0005).
 pub fn refresh_local_ca_trust(
     store: &dyn LocalCaSlots,
     profiles: &[PathBuf],
     stores: &dyn TrustStores,
     moment: Moment,
+    mark: ChannelMark,
 ) -> Result<TrustOutcome, TlsError> {
     let saved = store.serving()?;
     let waiting = store.next()?;
     let days_left = saved.as_ref().map(LocalCa::days_left).transpose()?;
     let stage = Stage::of(days_left);
-    let work = trust::work_at(
-        moment,
-        stage,
-        if waiting.is_some() {
-            NextCa::Waiting
-        } else {
-            NextCa::None
-        },
-    );
+    let work = work_for(moment, stage, saved.as_ref(), waiting.is_some(), mark);
+    let retired = if work == Work::ReplaceTheUnmarkedOne {
+        [saved.as_ref(), waiting.as_ref()]
+            .into_iter()
+            .flatten()
+            .map(der_of)
+            .collect::<Result<Vec<_>, _>>()?
+    } else {
+        Vec::new()
+    };
 
     let serving = || saved.clone().expect("esa etapa sale de una CA guardada");
     let certificates: Vec<LocalCa> = match work {
@@ -109,14 +126,14 @@ pub fn refresh_local_ca_trust(
             })
         }
         Work::InstallTheOneWeHave => vec![serving()],
-        Work::MakeOneAndInstallIt => {
-            let fresh = LocalCa::generate()?;
+        Work::MakeOneAndInstallIt | Work::ReplaceTheUnmarkedOne => {
+            let fresh = LocalCa::generate(mark)?;
             store.write_serving(&fresh)?;
             store.forget_next()?;
             vec![fresh]
         }
         Work::MakeTheNextAndInstallItToo => {
-            let next = LocalCa::generate()?;
+            let next = LocalCa::generate(mark)?;
             store.write_next(&next)?;
             vec![serving(), next]
         }
@@ -131,37 +148,31 @@ pub fn refresh_local_ca_trust(
 
     let ders = certificates
         .iter()
-        .map(|ca| {
-            ca.certificate().to_der().map_err(|error| {
-                TlsError::new(
-                    TlsSituation::MaterialDamaged,
-                    format!("el certificado de la CA local no sale en DER: {error}"),
-                )
-            })
-        })
+        .map(der_of)
+        .collect::<Result<Vec<_>, _>>()?;
+    let kept = [store.serving()?, store.next()?]
+        .iter()
+        .flatten()
+        .map(der_of)
         .collect::<Result<Vec<_>, _>>()?;
 
-    let mut trusted = 0;
-    let mut installed = 0;
-    let mut missed = Vec::new();
-
-    for profile in profiles {
-        match settle(stores, profile, &ders) {
-            Ok(Settled::AlreadyThere) => trusted += 1,
-            Ok(Settled::JustInstalled) => {
-                trusted += 1;
-                installed += 1;
-            }
-            Err(error) => missed.push((profile.clone(), error)),
-        }
-    }
+    let tally = install_everywhere(
+        stores,
+        profiles,
+        &Installation {
+            ders: &ders,
+            retired: &retired,
+            kept: &kept,
+            mark,
+        },
+    );
 
     Ok(TrustOutcome {
         stage,
         work,
-        trusted,
-        missed,
-        notice: if installed > 0 {
+        trusted: tally.trusted,
+        missed: tally.missed,
+        notice: if tally.installed > 0 {
             PendingNotice::after_installing()
         } else {
             PendingNotice::none()
@@ -169,9 +180,101 @@ pub fn refresh_local_ca_trust(
     })
 }
 
+struct Installation<'a> {
+    ders: &'a [Vec<u8>],
+    retired: &'a [Vec<u8>],
+    kept: &'a [Vec<u8>],
+    mark: ChannelMark,
+}
+
+#[derive(Default)]
+struct Tally {
+    trusted: usize,
+    installed: usize,
+    missed: Vec<(PathBuf, TrustError)>,
+}
+
+fn install_everywhere(
+    stores: &dyn TrustStores,
+    profiles: &[PathBuf],
+    installation: &Installation<'_>,
+) -> Tally {
+    let mut tally = Tally::default();
+    for profile in profiles {
+        match settle(stores, profile, installation.ders) {
+            Ok(Settled::AlreadyThere) => tally.trusted += 1,
+            Ok(Settled::JustInstalled) => {
+                tally.trusted += 1;
+                tally.installed += 1;
+            }
+            Err(error) => {
+                tally.missed.push((profile.clone(), error));
+                continue;
+            }
+        }
+        if let Err(error) = retire(stores, profile, installation.retired)
+            .and_then(|()| sweep_orphans(stores, profile, installation.kept, installation.mark))
+        {
+            tally.missed.push((profile.clone(), error));
+        }
+    }
+    tally
+}
+
+fn sweep_orphans(
+    stores: &dyn TrustStores,
+    profile: &Path,
+    kept: &[Vec<u8>],
+    mark: ChannelMark,
+) -> Result<(), TrustError> {
+    let found = stores.local_cas(profile)?;
+    retire(
+        stores,
+        profile,
+        &trust::orphaned_local_cas(found, kept, mark),
+    )
+}
+
+fn work_for(
+    moment: Moment,
+    stage: Stage,
+    saved: Option<&LocalCa>,
+    waiting: bool,
+    mark: ChannelMark,
+) -> Work {
+    let next = if waiting {
+        NextCa::Waiting
+    } else {
+        NextCa::None
+    };
+    let work = trust::work_at(moment, stage, next);
+    let unmarked = saved.is_some_and(|ca| ca.mark().is_none());
+    if unmarked && mark.replaces_an_unmarked_local_ca() && moment != Moment::ChannelServing {
+        trust::replacing_the_unmarked(work)
+    } else {
+        work
+    }
+}
+
 enum Settled {
     AlreadyThere,
     JustInstalled,
+}
+
+fn der_of(ca: &LocalCa) -> Result<Vec<u8>, TlsError> {
+    ca.certificate().to_der().map_err(|error| {
+        TlsError::new(
+            TlsSituation::MaterialDamaged,
+            format!("el certificado de la CA local no sale en DER: {error}"),
+        )
+    })
+}
+
+fn retire(stores: &dyn TrustStores, profile: &Path, ders: &[Vec<u8>]) -> Result<(), TrustError> {
+    for der in ders {
+        stores.withdraw(profile, der)?;
+    }
+    Ok(())
 }
 
 fn settle(
@@ -267,12 +370,13 @@ pub struct WithdrawOutcome {
     pub results: Vec<(PathBuf, StoreWithdrawal)>,
 }
 
-/// Retira la CA local —vigente y la del solape— de los almacenes NSS indicados, por huella.
+/// Retira la CA local —vigente y la del solape— y las antiguas de rFirma de su canal o sin marca de los almacenes NSS indicados.
 /// Las ranuras solo se vacían después, y solo si ningún almacén ha fallado.
 pub fn withdraw_everywhere(
     store: &dyn LocalCaSlots,
     profiles: &[PathBuf],
     stores: &dyn TrustStores,
+    mark: ChannelMark,
 ) -> Result<WithdrawOutcome, TlsError> {
     let ders = [store.serving()?, store.next()?]
         .into_iter()
@@ -295,7 +399,7 @@ pub fn withdraw_everywhere(
 
     let results: Vec<(PathBuf, StoreWithdrawal)> = profiles
         .iter()
-        .map(|profile| (profile.clone(), withdraw_one(stores, profile, &ders)))
+        .map(|profile| (profile.clone(), withdraw_one(stores, profile, &ders, mark)))
         .collect();
 
     if !results
@@ -309,9 +413,19 @@ pub fn withdraw_everywhere(
     Ok(WithdrawOutcome { results })
 }
 
-fn withdraw_one(stores: &dyn TrustStores, profile: &Path, ders: &[Vec<u8>]) -> StoreWithdrawal {
+fn withdraw_one(
+    stores: &dyn TrustStores,
+    profile: &Path,
+    ders: &[Vec<u8>],
+    mark: ChannelMark,
+) -> StoreWithdrawal {
+    let orphans = match stores.local_cas(profile) {
+        Ok(found) => trust::orphaned_local_cas(found, ders, mark),
+        Err(error) => return StoreWithdrawal::Failed(error),
+    };
+    let ders = [ders, orphans.as_slice()].concat();
     let mut was_there = false;
-    for der in ders {
+    for der in &ders {
         match stores.trust_of(profile, der) {
             Ok(Some(_)) => was_there = true,
             Ok(None) => {}

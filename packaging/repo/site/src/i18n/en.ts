@@ -160,6 +160,8 @@ export const en: Dictionary = {
     "For Fedora and RPM-based derivatives. Sets up the repository with strict cryptographic checking of metadata and packages (<code>gpgcheck=1</code> and <code>repo_gpgcheck=1</code>).",
   "install.manual":
     "Detailed steps, key fingerprint and verification are in the manual (in Spanish)",
+  "install.uninstall":
+    "To leave no rFirma certificate behind in your browser, click <em>Withdraw certificate</em> in the status panel before uninstalling.",
   "install.soon": "In development",
   "install.windows.title": "rFirma for Windows",
   "install.windows.body":

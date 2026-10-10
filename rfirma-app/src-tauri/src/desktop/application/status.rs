@@ -248,10 +248,11 @@ pub fn evaluate_local_ca_certificate_signal(
     }
 }
 
-/// Si conviene avisar de reiniciar Firefox: alguno de sus perfiles pasó de no confiar a confiar
-/// en la CA local mientras Firefox seguía abierto.
+/// Si conviene avisar de reiniciar Firefox: alguno de sus perfiles pasó a confiar en una CA local
+/// nueva para él mientras Firefox seguía abierto.
 pub fn firefox_restart_notice(
     firefox_was_running: bool,
+    the_local_ca_changed: bool,
     trusted_before: &[bool],
     trusted_after: &[bool],
 ) -> bool {
@@ -259,7 +260,7 @@ pub fn firefox_restart_notice(
         && trusted_after
             .iter()
             .zip(trusted_before)
-            .any(|(after, before)| *after && !*before)
+            .any(|(after, before)| *after && (the_local_ca_changed || !*before))
 }
 
 #[cfg(test)]

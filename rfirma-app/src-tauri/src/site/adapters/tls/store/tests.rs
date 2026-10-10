@@ -1,4 +1,5 @@
 use super::*;
+use crate::site::domain::local_ca::ChannelMark;
 
 fn store_in(directory: &Path) -> LocalCaStore {
     LocalCaStore::of(&Paths::under(directory))
@@ -19,7 +20,7 @@ fn the_first_boot_finds_no_local_ca_and_that_is_not_a_failure() {
 fn the_local_ca_survives_a_restart() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let store = store_in(directory.path());
-    let ca = LocalCa::generate().expect("deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
 
     store.write(&ca).expect("deberia guardarse");
     let restored = store
@@ -38,7 +39,7 @@ fn a_local_ca_that_no_longer_parses_is_said_out_loud() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let store = store_in(directory.path());
     store
-        .write(&LocalCa::generate().expect("deberia generarse"))
+        .write(&LocalCa::generate(ChannelMark::Native).expect("deberia generarse"))
         .expect("deberia guardarse");
     std::fs::write(store.certificate_path(), b"esto no es un PEM").expect("deberia escribirse");
 
@@ -51,8 +52,8 @@ fn a_local_ca_that_no_longer_parses_is_said_out_loud() {
 fn the_next_local_ca_is_saved_beside_the_serving_one_and_not_over_it() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let store = store_in(directory.path());
-    let serving = LocalCa::generate().expect("deberia generarse");
-    let next = LocalCa::generate().expect("deberia generarse");
+    let serving = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
 
     store.write(&serving).expect("deberia guardarse la vigente");
     store
@@ -87,9 +88,9 @@ fn the_next_local_ca_takes_over_and_leaves_its_slot_empty() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let store = store_in(directory.path());
     store
-        .write(&LocalCa::generate().expect("deberia generarse"))
+        .write(&LocalCa::generate(ChannelMark::Native).expect("deberia generarse"))
         .expect("deberia guardarse");
-    let next = LocalCa::generate().expect("deberia generarse");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
     store.write_next(&next).expect("deberia guardarse");
 
     let promoted = store
@@ -128,9 +129,9 @@ fn forgetting_the_serving_ca_empties_its_slot_without_touching_the_next_one() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let store = store_in(directory.path());
     store
-        .write(&LocalCa::generate().expect("deberia generarse"))
+        .write(&LocalCa::generate(ChannelMark::Native).expect("deberia generarse"))
         .expect("deberia guardarse");
-    let next = LocalCa::generate().expect("deberia generarse");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
     store.write_next(&next).expect("deberia guardarse");
 
     store.forget_serving().expect("deberia vaciarse");

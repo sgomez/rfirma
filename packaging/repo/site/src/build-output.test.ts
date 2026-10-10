@@ -112,6 +112,10 @@ describe.each(locales)("landing %s", (locale) => {
     expect(document.querySelector("#instalacion a[href='/manual/instalacion/']")).not.toBeNull();
   });
 
+  it("tells to withdraw the certificate before uninstalling", () => {
+    expect(document.querySelector("#instalacion [data-uninstall-note]")?.textContent).toMatch(/\S/);
+  });
+
   it("describes itself as a free SoftwareApplication in JSON-LD", () => {
     const script = document.querySelector("script[type='application/ld+json']");
     const data = JSON.parse(script?.textContent ?? "");
@@ -151,6 +155,13 @@ describe("manual", () => {
     "si-vienes-de-autofirma",
   ])("publishes the %s page", (slug) => {
     expect(manual.map(({ file }) => file)).toContain(join("manual", slug, "index.html"));
+  });
+
+  it("tells to withdraw the certificate in the status panel before uninstalling", () => {
+    const text = page(join("manual", "instalacion", "index.html")).body.textContent ?? "";
+    expect(text).toContain(
+      "Para no dejar el certificado de rFirma en el navegador, pulsa Retirar certificado en el panel de estado antes de desinstalar.",
+    );
   });
 
   it("gives every page its own title and description", () => {

@@ -200,10 +200,13 @@ pub fn measure_local_ca_certificate(site: State<'_, SiteRoot>) -> SignalRowView 
 pub fn install_local_ca_certificate(site: State<'_, SiteRoot>) -> SignalRowView {
     let firefox_was_running = firefox_is_running(&site);
     let firefox_trusted_before = firefox_local_ca_trust(&site);
-    let _ = site.install_local_ca_trust();
+    let the_local_ca_changed = site
+        .install_local_ca_trust()
+        .is_ok_and(|outcome| outcome.replaced_the_local_ca());
     let firefox_trusted_after = firefox_local_ca_trust(&site);
     let restart_firefox_notice = crate::desktop::application::status::firefox_restart_notice(
         firefox_was_running,
+        the_local_ca_changed,
         &firefox_trusted_before,
         &firefox_trusted_after,
     );
@@ -221,12 +224,14 @@ pub fn choose_site_signature_handler(
 
     let firefox_was_running = firefox_is_running(&site);
     let firefox_trusted_before = firefox_local_ca_trust(&site);
-    if handler == crate::desktop::domain::handlers::OUR_DESKTOP_FILE {
-        let _ = site.install_local_ca_trust();
-    }
+    let the_local_ca_changed = handler == crate::desktop::domain::handlers::OUR_DESKTOP_FILE
+        && site
+            .install_local_ca_trust()
+            .is_ok_and(|outcome| outcome.replaced_the_local_ca());
     let firefox_trusted_after = firefox_local_ca_trust(&site);
     let restart_firefox_notice = crate::desktop::application::status::firefox_restart_notice(
         firefox_was_running,
+        the_local_ca_changed,
         &firefox_trusted_before,
         &firefox_trusted_after,
     );

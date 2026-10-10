@@ -181,9 +181,9 @@ pub(in crate::site::adapters) fn cookie_probe(
 pub(in crate::site::adapters) fn untrusted_tls_server() -> String {
     use crate::site::adapters::channel::acceptor::LocalTlsAcceptor;
     use crate::site::adapters::tls::LocalServerCertificate;
-    use crate::site::domain::local_ca::LocalCa;
+    use crate::site::domain::local_ca::{ChannelMark, LocalCa};
 
-    let ca = LocalCa::generate().expect("se genera la CA");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("se genera la CA");
     let certificate = LocalServerCertificate::issued_by(&ca).expect("se emite el certificado");
     let acceptor = LocalTlsAcceptor::from_pem(
         &certificate.certificate_pem().expect("certificado en PEM"),

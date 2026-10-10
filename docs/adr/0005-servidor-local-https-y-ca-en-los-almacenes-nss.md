@@ -436,3 +436,40 @@ Considered Options:
 - **Todo `127.0.0.0/8`.** Se descarta: un socket en `127.0.0.1` no recibe lo que
   va a `127.0.0.2`, y recibirlo todo exige la comodín, que abre el puerto a la
   red; además la CA solo admite `127.0.0.1` exacto.
+
+## Enmienda: cada CA local lleva la marca de su canal
+
+La CA local que genera rFirma lleva una extensión no crítica cuyo valor es su
+canal: `native` (el deb y el rpm, que comparten carpeta), `flatpak` o `windows`.
+El OID cuelga de `2.25`, a partir de un UUID aleatorio (ITU-T X.667), sin registro
+en IANA; está en `CHANNEL_MARK_OID` de `site/domain/local_ca.rs`. El sujeto y el
+*nickname* no cambian, porque en NSS el *nickname* va unido al sujeto: en la lista
+del navegador se sigue viendo «rFirma CA local», una por cada canal instalado.
+
+Instalar el certificado en Linux sustituye, una sola vez, una CA vigente sin marca
+—de antes de esta enmienda— por una marcada, y retira por huella la antigua y la
+del solape, con el mismo aviso de reiniciar el navegador que cualquier instalación.
+A mitad de un trámite no se toca nada, como siempre. En Windows no se sustituye:
+cada alta o retirada en el almacén raíz del usuario abre el aviso de seguridad de
+Windows.
+
+Esto enmienda «Instalar solo añade»: instalar el certificado en Linux, desde el
+asistente, el panel de estado, la elección de rFirma como gestor de `afirma://` o
+la reparación de la ventana de sede, retira además de cada almacén las CA de
+rFirma antiguas: las que llevan la marca de su canal y las que no llevan marca,
+salvo la vigente y la siguiente. Una CA es de rFirma si su sujeto es exactamente
+`CN=rFirma CA local` y sus restricciones de nombre son exactamente `localhost`,
+`127.0.0.1` y `::1`; la que se llame igual sin cumplir las dos, no se toca. Las de
+otro canal se conservan. Un almacén que no deja retirar se notifica como el que no
+deja instalar, y no impide instalar en los demás. El arranque y un trámite en
+curso no tocan los almacenes, y en Windows no se retira ninguna.
+
+«Retirar certificado» retira de cada almacén, con los mismos criterios, la vigente
+y la siguiente, las CA de rFirma con la marca de su canal y las que no llevan marca,
+y borra los ficheros de la CA si ningún perfil ha fallado. Las de otro canal se
+conservan. Como ningún paquete tiene gancho de desinstalación, la landing y el manual
+piden pulsarlo antes de desinstalar.
+
+Un arco de 128 bits no cabe en `x509-cert`, que limita cada arco a 32: un
+certificado marcado no se decodifica con `x509_cert::Certificate`, y la marca se
+lee recorriendo el DER (`ChannelMark::of_certificate`).
