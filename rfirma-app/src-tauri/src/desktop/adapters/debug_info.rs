@@ -366,3 +366,6 @@ fn browser_of(directory: &Path) -> String {
     };
     format!("{name}{packaging}")
 }
+
+#[cfg(test)]
+mod tests;
