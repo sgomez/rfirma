@@ -50,6 +50,8 @@ pub enum Moment {
     Startup,
     /// Trámite de sede en curso.
     MidErrand,
+    /// Instalación desde la ventana de sede, con un canal firmado por la CA vigente.
+    ChannelServing,
 }
 
 /// Estado de existencia de la CA local siguiente en el almacén.
@@ -84,12 +86,12 @@ pub enum Work {
 pub fn work_at(moment: Moment, stage: Stage, next: NextCa) -> Work {
     match (moment, stage, next) {
         (Moment::MidErrand, _, _) => Work::Nothing,
-        (Moment::Startup, Stage::Serving, _) => Work::InstallTheOneWeHave,
-        (Moment::Startup, Stage::Absent, _) => Work::MakeOneAndInstallIt,
-        (Moment::Startup, Stage::Overlapping, NextCa::None) => Work::MakeTheNextAndInstallItToo,
-        (Moment::Startup, Stage::Overlapping, NextCa::Waiting) => Work::InstallBothOfThem,
-        (Moment::Startup, Stage::Expired, NextCa::Waiting) => Work::PromoteTheNextOne,
-        (Moment::Startup, Stage::Expired, NextCa::None) => Work::MakeOneAndInstallIt,
+        (_, Stage::Serving, _) => Work::InstallTheOneWeHave,
+        (_, Stage::Absent, _) => Work::MakeOneAndInstallIt,
+        (_, Stage::Overlapping, NextCa::None) => Work::MakeTheNextAndInstallItToo,
+        (_, Stage::Overlapping, NextCa::Waiting) => Work::InstallBothOfThem,
+        (_, Stage::Expired, NextCa::Waiting) => Work::PromoteTheNextOne,
+        (_, Stage::Expired, NextCa::None) => Work::MakeOneAndInstallIt,
     }
 }
 

@@ -24,16 +24,21 @@ pub struct LocalCaTrust {
 
 /// Instala la CA local a petición de la persona y actualiza el estado de la ventana (ADR-0005).
 pub fn repair_the_local_ca(trust: &LocalCaTrust, held: &HeldChannel, live: &LiveErrand) -> Moment {
+    let channel_is_serving = held.is_serving();
     let in_some_store = trust::refresh_local_ca_trust(
         trust.store.as_ref(),
         &trust.profiles,
         trust.stores.as_ref(),
-        TrustMoment::Startup,
+        if channel_is_serving {
+            TrustMoment::ChannelServing
+        } else {
+            TrustMoment::Startup
+        },
         trust.mark,
     )
     .is_ok_and(|outcome| !outcome.nowhere());
 
-    let moment = what_the_repair_leaves(in_some_store, held.is_serving());
+    let moment = what_the_repair_leaves(in_some_store, channel_is_serving);
     live.note(moment.clone());
     moment
 }

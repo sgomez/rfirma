@@ -36,6 +36,11 @@ impl TrustOutcome {
     pub fn looked(&self) -> bool {
         !matches!(self.work, Work::Nothing)
     }
+
+    /// Indica si la CA vigente ha cambiado por una con la marca del canal.
+    pub fn replaced_the_local_ca(&self) -> bool {
+        self.work == Work::ReplaceTheUnmarkedOne
+    }
 }
 
 /// Genera los mensajes descriptivos del resultado de confianza para registro.
@@ -196,10 +201,7 @@ fn install_everywhere(
 ) -> Tally {
     let mut tally = Tally::default();
     for profile in profiles {
-        match settle(stores, profile, installation.ders).and_then(|settled| {
-            retire(stores, profile, installation.retired)?;
-            Ok(settled)
-        }) {
+        match settle(stores, profile, installation.ders) {
             Ok(Settled::AlreadyThere) => tally.trusted += 1,
             Ok(Settled::JustInstalled) => {
                 tally.trusted += 1;
@@ -210,7 +212,9 @@ fn install_everywhere(
                 continue;
             }
         }
-        if let Err(error) = sweep_orphans(stores, profile, installation.kept, installation.mark) {
+        if let Err(error) = retire(stores, profile, installation.retired)
+            .and_then(|()| sweep_orphans(stores, profile, installation.kept, installation.mark))
+        {
             tally.missed.push((profile.clone(), error));
         }
     }
@@ -245,7 +249,7 @@ fn work_for(
     };
     let work = trust::work_at(moment, stage, next);
     let unmarked = saved.is_some_and(|ca| ca.mark().is_none());
-    if unmarked && mark.replaces_an_unmarked_local_ca() {
+    if unmarked && mark.replaces_an_unmarked_local_ca() && moment != Moment::ChannelServing {
         trust::replacing_the_unmarked(work)
     } else {
         work

@@ -310,29 +310,45 @@ fn restart_firefox_notice_carries_through_when_asked() {
 
 #[test]
 fn firefox_restart_notice_when_its_own_profile_starts_trusting_while_alive() {
-    assert!(firefox_restart_notice(true, &[false], &[true]));
+    assert!(firefox_restart_notice(true, false, &[false], &[true]));
 }
 
 #[test]
 fn no_firefox_restart_notice_when_firefox_was_not_running() {
-    assert!(!firefox_restart_notice(false, &[false], &[true]));
+    assert!(!firefox_restart_notice(false, false, &[false], &[true]));
 }
 
 #[test]
 fn no_firefox_restart_notice_when_firefox_profile_was_already_trusted() {
     // Escenario del hallazgo: Firefox ya de confianza, solo otro almacén (p. ej. Chrome) recibe
     // la instalación mientras Firefox está abierto — no debe avisar de reiniciar Firefox.
-    assert!(!firefox_restart_notice(true, &[true], &[true]));
+    assert!(!firefox_restart_notice(true, false, &[true], &[true]));
 }
 
 #[test]
 fn no_firefox_restart_notice_when_nothing_changed() {
-    assert!(!firefox_restart_notice(true, &[false], &[false]));
+    assert!(!firefox_restart_notice(true, false, &[false], &[false]));
 }
 
 #[test]
 fn firefox_restart_notice_with_several_profiles_needs_only_one_to_flip() {
-    assert!(firefox_restart_notice(true, &[true, false], &[true, true]));
+    assert!(firefox_restart_notice(
+        true,
+        false,
+        &[true, false],
+        &[true, true]
+    ));
+}
+
+#[test]
+fn firefox_restart_notice_when_the_local_ca_it_trusted_is_replaced_while_alive() {
+    assert!(firefox_restart_notice(true, true, &[true], &[true]));
+}
+
+#[test]
+fn no_firefox_restart_notice_for_a_replacement_no_firefox_profile_took() {
+    assert!(!firefox_restart_notice(true, true, &[false], &[false]));
+    assert!(!firefox_restart_notice(false, true, &[true], &[true]));
 }
 
 fn a_url_handlers(

@@ -214,6 +214,61 @@ fn a_profile_that_refuses_the_replacement_is_reported_and_the_others_get_the_mar
 }
 
 #[test]
+fn a_profile_that_takes_the_replacement_but_keeps_the_unmarked_one_counts_as_trusted_and_is_reported(
+) {
+    let store = a_store();
+    let profile = profiles()[0].clone();
+    let stores = Doubled::with_profiles(&[&profile]);
+    let unmarked = LocalCa::unmarked_for_test().expect("deberia fabricarse");
+    store.write_serving(&unmarked).expect("deberia guardarse");
+    installed_everywhere(&stores, std::slice::from_ref(&profile), &[&unmarked]);
+    let stores = stores.refusing_to_withdraw(&profile);
+
+    let outcome = refresh_local_ca_trust(
+        &store,
+        std::slice::from_ref(&profile),
+        &stores,
+        Moment::Startup,
+        ChannelMark::Flatpak,
+    )
+    .expect("un perfil que no deja retirar no es un fallo del material");
+
+    assert_eq!(outcome.trusted, 1);
+    assert!(!outcome.nowhere());
+    assert_eq!(outcome.missed.len(), 1);
+    assert_eq!(outcome.missed[0].0, profile);
+    assert!(outcome.replaced_the_local_ca());
+}
+
+#[test]
+fn keeping_the_local_ca_that_signs_the_channel_installs_the_unmarked_one_without_replacing_it() {
+    let store = a_store();
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+    let unmarked = LocalCa::unmarked_for_test().expect("deberia fabricarse");
+    store.write_serving(&unmarked).expect("deberia guardarse");
+    installed_everywhere(&stores, &profiles[..1], &[&unmarked]);
+
+    let outcome = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::ChannelServing,
+        ChannelMark::Flatpak,
+    )
+    .expect("deberia registrarse");
+
+    assert_eq!(outcome.work, Work::InstallTheOneWeHave);
+    assert!(!outcome.replaced_the_local_ca());
+    for profile in &profiles {
+        assert_eq!(
+            stores.inside(profile),
+            vec![(der_of(&unmarked), COMMON_NAME.to_owned())]
+        );
+    }
+}
+
+#[test]
 fn each_distribution_channel_marks_its_local_ca_with_its_own_value() {
     assert_eq!(mark_of(Channel::Native).value(), "native");
     assert_eq!(mark_of(Channel::Flatpak).value(), "flatpak");
