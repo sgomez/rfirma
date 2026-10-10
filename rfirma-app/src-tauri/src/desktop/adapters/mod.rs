@@ -11,6 +11,7 @@ pub mod graphics_info;
 pub mod handover;
 pub mod installation;
 pub mod installer;
+pub mod minidrivers;
 pub mod paths;
 pub mod process;
 pub mod registry;

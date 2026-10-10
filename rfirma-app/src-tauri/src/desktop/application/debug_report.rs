@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 
 use crate::identity::domain::readers::Reader;
 
-use nss::nss_lines;
 use pkcs11::module_lines;
 
 /// Qué se sabe de la librería nativa tras intentar cargarla de verdad.
@@ -107,6 +106,15 @@ pub struct NssStores {
     pub profiles: Vec<NssProfile>,
     /// Si el Almacén de rFirma está instalado.
     pub rfirma_store_installed: bool,
+}
+
+/// Lo que solo existe en Windows: el almacén del sistema y los minidrivers de tarjeta.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WindowsStores {
+    /// Si el almacén raíz del usuario confía en el canal local; nunca es un perfil ignorado.
+    pub local_channel: NssProfileState,
+    /// Tipos de tarjeta que Windows tiene dados de alta.
+    pub minidrivers: Vec<String>,
 }
 
 /// Dónde y con qué instalador está el flatpak.
@@ -277,6 +285,8 @@ pub struct DebugReport {
     pub pkcs11_modules: Option<Pkcs11Modules>,
     /// Almacenes NSS; `None` donde esta versión no los consulta.
     pub nss_stores: Option<NssStores>,
+    /// Almacén de Windows y minidrivers; `None` fuera de Windows.
+    pub windows_stores: Option<WindowsStores>,
 }
 
 /// Una cabecera y una sección por bloque, con el patrón `clave: estado · detalle` y las rutas anonimizadas.
@@ -304,8 +314,9 @@ pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
         report
             .nss_stores
             .as_ref()
-            .map(|stores| section("Almacenes NSS", &nss_lines(stores, owner))),
+            .map(|stores| section("Almacenes NSS", &stores::nss_lines(stores, owner))),
     )
+    .chain(stores::windows_sections(report.windows_stores.as_ref()))
     .flatten()
     .collect::<Vec<_>>()
     .join("\n\n")
@@ -512,7 +523,10 @@ fn relative_to_runtime_directory(path: &Path) -> Option<String> {
     )
 }
 
-mod nss;
 mod pkcs11;
+mod stores;
+
+#[cfg(test)]
+mod stores_tests;
 #[cfg(test)]
 mod tests;
