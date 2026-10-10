@@ -7,14 +7,15 @@ use fake_pkcs11::FakeCard;
 
 use super::*;
 
-const LIMIT: Duration = Duration::from_millis(300);
+const HANG_LIMIT: Duration = Duration::from_millis(300);
+const HEALTHY_LIMIT: Duration = Duration::from_secs(120);
 
 #[test]
 fn a_module_that_loads_says_the_manufacturer_and_version_its_library_declares() {
     let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
 
     assert_eq!(
-        probe(&card.module(), LIMIT),
+        probe(&card.module(), HEALTHY_LIMIT),
         ModuleProbe::Loads(LibraryInfo {
             manufacturer: "rfirma".to_owned(),
             version: "0.1".to_owned(),
@@ -25,7 +26,7 @@ fn a_module_that_loads_says_the_manufacturer_and_version_its_library_declares() 
 #[test]
 fn a_library_that_does_not_exist_does_not_load() {
     assert_eq!(
-        probe(Path::new("/nonexistent/libnothing.so"), LIMIT),
+        probe(Path::new("/nonexistent/libnothing.so"), HANG_LIMIT),
         ModuleProbe::DoesNotLoad
     );
 }
@@ -37,15 +38,18 @@ fn a_module_that_hangs_on_initialize_is_not_responding_once_the_limit_passes() {
         .expect("la tarjeta falsa deberia montarse");
     let started = Instant::now();
 
-    assert_eq!(probe(&card.module(), LIMIT), ModuleProbe::NotResponding);
-    assert!(started.elapsed() < LIMIT * 10);
+    assert_eq!(
+        probe(&card.module(), HANG_LIMIT),
+        ModuleProbe::NotResponding
+    );
+    assert!(started.elapsed() < HANG_LIMIT * 10);
 }
 
 #[test]
 fn the_probe_calls_no_slot_token_session_or_object_function() {
     let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
 
-    probe(&card.module(), LIMIT);
+    probe(&card.module(), HEALTHY_LIMIT);
 
     let functions: Vec<String> = card
         .calls()

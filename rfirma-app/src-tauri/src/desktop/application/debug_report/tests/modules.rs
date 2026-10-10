@@ -195,14 +195,40 @@ fn in_the_flatpak_the_section_says_the_sandbox_does_not_see_the_host_modules() {
 fn the_module_variable_says_it_overrides_the_discovery() {
     assert_eq!(
         modules_section(DebugReport {
-            pkcs11_modules: Some(Pkcs11Modules::Overridden(PathBuf::from(
-                "/home/ana/softhsm/libsofthsm2.so"
+            pkcs11_modules: Some(Pkcs11Modules::Overridden(module(
+                "libsofthsm2",
+                Some("/home/ana/softhsm/libsofthsm2.so"),
+                None,
+                ModuleStatus::DoesNotLoad,
             ))),
             ..a_native_report()
         }),
         "Módulos PKCS#11\n  \
-         Descubrimiento: anulado · RFIRMA_PKCS11_MODULE\n    \
+         Descubrimiento: anulado · RFIRMA_PKCS11_MODULE\n  \
+         libsofthsm2: no carga\n    \
            módulo: ~/softhsm/libsofthsm2.so"
+    );
+}
+
+#[test]
+fn an_overriding_module_that_loads_says_what_its_library_declares() {
+    assert_eq!(
+        modules_section(DebugReport {
+            pkcs11_modules: Some(Pkcs11Modules::Overridden(module(
+                "libsofthsm2",
+                Some("/usr/lib/softhsm/libsofthsm2.so"),
+                None,
+                ModuleStatus::Loads {
+                    manufacturer: "SoftHSM".to_owned(),
+                    version: "2.6".to_owned(),
+                },
+            ))),
+            ..a_native_report()
+        }),
+        "Módulos PKCS#11\n  \
+         Descubrimiento: anulado · RFIRMA_PKCS11_MODULE\n  \
+         libsofthsm2: carga · SoftHSM 2.6\n    \
+           módulo: /usr/lib/softhsm/libsofthsm2.so"
     );
 }
 

@@ -143,14 +143,14 @@ pub struct LinuxEnvironment {
     pub session: String,
 }
 
-/// Una tarjeta gráfica, tal como la ve DRM.
+/// Una tarjeta gráfica, tal como la ve el sistema: DRM, el registro de Windows o `system_profiler`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Gpu {
     /// Fabricante.
     pub vendor: String,
-    /// Controlador del kernel.
+    /// Controlador del kernel en Linux, descripción del adaptador en Windows, modelo en macOS.
     pub driver: String,
-    /// Versión del controlador, si el kernel la declara.
+    /// Versión del controlador, si el sistema la declara.
     pub driver_version: Option<String>,
 }
 
@@ -470,23 +470,31 @@ impl ReportOwner {
 
     fn relative_to_home(&self, path: &Path) -> Option<String> {
         self.home.parent()?;
-        let rest = path.strip_prefix(&self.home).ok()?;
-        Some(Path::new("~").join(rest).display().to_string())
+        with_prefix_replaced(path, &self.home, "~")
     }
 }
 
 fn relative_to_runtime_directory(path: &Path) -> Option<String> {
-    let mut below = path.strip_prefix(RUNTIME_DIRECTORY).ok()?.components();
-    let uid = below.next()?.as_os_str().to_str()?;
+    let uid = path
+        .strip_prefix(RUNTIME_DIRECTORY)
+        .ok()?
+        .components()
+        .next()?
+        .as_os_str()
+        .to_str()?;
     if !uid.bytes().all(|byte| byte.is_ascii_digit()) {
         return None;
     }
-    Some(
-        Path::new("$XDG_RUNTIME_DIR")
-            .join(below.as_path())
-            .display()
-            .to_string(),
-    )
+    let own_directory = format!("{RUNTIME_DIRECTORY}/{uid}");
+    with_prefix_replaced(path, Path::new(&own_directory), "$XDG_RUNTIME_DIR")
+}
+
+fn with_prefix_replaced(path: &Path, prefix: &Path, label: &str) -> Option<String> {
+    path.strip_prefix(prefix).ok()?;
+    let text = path.display().to_string();
+    let prefix_text = prefix.display().to_string();
+    let tail = text.strip_prefix(prefix_text.trim_end_matches(['/', '\\']))?;
+    Some(format!("{label}{tail}"))
 }
 
 mod pkcs11;

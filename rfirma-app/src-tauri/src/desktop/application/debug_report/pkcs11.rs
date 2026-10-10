@@ -52,7 +52,7 @@ pub struct Pkcs11Module {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Pkcs11Modules {
     /// `RFIRMA_PKCS11_MODULE` anula el descubrimiento y es el único módulo.
-    Overridden(PathBuf),
+    Overridden(Pkcs11Module),
     /// Lo que el descubrimiento usa y descarta.
     Discovered(Vec<Pkcs11Module>),
 }
@@ -63,10 +63,11 @@ pub(super) fn module_lines(
     owner: &ReportOwner,
 ) -> Vec<String> {
     match modules {
-        Pkcs11Modules::Overridden(path) => vec![
-            "Descubrimiento: anulado · RFIRMA_PKCS11_MODULE".to_owned(),
-            format!("  módulo: {}", owner.anonymized(path)),
-        ],
+        Pkcs11Modules::Overridden(module) => {
+            std::iter::once("Descubrimiento: anulado · RFIRMA_PKCS11_MODULE".to_owned())
+                .chain(module_block(module, owner))
+                .collect()
+        }
         Pkcs11Modules::Discovered(found) => {
             let sandbox = matches!(installation, Installation::Flatpak(_)).then(|| {
                 "Módulos del anfitrión: no visibles · el sandbox solo ve el OpenSC incluido"

@@ -176,8 +176,16 @@ fn pcsc_status() -> Option<PcscStatus> {
 }
 
 fn pkcs11_modules() -> Option<Pkcs11Modules> {
-    if let Some(module) = defined_path(PKCS11_MODULE_VARIABLE) {
-        return Some(Pkcs11Modules::Overridden(module));
+    if let Some(library) = defined_path(PKCS11_MODULE_VARIABLE) {
+        return Some(Pkcs11Modules::Overridden(Pkcs11Module {
+            name: library
+                .file_stem()
+                .map(|stem| stem.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            status: module_status(Some(&library), None),
+            library: Some(library),
+            registration: None,
+        }));
     }
     (std::env::consts::OS == "linux").then(|| {
         Pkcs11Modules::Discovered(
