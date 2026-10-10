@@ -464,6 +464,12 @@ otro canal se conservan. Un almacén que no deja retirar se notifica como el que
 deja instalar, y no impide instalar en los demás. El arranque y un trámite en
 curso no tocan los almacenes, y en Windows no se retira ninguna.
 
+«Retirar certificado» retira de cada almacén, con los mismos criterios, la vigente
+y la siguiente, las CA de rFirma con la marca de su canal y las que no llevan marca,
+y borra los ficheros de la CA si ningún perfil ha fallado. Las de otro canal se
+conservan. Como ningún paquete tiene gancho de desinstalación, la landing y el manual
+piden pulsarlo antes de desinstalar.
+
 Un arco de 128 bits no cabe en `x509-cert`, que limita cada arco a 32: un
 certificado marcado no se decodifica con `x509_cert::Certificate`, y la marca se
 lee recorriendo el DER (`ChannelMark::of_certificate`).
