@@ -97,6 +97,59 @@ pub struct LinuxEnvironment {
     pub session: String,
 }
 
+/// Una tarjeta gráfica, tal como la ve DRM.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Gpu {
+    /// Fabricante.
+    pub vendor: String,
+    /// Controlador del kernel.
+    pub driver: String,
+    /// Versión del controlador, si el kernel la declara.
+    pub driver_version: Option<String>,
+}
+
+/// Quién fijó la variable que rige el renderizador de WebKitGTK.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RendererOrigin {
+    /// La fija rFirma al arrancar (ADR-0007).
+    SetByRfirma,
+    /// Ya venía en el entorno.
+    FromTheEnvironment,
+}
+
+/// La variable que rige el renderizador de WebKitGTK, con su valor.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RendererVariable {
+    /// Nombre de la variable.
+    pub name: String,
+    /// Valor que tendrá.
+    pub value: String,
+    /// Quién la fija.
+    pub origin: RendererOrigin,
+}
+
+/// La extensión GL de NVIDIA que corresponde al controlador del anfitrión.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GlExtension {
+    /// Versión del controlador a la que corresponde.
+    pub driver_version: String,
+    /// Si está instalada en el sandbox.
+    pub installed: bool,
+}
+
+/// Lo que se sabe de los gráficos de esta sesión.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Graphics {
+    /// Una por tarjeta.
+    pub gpus: Vec<Gpu>,
+    /// Solo en Linux, y si hay algo que decir.
+    pub renderer: Option<RendererVariable>,
+    /// `GDK_BACKEND`, si está definida.
+    pub display_backend: Option<String>,
+    /// Solo en flatpak con NVIDIA.
+    pub gl_extension: Option<GlExtension>,
+}
+
 /// La librería nativa: cómo acabó y qué fichero se intentó cargar.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NativeLibrary {
@@ -132,6 +185,8 @@ pub struct DebugReport {
     pub architecture: String,
     /// Distribución, escritorio y sesión; solo en Linux.
     pub linux: Option<LinuxEnvironment>,
+    /// Tarjetas gráficas y renderizador.
+    pub graphics: Graphics,
     /// Idioma del sistema.
     pub locale: String,
     /// Quién atiende `afirma://`.
@@ -151,8 +206,9 @@ pub struct DebugReport {
 /// Una cabecera y una sección por bloque, con el patrón `clave: estado · detalle` y las rutas anonimizadas.
 pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
     [
-        format!("rFirma {}", report.version),
+        Some(format!("rFirma {}", report.version)),
         section("Sistema", &system_lines(report)),
+        section("Gráficos", &graphics_lines(&report.graphics)),
         section("Integración", &integration_lines(report, owner)),
     ]
     .into_iter()
@@ -162,6 +218,7 @@ pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
             .as_ref()
             .map(|pcsc| section("Lectores", &reader_lines(pcsc))),
     )
+    .flatten()
     .collect::<Vec<_>>()
     .join("\n\n")
 }
@@ -182,11 +239,16 @@ fn reader_lines(pcsc: &PcscStatus) -> Vec<String> {
     }
 }
 
-fn section(title: &str, lines: &[String]) -> String {
-    std::iter::once(title.to_owned())
-        .chain(lines.iter().map(|line| format!("  {line}")))
-        .collect::<Vec<_>>()
-        .join("\n")
+fn section(title: &str, lines: &[String]) -> Option<String> {
+    if lines.is_empty() {
+        return None;
+    }
+    Some(
+        std::iter::once(title.to_owned())
+            .chain(lines.iter().map(|line| format!("  {line}")))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    )
 }
 
 fn system_lines(report: &DebugReport) -> Vec<String> {
@@ -215,6 +277,42 @@ fn system_lines(report: &DebugReport) -> Vec<String> {
         lines.push(format!("pcsc-lite: {version}"));
     }
     lines
+}
+
+fn graphics_lines(graphics: &Graphics) -> Vec<String> {
+    let mut lines: Vec<String> = graphics.gpus.iter().map(gpu_line).collect();
+    if let Some(renderer) = &graphics.renderer {
+        let origin = match renderer.origin {
+            RendererOrigin::SetByRfirma => "fijado por rFirma",
+            RendererOrigin::FromTheEnvironment => "del entorno",
+        };
+        lines.push(format!(
+            "Renderizador: {}={} · {origin}",
+            renderer.name, renderer.value
+        ));
+    }
+    if let Some(backend) = &graphics.display_backend {
+        lines.push(format!("GDK_BACKEND: {backend}"));
+    }
+    if let Some(extension) = &graphics.gl_extension {
+        let state = if extension.installed {
+            "instalada"
+        } else {
+            "falta"
+        };
+        lines.push(format!(
+            "Extensión GL: {state} · {}",
+            extension.driver_version
+        ));
+    }
+    lines
+}
+
+fn gpu_line(gpu: &Gpu) -> String {
+    match &gpu.driver_version {
+        Some(version) => format!("GPU: {} · {} {version}", gpu.vendor, gpu.driver),
+        None => format!("GPU: {} · {}", gpu.vendor, gpu.driver),
+    }
 }
 
 fn installation_lines(installation: &Installation) -> Vec<String> {

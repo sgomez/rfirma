@@ -26,6 +26,7 @@ fn a_flatpak_report() -> DebugReport {
             desktop: "GNOME".to_owned(),
             session: "wayland".to_owned(),
         }),
+        graphics: Graphics::default(),
         locale: "es_ES.UTF-8".to_owned(),
         protocol_handler: ProtocolHandlerStatus::NotQueryableFromTheSandbox,
         native_library: NativeLibrary {
@@ -64,6 +65,150 @@ fn the_report_is_a_header_then_system_then_integration() {
          Lectores\n  \
            pcscd: responde"
     );
+}
+
+fn nvidia() -> Gpu {
+    Gpu {
+        vendor: "NVIDIA".to_owned(),
+        driver: "nvidia".to_owned(),
+        driver_version: Some("580.95".to_owned()),
+    }
+}
+
+fn intel() -> Gpu {
+    Gpu {
+        vendor: "Intel".to_owned(),
+        driver: "i915".to_owned(),
+        driver_version: None,
+    }
+}
+
+fn graphics_section(graphics: Graphics) -> String {
+    let text = debug_report_text(
+        &DebugReport {
+            graphics,
+            ..a_flatpak_report()
+        },
+        &ana(),
+    );
+    text.split("\n\n")
+        .find(|block| block.starts_with("Gráficos"))
+        .unwrap_or_default()
+        .to_owned()
+}
+
+fn renderer(origin: RendererOrigin) -> RendererVariable {
+    RendererVariable {
+        name: "WEBKIT_DISABLE_DMABUF_RENDERER".to_owned(),
+        value: "1".to_owned(),
+        origin,
+    }
+}
+
+#[test]
+fn graphics_sit_between_system_and_integration() {
+    let text = debug_report_text(
+        &DebugReport {
+            graphics: Graphics {
+                gpus: vec![intel()],
+                ..Graphics::default()
+            },
+            ..a_flatpak_report()
+        },
+        &ana(),
+    );
+
+    let at = |title: &str| text.find(title).unwrap_or(usize::MAX);
+    assert!(
+        at("Sistema") < at("Gráficos") && at("Gráficos") < at("Integración"),
+        "{text}"
+    );
+}
+
+#[test]
+fn a_gpu_line_carries_vendor_driver_and_version_when_there_is_one() {
+    assert_eq!(
+        graphics_section(Graphics {
+            gpus: vec![nvidia()],
+            ..Graphics::default()
+        }),
+        "Gráficos\n  GPU: NVIDIA · nvidia 580.95"
+    );
+}
+
+#[test]
+fn a_hybrid_laptop_gets_one_gpu_line_per_card() {
+    assert_eq!(
+        graphics_section(Graphics {
+            gpus: vec![nvidia(), intel()],
+            ..Graphics::default()
+        }),
+        "Gráficos\n  GPU: NVIDIA · nvidia 580.95\n  GPU: Intel · i915"
+    );
+}
+
+#[test]
+fn a_renderer_variable_set_by_rfirma_says_so() {
+    assert_eq!(
+        graphics_section(Graphics {
+            renderer: Some(renderer(RendererOrigin::SetByRfirma)),
+            ..Graphics::default()
+        }),
+        "Gráficos\n  Renderizador: WEBKIT_DISABLE_DMABUF_RENDERER=1 · fijado por rFirma"
+    );
+}
+
+#[test]
+fn a_renderer_variable_from_the_environment_says_so() {
+    assert_eq!(
+        graphics_section(Graphics {
+            renderer: Some(renderer(RendererOrigin::FromTheEnvironment)),
+            ..Graphics::default()
+        }),
+        "Gráficos\n  Renderizador: WEBKIT_DISABLE_DMABUF_RENDERER=1 · del entorno"
+    );
+}
+
+#[test]
+fn gdk_backend_only_shows_when_defined() {
+    let defined = graphics_section(Graphics {
+        gpus: vec![intel()],
+        display_backend: Some("x11".to_owned()),
+        ..Graphics::default()
+    });
+    let undefined = graphics_section(Graphics {
+        gpus: vec![intel()],
+        ..Graphics::default()
+    });
+
+    assert!(defined.contains("  GDK_BACKEND: x11"), "{defined}");
+    assert!(!undefined.contains("GDK_BACKEND"), "{undefined}");
+}
+
+#[test]
+fn the_gl_extension_says_whether_it_is_installed_or_missing() {
+    let extension = |installed| {
+        graphics_section(Graphics {
+            gl_extension: Some(GlExtension {
+                driver_version: "580.95".to_owned(),
+                installed,
+            }),
+            ..Graphics::default()
+        })
+    };
+
+    assert_eq!(
+        extension(true),
+        "Gráficos\n  Extensión GL: instalada · 580.95"
+    );
+    assert_eq!(extension(false), "Gráficos\n  Extensión GL: falta · 580.95");
+}
+
+#[test]
+fn a_report_without_graphics_has_no_graphics_section() {
+    let text = debug_report_text(&a_flatpak_report(), &ana());
+
+    assert!(!text.contains("Gráficos"), "{text}");
 }
 
 #[test]

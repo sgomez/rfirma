@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+use crate::desktop::adapters::graphics_info::this_session_graphics;
 use crate::desktop::adapters::installation::{this_glibc, this_installation, this_webview};
 use crate::desktop::adapters::registry::this_desktop;
 use crate::desktop::application::debug_report::{
@@ -29,6 +30,7 @@ pub fn this_process_report() -> DebugReport {
         operating_system: std::env::consts::OS.to_owned(),
         architecture: std::env::consts::ARCH.to_owned(),
         linux: (std::env::consts::OS == "linux").then(|| linux_environment(channel)),
+        graphics: this_session_graphics(channel),
         locale: locale(),
         protocol_handler: protocol_handler(channel),
         native_library: native_library(),
