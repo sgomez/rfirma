@@ -8,6 +8,7 @@ pub mod debug_info;
 pub mod failures;
 pub mod firefox_lock;
 pub mod handover;
+pub mod installation;
 pub mod installer;
 pub mod paths;
 pub mod process;
