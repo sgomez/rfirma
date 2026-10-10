@@ -3,11 +3,18 @@
 use std::path::Path;
 use std::process::Command;
 
+use openssl::asn1::Asn1Time;
+use openssl::ec::{EcGroup, EcKey};
+use openssl::hash::MessageDigest;
+use openssl::nid::Nid;
+use openssl::pkey::PKey;
+use openssl::x509::extension::BasicConstraints;
+use openssl::x509::{X509Name, X509};
 use rfirma_lib::identity::adapters::pkcs11::RealNssHost;
 use rfirma_lib::site::adapters::nss::NssTrustStores;
 use rfirma_lib::site::adapters::tls::{CaFiles, LocalCaStore};
 use rfirma_lib::site::application::trust::refresh_local_ca_trust;
-use rfirma_lib::site::domain::local_ca::COMMON_NAME;
+use rfirma_lib::site::domain::local_ca::{random_serial, COMMON_NAME};
 use rfirma_lib::site::domain::local_ca::{ChannelMark, LocalCa};
 use rfirma_lib::site::domain::trust::is_trusted_ssl_ca;
 use rfirma_lib::site::domain::trust::{Moment, Situation};
@@ -358,4 +365,165 @@ fn during_the_overlap_the_serving_ca_keeps_serving_and_both_are_trusted() {
         2,
         "el relevo no instala nada: las dos ya estaban"
     );
+}
+
+/// Autoridad autofirmada con el sujeto dado y sin las restricciones de nombre de la CA local.
+fn a_stranger_named(entries: &[(Nid, &str)]) -> Vec<u8> {
+    let key = PKey::from_ec_key(
+        EcKey::generate(
+            &EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).expect("deberia haber curva"),
+        )
+        .expect("deberia generarse la clave"),
+    )
+    .expect("deberia envolverse la clave");
+    let mut name = X509Name::builder().expect("deberia construirse el nombre");
+    for (nid, value) in entries {
+        name.append_entry_by_nid(*nid, value)
+            .expect("deberia añadirse la entrada");
+    }
+    let name = name.build();
+    let mut builder = X509::builder().expect("deberia construirse el certificado");
+    builder.set_version(2).expect("versión");
+    builder
+        .set_serial_number(&random_serial().expect("serie"))
+        .expect("serie");
+    builder.set_subject_name(&name).expect("sujeto");
+    builder.set_issuer_name(&name).expect("emisor");
+    builder.set_pubkey(&key).expect("clave");
+    builder
+        .set_not_before(&Asn1Time::days_from_now(0).expect("inicio"))
+        .expect("inicio");
+    builder
+        .set_not_after(&Asn1Time::days_from_now(30).expect("fin"))
+        .expect("fin");
+    builder
+        .append_extension(BasicConstraints::new().critical().ca().build().expect("CA"))
+        .expect("CA");
+    builder
+        .sign(&key, MessageDigest::sha256())
+        .expect("deberia firmarse");
+    builder.build().to_der().expect("deberia salir en DER")
+}
+
+fn sorted(mut ders: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+    ders.sort();
+    ders
+}
+
+/// Los ficheros del perfil con su contenido, para ver si algo los ha tocado.
+fn contents_of(profile: &Path) -> Vec<(String, Vec<u8>)> {
+    let mut files: Vec<(String, Vec<u8>)> = std::fs::read_dir(profile)
+        .expect("deberia leerse el perfil")
+        .map(|entry| entry.expect("deberia leerse la entrada").path())
+        .map(|path| {
+            (
+                path.display().to_string(),
+                std::fs::read(&path).expect("deberia leerse el fichero"),
+            )
+        })
+        .collect();
+    files.sort();
+    files
+}
+
+#[test]
+fn every_certificate_with_the_local_ca_subject_is_listed_and_no_other() {
+    let profile = a_disposable_profile();
+    let current = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la vigente");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la siguiente");
+    let namesake = a_stranger_named(&[(Nid::COMMONNAME, COMMON_NAME)]);
+    let other_name = a_stranger_named(&[(Nid::COMMONNAME, "Otra CA")]);
+    let longer_subject = a_stranger_named(&[
+        (Nid::COMMONNAME, COMMON_NAME),
+        (Nid::ORGANIZATIONNAME, "Ajena"),
+    ]);
+
+    install(profile.path(), &current);
+    install(profile.path(), &next);
+    stores()
+        .install(profile.path(), &namesake, COMMON_NAME)
+        .expect("deberia entrar la homónima");
+    stores()
+        .install(profile.path(), &other_name, "Otra CA")
+        .expect("deberia entrar la ajena");
+    stores()
+        .install(profile.path(), &longer_subject, "Ajena")
+        .expect("deberia entrar la de sujeto más largo");
+
+    let listed = stores()
+        .local_cas(profile.path())
+        .expect("deberia poder listarse");
+
+    assert_eq!(
+        sorted(listed),
+        sorted(vec![der_of(&current), der_of(&next), namesake]),
+        "listado:\n{}",
+        certutil_listing(profile.path())
+    );
+}
+
+#[test]
+fn a_profile_without_any_local_ca_lists_nothing() {
+    let profile = a_disposable_profile();
+    stores()
+        .install(
+            profile.path(),
+            &a_stranger_named(&[(Nid::COMMONNAME, "Otra CA")]),
+            "Otra CA",
+        )
+        .expect("deberia entrar la ajena");
+
+    let listed = stores()
+        .local_cas(profile.path())
+        .expect("un perfil sin CA local no es un fallo");
+
+    assert!(listed.is_empty());
+}
+
+#[test]
+fn listing_the_local_cas_leaves_the_profile_untouched() {
+    let profile = a_disposable_profile();
+    install(
+        profile.path(),
+        &LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse"),
+    );
+    let before = contents_of(profile.path());
+
+    stores()
+        .local_cas(profile.path())
+        .expect("deberia poder listarse");
+
+    assert_eq!(contents_of(profile.path()), before);
+}
+
+#[test]
+fn each_local_ca_listed_from_a_real_profile_keeps_the_mark_of_its_channel() {
+    let profile = a_disposable_profile();
+    install(
+        profile.path(),
+        &LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la del deb"),
+    );
+    install(
+        profile.path(),
+        &LocalCa::generate(ChannelMark::Flatpak).expect("deberia fabricarse la del flatpak"),
+    );
+    stores()
+        .install(
+            profile.path(),
+            &a_stranger_named(&[(Nid::COMMONNAME, COMMON_NAME)]),
+            COMMON_NAME,
+        )
+        .expect("deberia entrar la homónima sin marca");
+
+    let marks: Vec<Option<ChannelMark>> = stores()
+        .local_cas(profile.path())
+        .expect("deberia poder listarse")
+        .iter()
+        .map(|der| ChannelMark::of_certificate(der))
+        .collect();
+
+    assert_eq!(marks.len(), 3, "{marks:?}");
+    for mark in [Some(ChannelMark::Native), Some(ChannelMark::Flatpak), None] {
+        assert!(marks.contains(&mark), "falta {mark:?} en {marks:?}");
+    }
 }

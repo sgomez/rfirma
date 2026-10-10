@@ -233,6 +233,9 @@ pub trait TrustStores {
 
     /// Retira el certificado del almacén de perfil indicado, localizándolo por huella.
     fn withdraw(&self, profile: &Path, certificate_der: &[u8]) -> Result<(), TrustError>;
+
+    /// Los certificados del perfil, en DER, cuyo sujeto es exactamente `CN=rFirma CA local`; no escribe.
+    fn local_cas(&self, profile: &Path) -> Result<Vec<Vec<u8>>, TrustError>;
 }
 
 /// Puerto de salida hacia los servlets del servidor intermedio: recuperar, almacenar y esperar.

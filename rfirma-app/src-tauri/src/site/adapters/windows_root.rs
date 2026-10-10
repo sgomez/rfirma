@@ -78,6 +78,10 @@ impl TrustStores for WindowsUserStores {
         }
         Ok(())
     }
+
+    fn local_cas(&self, _profile: &Path) -> Result<Vec<Vec<u8>>, TrustError> {
+        Ok(Vec::new())
+    }
 }
 
 /// El nombre del almacén de `CurrentUser` que designa el perfil, en UTF-16 terminado en cero.

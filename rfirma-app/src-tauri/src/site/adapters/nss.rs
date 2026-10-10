@@ -9,6 +9,7 @@ use crate::identity::adapters::pkcs11::NssHost;
 use crate::site::domain::trust_error::{Situation, TrustError};
 use crate::site::ports::TrustStores;
 
+use crate::site::domain::local_ca::has_the_local_ca_subject;
 use crate::site::domain::trust::TRUSTED_SSL_CA;
 
 const SEC_SUCCESS: c_int = 0;
@@ -17,11 +18,19 @@ const PR_TRUE: c_int = 1;
 const SI_BUFFER: c_uint = 0;
 const NO_KEY: c_ulong = 0;
 
-fn read_write_spec(profile: &Path) -> String {
+fn spec(profile: &Path, flags: &str) -> String {
     format!(
-        "configDir='sql:{}' certPrefix='' keyPrefix='' flags=readWrite",
+        "configDir='sql:{}' certPrefix='' keyPrefix='' flags={flags}",
         profile.display()
     )
+}
+
+fn read_write_spec(profile: &Path) -> String {
+    spec(profile, "readWrite")
+}
+
+fn read_only_spec(profile: &Path) -> String {
+    spec(profile, "readOnly")
 }
 
 #[repr(C)]
@@ -29,6 +38,25 @@ struct SecItem {
     kind: c_uint,
     data: *mut c_uchar,
     len: c_uint,
+}
+
+#[repr(C)]
+struct PrCList {
+    next: *mut PrCList,
+    prev: *mut PrCList,
+}
+
+#[repr(C)]
+struct CertList {
+    links: PrCList,
+    arena: *mut c_void,
+}
+
+#[repr(C)]
+struct CertListNode {
+    links: PrCList,
+    certificate: *mut c_void,
+    application_data: *mut c_void,
 }
 
 #[repr(C)]
@@ -80,6 +108,9 @@ type ChangeCertTrust = extern "C" fn(*mut c_void, *mut c_void, *mut CertTrust) -
 type GetCertTrust = extern "C" fn(*const c_void, *mut CertTrust) -> c_int;
 type DestroyCertificate = extern "C" fn(*mut c_void);
 type DeletePermCertificate = extern "C" fn(*mut c_void) -> c_int;
+type ListCertsInSlot = extern "C" fn(*mut c_void) -> *mut CertList;
+type DestroyCertList = extern "C" fn(*mut CertList);
+type GetCertificateDer = extern "C" fn(*mut c_void, *mut SecItem) -> c_int;
 
 struct Api {
     no_db_init: NoDbInit,
@@ -96,6 +127,9 @@ struct Api {
     get_cert_trust: GetCertTrust,
     destroy_certificate: DestroyCertificate,
     delete_perm_certificate: DeletePermCertificate,
+    list_certs_in_slot: ListCertsInSlot,
+    destroy_cert_list: DestroyCertList,
+    get_certificate_der: GetCertificateDer,
 }
 
 impl Api {
@@ -115,8 +149,41 @@ impl Api {
             get_cert_trust: symbol(nss, b"CERT_GetCertTrust\0")?,
             destroy_certificate: symbol(nss, b"CERT_DestroyCertificate\0")?,
             delete_perm_certificate: symbol(nss, b"SEC_DeletePermCertificate\0")?,
+            list_certs_in_slot: symbol(nss, b"PK11_ListCertsInSlot\0")?,
+            destroy_cert_list: symbol(nss, b"CERT_DestroyCertList\0")?,
+            get_certificate_der: symbol(nss, b"CERT_GetCertificateDer\0")?,
         })
     }
+}
+
+fn certificates_in(api: &Api, list: *mut CertList) -> Vec<Vec<u8>> {
+    let mut found = Vec::new();
+    if list.is_null() {
+        return found;
+    }
+
+    // SAFETY: NSS devuelve una lista circular viva hasta que se destruye.
+    unsafe {
+        let head: *mut PrCList = &raw mut (*list).links;
+        let mut link = (*head).next;
+        while !link.is_null() && !std::ptr::eq(link, head) {
+            let certificate = (*link.cast::<CertListNode>()).certificate;
+            let mut der = SecItem {
+                kind: SI_BUFFER,
+                data: std::ptr::null_mut(),
+                len: 0,
+            };
+            if !certificate.is_null()
+                && (api.get_certificate_der)(certificate, &mut der) == SEC_SUCCESS
+                && !der.data.is_null()
+            {
+                found.push(std::slice::from_raw_parts(der.data, der.len as usize).to_vec());
+            }
+            link = (*link).next;
+        }
+    }
+
+    found
 }
 
 fn der_item(der: &mut [u8]) -> SecItem {
@@ -146,11 +213,20 @@ impl<H: NssHost> NssTrustStores<H> {
         profile: &Path,
         work: impl FnOnce(&Api, *mut c_void) -> Result<T, TrustError>,
     ) -> Result<T, TrustError> {
+        self.opened(profile, read_write_spec(profile), work)
+    }
+
+    fn opened<T>(
+        &self,
+        profile: &Path,
+        spec: String,
+        work: impl FnOnce(&Api, *mut c_void) -> Result<T, TrustError>,
+    ) -> Result<T, TrustError> {
         let nss = self.host.library().map_err(|unavailable| {
             TrustError::new(Situation::NssMissing, unavailable.detail().to_owned())
         })?;
         let api = Api::resolve(nss)?;
-        let spec = CString::new(read_write_spec(profile)).map_err(|_| {
+        let spec = CString::new(spec).map_err(|_| {
             TrustError::new(
                 Situation::StoreUnreachable,
                 "la ruta del perfil lleva un cero dentro",
@@ -173,7 +249,7 @@ impl<H: NssHost> NssTrustStores<H> {
                     return Err(TrustError::new(
                         Situation::StoreUnreachable,
                         format!(
-                            "SECMOD_OpenUserDB no ha podido abrir «{}» en lectura y escritura",
+                            "SECMOD_OpenUserDB no ha podido abrir «{}»",
                             profile.display()
                         ),
                     ));
@@ -285,6 +361,20 @@ impl<H: NssHost> TrustStores for NssTrustStores<H> {
                 ));
             }
             Ok(())
+        })
+    }
+
+    fn local_cas(&self, profile: &Path) -> Result<Vec<Vec<u8>>, TrustError> {
+        self.opened(profile, read_only_spec(profile), |api, slot| {
+            let list = (api.list_certs_in_slot)(slot);
+            let found = certificates_in(api, list);
+            if !list.is_null() {
+                (api.destroy_cert_list)(list);
+            }
+            Ok(found
+                .into_iter()
+                .filter(|der| has_the_local_ca_subject(der))
+                .collect())
         })
     }
 }

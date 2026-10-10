@@ -186,3 +186,73 @@ fn only_the_channels_with_nss_stores_replace_an_unmarked_local_ca() {
     assert!(ChannelMark::Flatpak.replaces_an_unmarked_local_ca());
     assert!(!ChannelMark::Windows.replaces_an_unmarked_local_ca());
 }
+
+fn self_signed_der(entries: &[(Nid, &str)]) -> Vec<u8> {
+    let key = generate_key().expect("deberia generarse la clave");
+    let mut name = X509Name::builder().expect("deberia construirse el nombre");
+    for (nid, value) in entries {
+        name.append_entry_by_nid(*nid, value)
+            .expect("deberia añadirse la entrada");
+    }
+    let name = name.build();
+    let mut builder = X509::builder().expect("deberia construirse el certificado");
+    builder.set_subject_name(&name).expect("sujeto");
+    builder.set_issuer_name(&name).expect("emisor");
+    builder.set_pubkey(&key).expect("clave");
+    builder
+        .set_not_before(&Asn1Time::days_from_now(0).expect("inicio"))
+        .expect("inicio");
+    builder
+        .set_not_after(&Asn1Time::days_from_now(1).expect("fin"))
+        .expect("fin");
+    builder
+        .sign(&key, MessageDigest::sha256())
+        .expect("deberia firmarse");
+    builder.build().to_der().expect("deberia salir en DER")
+}
+
+#[test]
+fn a_generated_local_ca_carries_the_local_ca_subject() {
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
+
+    assert!(has_the_local_ca_subject(
+        &ca.certificate().to_der().expect("deberia salir en DER")
+    ));
+}
+
+#[test]
+fn a_namesake_without_the_constraints_still_carries_the_local_ca_subject() {
+    assert!(has_the_local_ca_subject(&self_signed_der(&[(
+        Nid::COMMONNAME,
+        COMMON_NAME
+    )])));
+}
+
+#[test]
+fn a_subject_with_more_than_the_local_ca_name_is_not_the_local_ca_subject() {
+    assert!(!has_the_local_ca_subject(&self_signed_der(&[
+        (Nid::COMMONNAME, COMMON_NAME),
+        (Nid::ORGANIZATIONNAME, "Ajena"),
+    ])));
+    assert!(!has_the_local_ca_subject(&self_signed_der(&[
+        (Nid::ORGANIZATIONNAME, "Ajena"),
+        (Nid::COMMONNAME, COMMON_NAME),
+    ])));
+}
+
+#[test]
+fn another_common_name_is_not_the_local_ca_subject() {
+    assert!(!has_the_local_ca_subject(&self_signed_der(&[(
+        Nid::COMMONNAME,
+        "Otra CA"
+    )])));
+    assert!(!has_the_local_ca_subject(&self_signed_der(&[(
+        Nid::COMMONNAME,
+        "rFirma CA local 2"
+    )])));
+}
+
+#[test]
+fn bytes_that_are_not_a_certificate_are_not_the_local_ca_subject() {
+    assert!(!has_the_local_ca_subject(b"no es DER"));
+}

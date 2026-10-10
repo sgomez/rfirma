@@ -1,5 +1,6 @@
 use super::*;
 use crate::site::application::tests::InMemoryCaSlots;
+use crate::site::domain::local_ca::has_the_local_ca_subject;
 use crate::site::domain::trust::TRUSTED_SSL_CA;
 use crate::site::domain::trust::{Notice, Situation};
 use std::collections::HashMap;
@@ -88,6 +89,15 @@ impl TrustStores for Doubled {
             registered.retain(|(der, _)| der != certificate_der);
         }
         Ok(())
+    }
+
+    fn local_cas(&self, profile: &Path) -> Result<Vec<Vec<u8>>, TrustError> {
+        Ok(self
+            .inside(profile)
+            .into_iter()
+            .map(|(der, _)| der)
+            .filter(|der| has_the_local_ca_subject(der))
+            .collect())
     }
 }
 

@@ -15,6 +15,15 @@ fn opening_someone_elses_profile_does_not_rename_their_token() {
 }
 
 #[test]
+fn listing_opens_the_profile_read_only() {
+    let spec = read_only_spec(Path::new("/home/quien/.mozilla/firefox/perfil"));
+
+    assert!(spec.contains("configDir='sql:/home/quien/.mozilla/firefox/perfil'"));
+    assert!(spec.contains("flags=readOnly"));
+    assert!(!spec.contains("readWrite"));
+}
+
+#[test]
 fn the_bits_that_come_back_from_the_softoken_still_read_as_trusted() {
     assert!(is_trusted_ssl_ca(0x38));
     assert!(!is_trusted_ssl_ca(0x08));
