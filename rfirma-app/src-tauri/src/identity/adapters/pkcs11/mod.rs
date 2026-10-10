@@ -5,6 +5,7 @@ mod mechanism;
 pub mod nss;
 mod one_login;
 pub mod p11kit;
+pub mod probe;
 mod removal;
 mod session;
 pub mod stores;

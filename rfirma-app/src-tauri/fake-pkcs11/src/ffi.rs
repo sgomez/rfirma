@@ -141,6 +141,11 @@ fn write_list<T: Copy>(values: &[T], list: *mut T, count: *mut CK_ULONG) -> Resu
 }
 
 unsafe extern "C" fn initialize(_args: *mut c_void) -> CK_RV {
+    if card::hangs_on_initialize(card::card_dir()) {
+        loop {
+            std::thread::park();
+        }
+    }
     let mut state = state();
     let rv = if state.is_some() {
         CKR_CRYPTOKI_ALREADY_INITIALIZED

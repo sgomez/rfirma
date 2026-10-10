@@ -11,13 +11,14 @@ use crate::desktop::adapters::installation::{this_glibc, this_installation, this
 use crate::desktop::adapters::paths::Paths;
 use crate::desktop::adapters::registry::this_desktop;
 use crate::desktop::application::debug_report::{
-    DebugReport, DiscardReason, LinuxEnvironment, NativeLibrary, NativeLibraryStatus, NssProfile,
-    NssProfileState, NssStores, PcscStatus, Pkcs11Module, Pkcs11Modules, ProtocolHandlerStatus,
-    ReportOwner, WindowsStores,
+    DebugReport, DiscardReason, LinuxEnvironment, ModuleStatus, NativeLibrary, NativeLibraryStatus,
+    NssProfile, NssProfileState, NssStores, PcscStatus, Pkcs11Module, Pkcs11Modules,
+    ProtocolHandlerStatus, ReportOwner, WindowsStores,
 };
 use crate::desktop::domain::channel::Channel;
 use crate::identity::adapters as identity_adapters;
 use crate::identity::adapters::pkcs11::p11kit;
+use crate::identity::adapters::pkcs11::probe::{probe, ModuleProbe};
 use crate::identity::adapters::pkcs11::stores::{
     has_certificate_database, ignored_nss_profiles, modules_from_environment, nss_profiles,
 };
@@ -32,6 +33,7 @@ use crate::PKCS11_MODULE_VARIABLE;
 const SCHEME: &str = "afirma";
 const BUNDLED_PCSC_LITE_VERSION: &str = "/app/share/rfirma/pcsc-lite-version";
 const UNKNOWN: &str = "desconocido";
+const MODULE_PROBE_LIMIT: Duration = Duration::from_secs(5);
 
 /// El informe de este proceso, con la librería nativa realmente cargada.
 pub fn this_process_report() -> DebugReport {
@@ -182,14 +184,29 @@ fn pkcs11_modules() -> Option<Pkcs11Modules> {
             modules_from_environment()
                 .into_iter()
                 .map(|module| Pkcs11Module {
+                    status: module_status(module.library.as_deref(), module.discard),
                     name: module.name,
                     library: module.library,
                     registration: module.registration,
-                    discard: module.discard.map(discard_reason),
                 })
                 .collect(),
         )
     })
+}
+
+fn module_status(library: Option<&Path>, discard: Option<p11kit::DiscardReason>) -> ModuleStatus {
+    match (discard, library) {
+        (Some(reason), _) => ModuleStatus::Discarded(discard_reason(reason)),
+        (None, None) => ModuleStatus::DoesNotLoad,
+        (None, Some(library)) => match probe(library, MODULE_PROBE_LIMIT) {
+            ModuleProbe::Loads(info) => ModuleStatus::Loads {
+                manufacturer: info.manufacturer,
+                version: info.version,
+            },
+            ModuleProbe::DoesNotLoad => ModuleStatus::DoesNotLoad,
+            ModuleProbe::NotResponding => ModuleStatus::NotResponding(MODULE_PROBE_LIMIT),
+        },
+    }
 }
 
 fn discard_reason(reason: p11kit::DiscardReason) -> DiscardReason {

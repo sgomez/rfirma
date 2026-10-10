@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::time::Duration;
 
 use super::super::*;
 use super::{a_flatpak_report, ana};
@@ -22,14 +23,61 @@ fn module(
     name: &str,
     library: Option<&str>,
     registration: Option<&str>,
-    discard: Option<DiscardReason>,
+    status: ModuleStatus,
 ) -> Pkcs11Module {
     Pkcs11Module {
         name: name.to_owned(),
         library: library.map(PathBuf::from),
         registration: registration.map(PathBuf::from),
-        discard,
+        status,
     }
+}
+
+fn opensc_loads() -> ModuleStatus {
+    ModuleStatus::Loads {
+        manufacturer: "OpenSC Project".to_owned(),
+        version: "0.26".to_owned(),
+    }
+}
+
+fn first_module_line(status: ModuleStatus) -> String {
+    modules_section(DebugReport {
+        pkcs11_modules: Some(Pkcs11Modules::Discovered(vec![module(
+            "dnie",
+            Some("/usr/lib/x86_64-linux-gnu/libpkcs11-dnie.so"),
+            Some("/home/ana/.config/pkcs11/modules/dnie.module"),
+            status,
+        )])),
+        ..a_native_report()
+    })
+    .lines()
+    .nth(1)
+    .unwrap_or_default()
+    .to_owned()
+}
+
+#[test]
+fn a_module_that_loads_says_the_manufacturer_and_version_of_its_library() {
+    assert_eq!(
+        first_module_line(opensc_loads()),
+        "  dnie: carga · OpenSC Project 0.26"
+    );
+}
+
+#[test]
+fn a_module_that_cannot_be_loaded_says_so() {
+    assert_eq!(
+        first_module_line(ModuleStatus::DoesNotLoad),
+        "  dnie: no carga"
+    );
+}
+
+#[test]
+fn a_module_that_does_not_answer_in_time_says_the_limit_it_was_given() {
+    assert_eq!(
+        first_module_line(ModuleStatus::NotResponding(Duration::from_secs(5))),
+        "  dnie: no responde · 5 s"
+    );
 }
 
 #[test]
@@ -40,12 +88,12 @@ fn a_usable_module_shows_its_library_and_the_file_that_registers_it() {
                 "opensc",
                 Some("/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so"),
                 Some("/home/ana/.config/pkcs11/modules/opensc.module"),
-                None,
+                opensc_loads(),
             )])),
             ..a_native_report()
         }),
         "Módulos PKCS#11\n  \
-         opensc: encontrado\n    \
+         opensc: carga · OpenSC Project 0.26\n    \
            módulo: /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so\n    \
            alta: ~/.config/pkcs11/modules/opensc.module"
     );
@@ -59,7 +107,7 @@ fn a_discarded_module_says_why() {
                 "bit4id",
                 Some("/usr/lib/libbit4xpki.so"),
                 Some("/etc/pkcs11/modules/bit4id.module"),
-                Some(reason),
+                ModuleStatus::Discarded(reason),
             )])),
             ..a_native_report()
         })
@@ -95,7 +143,7 @@ fn a_discarded_module_without_library_shows_only_its_registration() {
                 "p11-kit-trust",
                 None,
                 Some("/usr/share/p11-kit/modules/p11-kit-trust.module"),
-                Some(DiscardReason::TrustPolicy),
+                ModuleStatus::Discarded(DiscardReason::TrustPolicy),
             )])),
             ..a_native_report()
         }),
@@ -113,12 +161,12 @@ fn a_fixed_candidate_shows_no_registration() {
                 "libsofthsm2",
                 Some("/usr/lib/softhsm/libsofthsm2.so"),
                 None,
-                None,
+                ModuleStatus::DoesNotLoad,
             )])),
             ..a_native_report()
         }),
         "Módulos PKCS#11\n  \
-         libsofthsm2: encontrado\n    \
+         libsofthsm2: no carga\n    \
            módulo: /usr/lib/softhsm/libsofthsm2.so"
     );
 }
@@ -131,13 +179,13 @@ fn in_the_flatpak_the_section_says_the_sandbox_does_not_see_the_host_modules() {
                 "opensc",
                 Some("/app/lib/pkcs11/opensc-pkcs11.so"),
                 Some("/app/share/p11-kit/modules/opensc.module"),
-                None,
+                opensc_loads(),
             )])),
             ..a_flatpak_report()
         }),
         "Módulos PKCS#11\n  \
          Módulos del anfitrión: no visibles · el sandbox solo ve el OpenSC incluido\n  \
-         opensc: encontrado\n    \
+         opensc: carga · OpenSC Project 0.26\n    \
            módulo: /app/lib/pkcs11/opensc-pkcs11.so\n    \
            alta: /app/share/p11-kit/modules/opensc.module"
     );
