@@ -366,12 +366,13 @@ pub struct WithdrawOutcome {
     pub results: Vec<(PathBuf, StoreWithdrawal)>,
 }
 
-/// Retira la CA local —vigente y la del solape— de los almacenes NSS indicados, por huella.
+/// Retira la CA local —vigente y la del solape— y las antiguas de rFirma de su canal o sin marca de los almacenes NSS indicados.
 /// Las ranuras solo se vacían después, y solo si ningún almacén ha fallado.
 pub fn withdraw_everywhere(
     store: &dyn LocalCaSlots,
     profiles: &[PathBuf],
     stores: &dyn TrustStores,
+    mark: ChannelMark,
 ) -> Result<WithdrawOutcome, TlsError> {
     let ders = [store.serving()?, store.next()?]
         .into_iter()
@@ -394,7 +395,7 @@ pub fn withdraw_everywhere(
 
     let results: Vec<(PathBuf, StoreWithdrawal)> = profiles
         .iter()
-        .map(|profile| (profile.clone(), withdraw_one(stores, profile, &ders)))
+        .map(|profile| (profile.clone(), withdraw_one(stores, profile, &ders, mark)))
         .collect();
 
     if !results
@@ -408,9 +409,19 @@ pub fn withdraw_everywhere(
     Ok(WithdrawOutcome { results })
 }
 
-fn withdraw_one(stores: &dyn TrustStores, profile: &Path, ders: &[Vec<u8>]) -> StoreWithdrawal {
+fn withdraw_one(
+    stores: &dyn TrustStores,
+    profile: &Path,
+    ders: &[Vec<u8>],
+    mark: ChannelMark,
+) -> StoreWithdrawal {
+    let orphans = match stores.local_cas(profile) {
+        Ok(found) => trust::orphaned_local_cas(found, ders, mark),
+        Err(error) => return StoreWithdrawal::Failed(error),
+    };
+    let ders = [ders, orphans.as_slice()].concat();
     let mut was_there = false;
-    for der in ders {
+    for der in &ders {
         match stores.trust_of(profile, der) {
             Ok(Some(_)) => was_there = true,
             Ok(None) => {}

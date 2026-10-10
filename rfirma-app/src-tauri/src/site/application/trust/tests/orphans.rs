@@ -250,3 +250,71 @@ fn windows_withdraws_no_old_local_ca() {
         sorted(vec![der_of(&current), der_of(&old), der_of(&unmarked)])
     );
 }
+
+#[test]
+fn withdrawing_takes_the_old_and_unmarked_local_cas_and_keeps_the_other_channels() {
+    let store = a_store();
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+    let current = a_ca(ChannelMark::Flatpak);
+    let old = a_ca(ChannelMark::Flatpak);
+    let unmarked = LocalCa::unmarked_for_test().expect("deberia fabricarse");
+    let the_debs = a_ca(ChannelMark::Native);
+    store.write_serving(&current).expect("deberia guardarse");
+    installed(
+        &stores,
+        &profiles,
+        &[
+            der_of(&current),
+            der_of(&old),
+            der_of(&unmarked),
+            der_of(&the_debs),
+        ],
+    );
+
+    withdraw_everywhere(&store, &profiles, &stores, ChannelMark::Flatpak)
+        .expect("deberia retirarse");
+
+    for profile in &profiles {
+        assert_eq!(ders_inside(&stores, profile), vec![der_of(&the_debs)]);
+    }
+    assert!(store.serving().expect("deberia leerse").is_none());
+}
+
+#[test]
+fn withdrawing_does_not_touch_a_namesake_without_the_name_constraints_of_rfirma() {
+    let store = a_store();
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0]]);
+    let current = a_ca(ChannelMark::Native);
+    let namesake = a_namesake_without_the_constraints();
+    store.write_serving(&current).expect("deberia guardarse");
+    installed(
+        &stores,
+        &profiles[..1],
+        &[der_of(&current), namesake.clone()],
+    );
+
+    withdraw_everywhere(&store, &profiles[..1], &stores, ChannelMark::Native)
+        .expect("deberia retirarse");
+
+    assert_eq!(ders_inside(&stores, &profiles[0]), vec![namesake]);
+}
+
+#[test]
+fn a_profile_that_refuses_to_withdraw_an_old_local_ca_keeps_the_slots_for_a_retry() {
+    let store = a_store();
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+    let current = a_ca(ChannelMark::Native);
+    let old = a_ca(ChannelMark::Native);
+    store.write_serving(&current).expect("deberia guardarse");
+    installed(&stores, &profiles, &[der_of(&old)]);
+    let stores = stores.refusing_to_withdraw(&profiles[1]);
+
+    let outcome = withdraw_everywhere(&store, &profiles, &stores, ChannelMark::Native)
+        .expect("deberia retirarse");
+
+    assert!(matches!(outcome.results[1].1, StoreWithdrawal::Failed(_)));
+    assert!(store.serving().expect("deberia leerse").is_some());
+}

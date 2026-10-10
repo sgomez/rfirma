@@ -160,6 +160,8 @@ export const ca: Dictionary = {
     "Per a Fedora i derivades basades en paquets RPM. Configura el repositori amb comprovació criptogràfica estricta de metadades i paquets (<code>gpgcheck=1</code> i <code>repo_gpgcheck=1</code>).",
   "install.manual":
     "Instruccions detallades, empremta de la clau i verificació, al manual (en castellà)",
+  "install.uninstall":
+    "Per no deixar el certificat de rFirma al navegador, prem <em>Retira el certificat</em> al panell d'estat abans de desinstal·lar.",
   "install.soon": "En desenvolupament",
   "install.windows.title": "rFirma per a Windows",
   "install.windows.body":

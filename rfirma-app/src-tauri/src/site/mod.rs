@@ -76,6 +76,7 @@ impl SiteRoot {
             self.trust.store.as_ref(),
             profiles,
             self.trust.stores.as_ref(),
+            self.trust.mark,
         )
     }
 
