@@ -1,4 +1,4 @@
-//! La CA local, pura, que firma el certificado del servidor: la genera y la lee de PEM sin tocar el disco (ADR-0005).
+//! La CA local, pura, que firma el certificado del servidor: la genera con la marca de su canal y la lee de PEM sin tocar el disco (ADR-0005).
 
 use openssl::asn1::{Asn1Integer, Asn1Object, Asn1OctetString, Asn1Time};
 use openssl::bn::{BigNum, MsbOption};
@@ -8,6 +8,8 @@ use openssl::nid::Nid;
 use openssl::pkey::{PKey, Private};
 use openssl::x509::extension::{BasicConstraints, KeyUsage, SubjectKeyIdentifier};
 use openssl::x509::{X509Extension, X509Name, X509};
+use x509_cert::der::asn1::{AnyRef, Utf8StringRef};
+use x509_cert::der::{Decode, Reader, SliceReader, Tag, TagNumber, Tagged};
 
 use crate::site::domain::tls_error::{Situation, TlsError};
 
@@ -24,6 +26,74 @@ pub const PERMITTED_IPV4: [u8; 4] = [127, 0, 0, 1];
 /// Dirección IPv6 de loopback permitida por la restricción de nombres.
 pub const PERMITTED_IPV6: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
 
+/// OID propio de la extensión que marca el canal de la CA local, bajo el arco de UUID (ADR-0005).
+pub const CHANNEL_MARK_OID: &str = "2.25.204984766305632451904566026227780766075";
+
+const EXTENSIONS: Tag = Tag::ContextSpecific {
+    constructed: true,
+    number: TagNumber(3),
+};
+
+/// El canal cuya marca lleva dentro una CA local (ADR-0005).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChannelMark {
+    /// El deb y el rpm, que comparten carpeta.
+    Native,
+    /// El flatpak.
+    Flatpak,
+    /// Windows.
+    Windows,
+}
+
+impl ChannelMark {
+    const ALL: [Self; 3] = [Self::Native, Self::Flatpak, Self::Windows];
+
+    /// El valor que la extensión guarda para este canal.
+    pub fn value(self) -> &'static str {
+        match self {
+            Self::Native => "native",
+            Self::Flatpak => "flatpak",
+            Self::Windows => "windows",
+        }
+    }
+
+    /// La marca que lleva un certificado en DER, o ninguna si no la lleva o no es un certificado.
+    pub fn of_certificate(certificate_der: &[u8]) -> Option<Self> {
+        let oid = Asn1Object::from_str(CHANNEL_MARK_OID).ok()?;
+        let certificate = AnyRef::from_der(certificate_der).ok()?;
+        let tbs = *elements_of(certificate)?.first()?;
+        let extensions = elements_of(tbs)?
+            .into_iter()
+            .find(|field| field.tag() == EXTENSIONS)?;
+        let list = *elements_of(extensions)?.first()?;
+        let value = elements_of(list)?.into_iter().find_map(|extension| {
+            let parts = elements_of(extension)?;
+            let id = parts.first()?;
+            (id.tag() == Tag::ObjectIdentifier && id.value() == oid.as_slice())
+                .then(|| parts.last().copied())
+                .flatten()
+        })?;
+        let text = Utf8StringRef::from_der(value.value()).ok()?;
+        Self::ALL
+            .into_iter()
+            .find(|mark| mark.value() == text.as_str())
+    }
+
+    /// Si el canal sustituye una CA local vigente sin marca al instalar: solo los de NSS (ADR-0005).
+    pub fn replaces_an_unmarked_local_ca(self) -> bool {
+        self != Self::Windows
+    }
+}
+
+fn elements_of(constructed: AnyRef<'_>) -> Option<Vec<AnyRef<'_>>> {
+    let mut reader = SliceReader::new(constructed.value()).ok()?;
+    let mut found = Vec::new();
+    while !reader.is_finished() {
+        found.push(AnyRef::decode(&mut reader).ok()?);
+    }
+    Some(found)
+}
+
 /// Autoridad de certificación local con su certificado y clave privada.
 #[derive(Clone)]
 pub struct LocalCa {
@@ -32,35 +102,44 @@ pub struct LocalCa {
 }
 
 impl LocalCa {
-    /// Genera una CA local nueva válida desde este momento.
-    pub fn generate() -> Result<Self, TlsError> {
-        let key = generate_key()?;
-        let certificate = build_certificate(&key, VALIDITY_DAYS).map_err(not_generated)?;
-        Ok(Self { certificate, key })
+    /// Genera una CA local nueva, válida desde este momento y con la marca de su canal.
+    pub fn generate(mark: ChannelMark) -> Result<Self, TlsError> {
+        Self::made(VALIDITY_DAYS, Some(mark))
+    }
+
+    /// Genera una CA local sin marca de canal, como las de antes de ella, para pruebas.
+    #[cfg(test)]
+    pub fn unmarked_for_test() -> Result<Self, TlsError> {
+        Self::made(VALIDITY_DAYS, None)
     }
 
     /// Genera una CA local a punto de caducar para pruebas.
     #[cfg(test)]
     pub fn almost_expired_for_test() -> Result<Self, TlsError> {
-        let key = generate_key()?;
-        let certificate = build_certificate(&key, 2).map_err(not_generated)?;
-        Ok(Self { certificate, key })
+        Self::made(2, Some(ChannelMark::Native))
     }
 
     /// Genera una CA local ya caducada para pruebas.
     #[cfg(test)]
     pub fn expired_for_test() -> Result<Self, TlsError> {
-        let key = generate_key()?;
-        let certificate = build_certificate(&key, 0).map_err(not_generated)?;
-        Ok(Self { certificate, key })
+        Self::made(0, Some(ChannelMark::Native))
     }
 
     /// Genera una CA local con los días de validez indicados, para pruebas de umbral.
     #[cfg(test)]
     pub fn valid_for_days_for_test(days: u32) -> Result<Self, TlsError> {
+        Self::made(days, Some(ChannelMark::Native))
+    }
+
+    fn made(validity_days: u32, mark: Option<ChannelMark>) -> Result<Self, TlsError> {
         let key = generate_key()?;
-        let certificate = build_certificate(&key, days).map_err(not_generated)?;
+        let certificate = build_certificate(&key, validity_days, mark).map_err(not_generated)?;
         Ok(Self { certificate, key })
+    }
+
+    /// La marca de canal que lleva la CA local, o ninguna si es de antes de ella.
+    pub fn mark(&self) -> Option<ChannelMark> {
+        ChannelMark::of_certificate(&self.certificate.to_der().ok()?)
     }
 
     /// Reconstruye la CA local a partir de los PEM de certificado y clave privada.
@@ -141,6 +220,7 @@ pub fn random_serial() -> Result<Asn1Integer, openssl::error::ErrorStack> {
 fn build_certificate(
     key: &PKey<Private>,
     validity_days: u32,
+    mark: Option<ChannelMark>,
 ) -> Result<X509, openssl::error::ErrorStack> {
     let mut name = X509Name::builder()?;
     name.append_entry_by_nid(Nid::COMMONNAME, COMMON_NAME)?;
@@ -166,6 +246,9 @@ fn build_certificate(
             .build()?,
     )?;
     builder.append_extension(name_constraints()?)?;
+    if let Some(mark) = mark {
+        builder.append_extension(channel_mark(mark)?)?;
+    }
     let identifier = {
         let context = builder.x509v3_context(None, None);
         SubjectKeyIdentifier::new().build(&context)?
@@ -200,6 +283,14 @@ fn name_constraints() -> Result<X509Extension, openssl::error::ErrorStack> {
     let oid = Asn1Object::from_str("2.5.29.30")?;
     let contents = Asn1OctetString::new_from_bytes(&der)?;
     X509Extension::new_from_der(&oid, true, &contents)
+}
+
+fn channel_mark(mark: ChannelMark) -> Result<X509Extension, openssl::error::ErrorStack> {
+    const UTF8_STRING: u8 = 0x0c;
+
+    let oid = Asn1Object::from_str(CHANNEL_MARK_OID)?;
+    let contents = Asn1OctetString::new_from_bytes(&tagged(UTF8_STRING, mark.value().as_bytes()))?;
+    X509Extension::new_from_der(&oid, false, &contents)
 }
 
 fn tagged(tag: u8, contents: &[u8]) -> Vec<u8> {

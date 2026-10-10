@@ -58,6 +58,18 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
     composed_roots(paths, Some(desktop::adapters::process::this_invocation()))
 }
 
+/// La CA local de esta instalación, con sus almacenes, sus perfiles y la marca de su canal.
+fn local_ca_trust(
+    ca_store: &site::adapters::tls::LocalCaStore,
+) -> site::application::startup::LocalCaTrust {
+    site::application::startup::LocalCaTrust {
+        store: Box::new(ca_store.clone()),
+        profiles: site::adapters::trust_profiles(),
+        stores: site::adapters::desktop_trust_stores(),
+        mark: site::application::trust::mark_of(desktop::adapters::channel::Channel::detected()),
+    }
+}
+
 /// Compone las cinco raíces, con la invocación pendiente del escritorio o vacía en rol de sede.
 fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Invocation>) -> Roots {
     let memory = Arc::new(signing::adapters::memory::Memory::at(&paths));
@@ -107,11 +119,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
     let site = SiteRoot {
         errand: site::application::errand::LiveErrand::default(),
         held_channel: site::application::startup::HeldChannel::default(),
-        trust: site::application::startup::LocalCaTrust {
-            store: Box::new(ca_store.clone()),
-            profiles: site::adapters::trust_profiles(),
-            stores: site::adapters::desktop_trust_stores(),
-        },
+        trust: local_ca_trust(&ca_store),
         ca_store,
         codecs: site::application::site::CodecTable {
             v4: Arc::new(site::adapters::codec::V4Codec),
@@ -434,6 +442,7 @@ fn attend_the_site_launch(
             store: site.trust.store.as_ref(),
             profiles: &site.trust.profiles,
             stores: site.trust.stores.as_ref(),
+            mark: site.trust.mark,
         },
         &site.codecs,
         &transport,

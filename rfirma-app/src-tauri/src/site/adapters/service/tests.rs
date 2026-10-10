@@ -601,9 +601,9 @@ async fn an_idle_channel_stops_listening_and_says_so() {
     use std::sync::atomic::{AtomicBool, Ordering};
 
     use crate::site::adapters::tls::LocalServerCertificate;
-    use crate::site::domain::local_ca::LocalCa;
+    use crate::site::domain::local_ca::{ChannelMark, LocalCa};
 
-    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("la CA local deberia generarse");
     let certificate =
         LocalServerCertificate::issued_by(&ca).expect("el certificado del servidor local");
     let acceptor = Arc::new(acceptor_for(&certificate).expect("el aceptador TLS"));

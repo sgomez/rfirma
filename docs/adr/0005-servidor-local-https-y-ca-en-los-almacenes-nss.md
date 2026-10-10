@@ -436,3 +436,23 @@ Considered Options:
 - **Todo `127.0.0.0/8`.** Se descarta: un socket en `127.0.0.1` no recibe lo que
   va a `127.0.0.2`, y recibirlo todo exige la comodín, que abre el puerto a la
   red; además la CA solo admite `127.0.0.1` exacto.
+
+## Enmienda: cada CA local lleva la marca de su canal
+
+La CA local que genera rFirma lleva una extensión no crítica cuyo valor es su
+canal: `native` (el deb y el rpm, que comparten carpeta), `flatpak` o `windows`.
+El OID cuelga de `2.25`, a partir de un UUID aleatorio (ITU-T X.667), sin registro
+en IANA; está en `CHANNEL_MARK_OID` de `site/domain/local_ca.rs`. El sujeto y el
+*nickname* no cambian, porque en NSS el *nickname* va unido al sujeto: en la lista
+del navegador se sigue viendo «rFirma CA local», una por cada canal instalado.
+
+Instalar el certificado en Linux sustituye, una sola vez, una CA vigente sin marca
+—de antes de esta enmienda— por una marcada, y retira por huella la antigua y la
+del solape, con el mismo aviso de reiniciar el navegador que cualquier instalación.
+A mitad de un trámite no se toca nada, como siempre. En Windows no se sustituye:
+cada alta o retirada en el almacén raíz del usuario abre el aviso de seguridad de
+Windows.
+
+Un arco de 128 bits no cabe en `x509-cert`, que limita cada arco a 32: un
+certificado marcado no se decodifica con `x509_cert::Certificate`, y la marca se
+lee recorriendo el DER (`ChannelMark::of_certificate`).

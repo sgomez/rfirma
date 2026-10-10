@@ -34,7 +34,7 @@ pub use rfirma_lib::site::application::errand::{
     self, Errand, ErrandDesk, ErrandStep, NegotiatedCodec, Transport,
 };
 pub use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChannel};
-pub use rfirma_lib::site::domain::local_ca::LocalCa;
+pub use rfirma_lib::site::domain::local_ca::{ChannelMark, LocalCa};
 pub use rfirma_lib::site::domain::protocol::{
     drawn_ports, read_operation, AfirmaUrl, LaunchRequest, NegotiatedCredential, SafCode,
     SiteOperation, WireAnswer, PROTOCOL_VERSION,
@@ -390,7 +390,7 @@ pub struct ChannelMaterial {
 
 impl ChannelMaterial {
     pub fn fresh() -> Self {
-        let ca = LocalCa::generate().expect("la CA local deberia generarse");
+        let ca = LocalCa::generate(ChannelMark::Native).expect("la CA local deberia generarse");
         let certificate =
             LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
 

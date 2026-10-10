@@ -107,6 +107,27 @@ fn an_expired_local_ca_with_a_successor_waiting_hands_over_instead_of_starting_a
 }
 
 #[test]
+fn an_unmarked_local_ca_is_replaced_whatever_its_stage() {
+    for stage in [Stage::Serving, Stage::Overlapping, Stage::Expired] {
+        for next in [NextCa::None, NextCa::Waiting] {
+            assert_eq!(
+                replacing_the_unmarked(work_at(Moment::Startup, stage, next)),
+                Work::ReplaceTheUnmarkedOne,
+                "{stage:?} con {next:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn an_unmarked_local_ca_is_left_alone_in_the_middle_of_an_errand() {
+    assert_eq!(
+        replacing_the_unmarked(work_at(Moment::MidErrand, Stage::Serving, NextCa::None)),
+        Work::Nothing
+    );
+}
+
+#[test]
 fn the_notice_never_shows_up_in_the_middle_of_an_errand() {
     let pending = PendingNotice::after_installing();
 

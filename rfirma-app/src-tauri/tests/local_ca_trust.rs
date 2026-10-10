@@ -14,8 +14,8 @@ use rfirma_lib::identity::adapters::pkcs11::RealNssHost;
 use rfirma_lib::site::adapters::nss::NssTrustStores;
 use rfirma_lib::site::adapters::tls::{CaFiles, LocalCaStore};
 use rfirma_lib::site::application::trust::refresh_local_ca_trust;
-use rfirma_lib::site::domain::local_ca::LocalCa;
 use rfirma_lib::site::domain::local_ca::{random_serial, COMMON_NAME};
+use rfirma_lib::site::domain::local_ca::{ChannelMark, LocalCa};
 use rfirma_lib::site::domain::trust::is_trusted_ssl_ca;
 use rfirma_lib::site::domain::trust::{Moment, Situation};
 use rfirma_lib::site::ports::TrustStores;
@@ -102,7 +102,7 @@ fn withdraw(profile: &Path, ca: &LocalCa) {
 #[test]
 fn the_local_ca_ends_up_trusted_and_certutil_reads_the_bits() {
     let profile = a_disposable_profile();
-    let ca = LocalCa::generate().expect("deberia fabricarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse");
 
     install(profile.path(), &ca);
 
@@ -117,8 +117,8 @@ fn the_local_ca_ends_up_trusted_and_certutil_reads_the_bits() {
 #[test]
 fn two_local_ca_with_the_same_subject_live_together() {
     let profile = a_disposable_profile();
-    let current = LocalCa::generate().expect("deberia fabricarse la vigente");
-    let next = LocalCa::generate().expect("deberia fabricarse la siguiente");
+    let current = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la vigente");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la siguiente");
 
     install(profile.path(), &current);
     install(profile.path(), &next);
@@ -134,8 +134,8 @@ fn two_local_ca_with_the_same_subject_live_together() {
 #[test]
 fn the_overlap_holds_whichever_order_they_arrive_in() {
     let profile = a_disposable_profile();
-    let current = LocalCa::generate().expect("deberia fabricarse la vigente");
-    let next = LocalCa::generate().expect("deberia fabricarse la siguiente");
+    let current = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la vigente");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la siguiente");
 
     install(profile.path(), &next);
     install(profile.path(), &current);
@@ -155,7 +155,7 @@ fn the_overlap_holds_whichever_order_they_arrive_in() {
 #[test]
 fn installing_the_same_local_ca_twice_leaves_one_row() {
     let profile = a_disposable_profile();
-    let ca = LocalCa::generate().expect("deberia fabricarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse");
 
     install(profile.path(), &ca);
     install(profile.path(), &ca);
@@ -166,8 +166,8 @@ fn installing_the_same_local_ca_twice_leaves_one_row() {
 #[test]
 fn the_bits_come_back_and_a_ca_that_is_not_there_is_not_a_failure() {
     let profile = a_disposable_profile();
-    let installed = LocalCa::generate().expect("deberia fabricarse");
-    let stranger = LocalCa::generate().expect("deberia fabricarse");
+    let installed = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse");
+    let stranger = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse");
 
     install(profile.path(), &installed);
 
@@ -186,8 +186,8 @@ fn the_bits_come_back_and_a_ca_that_is_not_there_is_not_a_failure() {
 #[test]
 fn withdrawing_both_local_cas_after_an_overlap_leaves_the_store_trusting_neither() {
     let profile = a_disposable_profile();
-    let current = LocalCa::generate().expect("deberia fabricarse la vigente");
-    let next = LocalCa::generate().expect("deberia fabricarse la siguiente");
+    let current = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la vigente");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la siguiente");
 
     install(profile.path(), &current);
     install(profile.path(), &next);
@@ -217,7 +217,7 @@ fn withdrawing_both_local_cas_after_an_overlap_leaves_the_store_trusting_neither
 #[test]
 fn withdrawing_a_local_ca_that_is_not_there_is_not_a_failure() {
     let profile = a_disposable_profile();
-    let stranger = LocalCa::generate().expect("deberia fabricarse");
+    let stranger = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse");
 
     withdraw(profile.path(), &stranger);
 }
@@ -225,8 +225,8 @@ fn withdrawing_a_local_ca_that_is_not_there_is_not_a_failure() {
 #[test]
 fn withdrawing_one_local_ca_leaves_the_other_certificates_trusted() {
     let profile = a_disposable_profile();
-    let current = LocalCa::generate().expect("deberia fabricarse la vigente");
-    let next = LocalCa::generate().expect("deberia fabricarse la siguiente");
+    let current = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la vigente");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la siguiente");
 
     install(profile.path(), &current);
     install(profile.path(), &next);
@@ -253,7 +253,7 @@ fn withdrawing_one_local_ca_leaves_the_other_certificates_trusted() {
 #[test]
 fn a_directory_that_is_not_a_profile_says_the_store_is_unreachable() {
     let nowhere = tempfile::tempdir().expect("deberia haber directorio temporal");
-    let ca = LocalCa::generate().expect("deberia fabricarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse");
 
     let error = stores()
         .install(&nowhere.path().join("no-existe"), &der_of(&ca), COMMON_NAME)
@@ -270,10 +270,22 @@ fn the_first_boot_leaves_the_local_ca_trusted_in_a_real_profile() {
     let store = a_store_in(data.path());
     let profiles = [profile.path().to_path_buf()];
 
-    let mut first = refresh_local_ca_trust(&store, &profiles, &stores(), Moment::Startup)
-        .expect("deberia poder instalarse");
-    let mut second = refresh_local_ca_trust(&store, &profiles, &stores(), Moment::Startup)
-        .expect("deberia poder repetirse");
+    let mut first = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores(),
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("deberia poder instalarse");
+    let mut second = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores(),
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("deberia poder repetirse");
 
     assert_eq!(first.trusted, 1);
     assert!(first.missed.is_empty());
@@ -297,6 +309,7 @@ fn nothing_is_written_in_a_real_profile_in_the_middle_of_an_errand() {
         &[profile.path().to_path_buf()],
         &stores(),
         Moment::MidErrand,
+        ChannelMark::Native,
     )
     .expect("no hacer nada no es un fallo");
 
@@ -314,8 +327,8 @@ fn during_the_overlap_the_serving_ca_keeps_serving_and_both_are_trusted() {
     let data = tempfile::tempdir().expect("deberia haber directorio temporal");
     let profile = a_disposable_profile();
     let store = a_store_in(data.path());
-    let current = LocalCa::generate().expect("deberia fabricarse la vigente");
-    let next = LocalCa::generate().expect("deberia fabricarse la siguiente");
+    let current = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la vigente");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la siguiente");
 
     store.write(&current).expect("deberia guardarse la vigente");
     install(profile.path(), &current);
@@ -416,8 +429,8 @@ fn contents_of(profile: &Path) -> Vec<(String, Vec<u8>)> {
 #[test]
 fn every_certificate_with_the_local_ca_subject_is_listed_and_no_other() {
     let profile = a_disposable_profile();
-    let current = LocalCa::generate().expect("deberia fabricarse la vigente");
-    let next = LocalCa::generate().expect("deberia fabricarse la siguiente");
+    let current = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la vigente");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la siguiente");
     let namesake = a_stranger_named(&[(Nid::COMMONNAME, COMMON_NAME)]);
     let other_name = a_stranger_named(&[(Nid::COMMONNAME, "Otra CA")]);
     let longer_subject = a_stranger_named(&[
@@ -472,7 +485,7 @@ fn listing_the_local_cas_leaves_the_profile_untouched() {
     let profile = a_disposable_profile();
     install(
         profile.path(),
-        &LocalCa::generate().expect("deberia fabricarse"),
+        &LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse"),
     );
     let before = contents_of(profile.path());
 
@@ -481,4 +494,36 @@ fn listing_the_local_cas_leaves_the_profile_untouched() {
         .expect("deberia poder listarse");
 
     assert_eq!(contents_of(profile.path()), before);
+}
+
+#[test]
+fn each_local_ca_listed_from_a_real_profile_keeps_the_mark_of_its_channel() {
+    let profile = a_disposable_profile();
+    install(
+        profile.path(),
+        &LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse la del deb"),
+    );
+    install(
+        profile.path(),
+        &LocalCa::generate(ChannelMark::Flatpak).expect("deberia fabricarse la del flatpak"),
+    );
+    stores()
+        .install(
+            profile.path(),
+            &a_stranger_named(&[(Nid::COMMONNAME, COMMON_NAME)]),
+            COMMON_NAME,
+        )
+        .expect("deberia entrar la homónima sin marca");
+
+    let marks: Vec<Option<ChannelMark>> = stores()
+        .local_cas(profile.path())
+        .expect("deberia poder listarse")
+        .iter()
+        .map(|der| ChannelMark::of_certificate(der))
+        .collect();
+
+    assert_eq!(marks.len(), 3, "{marks:?}");
+    for mark in [Some(ChannelMark::Native), Some(ChannelMark::Flatpak), None] {
+        assert!(marks.contains(&mark), "falta {mark:?} en {marks:?}");
+    }
 }

@@ -118,7 +118,7 @@ pub(crate) fn a_certificate_with_id(label: &str, cka_id: u8, der: &[u8]) -> Toke
 
 /// Construye un certificado X.509 válido generado con la CA local de pruebas.
 pub(crate) fn a_usable_certificate(label: &str) -> TokenCertificate {
-    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let ca = LocalCa::unmarked_for_test().expect("la CA local deberia generarse");
     let der = ca
         .certificate()
         .to_der()

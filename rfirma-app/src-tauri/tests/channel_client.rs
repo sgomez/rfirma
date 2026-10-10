@@ -104,7 +104,7 @@ async fn the_channel_ends_up_on_one_of_the_ports_the_site_drew() {
         ports
     };
 
-    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("la CA local deberia generarse");
     let certificate =
         LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
     let listener = bind_first_free(&ChannelLocation::Drawn(drawn.clone()))
@@ -140,7 +140,7 @@ async fn the_channel_answers_on_both_loopbacks() {
     if std::net::TcpListener::bind("[::1]:0").is_err() {
         return;
     }
-    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("la CA local deberia generarse");
     let certificate =
         LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
     let port = {
@@ -207,7 +207,7 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
     };
     let drawn = [THE_PORT_OF_THE_THIRD_PROTOCOL, free[0], free[1]];
 
-    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("la CA local deberia generarse");
     let ca_pem = ca.certificate_pem().expect("la CA local en PEM");
     let certificate =
         LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");

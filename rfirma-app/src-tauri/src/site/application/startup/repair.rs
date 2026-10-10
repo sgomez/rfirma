@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+use crate::site::domain::local_ca::ChannelMark;
 use crate::site::domain::trust::Moment as TrustMoment;
 use crate::site::ports::{LocalCaSlots, TrustStores};
 
@@ -17,6 +18,8 @@ pub struct LocalCaTrust {
     pub profiles: Vec<PathBuf>,
     /// Los almacenes de confianza donde se registra.
     pub stores: Box<dyn TrustStores + Send + Sync>,
+    /// La marca del canal de esta instalación.
+    pub mark: ChannelMark,
 }
 
 /// Instala la CA local a petición de la persona y actualiza el estado de la ventana (ADR-0005).
@@ -26,6 +29,7 @@ pub fn repair_the_local_ca(trust: &LocalCaTrust, held: &HeldChannel, live: &Live
         &trust.profiles,
         trust.stores.as_ref(),
         TrustMoment::Startup,
+        trust.mark,
     )
     .is_ok_and(|outcome| !outcome.nowhere());
 
