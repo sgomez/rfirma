@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use crate::desktop::adapters::debug_info::this_process_report;
+use crate::desktop::adapters::debug_info::{this_process_owner, this_process_report};
 use crate::desktop::adapters::paths::Platform;
 use crate::desktop::application::debug_report::debug_report_text;
 use crate::desktop::application::invocation::{
@@ -86,7 +86,10 @@ fn launch_a_site_process(url: &str) {
 /// Imprime la ayuda, el diagnóstico o la versión si la línea de órdenes los pide, y dice si lo hizo.
 pub fn printed_the_informative_text(command_line: &[String]) -> bool {
     if !help_was_asked_for(command_line) && debug_info_was_asked_for(command_line) {
-        println!("{}", debug_report_text(&this_process_report()));
+        println!(
+            "{}",
+            debug_report_text(&this_process_report(), &this_process_owner())
+        );
         return true;
     }
     let library = native_library_found_or_looked_for();
