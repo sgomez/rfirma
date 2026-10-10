@@ -98,22 +98,16 @@ pub fn refresh_local_ca_trust(
     let waiting = store.next()?;
     let days_left = saved.as_ref().map(LocalCa::days_left).transpose()?;
     let stage = Stage::of(days_left);
-    let work = trust::work_at(
-        moment,
-        stage,
-        if waiting.is_some() {
-            NextCa::Waiting
-        } else {
-            NextCa::None
-        },
-    );
-    let unmarked = saved.as_ref().is_some_and(|ca| ca.mark().is_none());
-    let work = if unmarked && mark.replaces_an_unmarked_local_ca() {
-        trust::replacing_the_unmarked(work)
+    let work = work_for(moment, stage, saved.as_ref(), waiting.is_some(), mark);
+    let retired = if work == Work::ReplaceTheUnmarkedOne {
+        [saved.as_ref(), waiting.as_ref()]
+            .into_iter()
+            .flatten()
+            .map(der_of)
+            .collect::<Result<Vec<_>, _>>()?
     } else {
-        work
+        Vec::new()
     };
-    let mut retired = Vec::new();
 
     let serving = || saved.clone().expect("esa etapa sale de una CA guardada");
     let certificates: Vec<LocalCa> = match work {
@@ -127,7 +121,7 @@ pub fn refresh_local_ca_trust(
             })
         }
         Work::InstallTheOneWeHave => vec![serving()],
-        Work::MakeOneAndInstallIt => {
+        Work::MakeOneAndInstallIt | Work::ReplaceTheUnmarkedOne => {
             let fresh = LocalCa::generate(mark)?;
             store.write_serving(&fresh)?;
             store.forget_next()?;
@@ -145,17 +139,6 @@ pub fn refresh_local_ca_trust(
         Work::PromoteTheNextOne => vec![store
             .promote_next()?
             .expect("esta rama sale de una siguiente esperando")],
-        Work::ReplaceTheUnmarkedOne => {
-            let fresh = LocalCa::generate(mark)?;
-            retired = [saved.clone(), waiting.clone()]
-                .into_iter()
-                .flatten()
-                .map(|ca| der_of(&ca))
-                .collect::<Result<Vec<_>, _>>()?;
-            store.write_serving(&fresh)?;
-            store.forget_next()?;
-            vec![fresh]
-        }
     };
 
     let ders = certificates
@@ -192,6 +175,27 @@ pub fn refresh_local_ca_trust(
             PendingNotice::none()
         },
     })
+}
+
+fn work_for(
+    moment: Moment,
+    stage: Stage,
+    saved: Option<&LocalCa>,
+    waiting: bool,
+    mark: ChannelMark,
+) -> Work {
+    let next = if waiting {
+        NextCa::Waiting
+    } else {
+        NextCa::None
+    };
+    let work = trust::work_at(moment, stage, next);
+    let unmarked = saved.is_some_and(|ca| ca.mark().is_none());
+    if unmarked && mark.replaces_an_unmarked_local_ca() {
+        trust::replacing_the_unmarked(work)
+    } else {
+        work
+    }
 }
 
 enum Settled {
