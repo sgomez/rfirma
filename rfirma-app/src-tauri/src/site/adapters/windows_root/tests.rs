@@ -5,7 +5,7 @@ use windows_sys::Win32::Security::Cryptography::{
 };
 
 use super::*;
-use crate::site::domain::local_ca::LocalCa;
+use crate::site::domain::local_ca::{ChannelMark, LocalCa};
 
 struct ScratchStore(PathBuf);
 
@@ -31,7 +31,7 @@ impl Drop for ScratchStore {
 }
 
 fn a_local_ca() -> Vec<u8> {
-    LocalCa::generate()
+    LocalCa::generate(ChannelMark::Native)
         .expect("una CA local")
         .certificate()
         .to_der()

@@ -150,3 +150,7 @@ Los `.deb` no se firman uno a uno, porque apt firma el índice del repositorio: 
 La primera vez que abras rFirma, un asistente instala el certificado que hace segura la
 conexión del navegador con la aplicación y deja rFirma como el programa que abren las sedes
 electrónicas. Después, [firma tu primer PDF](/manual/firmar-un-pdf/).
+
+## Antes de desinstalar
+
+Para no dejar el certificado de rFirma en el navegador, pulsa *Retirar certificado* en el panel de estado antes de desinstalar.

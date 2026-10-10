@@ -164,6 +164,8 @@ export const eu: Dictionary = {
     "Fedora eta RPM paketeetan oinarritutako eratorrientzat. Biltegia metadatuen eta paketeen egiaztapen kriptografiko zorrotzarekin konfiguratzen du (<code>gpgcheck=1</code> eta <code>repo_gpgcheck=1</code>).",
   "install.manual":
     "Argibide zehatzak, gakoaren hatz-marka eta egiaztapena eskuliburuan (gaztelaniaz)",
+  "install.uninstall":
+    "rFirma-ren ziurtagiria nabigatzailean ez uzteko, sakatu <em>Ziurtagiria kendu</em> egoera-panelean, desinstalatu aurretik.",
   "install.soon": "Garatzen",
   "install.windows.title": "rFirma Windowsentzat",
   "install.windows.body":

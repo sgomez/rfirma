@@ -4,6 +4,8 @@ use crate::site::application::tests::InMemoryCaSlots;
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown, Situation,
 };
+use crate::site::domain::local_ca::has_the_local_ca_subject;
+use crate::site::domain::local_ca::ChannelMark;
 use crate::site::domain::trust_error::TrustError;
 use std::path::Path;
 use std::sync::Mutex;
@@ -150,6 +152,17 @@ impl TrustStores for World {
             .retain(|(where_, der)| !(where_ == profile && der == certificate_der));
         Ok(())
     }
+
+    fn local_cas(&self, profile: &Path) -> Result<Vec<Vec<u8>>, TrustError> {
+        Ok(self
+            .trusted
+            .lock()
+            .expect("el doble no envenena su cerrojo")
+            .iter()
+            .filter(|(where_, der)| where_ == profile && has_the_local_ca_subject(der))
+            .map(|(_, der)| der.clone())
+            .collect())
+    }
 }
 
 pub(super) fn a_store() -> InMemoryCaSlots {
@@ -198,6 +211,7 @@ pub(super) fn starting_with(
             store,
             profiles: &profiles,
             stores: &**world,
+            mark: ChannelMark::Native,
         },
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),

@@ -63,6 +63,7 @@ impl SiteRoot {
             &self.trust.profiles,
             self.trust.stores.as_ref(),
             Moment::Startup,
+            self.trust.mark,
         )
     }
 
@@ -75,6 +76,7 @@ impl SiteRoot {
             self.trust.store.as_ref(),
             profiles,
             self.trust.stores.as_ref(),
+            self.trust.mark,
         )
     }
 

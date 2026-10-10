@@ -2,6 +2,8 @@
 
 pub use super::trust_error::{Situation, TrustError};
 
+use super::local_ca::{is_an_rfirma_ca, ChannelMark};
+
 /// Días de solape previos a la caducidad para instalar la CA siguiente (ADR-0005).
 pub const OVERLAP_DAYS: i64 = 120;
 
@@ -48,6 +50,8 @@ pub enum Moment {
     Startup,
     /// Trámite de sede en curso.
     MidErrand,
+    /// Instalación desde la ventana de sede, con un canal firmado por la CA vigente.
+    ChannelServing,
 }
 
 /// Estado de existencia de la CA local siguiente en el almacén.
@@ -74,18 +78,28 @@ pub enum Work {
     InstallBothOfThem,
     /// Promover la CA siguiente a vigente sin fabricar material nuevo.
     PromoteTheNextOne,
+    /// Fabricar una CA con la marca del canal que sustituye a la vigente sin marca y retirar esta.
+    ReplaceTheUnmarkedOne,
 }
 
 /// Determina la acción a realizar según el momento, etapa y existencia de CA siguiente (ADR-0005).
 pub fn work_at(moment: Moment, stage: Stage, next: NextCa) -> Work {
     match (moment, stage, next) {
         (Moment::MidErrand, _, _) => Work::Nothing,
-        (Moment::Startup, Stage::Serving, _) => Work::InstallTheOneWeHave,
-        (Moment::Startup, Stage::Absent, _) => Work::MakeOneAndInstallIt,
-        (Moment::Startup, Stage::Overlapping, NextCa::None) => Work::MakeTheNextAndInstallItToo,
-        (Moment::Startup, Stage::Overlapping, NextCa::Waiting) => Work::InstallBothOfThem,
-        (Moment::Startup, Stage::Expired, NextCa::Waiting) => Work::PromoteTheNextOne,
-        (Moment::Startup, Stage::Expired, NextCa::None) => Work::MakeOneAndInstallIt,
+        (_, Stage::Serving, _) => Work::InstallTheOneWeHave,
+        (_, Stage::Absent, _) => Work::MakeOneAndInstallIt,
+        (_, Stage::Overlapping, NextCa::None) => Work::MakeTheNextAndInstallItToo,
+        (_, Stage::Overlapping, NextCa::Waiting) => Work::InstallBothOfThem,
+        (_, Stage::Expired, NextCa::Waiting) => Work::PromoteTheNextOne,
+        (_, Stage::Expired, NextCa::None) => Work::MakeOneAndInstallIt,
+    }
+}
+
+/// El trabajo cuando la CA vigente no lleva marca de canal: si toca escribir, se sustituye (ADR-0005).
+pub fn replacing_the_unmarked(work: Work) -> Work {
+    match work {
+        Work::Nothing => Work::Nothing,
+        _ => Work::ReplaceTheUnmarkedOne,
     }
 }
 
@@ -136,6 +150,22 @@ pub const TRUSTED_SSL_CA: u32 = CERTDB_VALID_CA | CERTDB_TRUSTED_CA;
 /// Comprueba si los bits corresponden a una CA de confianza para TLS.
 pub fn is_trusted_ssl_ca(flags: u32) -> bool {
     flags & TRUSTED_SSL_CA == TRUSTED_SSL_CA
+}
+
+/// Las CA de rFirma de un almacén que instalar retira: las de su canal o sin marca que no se conservan; en Windows, ninguna (ADR-0005).
+pub fn orphaned_local_cas(
+    found: Vec<Vec<u8>>,
+    kept: &[Vec<u8>],
+    mark: ChannelMark,
+) -> Vec<Vec<u8>> {
+    if mark == ChannelMark::Windows {
+        return Vec::new();
+    }
+    found
+        .into_iter()
+        .filter(|der| is_an_rfirma_ca(der) && !kept.contains(der))
+        .filter(|der| ChannelMark::of_certificate(der).is_none_or(|theirs| theirs == mark))
+        .collect()
 }
 
 #[cfg(test)]

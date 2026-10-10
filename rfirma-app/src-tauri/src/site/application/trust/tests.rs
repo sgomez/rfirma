@@ -1,9 +1,13 @@
 use super::*;
 use crate::site::application::tests::InMemoryCaSlots;
+use crate::site::domain::local_ca::has_the_local_ca_subject;
 use crate::site::domain::trust::TRUSTED_SSL_CA;
 use crate::site::domain::trust::{Notice, Situation};
 use std::collections::HashMap;
 use std::sync::Mutex;
+
+mod orphans;
+mod unmarked;
 
 type Registered = (Vec<u8>, String);
 
@@ -11,6 +15,7 @@ type Registered = (Vec<u8>, String);
 struct Doubled {
     contents: Mutex<HashMap<PathBuf, Vec<Registered>>>,
     refuse: Vec<PathBuf>,
+    refuse_to_withdraw: Vec<PathBuf>,
 }
 
 impl Doubled {
@@ -21,12 +26,17 @@ impl Doubled {
         }
         Self {
             contents: Mutex::new(contents),
-            refuse: Vec::new(),
+            ..Self::default()
         }
     }
 
     fn refusing(mut self, profile: &Path) -> Self {
         self.refuse.push(profile.to_path_buf());
+        self
+    }
+
+    fn refusing_to_withdraw(mut self, profile: &Path) -> Self {
+        self.refuse_to_withdraw.push(profile.to_path_buf());
         self
     }
 
@@ -71,7 +81,9 @@ impl TrustStores for Doubled {
     }
 
     fn withdraw(&self, profile: &Path, certificate_der: &[u8]) -> Result<(), TrustError> {
-        if self.refuse.contains(&profile.to_path_buf()) {
+        if self.refuse.contains(&profile.to_path_buf())
+            || self.refuse_to_withdraw.contains(&profile.to_path_buf())
+        {
             return Err(TrustError::new(
                 Situation::StoreUnreachable,
                 "el doble no deja escribir en este perfil",
@@ -86,6 +98,15 @@ impl TrustStores for Doubled {
             registered.retain(|(der, _)| der != certificate_der);
         }
         Ok(())
+    }
+
+    fn local_cas(&self, profile: &Path) -> Result<Vec<Vec<u8>>, TrustError> {
+        Ok(self
+            .inside(profile)
+            .into_iter()
+            .map(|(der, _)| der)
+            .filter(|der| has_the_local_ca_subject(der))
+            .collect())
     }
 }
 
@@ -110,8 +131,14 @@ fn the_first_boot_makes_the_local_ca_and_leaves_it_trusted_everywhere() {
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
 
-    let outcome = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
-        .expect("deberia poder fabricarse y registrarse");
+    let outcome = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("deberia poder fabricarse y registrarse");
 
     assert_eq!(outcome.stage, Stage::Absent);
     assert_eq!(outcome.work, Work::MakeOneAndInstallIt);
@@ -126,8 +153,14 @@ fn nothing_is_written_in_the_middle_of_an_errand() {
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
 
-    let outcome = refresh_local_ca_trust(&store, &profiles, &stores, Moment::MidErrand)
-        .expect("no hacer nada no es un fallo");
+    let outcome = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::MidErrand,
+        ChannelMark::Native,
+    )
+    .expect("no hacer nada no es un fallo");
 
     assert_eq!(outcome.work, Work::Nothing);
     assert!(stores.inside(&profiles[0]).is_empty());
@@ -144,10 +177,22 @@ fn the_second_boot_says_nothing_because_the_bits_are_already_there() {
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
 
-    let mut first = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
-        .expect("deberia registrarse");
-    let mut second = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
-        .expect("deberia registrarse");
+    let mut first = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("deberia registrarse");
+    let mut second = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("deberia registrarse");
 
     assert_eq!(
         first.notice.when_the_errand_ends(),
@@ -171,8 +216,14 @@ fn the_next_local_ca_goes_in_next_to_the_current_one() {
             .expect("deberia registrarse la vigente");
     }
 
-    let outcome = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
-        .expect("deberia registrarse la siguiente");
+    let outcome = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("deberia registrarse la siguiente");
 
     assert_eq!(outcome.stage, Stage::Overlapping);
     assert_eq!(outcome.work, Work::MakeTheNextAndInstallItToo);
@@ -205,11 +256,23 @@ fn the_next_local_ca_is_not_remade_on_every_boot_of_the_overlap() {
         .write_serving(&LocalCa::almost_expired_for_test().expect("deberia fabricarse"))
         .expect("deberia guardarse");
 
-    refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
-        .expect("deberia empezar el solape");
+    refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("deberia empezar el solape");
     let next_der = der_of(&store.next().unwrap().unwrap());
-    let mut second = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
-        .expect("deberia repetirse sin fabricar nada");
+    let mut second = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("deberia repetirse sin fabricar nada");
 
     assert_eq!(second.work, Work::InstallBothOfThem);
     assert_eq!(stores.inside(&profiles[0]).len(), 2);
@@ -226,7 +289,7 @@ fn the_waiting_local_ca_takes_over_without_asking_for_a_restart() {
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
     let expired = LocalCa::expired_for_test().expect("deberia fabricarse");
-    let waiting = LocalCa::generate().expect("deberia fabricarse");
+    let waiting = LocalCa::generate(ChannelMark::Native).expect("deberia fabricarse");
     store.write_serving(&expired).expect("deberia guardarse");
     store.write_next(&waiting).expect("deberia guardarse");
     for profile in &profiles {
@@ -237,8 +300,14 @@ fn the_waiting_local_ca_takes_over_without_asking_for_a_restart() {
         }
     }
 
-    let mut outcome = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
-        .expect("deberia poder relevarse");
+    let mut outcome = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("deberia poder relevarse");
 
     assert_eq!(outcome.stage, Stage::Expired);
     assert_eq!(outcome.work, Work::PromoteTheNextOne);
@@ -262,8 +331,14 @@ fn an_expired_local_ca_with_no_successor_starts_again_from_scratch() {
     let expired = LocalCa::expired_for_test().expect("deberia fabricarse");
     store.write_serving(&expired).expect("deberia guardarse");
 
-    let mut outcome = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
-        .expect("deberia fabricarse otra");
+    let mut outcome = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("deberia fabricarse otra");
 
     assert_eq!(outcome.work, Work::MakeOneAndInstallIt);
     assert_ne!(der_of(&store.serving().unwrap().unwrap()), der_of(&expired));
@@ -278,8 +353,14 @@ fn a_profile_that_refuses_does_not_leave_the_others_without_the_local_ca() {
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]).refusing(&profiles[1]);
 
-    let outcome = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
-        .expect("un perfil que falla no es un fallo del material");
+    let outcome = refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        Moment::Startup,
+        ChannelMark::Native,
+    )
+    .expect("un perfil que falla no es un fallo del material");
 
     assert_eq!(outcome.trusted, 1);
     assert_eq!(outcome.missed.len(), 1);
@@ -291,8 +372,9 @@ fn a_machine_without_nss_profiles_ends_up_with_the_ca_nowhere() {
     let store = a_store();
     let stores = Doubled::default();
 
-    let outcome = refresh_local_ca_trust(&store, &[], &stores, Moment::Startup)
-        .expect("no haber perfiles no es un fallo del material");
+    let outcome =
+        refresh_local_ca_trust(&store, &[], &stores, Moment::Startup, ChannelMark::Native)
+            .expect("no haber perfiles no es un fallo del material");
 
     assert!(outcome.nowhere());
     assert!(!outcome.notice.is_pending());
@@ -374,7 +456,7 @@ fn one_missed_profile_among_others_only_reports_the_miss() {
 
 #[test]
 fn measuring_does_not_write_and_reports_untrusted_when_nowhere_installed() {
-    let ca = LocalCa::generate().expect("deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
     let store = InMemoryCaSlots::unwritable_serving(ca);
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
@@ -388,7 +470,7 @@ fn measuring_does_not_write_and_reports_untrusted_when_nowhere_installed() {
 
 #[test]
 fn measuring_reports_trusted_only_where_the_certificate_is_already_installed() {
-    let ca = LocalCa::generate().expect("deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
     let der = der_of(&ca);
     let store = InMemoryCaSlots::unwritable_serving(ca);
     let profiles = profiles();
@@ -432,14 +514,15 @@ fn withdrawing_with_no_local_ca_touches_nothing() {
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
 
-    let outcome = withdraw_everywhere(&store, &profiles, &stores).expect("deberia retirarse");
+    let outcome = withdraw_everywhere(&store, &profiles, &stores, ChannelMark::Native)
+        .expect("deberia retirarse");
 
     assert!(outcome.results.is_empty());
 }
 
 #[test]
 fn withdrawing_removes_the_serving_ca_where_it_was_installed() {
-    let ca = LocalCa::generate().expect("deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
     let der = der_of(&ca);
     let store = a_store();
     store.write_serving(&ca).expect("deberia guardarse");
@@ -449,7 +532,8 @@ fn withdrawing_removes_the_serving_ca_where_it_was_installed() {
         .install(&profiles[0], &der, COMMON_NAME)
         .expect("el doble deja instalar en la preparacion");
 
-    let outcome = withdraw_everywhere(&store, &profiles, &stores).expect("deberia retirarse");
+    let outcome = withdraw_everywhere(&store, &profiles, &stores, ChannelMark::Native)
+        .expect("deberia retirarse");
 
     assert_eq!(
         outcome.results,
@@ -463,8 +547,8 @@ fn withdrawing_removes_the_serving_ca_where_it_was_installed() {
 
 #[test]
 fn withdrawing_also_searches_the_overlap_ca_by_fingerprint() {
-    let serving = LocalCa::generate().expect("deberia generarse");
-    let next = LocalCa::generate().expect("deberia generarse");
+    let serving = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
+    let next = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
     let store = a_store();
     store.write_serving(&serving).expect("deberia guardarse");
     store.write_next(&next).expect("deberia guardarse");
@@ -474,8 +558,8 @@ fn withdrawing_also_searches_the_overlap_ca_by_fingerprint() {
         .install(&profiles[0], &der_of(&next), COMMON_NAME)
         .expect("el doble deja instalar en la preparacion");
 
-    let outcome =
-        withdraw_everywhere(&store, &[profiles[0].clone()], &stores).expect("deberia retirarse");
+    let outcome = withdraw_everywhere(&store, &[profiles[0].clone()], &stores, ChannelMark::Native)
+        .expect("deberia retirarse");
 
     assert_eq!(
         outcome.results,
@@ -486,13 +570,14 @@ fn withdrawing_also_searches_the_overlap_ca_by_fingerprint() {
 
 #[test]
 fn withdrawing_everywhere_without_failures_empties_both_slots() {
-    let ca = LocalCa::generate().expect("deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
     let store = a_store();
     store.write_serving(&ca).expect("deberia guardarse");
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
 
-    withdraw_everywhere(&store, &profiles, &stores).expect("deberia retirarse");
+    withdraw_everywhere(&store, &profiles, &stores, ChannelMark::Native)
+        .expect("deberia retirarse");
 
     assert!(store.serving().expect("deberia leerse").is_none());
     assert!(store.next().expect("deberia leerse").is_none());
@@ -500,13 +585,14 @@ fn withdrawing_everywhere_without_failures_empties_both_slots() {
 
 #[test]
 fn a_failing_store_leaves_the_pem_slots_untouched_for_a_retry() {
-    let ca = LocalCa::generate().expect("deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
     let store = a_store();
     store.write_serving(&ca).expect("deberia guardarse");
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]).refusing(&profiles[1]);
 
-    let outcome = withdraw_everywhere(&store, &profiles, &stores).expect("deberia retirarse");
+    let outcome = withdraw_everywhere(&store, &profiles, &stores, ChannelMark::Native)
+        .expect("deberia retirarse");
 
     assert!(matches!(outcome.results[1].1, StoreWithdrawal::Failed(_)));
     assert!(store.serving().expect("deberia leerse").is_some());
@@ -514,7 +600,7 @@ fn a_failing_store_leaves_the_pem_slots_untouched_for_a_retry() {
 
 #[test]
 fn retrying_only_the_failed_profile_finishes_the_job() {
-    let ca = LocalCa::generate().expect("deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
     let der = der_of(&ca);
     let store = a_store();
     store.write_serving(&ca).expect("deberia guardarse");
@@ -524,7 +610,8 @@ fn retrying_only_the_failed_profile_finishes_the_job() {
         .install(&profiles[1], &der, COMMON_NAME)
         .expect("el doble deja instalar en la preparacion");
 
-    withdraw_everywhere(&store, &[profiles[1].clone()], &stores).expect("deberia retirarse");
+    withdraw_everywhere(&store, &[profiles[1].clone()], &stores, ChannelMark::Native)
+        .expect("deberia retirarse");
 
     assert!(stores.inside(&profiles[1]).is_empty());
     assert!(store.serving().expect("deberia leerse").is_none());

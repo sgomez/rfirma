@@ -10,7 +10,7 @@ pub use native_tls::{Certificate, TlsConnector};
 pub use rfirma_lib::site::adapters::channel::{serve, SiteOperations};
 pub use rfirma_lib::site::adapters::tls::LocalServerCertificate;
 pub use rfirma_lib::site::domain::channel::{ChannelDuty, OpenChannel};
-pub use rfirma_lib::site::domain::local_ca::LocalCa;
+pub use rfirma_lib::site::domain::local_ca::{ChannelMark, LocalCa};
 pub use rfirma_lib::site::domain::protocol::{
     AfirmaUrl, ChannelCredential, NegotiatedCredential, SafCode,
 };
@@ -40,7 +40,7 @@ impl AChannel {
 
     /// Levanta el canal con el trámite doblado.
     pub async fn serving_with(duty: ChannelDuty, operations: SiteOperations) -> Self {
-        let ca = LocalCa::generate().expect("la CA local deberia generarse");
+        let ca = LocalCa::generate(ChannelMark::Native).expect("la CA local deberia generarse");
         let certificate =
             LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
         let listener = std::net::TcpListener::bind("127.0.0.1:0")

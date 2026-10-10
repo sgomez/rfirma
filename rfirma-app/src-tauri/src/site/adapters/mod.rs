@@ -126,6 +126,10 @@ impl TrustStores for PendingMacosKeychainTrust {
     fn withdraw(&self, _profile: &Path, _certificate_der: &[u8]) -> Result<(), TrustError> {
         Err(pending_macos_keychain_trust(Situation::TrustNotWithdrawn))
     }
+
+    fn local_cas(&self, _profile: &Path) -> Result<Vec<Vec<u8>>, TrustError> {
+        Ok(Vec::new())
+    }
 }
 
 #[cfg(target_os = "macos")]
