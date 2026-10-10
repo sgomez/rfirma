@@ -5,11 +5,13 @@ use std::path::PathBuf;
 use crate::desktop::adapters::installation::{this_glibc, this_installation, this_webview};
 use crate::desktop::adapters::registry::this_desktop;
 use crate::desktop::application::debug_report::{
-    DebugReport, LinuxEnvironment, NativeLibrary, NativeLibraryStatus, PcscStatus,
-    ProtocolHandlerStatus, ReportOwner,
+    DebugReport, DiscardReason, LinuxEnvironment, NativeLibrary, NativeLibraryStatus, PcscStatus,
+    Pkcs11Module, Pkcs11Modules, ProtocolHandlerStatus, ReportOwner,
 };
 use crate::desktop::domain::channel::Channel;
 use crate::identity::adapters as identity_adapters;
+use crate::identity::adapters::pkcs11::p11kit;
+use crate::identity::adapters::pkcs11::stores::modules_from_environment;
 use crate::signing::adapters::ffi::{locate, NativeBridge};
 use crate::signing::domain::bridge::{BridgeError, LIBRARY_DIRECTORY_VARIABLE};
 use crate::PKCS11_MODULE_VARIABLE;
@@ -36,6 +38,7 @@ pub fn this_process_report() -> DebugReport {
         pkcs11_module_override: defined_path(PKCS11_MODULE_VARIABLE),
         pcsc: pcsc_status(),
         bundled_pcsc_lite: bundled_pcsc_lite(channel),
+        pkcs11_modules: pkcs11_modules(),
     }
 }
 
@@ -152,6 +155,34 @@ fn pcsc_status() -> Option<PcscStatus> {
         Some(readers) => PcscStatus::Responding(readers),
         None => PcscStatus::NotResponding,
     })
+}
+
+fn pkcs11_modules() -> Option<Pkcs11Modules> {
+    if let Some(module) = defined_path(PKCS11_MODULE_VARIABLE) {
+        return Some(Pkcs11Modules::Overridden(module));
+    }
+    (std::env::consts::OS == "linux").then(|| {
+        Pkcs11Modules::Discovered(
+            modules_from_environment()
+                .into_iter()
+                .map(|module| Pkcs11Module {
+                    name: module.name,
+                    library: module.library,
+                    registration: module.registration,
+                    discard: module.discard.map(discard_reason),
+                })
+                .collect(),
+        )
+    })
+}
+
+fn discard_reason(reason: p11kit::DiscardReason) -> DiscardReason {
+    match reason {
+        p11kit::DiscardReason::DisabledInRfirma => DiscardReason::DisabledInRfirma,
+        p11kit::DiscardReason::EnabledOnlyElsewhere => DiscardReason::EnabledOnlyElsewhere,
+        p11kit::DiscardReason::TrustPolicy => DiscardReason::TrustPolicy,
+        p11kit::DiscardReason::MissingModule => DiscardReason::MissingModule,
+    }
 }
 
 fn bundled_pcsc_lite(channel: Channel) -> Option<String> {

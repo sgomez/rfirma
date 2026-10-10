@@ -79,6 +79,69 @@ pub fn discovered_modules(
     )
 }
 
+/// Un módulo PKCS#11 que el descubrimiento ha visto, usado o descartado.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DiscoveredModule {
+    /// Nombre del `.module`, o de la biblioteca si es un candidato fijo.
+    pub name: String,
+    /// La biblioteca; la del descartado, tal como el `.module` la nombra.
+    pub library: Option<PathBuf>,
+    /// El `.module` que lo da de alta; ninguno en los candidatos fijos.
+    pub registration: Option<PathBuf>,
+    /// Por qué no se usa; `None` si se usa.
+    pub discard: Option<p11kit::DiscardReason>,
+}
+
+/// Lo que `discovered_modules` usa y lo que descarta con su motivo, sin cargar nada.
+pub fn module_discovery(
+    usr: &Path,
+    app: Option<&Path>,
+    p11kit_directories: &[PathBuf],
+) -> Vec<DiscoveredModule> {
+    let registrations = p11kit::registrations(p11kit_directories, usr, app);
+    let registration_of = |module: &Path| {
+        registrations.iter().find(|registration| {
+            registration
+                .outcome
+                .as_ref()
+                .is_ok_and(|library| same_file(library, module))
+        })
+    };
+    let mut report: Vec<DiscoveredModule> = discovered_modules(usr, app, p11kit_directories)
+        .into_iter()
+        .map(|module| match registration_of(&module) {
+            Some(registration) => DiscoveredModule {
+                name: registration.name.clone(),
+                library: Some(module),
+                registration: Some(registration.file.clone()),
+                discard: None,
+            },
+            None => DiscoveredModule {
+                name: module
+                    .file_stem()
+                    .map(|stem| stem.to_string_lossy().into_owned())
+                    .unwrap_or_default(),
+                library: Some(module),
+                registration: None,
+                discard: None,
+            },
+        })
+        .collect();
+    report.extend(registrations.iter().filter_map(|registration| {
+        Some(DiscoveredModule {
+            name: registration.name.clone(),
+            library: registration.library.as_ref().map(PathBuf::from),
+            registration: Some(registration.file.clone()),
+            discard: Some(*registration.outcome.as_ref().err()?),
+        })
+    }));
+    report
+}
+
+fn same_file(first: &Path, second: &Path) -> bool {
+    first.canonicalize().ok() == second.canonicalize().ok()
+}
+
 /// El módulo PKCS#11 descubierto que es, canonizada, la biblioteca que nombra la sede.
 pub fn discovered_module_named(stores: &[Store], library: &str) -> Option<PathBuf> {
     let named = Path::new(library).canonicalize().ok()?;
@@ -98,10 +161,7 @@ pub fn from_environment() -> Vec<Store> {
 
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let channel = Channel::detected();
-    let p11kit_directories = home
-        .as_deref()
-        .map(|home| p11kit::configuration_directories(home, channel))
-        .unwrap_or_default();
+    let p11kit_directories = environment_p11kit_directories(home.as_deref(), channel);
     let mut stores: Vec<Store> = discovered_modules(
         Path::new("/usr"),
         p11kit::app_root(channel),
@@ -120,6 +180,22 @@ pub fn from_environment() -> Vec<Store> {
     }
 
     stores
+}
+
+/// Lo que el descubrimiento de este proceso usa y descarta, salvo que `RFIRMA_PKCS11_MODULE` lo anule.
+pub fn modules_from_environment() -> Vec<DiscoveredModule> {
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let channel = Channel::detected();
+    module_discovery(
+        Path::new("/usr"),
+        p11kit::app_root(channel),
+        &environment_p11kit_directories(home.as_deref(), channel),
+    )
+}
+
+fn environment_p11kit_directories(home: Option<&Path>, channel: Channel) -> Vec<PathBuf> {
+    home.map(|home| p11kit::configuration_directories(home, channel))
+        .unwrap_or_default()
 }
 
 /// Localiza la biblioteca softoken de NSS en el sistema.

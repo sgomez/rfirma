@@ -37,6 +37,41 @@ pub enum PcscStatus {
     Responding(Vec<Reader>),
 }
 
+/// Por qué rFirma no usa un módulo dado de alta.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DiscardReason {
+    /// Su `disable-in` nombra a rFirma.
+    DisabledInRfirma,
+    /// Su `enable-in` no nombra a rFirma.
+    EnabledOnlyElsewhere,
+    /// Es un almacén de confianza.
+    TrustPolicy,
+    /// Su biblioteca no está instalada.
+    MissingModule,
+}
+
+/// Un módulo PKCS#11 del descubrimiento.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Pkcs11Module {
+    /// Nombre del `.module`, o de la biblioteca si es un candidato fijo.
+    pub name: String,
+    /// La biblioteca, si se conoce.
+    pub library: Option<PathBuf>,
+    /// El `.module` que lo da de alta, si lo hay.
+    pub registration: Option<PathBuf>,
+    /// Por qué se descarta; `None` si se usa.
+    pub discard: Option<DiscardReason>,
+}
+
+/// De dónde salen los módulos PKCS#11 que usa la aplicación.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Pkcs11Modules {
+    /// `RFIRMA_PKCS11_MODULE` anula el descubrimiento y es el único módulo.
+    Overridden(PathBuf),
+    /// Lo que el descubrimiento usa y descarta.
+    Discovered(Vec<Pkcs11Module>),
+}
+
 /// Dónde y con qué instalador está el flatpak.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FlatpakInstallation {
@@ -146,6 +181,8 @@ pub struct DebugReport {
     pub pcsc: Option<PcscStatus>,
     /// Versión del cliente pcsc-lite que lleva el paquete, si lo lleva.
     pub bundled_pcsc_lite: Option<String>,
+    /// Los módulos PKCS#11; `None` donde no hay descubrimiento que contar.
+    pub pkcs11_modules: Option<Pkcs11Modules>,
 }
 
 /// Una cabecera y una sección por bloque, con el patrón `clave: estado · detalle` y las rutas anonimizadas.
@@ -162,8 +199,67 @@ pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
             .as_ref()
             .map(|pcsc| section("Lectores", &reader_lines(pcsc))),
     )
+    .chain(report.pkcs11_modules.as_ref().map(|modules| {
+        section(
+            "Módulos PKCS#11",
+            &module_lines(modules, &report.installation, owner),
+        )
+    }))
     .collect::<Vec<_>>()
     .join("\n\n")
+}
+
+fn module_lines(
+    modules: &Pkcs11Modules,
+    installation: &Installation,
+    owner: &ReportOwner,
+) -> Vec<String> {
+    match modules {
+        Pkcs11Modules::Overridden(path) => vec![
+            "Descubrimiento: anulado · RFIRMA_PKCS11_MODULE".to_owned(),
+            format!("  módulo: {}", owner.anonymized(path)),
+        ],
+        Pkcs11Modules::Discovered(found) => {
+            let sandbox = matches!(installation, Installation::Flatpak(_)).then(|| {
+                "Módulos del anfitrión: no visibles · el sandbox solo ve el OpenSC incluido"
+                    .to_owned()
+            });
+            sandbox
+                .into_iter()
+                .chain(found.iter().flat_map(|module| module_block(module, owner)))
+                .collect()
+        }
+    }
+}
+
+fn module_block(module: &Pkcs11Module, owner: &ReportOwner) -> Vec<String> {
+    let state = match module.discard {
+        None => "encontrado".to_owned(),
+        Some(reason) => format!("descartado · {}", discard_reason_text(reason)),
+    };
+    std::iter::once(format!("{}: {state}", module.name))
+        .chain(
+            module
+                .library
+                .iter()
+                .map(|path| format!("  módulo: {}", owner.anonymized(path))),
+        )
+        .chain(
+            module
+                .registration
+                .iter()
+                .map(|path| format!("  alta: {}", owner.anonymized(path))),
+        )
+        .collect()
+}
+
+fn discard_reason_text(reason: DiscardReason) -> &'static str {
+    match reason {
+        DiscardReason::DisabledInRfirma => "disable-in",
+        DiscardReason::EnabledOnlyElsewhere => "enable-in sin rfirma",
+        DiscardReason::TrustPolicy => "trust-policy",
+        DiscardReason::MissingModule => "falta el módulo",
+    }
 }
 
 fn reader_lines(pcsc: &PcscStatus) -> Vec<String> {
