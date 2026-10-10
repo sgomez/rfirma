@@ -197,8 +197,8 @@ runs:
             tauri) packages=("${tauri[@]}") ;;
             test) packages=("${tauri[@]}" poppler-utils libxml2-utils softhsm2 opensc libnss3-tools) ;;
             verify) packages=("${verify[@]}") ;;
-            flatpak) packages=("${verify[@]}" gettext flatpak-builder librsvg2-common appstream) ;;
-            repo) packages=("${verify[@]}" gettext dpkg-dev apt-utils createrepo-c rpm minisign) ;;
+            flatpak) packages=("${verify[@]}" gettext flatpak-builder librsvg2-common appstream elfutils) ;;
+            repo) packages=("${verify[@]}" gettext dpkg-dev apt-utils createrepo-c rpm minisign appstream) ;;
         esac
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends "${packages[@]}"

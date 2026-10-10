@@ -91,16 +91,6 @@ El ciclo trifásico corre en el anfitrión y no dentro del sandbox: dentro no ha
 token PKCS#11, ni `pdfsig`, ni forma de invocar los comandos sin el WebView.
 Necesita el token de la grada B y `poppler-utils`.
 
-## Pendiente antes de publicar
-
-El canal es propio: paquetes en GitHub Releases y **tres** repositorios en
-`rfirma.sgomez.me` —ostree, apt y dnf—. Ver el
-[ADR-0015](../../docs/adr/0015-canal-de-distribucion-propio.md).
-
-- **Publicar el repositorio ostree.** `flatpak build-export` +
-  `flatpak build-update-repo`, firmado con GPG, servido como ficheros estáticos,
-  más el `.flatpakref` con la huella de la clave.
-
 ## Construir sin red
 
 Ya está hecho: **ningún módulo declara `--share=network`**. El único

@@ -4,13 +4,83 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>EUPL-1.2</project_license>
   <name>rFirma</name>
-  <summary>Firma electrónica de documentos PDF</summary>
+  <summary>Sign documents electronically</summary>
+  <summary xml:lang="es">Firma electrónica de documentos</summary>
+  <summary xml:lang="ca">Signatura electrònica de documents</summary>
+  <summary xml:lang="eu">Dokumentuen sinadura elektronikoa</summary>
+  <summary xml:lang="gl">Sinatura electrónica de documentos</summary>
   <description>
-    <p>
-      Firma y cofirma documentos PDF en PAdES con firma visible, usando el
-      certificado de una tarjeta o de un módulo PKCS#11.
-    </p>
+    <p>rFirma signs documents with your electronic certificate.</p>
+    <p xml:lang="es">rFirma firma documentos con tu certificado electrónico.</p>
+    <p xml:lang="ca">rFirma signa documents amb el teu certificat electrònic.</p>
+    <p xml:lang="eu">rFirma-k dokumentuak sinatzen ditu zure ziurtagiri elektronikoarekin.</p>
+    <p xml:lang="gl">rFirma asina documentos co teu certificado electrónico.</p>
+    <ul>
+      <li>When a government website asks you for AutoFirma in order to sign, rFirma does that job. Before signing, it shows you what you are about to sign and who is asking.</li>
+      <li xml:lang="es">Si una web de la administración te pide AutoFirma para firmar, rFirma hace ese trabajo. Antes de firmar te enseña qué vas a firmar y quién te lo pide.</li>
+      <li xml:lang="ca">Si una web de l'administració et demana AutoFirma per signar, rFirma fa aquesta feina. Abans de signar, t'ensenya què signaràs i qui t'ho demana.</li>
+      <li xml:lang="eu">Administrazioko webgune batek sinatzeko AutoFirma eskatzen badizu, rFirma-k egiten du lan hori. Sinatu aurretik, zer sinatuko duzun eta nork eskatzen dizun erakusten dizu.</li>
+      <li xml:lang="gl">Se unha web da administración che pide AutoFirma para asinar, rFirma fai ese traballo. Antes de asinar, móstrache que vas asinar e quen cho pide.</li>
+      <li>You can also sign your own PDF files and place the signature wherever you like on the page.</li>
+      <li xml:lang="es">También puedes firmar tus PDF tú mismo y poner la firma donde quieras de la página.</li>
+      <li xml:lang="ca">També pots signar els teus PDF tu mateix i posar la signatura on vulguis de la pàgina.</li>
+      <li xml:lang="eu">Zeure PDFak ere sina ditzakezu, eta sinadura orriaren nahi duzun lekuan jarri.</li>
+      <li xml:lang="gl">Tamén podes asinar os teus PDF ti mesmo e poñer a sinatura onde queiras da páxina.</li>
+      <li>If a document already comes signed, it tells you whether those signatures are valid.</li>
+      <li xml:lang="es">Si un documento ya viene firmado, te dice si esas firmas están bien.</li>
+      <li xml:lang="ca">Si un document ja arriba signat, t'avisa de si aquestes signatures són correctes.</li>
+      <li xml:lang="eu">Dokumentu bat jada sinatuta badator, sinadura horiek zuzenak diren esaten dizu.</li>
+      <li xml:lang="gl">Se un documento xa ven asinado, dicíche se esas sinaturas están ben.</li>
+      <li>You sign with the certificate you already have in your browser, with a certificate file or with your national ID card.</li>
+      <li xml:lang="es">Firmas con el certificado que ya tienes en el navegador, con un archivo de certificado o con tu DNIe.</li>
+      <li xml:lang="ca">Signes amb el certificat que ja tens al navegador, amb un fitxer de certificat o amb el teu DNIe.</li>
+      <li xml:lang="eu">Nabigatzailean daukazun ziurtagiriarekin, ziurtagiri-fitxategi batekin edo zure DNIe-rekin sinatzen duzu.</li>
+      <li xml:lang="gl">Asinas co certificado que xa tes no navegador, cun ficheiro de certificado ou co teu DNIe.</li>
+      <li>Everything happens on your computer: your certificate never leaves it.</li>
+      <li xml:lang="es">Todo se hace en tu ordenador: tu certificado no sale de ahí.</li>
+      <li xml:lang="ca">Tot es fa al teu ordinador: el teu certificat no en surt.</li>
+      <li xml:lang="eu">Dena zure ordenagailuan egiten da: zure ziurtagiria ez da handik ateratzen.</li>
+      <li xml:lang="gl">Todo se fai no teu ordenador: o teu certificado non sae de aí.</li>
+      <li>You do not need to install Java.</li>
+      <li xml:lang="es">No necesitas instalar Java.</li>
+      <li xml:lang="ca">No cal que instal·lis Java.</li>
+      <li xml:lang="eu">Ez duzu Java instalatu beharrik.</li>
+      <li xml:lang="gl">Non precisas instalar Java.</li>
+    </ul>
   </description>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Place the signature wherever you like</caption>
+      <caption xml:lang="es">Coloca la firma donde quieras</caption>
+      <caption xml:lang="ca">Posa la signatura on vulguis</caption>
+      <caption xml:lang="eu">Jarri sinadura nahi duzun lekuan</caption>
+      <caption xml:lang="gl">Pon a sinatura onde queiras</caption>
+      <image type="source">https://raw.githubusercontent.com/sgomez/rfirma/main/packaging/repo/site/src/assets/rfirma-main-window.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Choose your certificate</caption>
+      <caption xml:lang="es">Elige tu certificado</caption>
+      <caption xml:lang="ca">Tria el teu certificat</caption>
+      <caption xml:lang="eu">Aukeratu zure ziurtagiria</caption>
+      <caption xml:lang="gl">Escolle o teu certificado</caption>
+      <image type="source">https://raw.githubusercontent.com/sgomez/rfirma/main/packaging/repo/site/src/assets/how-step2.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Enter your PIN</caption>
+      <caption xml:lang="es">Escribe tu PIN</caption>
+      <caption xml:lang="ca">Escriu el teu PIN</caption>
+      <caption xml:lang="eu">Idatzi zure PIN-a</caption>
+      <caption xml:lang="gl">Escribe o teu PIN</caption>
+      <image type="source">https://raw.githubusercontent.com/sgomez/rfirma/main/packaging/repo/site/src/assets/how-step3.png</image>
+    </screenshot>
+  </screenshots>
+  <requires>
+    <display_length>768</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
   <launchable type="desktop-id">me.sgomez.rfirma.desktop</launchable>
   <url type="homepage">https://rfirma.sgomez.me</url>
   <url type="bugtracker">https://github.com/sgomez/rfirma/issues</url>

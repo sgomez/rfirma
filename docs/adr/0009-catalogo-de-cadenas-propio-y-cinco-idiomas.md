@@ -137,6 +137,17 @@ permite que alguien de fuera traduzca sin tocar código.
 - **El empaquetado queda fuera del circuito de traducción.** El `.desktop` y el
   `metainfo.xml` no se traducen: lo que muestran es el nombre propio del programa.
 
+## Enmienda: la ficha del flatpak se escribe en los cinco idiomas
+
+El `metainfo.xml` deja de quedar fuera de la traducción. Su resumen, su
+descripción y los pies de sus capturas se escriben en los cinco idiomas a partir
+de las mismas ideas en lenguaje llano, cada uno en nativo y sin pasar por el
+texto de otro: el inglés sin `xml:lang`, porque AppStream cae a él cuando falta
+el idioma del sistema, y los demás con el suyo. No hay catálogo ni dominio
+gettext: se escriben a mano en el propio XML. Quien toque la ficha toca sus
+cinco versiones, porque nada avisa si una se queda atrás. El `.desktop` sigue
+fuera.
+
 ## Enmienda: la línea de órdenes lee el mismo catálogo
 
 El catálogo deja de ser solo de la interfaz: los textos que imprime

@@ -69,12 +69,13 @@ nunca.
 | `/` | la landing |
 | `/rfirma.asc` | la clave pública: el `Signed-By` de apt y el `gpgkey` de dnf |
 | `/flatpak/` | el repositorio ostree |
-| `/rfirma.flatpakref` | instalación de un clic |
+| `/rfirma.flatpakref` | instalación de un clic, ya no anunciada |
+| `/rfirma.flatpakrepo` | el alta del remoto de rFirma |
 | `/apt/` | con `dists/stable/main/binary-amd64/` |
 | `/rpm/` | con `repodata/` |
 | `/windows/` | el `-setup.exe` y su `.sig` de cada versión, y `latest.json` |
 
-Estas rutas van dentro del `.flatpakref`, de las órdenes de alta publicadas y del *endpoint*
+Estas rutas van dentro del `.flatpakref` y del `.flatpakrepo`, de las órdenes de alta publicadas y del *endpoint*
 del *updater* embebido en cada instalación de Windows, así que se fijan aquí.
 
 **apt con una sola suite**, no repositorio plano: el plano es más barato y **no admite
@@ -382,3 +383,18 @@ misma cosa en la misma apertura del panel.
   la minisign del *updater*, y aprovisionar los **cinco secretos** —subclave GPG, clave SSH
   con orden forzada, token de Coolify que sólo redespliega esa aplicación, y la privada
   minisign con su contraseña— es **trabajo humano y bloqueante**.
+
+## Enmienda: el flatpak se instala dando de alta el remoto
+
+La vía de instalación del flatpak es dar de alta el remoto de rFirma con `rfirma.flatpakrepo`,
+después del de Flathub, de donde sale el runtime: `flatpak remote-add --if-not-exists rfirma
+https://rfirma.sgomez.me/rfirma.flatpakrepo` y `flatpak install rfirma me.sgomez.rfirma`. Un
+remoto dado de alta así es un remoto normal: GNOME Software lo incluye en la búsqueda y enseña
+la ficha que publica su rama `appstream`. El `.flatpakref` y un bundle crean un remoto de
+origen con `xa.noenumerate=true`, que la búsqueda no ve, y GNOME Software solo enseña de un
+bundle sin instalar el nombre, el resumen y la versión.
+
+El `.flatpak` de la Release sigue ahí, sin firmar y sin origen, pero es la materia prima con la
+que `publish.yml` monta el repositorio ostree, no un canal: ni la landing, ni el manual ni el
+README lo ofrecen como descarga. El `.flatpakref` se sigue sirviendo para no romper los enlaces
+que ya circulan, pero deja de anunciarse.

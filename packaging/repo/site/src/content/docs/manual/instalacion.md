@@ -50,19 +50,38 @@ los metadatos del repositorio.
 ## Linux con flatpak
 
 Es la opción para las distribuciones que no usan apt ni dnf. Necesitas tener
-instalados `flatpak` y `xdg-desktop-portal`; el runtime `org.gnome.Platform` se
-descarga de Flathub sin configurar nada.
+instalados `flatpak` y `xdg-desktop-portal`. El remoto de rFirma se da de alta
+como un repositorio más, después del de Flathub, de donde sale el runtime
+`org.gnome.Platform`:
 
 ```bash
-flatpak install https://rfirma.sgomez.me/rfirma.flatpakref
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --if-not-exists rfirma https://rfirma.sgomez.me/rfirma.flatpakrepo
+flatpak install rfirma me.sgomez.rfirma
 ```
 
-Si tu escritorio lo admite, también puedes abrir con doble clic el fichero
-[rfirma.flatpakref](https://rfirma.sgomez.me/rfirma.flatpakref).
+Con el remoto dado de alta así, rFirma aparece al buscar en GNOME Software y las
+versiones nuevas llegan con las actualizaciones del sistema.
 
 Bajo flatpak, rFirma solo ve las carpetas que le das a través del portal del
 sistema. Por eso, en [Preferencias](/manual/preferencias/), el destino de los
 documentos firmados es siempre una carpeta elegida: no existe «junto al original».
+
+### Por qué GNOME Software dice «potencialmente insegura»
+
+Si abres rFirma en GNOME Software verás la etiqueta «Potencialmente insegura». Es
+esperable y no indica que haya un problema: GNOME Software la pone a cualquier
+aplicación que pide acceso a carpetas concretas de tu equipo, y no distingue para qué.
+
+rFirma pide esos accesos porque los necesita para firmar:
+
+* **Certificados de tus navegadores.** Para ofrecerte los que ya tienes instalados en
+  Firefox (también si es Snap o Flatpak), LibreWolf, Chrome y Chromium.
+* **Lector de tarjetas.** Para hablar con él cuando firmas con el DNIe.
+* **Tu navegador.** Para que pueda llegar a rFirma en tu equipo cuando una web te pide
+  firmar.
+* **Versiones nuevas.** Para avisarte cuando hay una disponible.
+* **La carpeta Documentos.** Para guardar en ella los documentos firmados.
 
 ## Windows
 

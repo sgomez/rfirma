@@ -159,19 +159,18 @@ flatpak remote-add --user --if-not-exists \
 
 #### Descarga suelta (excepción)
 
-Si no quieres dar de alta el repositorio, cada canal también se sirve como
-fichero suelto en las Releases de GitHub. Es la vía sin actualizaciones
+Si no quieres dar de alta el repositorio, el `.deb` y el `.rpm` también se sirven
+como fichero suelto en las Releases de GitHub. Es la vía sin actualizaciones
 automáticas: hay que repetir la descarga a mano en cada versión. Las
 descargas van **siempre a la última publicación**, sin número de versión en
 el enlace: así el README no envejece y no hay que sincronizarlo con nada
 (ID-151). Los nombres de los ficheros publicados no llevan versión, que es lo
 que hace que estos enlaces resuelvan:
 
-* flatpak: <https://github.com/sgomez/rfirma/releases/latest/download/me.sgomez.rfirma.flatpak>
 * `.deb`: <https://github.com/sgomez/rfirma/releases/latest/download/rfirma_amd64.deb>
 * `.rpm`: <https://github.com/sgomez/rfirma/releases/latest/download/rfirma.x86_64.rpm>
 
-Las candidatas (`-rc.N`) publican **solo el flatpak**: el campo `Version` de un
+Las candidatas (`-rc.N`) publican **solo el flatpak** en su Release, para quien las prueba: el campo `Version` de un
 RPM no admite guiones, así que un `.deb` o un `.rpm` de una candidata no existe.
 
 Con el remoto de Flathub puesto (arriba), `flatpak install` resuelve

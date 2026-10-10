@@ -36,7 +36,8 @@
 #
 #   /rfirma.asc         la clave publica (el `Signed-By` de apt y el `gpgkey`
 #                       de dnf)
-#   /rfirma.flatpakref  la instalacion de un clic
+#   /rfirma.flatpakref  la instalacion de un clic, ya no anunciada (ID-511)
+#   /rfirma.flatpakrepo el alta del remoto de rFirma (ID-507)
 #   /flatpak/           el repositorio ostree
 #   /apt/               con dists/stable/main/binary-amd64/
 #   /rpm/               con repodata/
@@ -295,6 +296,21 @@ fi
     echo "RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo"
     echo "GPGKey=$clave_binaria"
 } > "$arbol/rfirma.flatpakref"
+
+# EL `.flatpakrepo` es la via de instalacion que anuncia la landing (ID-507): un
+# remoto dado de alta asi es un remoto normal, que GNOME Software incluye en la
+# busqueda. El formato no tiene `RuntimeRepo`; por eso las ordenes publicadas dan
+# de alta Flathub antes.
+{
+    echo "[Flatpak Repo]"
+    echo "Title=rFirma"
+    echo "Url=https://rfirma.sgomez.me/flatpak/"
+    echo "Homepage=https://rfirma.sgomez.me"
+    echo "Comment=Firma electrónica con certificado, sin Java"
+    echo "Description=Repositorio de rFirma, la aplicación nativa para firmar documentos con tu certificado electrónico"
+    echo "Icon=https://rfirma.sgomez.me/apple-touch-icon.png"
+    echo "GPGKey=$clave_binaria"
+} > "$arbol/rfirma.flatpakrepo"
 
 # ---------------------------------------------------------------- 2. el apt --
 # `pool/` con TODAS las versiones de la serie y un solo `dists/stable`: un
