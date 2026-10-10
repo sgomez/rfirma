@@ -37,6 +37,7 @@ pub(super) fn a_flatpak_report() -> DebugReport {
         pkcs11_module_override: None,
         pcsc: Some(PcscStatus::Responding(Vec::new())),
         bundled_pcsc_lite: None,
+        pkcs11_modules: None,
         nss_stores: None,
         windows_stores: None,
     }
@@ -551,3 +552,5 @@ fn without_a_bundled_client_no_pcsc_lite_line_appears() {
 
     assert!(!text.contains("pcsc-lite"), "{text}");
 }
+
+mod modules;

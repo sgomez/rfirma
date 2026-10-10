@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use crate::identity::domain::readers::Reader;
 
+use pkcs11::module_lines;
+
 /// Qué se sabe de la librería nativa tras intentar cargarla de verdad.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeLibraryStatus {
@@ -35,6 +37,41 @@ pub enum PcscStatus {
     NotResponding,
     /// El servicio contesta, con los lectores que ve.
     Responding(Vec<Reader>),
+}
+
+/// Por qué rFirma no usa un módulo dado de alta.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DiscardReason {
+    /// Su `disable-in` nombra a rFirma.
+    DisabledInRfirma,
+    /// Su `enable-in` no nombra a rFirma.
+    EnabledOnlyElsewhere,
+    /// Es un almacén de confianza.
+    TrustPolicy,
+    /// Su biblioteca no está instalada.
+    MissingModule,
+}
+
+/// Un módulo PKCS#11 del descubrimiento.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Pkcs11Module {
+    /// Nombre del `.module`, o de la biblioteca si es un candidato fijo.
+    pub name: String,
+    /// La biblioteca, si se conoce.
+    pub library: Option<PathBuf>,
+    /// El `.module` que lo da de alta, si lo hay.
+    pub registration: Option<PathBuf>,
+    /// Por qué se descarta; `None` si se usa.
+    pub discard: Option<DiscardReason>,
+}
+
+/// De dónde salen los módulos PKCS#11 que usa la aplicación.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Pkcs11Modules {
+    /// `RFIRMA_PKCS11_MODULE` anula el descubrimiento y es el único módulo.
+    Overridden(PathBuf),
+    /// Lo que el descubrimiento usa y descarta.
+    Discovered(Vec<Pkcs11Module>),
 }
 
 /// Qué se sabe de un perfil NSS.
@@ -244,6 +281,8 @@ pub struct DebugReport {
     pub pcsc: Option<PcscStatus>,
     /// Versión del cliente pcsc-lite que lleva el paquete, si lo lleva.
     pub bundled_pcsc_lite: Option<String>,
+    /// Los módulos PKCS#11; `None` donde no hay descubrimiento que contar.
+    pub pkcs11_modules: Option<Pkcs11Modules>,
     /// Almacenes NSS; `None` donde esta versión no los consulta.
     pub nss_stores: Option<NssStores>,
     /// Almacén de Windows y minidrivers; `None` fuera de Windows.
@@ -265,6 +304,12 @@ pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
             .as_ref()
             .map(|pcsc| section("Lectores", &reader_lines(pcsc))),
     )
+    .chain(report.pkcs11_modules.as_ref().map(|modules| {
+        section(
+            "Módulos PKCS#11",
+            &module_lines(modules, &report.installation, owner),
+        )
+    }))
     .chain(
         report
             .nss_stores
@@ -478,6 +523,7 @@ fn relative_to_runtime_directory(path: &Path) -> Option<String> {
     )
 }
 
+mod pkcs11;
 mod stores;
 
 #[cfg(test)]
