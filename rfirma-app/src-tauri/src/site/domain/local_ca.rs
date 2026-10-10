@@ -29,6 +29,8 @@ pub const PERMITTED_IPV6: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 /// OID propio de la extensión que marca el canal de la CA local, bajo el arco de UUID (ADR-0005).
 pub const CHANNEL_MARK_OID: &str = "2.25.204984766305632451904566026227780766075";
 
+const NAME_CONSTRAINTS_OID: &str = "2.5.29.30";
+
 const EXTENSIONS: Tag = Tag::ContextSpecific {
     constructed: true,
     number: TagNumber(3),
@@ -59,21 +61,8 @@ impl ChannelMark {
 
     /// La marca que lleva un certificado en DER, o ninguna si no la lleva o no es un certificado.
     pub fn of_certificate(certificate_der: &[u8]) -> Option<Self> {
-        let oid = Asn1Object::from_str(CHANNEL_MARK_OID).ok()?;
-        let certificate = AnyRef::from_der(certificate_der).ok()?;
-        let tbs = *elements_of(certificate)?.first()?;
-        let extensions = elements_of(tbs)?
-            .into_iter()
-            .find(|field| field.tag() == EXTENSIONS)?;
-        let list = *elements_of(extensions)?.first()?;
-        let value = elements_of(list)?.into_iter().find_map(|extension| {
-            let parts = elements_of(extension)?;
-            let id = parts.first()?;
-            (id.tag() == Tag::ObjectIdentifier && id.value() == oid.as_slice())
-                .then(|| parts.last().copied())
-                .flatten()
-        })?;
-        let text = Utf8StringRef::from_der(value.value()).ok()?;
+        let value = extension_value(certificate_der, CHANNEL_MARK_OID)?;
+        let text = Utf8StringRef::from_der(value).ok()?;
         Self::ALL
             .into_iter()
             .find(|mark| mark.value() == text.as_str())
@@ -83,6 +72,23 @@ impl ChannelMark {
     pub fn replaces_an_unmarked_local_ca(self) -> bool {
         self != Self::Windows
     }
+}
+
+fn extension_value<'a>(certificate_der: &'a [u8], oid: &str) -> Option<&'a [u8]> {
+    let oid = Asn1Object::from_str(oid).ok()?;
+    let certificate = AnyRef::from_der(certificate_der).ok()?;
+    let tbs = *elements_of(certificate)?.first()?;
+    let extensions = elements_of(tbs)?
+        .into_iter()
+        .find(|field| field.tag() == EXTENSIONS)?;
+    let list = *elements_of(extensions)?.first()?;
+    elements_of(list)?.into_iter().find_map(|extension| {
+        let parts = elements_of(extension)?;
+        let id = parts.first()?;
+        (id.tag() == Tag::ObjectIdentifier && id.value() == oid.as_slice())
+            .then(|| parts.last().map(|value| value.value()))
+            .flatten()
+    })
 }
 
 fn elements_of(constructed: AnyRef<'_>) -> Option<Vec<AnyRef<'_>>> {
@@ -205,6 +211,13 @@ pub fn has_the_local_ca_subject(certificate_der: &[u8]) -> bool {
     })
 }
 
+/// Si el certificado DER es una CA de rFirma: el sujeto de la CA local y sus mismas restricciones de nombre (ADR-0005).
+pub fn is_an_rfirma_ca(certificate_der: &[u8]) -> bool {
+    has_the_local_ca_subject(certificate_der)
+        && extension_value(certificate_der, NAME_CONSTRAINTS_OID)
+            .is_some_and(|value| value == name_constraints_der())
+}
+
 pub fn generate_key() -> Result<PKey<Private>, TlsError> {
     let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).map_err(not_generated)?;
     let key = EcKey::generate(&group).map_err(not_generated)?;
@@ -259,6 +272,12 @@ fn build_certificate(
 }
 
 fn name_constraints() -> Result<X509Extension, openssl::error::ErrorStack> {
+    let oid = Asn1Object::from_str(NAME_CONSTRAINTS_OID)?;
+    let contents = Asn1OctetString::new_from_bytes(&name_constraints_der())?;
+    X509Extension::new_from_der(&oid, true, &contents)
+}
+
+fn name_constraints_der() -> Vec<u8> {
     const DNS_NAME: u8 = 0x82;
     const IP_ADDRESS: u8 = 0x87;
     const SEQUENCE: u8 = 0x30;
@@ -278,11 +297,7 @@ fn name_constraints() -> Result<X509Extension, openssl::error::ErrorStack> {
         subtrees.extend_from_slice(&tagged(SEQUENCE, &base));
     }
     let permitted = tagged(PERMITTED_SUBTREES, &subtrees);
-    let der = tagged(SEQUENCE, &permitted);
-
-    let oid = Asn1Object::from_str("2.5.29.30")?;
-    let contents = Asn1OctetString::new_from_bytes(&der)?;
-    X509Extension::new_from_der(&oid, true, &contents)
+    tagged(SEQUENCE, &permitted)
 }
 
 fn channel_mark(mark: ChannelMark) -> Result<X509Extension, openssl::error::ErrorStack> {
