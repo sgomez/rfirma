@@ -145,36 +145,90 @@ pub fn refresh_local_ca_trust(
         .iter()
         .map(der_of)
         .collect::<Result<Vec<_>, _>>()?;
+    let kept = [store.serving()?, store.next()?]
+        .iter()
+        .flatten()
+        .map(der_of)
+        .collect::<Result<Vec<_>, _>>()?;
 
-    let mut trusted = 0;
-    let mut installed = 0;
-    let mut missed = Vec::new();
-
-    for profile in profiles {
-        match settle(stores, profile, &ders).and_then(|settled| {
-            retire(stores, profile, &retired)?;
-            Ok(settled)
-        }) {
-            Ok(Settled::AlreadyThere) => trusted += 1,
-            Ok(Settled::JustInstalled) => {
-                trusted += 1;
-                installed += 1;
-            }
-            Err(error) => missed.push((profile.clone(), error)),
-        }
-    }
+    let tally = install_everywhere(
+        stores,
+        profiles,
+        &Installation {
+            ders: &ders,
+            retired: &retired,
+            kept: &kept,
+            mark,
+        },
+    );
 
     Ok(TrustOutcome {
         stage,
         work,
-        trusted,
-        missed,
-        notice: if installed > 0 {
+        trusted: tally.trusted,
+        missed: tally.missed,
+        notice: if tally.installed > 0 {
             PendingNotice::after_installing()
         } else {
             PendingNotice::none()
         },
     })
+}
+
+struct Installation<'a> {
+    ders: &'a [Vec<u8>],
+    retired: &'a [Vec<u8>],
+    kept: &'a [Vec<u8>],
+    mark: ChannelMark,
+}
+
+#[derive(Default)]
+struct Tally {
+    trusted: usize,
+    installed: usize,
+    missed: Vec<(PathBuf, TrustError)>,
+}
+
+fn install_everywhere(
+    stores: &dyn TrustStores,
+    profiles: &[PathBuf],
+    installation: &Installation<'_>,
+) -> Tally {
+    let mut tally = Tally::default();
+    for profile in profiles {
+        match settle(stores, profile, installation.ders).and_then(|settled| {
+            retire(stores, profile, installation.retired)?;
+            Ok(settled)
+        }) {
+            Ok(Settled::AlreadyThere) => tally.trusted += 1,
+            Ok(Settled::JustInstalled) => {
+                tally.trusted += 1;
+                tally.installed += 1;
+            }
+            Err(error) => {
+                tally.missed.push((profile.clone(), error));
+                continue;
+            }
+        }
+        if let Err(error) = sweep_orphans(stores, profile, installation.kept, installation.mark) {
+            tally.missed.push((profile.clone(), error));
+        }
+    }
+    tally
+}
+
+fn sweep_orphans(
+    stores: &dyn TrustStores,
+    profile: &Path,
+    kept: &[Vec<u8>],
+    mark: ChannelMark,
+) -> Result<(), TrustError> {
+    let found = stores.local_cas(profile)?;
+    retire(
+        stores,
+        profile,
+        &trust::orphaned_local_cas(found, kept, mark),
+    )
 }
 
 fn work_for(

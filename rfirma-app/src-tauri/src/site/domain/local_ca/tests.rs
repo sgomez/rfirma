@@ -188,6 +188,10 @@ fn only_the_channels_with_nss_stores_replace_an_unmarked_local_ca() {
 }
 
 fn self_signed_der(entries: &[(Nid, &str)]) -> Vec<u8> {
+    self_signed_der_with(entries, None)
+}
+
+fn self_signed_der_with(entries: &[(Nid, &str)], extension: Option<X509Extension>) -> Vec<u8> {
     let key = generate_key().expect("deberia generarse la clave");
     let mut name = X509Name::builder().expect("deberia construirse el nombre");
     for (nid, value) in entries {
@@ -205,6 +209,9 @@ fn self_signed_der(entries: &[(Nid, &str)]) -> Vec<u8> {
     builder
         .set_not_after(&Asn1Time::days_from_now(1).expect("fin"))
         .expect("fin");
+    if let Some(extension) = extension {
+        builder.append_extension(extension).expect("extension");
+    }
     builder
         .sign(&key, MessageDigest::sha256())
         .expect("deberia firmarse");
@@ -255,4 +262,62 @@ fn another_common_name_is_not_the_local_ca_subject() {
 #[test]
 fn bytes_that_are_not_a_certificate_are_not_the_local_ca_subject() {
     assert!(!has_the_local_ca_subject(b"no es DER"));
+}
+
+fn constraints_permitting(dns_names: &[&str]) -> X509Extension {
+    let mut subtrees = Vec::new();
+    for dns_name in dns_names {
+        subtrees.extend_from_slice(&tagged(0x30, &tagged(0x82, dns_name.as_bytes())));
+    }
+    let der = tagged(0x30, &tagged(0xa0, &subtrees));
+    X509Extension::new_from_der(
+        &Asn1Object::from_str("2.5.29.30").expect("OID"),
+        true,
+        &Asn1OctetString::new_from_bytes(&der).expect("contenido"),
+    )
+    .expect("deberia construirse la restriccion")
+}
+
+#[test]
+fn a_local_ca_of_any_channel_or_of_none_is_ours() {
+    for ca in [
+        LocalCa::generate(ChannelMark::Native),
+        LocalCa::generate(ChannelMark::Flatpak),
+        LocalCa::unmarked_for_test(),
+    ] {
+        assert!(is_an_rfirma_ca(&der_of(&ca.expect("deberia generarse"))));
+    }
+}
+
+#[test]
+fn a_namesake_without_the_name_constraints_is_not_ours() {
+    assert!(!is_an_rfirma_ca(&self_signed_der(&[(
+        Nid::COMMONNAME,
+        COMMON_NAME
+    )])));
+}
+
+#[test]
+fn a_namesake_whose_constraints_are_not_exactly_the_loopback_is_not_ours() {
+    assert!(!is_an_rfirma_ca(&self_signed_der_with(
+        &[(Nid::COMMONNAME, COMMON_NAME)],
+        Some(constraints_permitting(&["localhost", "example.com"])),
+    )));
+    assert!(!is_an_rfirma_ca(&self_signed_der_with(
+        &[(Nid::COMMONNAME, COMMON_NAME)],
+        Some(constraints_permitting(&["localhost"])),
+    )));
+}
+
+#[test]
+fn our_constraints_under_another_subject_are_not_ours() {
+    assert!(!is_an_rfirma_ca(&self_signed_der_with(
+        &[(Nid::COMMONNAME, "Otra CA")],
+        Some(name_constraints().expect("deberia construirse")),
+    )));
+}
+
+#[test]
+fn bytes_that_are_not_a_certificate_are_not_ours() {
+    assert!(!is_an_rfirma_ca(b"no es DER"));
 }

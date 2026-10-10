@@ -2,6 +2,8 @@
 
 pub use super::trust_error::{Situation, TrustError};
 
+use super::local_ca::{is_an_rfirma_ca, ChannelMark};
+
 /// Días de solape previos a la caducidad para instalar la CA siguiente (ADR-0005).
 pub const OVERLAP_DAYS: i64 = 120;
 
@@ -146,6 +148,22 @@ pub const TRUSTED_SSL_CA: u32 = CERTDB_VALID_CA | CERTDB_TRUSTED_CA;
 /// Comprueba si los bits corresponden a una CA de confianza para TLS.
 pub fn is_trusted_ssl_ca(flags: u32) -> bool {
     flags & TRUSTED_SSL_CA == TRUSTED_SSL_CA
+}
+
+/// Las CA de rFirma de un almacén que instalar retira: las de su canal o sin marca que no se conservan; en Windows, ninguna (ADR-0005).
+pub fn orphaned_local_cas(
+    found: Vec<Vec<u8>>,
+    kept: &[Vec<u8>],
+    mark: ChannelMark,
+) -> Vec<Vec<u8>> {
+    if mark == ChannelMark::Windows {
+        return Vec::new();
+    }
+    found
+        .into_iter()
+        .filter(|der| is_an_rfirma_ca(der) && !kept.contains(der))
+        .filter(|der| ChannelMark::of_certificate(der).is_none_or(|theirs| theirs == mark))
+        .collect()
 }
 
 #[cfg(test)]

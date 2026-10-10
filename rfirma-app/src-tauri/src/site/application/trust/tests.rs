@@ -6,6 +6,7 @@ use crate::site::domain::trust::{Notice, Situation};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+mod orphans;
 mod unmarked;
 
 type Registered = (Vec<u8>, String);
@@ -14,6 +15,7 @@ type Registered = (Vec<u8>, String);
 struct Doubled {
     contents: Mutex<HashMap<PathBuf, Vec<Registered>>>,
     refuse: Vec<PathBuf>,
+    refuse_to_withdraw: Vec<PathBuf>,
 }
 
 impl Doubled {
@@ -24,12 +26,17 @@ impl Doubled {
         }
         Self {
             contents: Mutex::new(contents),
-            refuse: Vec::new(),
+            ..Self::default()
         }
     }
 
     fn refusing(mut self, profile: &Path) -> Self {
         self.refuse.push(profile.to_path_buf());
+        self
+    }
+
+    fn refusing_to_withdraw(mut self, profile: &Path) -> Self {
+        self.refuse_to_withdraw.push(profile.to_path_buf());
         self
     }
 
@@ -74,7 +81,9 @@ impl TrustStores for Doubled {
     }
 
     fn withdraw(&self, profile: &Path, certificate_der: &[u8]) -> Result<(), TrustError> {
-        if self.refuse.contains(&profile.to_path_buf()) {
+        if self.refuse.contains(&profile.to_path_buf())
+            || self.refuse_to_withdraw.contains(&profile.to_path_buf())
+        {
             return Err(TrustError::new(
                 Situation::StoreUnreachable,
                 "el doble no deja escribir en este perfil",

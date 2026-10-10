@@ -453,6 +453,17 @@ A mitad de un trámite no se toca nada, como siempre. En Windows no se sustituye
 cada alta o retirada en el almacén raíz del usuario abre el aviso de seguridad de
 Windows.
 
+Esto enmienda «Instalar solo añade»: instalar el certificado en Linux, desde el
+asistente, el panel de estado, la elección de rFirma como gestor de `afirma://` o
+la reparación de la ventana de sede, retira además de cada almacén las CA de
+rFirma antiguas: las que llevan la marca de su canal y las que no llevan marca,
+salvo la vigente y la siguiente. Una CA es de rFirma si su sujeto es exactamente
+`CN=rFirma CA local` y sus restricciones de nombre son exactamente `localhost`,
+`127.0.0.1` y `::1`; la que se llame igual sin cumplir las dos, no se toca. Las de
+otro canal se conservan. Un almacén que no deja retirar se notifica como el que no
+deja instalar, y no impide instalar en los demás. El arranque y un trámite en
+curso no tocan los almacenes, y en Windows no se retira ninguna.
+
 Un arco de 128 bits no cabe en `x509-cert`, que limita cada arco a 32: un
 certificado marcado no se decodifica con `x509_cert::Certificate`, y la marca se
 lee recorriendo el DER (`ChannelMark::of_certificate`).
