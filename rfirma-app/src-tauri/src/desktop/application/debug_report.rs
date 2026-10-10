@@ -37,6 +37,40 @@ pub enum PcscStatus {
     Responding(Vec<Reader>),
 }
 
+/// Qué se sabe de un perfil NSS.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NssProfileState {
+    /// El navegador confía en el canal local, hasta la fecha de caducidad de su CA.
+    TrustsLocalChannel {
+        /// Fecha `AAAA-MM-DD`, si se pudo leer.
+        until: Option<String>,
+    },
+    /// El navegador no confía en el canal local.
+    DoesNotTrustLocalChannel,
+    /// El descubrimiento lo descarta porque no tiene `cert9.db`.
+    IgnoredWithoutCertificateDatabase,
+}
+
+/// Un perfil NSS que el descubrimiento ve, con el navegador al que pertenece.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NssProfile {
+    /// Navegador, como se lee en el informe.
+    pub browser: String,
+    /// Directorio del perfil.
+    pub directory: PathBuf,
+    /// Qué se sabe de él.
+    pub state: NssProfileState,
+}
+
+/// Los almacenes NSS: los perfiles y si el Almacén de rFirma existe.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NssStores {
+    /// Perfiles encontrados o ignorados.
+    pub profiles: Vec<NssProfile>,
+    /// Si el Almacén de rFirma está instalado.
+    pub rfirma_store_installed: bool,
+}
+
 /// Dónde y con qué instalador está el flatpak.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FlatpakInstallation {
@@ -201,6 +235,8 @@ pub struct DebugReport {
     pub pcsc: Option<PcscStatus>,
     /// Versión del cliente pcsc-lite que lleva el paquete, si lo lleva.
     pub bundled_pcsc_lite: Option<String>,
+    /// Almacenes NSS; `None` donde esta versión no los consulta.
+    pub nss_stores: Option<NssStores>,
 }
 
 /// Una cabecera y una sección por bloque, con el patrón `clave: estado · detalle` y las rutas anonimizadas.
@@ -218,9 +254,59 @@ pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
             .as_ref()
             .map(|pcsc| section("Lectores", &reader_lines(pcsc))),
     )
+    .chain(
+        report
+            .nss_stores
+            .as_ref()
+            .map(|stores| section("Almacenes NSS", &nss_lines(stores, owner))),
+    )
     .flatten()
     .collect::<Vec<_>>()
     .join("\n\n")
+}
+
+fn nss_lines(stores: &NssStores, owner: &ReportOwner) -> Vec<String> {
+    let rfirma_store = if stores.rfirma_store_installed {
+        "instalado"
+    } else {
+        "no instalado"
+    };
+    stores
+        .profiles
+        .iter()
+        .flat_map(|profile| {
+            [
+                format!("{}: {}", profile.browser, profile_state(&profile.state)),
+                format!(
+                    "  perfil: {}",
+                    anonymized_profile(&profile.directory, owner)
+                ),
+            ]
+        })
+        .chain(std::iter::once(format!(
+            "Almacén de rFirma: {rfirma_store}"
+        )))
+        .collect()
+}
+
+fn profile_state(state: &NssProfileState) -> String {
+    match state {
+        NssProfileState::TrustsLocalChannel { until: Some(date) } => {
+            format!("confía en el canal local · hasta {date}")
+        }
+        NssProfileState::TrustsLocalChannel { until: None } => {
+            "confía en el canal local".to_owned()
+        }
+        NssProfileState::DoesNotTrustLocalChannel => "no confía en el canal local".to_owned(),
+        NssProfileState::IgnoredWithoutCertificateDatabase => "ignorado · sin cert9.db".to_owned(),
+    }
+}
+
+fn anonymized_profile(directory: &Path, owner: &ReportOwner) -> String {
+    match directory.parent() {
+        Some(parent) => format!("{}/<perfil>", owner.anonymized(parent)),
+        None => "<perfil>".to_owned(),
+    }
 }
 
 fn reader_lines(pcsc: &PcscStatus) -> Vec<String> {
