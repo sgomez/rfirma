@@ -28,6 +28,8 @@ fn a_flatpak_report() -> DebugReport {
         },
         library_directory_override: None,
         pkcs11_module_override: None,
+        pcsc: Some(PcscStatus::Responding(Vec::new())),
+        bundled_pcsc_lite: None,
     }
 }
 
@@ -48,7 +50,10 @@ fn the_report_is_a_header_then_system_then_integration() {
          Integración\n  \
            afirma://: no consultable · sandbox de flatpak\n  \
            Biblioteca nativa: cargada\n    \
-             ruta: /app/lib/rfirma/librfirma_crypto.so"
+             ruta: /app/lib/rfirma/librfirma_crypto.so\n\
+         \n\
+         Lectores\n  \
+           pcscd: responde"
     );
 }
 
@@ -108,7 +113,7 @@ fn a_library_that_is_not_found_has_no_path_below_it() {
     );
 
     assert!(
-        text.ends_with("  Biblioteca nativa: no encontrada"),
+        text.contains("  Biblioteca nativa: no encontrada\n\nLectores"),
         "{text}"
     );
 }
@@ -134,8 +139,8 @@ fn a_library_that_does_not_load_shows_why_and_its_anonymized_path() {
         );
 
         assert!(
-            text.ends_with(&format!(
-                "  Biblioteca nativa: {line}\n    ruta: ~/rfirma/lib/librfirma_crypto.so"
+            text.contains(&format!(
+                "  Biblioteca nativa: {line}\n    ruta: ~/rfirma/lib/librfirma_crypto.so\n\nLectores"
             )),
             "{text}"
         );
@@ -154,9 +159,9 @@ fn the_overriding_variables_appear_in_integration_when_defined() {
     );
 
     assert!(
-        text.ends_with(
+        text.contains(
             "  RFIRMA_LIB_DIR: ~/rfirma/target/lib\n  \
-             RFIRMA_PKCS11_MODULE: /usr/lib/softhsm/libsofthsm2.so"
+             RFIRMA_PKCS11_MODULE: /usr/lib/softhsm/libsofthsm2.so\n\nLectores"
         ),
         "{text}"
     );
@@ -236,4 +241,82 @@ fn system_paths_are_left_as_they_are() {
         text.contains("  RFIRMA_PKCS11_MODULE: /usr/lib/opensc-pkcs11.so"),
         "{text}"
     );
+}
+
+fn a_reader(name: &str, has_a_card: bool) -> Reader {
+    Reader {
+        name: name.to_owned(),
+        has_a_card,
+    }
+}
+
+fn readers_section(pcsc: Option<PcscStatus>) -> String {
+    let text = debug_report_text(
+        &DebugReport {
+            pcsc,
+            ..a_flatpak_report()
+        },
+        &ana(),
+    );
+    text.split("\n\n")
+        .find(|block| block.starts_with("Lectores"))
+        .unwrap_or_default()
+        .to_owned()
+}
+
+#[test]
+fn a_pcscd_that_does_not_answer_lists_no_readers() {
+    assert_eq!(
+        readers_section(Some(PcscStatus::NotResponding)),
+        "Lectores\n  pcscd: no responde"
+    );
+}
+
+#[test]
+fn a_pcscd_with_no_readers_says_only_that_it_answers() {
+    assert_eq!(
+        readers_section(Some(PcscStatus::Responding(Vec::new()))),
+        "Lectores\n  pcscd: responde"
+    );
+}
+
+#[test]
+fn each_reader_says_whether_it_holds_a_card() {
+    assert_eq!(
+        readers_section(Some(PcscStatus::Responding(vec![
+            a_reader("Alcor Micro AU9540 00 00", true),
+            a_reader("Generic Smart Card Reader Interface 01 00", false),
+        ]))),
+        "Lectores\n  pcscd: responde\n  \
+         Alcor Micro AU9540 00 00: con tarjeta\n  \
+         Generic Smart Card Reader Interface 01 00: sin tarjeta"
+    );
+}
+
+#[test]
+fn a_platform_without_pcsc_has_no_readers_section() {
+    assert_eq!(readers_section(None), "");
+}
+
+#[test]
+fn the_bundled_pcsc_lite_version_closes_the_system_section() {
+    let text = debug_report_text(
+        &DebugReport {
+            bundled_pcsc_lite: Some("2.5.1".to_owned()),
+            ..a_flatpak_report()
+        },
+        &ana(),
+    );
+
+    assert!(
+        text.contains("Idioma: es_ES.UTF-8\n  pcsc-lite: 2.5.1\n"),
+        "{text}"
+    );
+}
+
+#[test]
+fn without_a_bundled_client_no_pcsc_lite_line_appears() {
+    let text = debug_report_text(&a_flatpak_report(), &ana());
+
+    assert!(!text.contains("pcsc-lite"), "{text}");
 }

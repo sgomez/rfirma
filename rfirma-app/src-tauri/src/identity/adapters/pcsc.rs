@@ -147,5 +147,25 @@ fn readers_in(states: &[(CString, State)]) -> Vec<Reader> {
         .collect()
 }
 
+/// Una consulta puntual a PC/SC; `None`, si no responde.
+pub fn survey_readers() -> Option<Vec<Reader>> {
+    let context = Context::establish(Scope::System).ok()?;
+    let names = reader_names(&context)?;
+    let mut states: Vec<ReaderState> = names
+        .into_iter()
+        .map(|name| ReaderState::new(name, State::UNAWARE))
+        .collect();
+    if !states.is_empty() {
+        context
+            .get_status_change(Duration::ZERO, &mut states)
+            .ok()?;
+    }
+    let observed: ReaderStates = states
+        .iter()
+        .map(|state| (state.name().to_owned(), state.event_state()))
+        .collect();
+    Some(readers_in(&observed))
+}
+
 #[cfg(test)]
 mod tests;

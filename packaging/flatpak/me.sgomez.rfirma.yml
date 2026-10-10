@@ -179,6 +179,10 @@ modules:
       - -Dpolkit=false
       - -Dipcdir=/run/pcscd
       - -Dusbdropdir=/app/lib/pcsc/drivers
+    post-install:
+      # La version del cliente, para `rfirma --debug-info`: el .pc se limpia.
+      - install -d /app/share/rfirma
+      - pkg-config --modversion libpcsclite > /app/share/rfirma/pcsc-lite-version
     sources:
       - type: archive
         url: https://pcsclite.apdu.fr/files/pcsc-lite-2.5.1.tar.xz

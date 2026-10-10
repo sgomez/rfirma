@@ -2,6 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::identity::domain::readers::Reader;
+
 /// Qué se sabe de la librería nativa tras intentar cargarla de verdad.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeLibraryStatus {
@@ -24,6 +26,15 @@ pub enum ProtocolHandlerStatus {
     NoneRegistered,
     /// El identificador de la aplicación que lo tiene registrado.
     Registered(String),
+}
+
+/// Lo que dice una consulta puntual a PC/SC.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PcscStatus {
+    /// El servicio no contesta.
+    NotResponding,
+    /// El servicio contesta, con los lectores que ve.
+    Responding(Vec<Reader>),
 }
 
 /// Los datos que solo existen en Linux.
@@ -78,6 +89,10 @@ pub struct DebugReport {
     pub library_directory_override: Option<PathBuf>,
     /// `RFIRMA_PKCS11_MODULE`, si está definida.
     pub pkcs11_module_override: Option<PathBuf>,
+    /// PC/SC; `None` donde esta versión no lo consulta.
+    pub pcsc: Option<PcscStatus>,
+    /// Versión del cliente pcsc-lite que lleva el paquete, si lo lleva.
+    pub bundled_pcsc_lite: Option<String>,
 }
 
 /// Una cabecera y una sección por bloque, con el patrón `clave: estado · detalle` y las rutas anonimizadas.
@@ -87,7 +102,31 @@ pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
         section("Sistema", &system_lines(report)),
         section("Integración", &integration_lines(report, owner)),
     ]
+    .into_iter()
+    .chain(
+        report
+            .pcsc
+            .as_ref()
+            .map(|pcsc| section("Lectores", &reader_lines(pcsc))),
+    )
+    .collect::<Vec<_>>()
     .join("\n\n")
+}
+
+fn reader_lines(pcsc: &PcscStatus) -> Vec<String> {
+    match pcsc {
+        PcscStatus::NotResponding => vec!["pcscd: no responde".to_owned()],
+        PcscStatus::Responding(readers) => std::iter::once("pcscd: responde".to_owned())
+            .chain(readers.iter().map(|reader| {
+                let card = if reader.has_a_card {
+                    "con tarjeta"
+                } else {
+                    "sin tarjeta"
+                };
+                format!("{}: {card}", reader.name)
+            }))
+            .collect(),
+    }
 }
 
 fn section(title: &str, lines: &[String]) -> String {
@@ -112,6 +151,9 @@ fn system_lines(report: &DebugReport) -> Vec<String> {
         }
     }
     lines.push(format!("Idioma: {}", report.locale));
+    if let Some(version) = &report.bundled_pcsc_lite {
+        lines.push(format!("pcsc-lite: {version}"));
+    }
     lines
 }
 
