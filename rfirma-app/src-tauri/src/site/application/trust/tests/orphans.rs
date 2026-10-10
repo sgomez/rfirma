@@ -157,7 +157,7 @@ fn installing_does_not_touch_a_namesake_without_the_name_constraints_of_rfirma()
     let current = a_ca(ChannelMark::Native);
     let namesake = a_namesake_without_the_constraints();
     store.write_serving(&current).expect("deberia guardarse");
-    installed(&stores, &profiles, &[namesake.clone()]);
+    installed(&stores, &profiles, std::slice::from_ref(&namesake));
 
     install(
         &store,
