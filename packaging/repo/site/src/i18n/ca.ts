@@ -153,9 +153,7 @@ export const ca: Dictionary = {
   "install.copy.apt.aria": "Copiar les ordres per a APT",
   "install.copy.dnf.aria": "Copiar les ordres per a DNF",
   "install.flatpak.body":
-    "Recomanada per a les distribucions de Linux que no fan servir APT ni DNF. Es resol des del remot ostree propi de rFirma, i el runtime <code>org.gnome.Platform</code> es descarrega de Flathub sense configurar res. Només cal tenir instal·lats <code>flatpak</code> i <code>xdg-desktop-portal</code>.",
-  "install.flatpak.tip":
-    'També pots descarregar i instal·lar amb doble clic el fitxer <a href="https://rfirma.sgomez.me/rfirma.flatpakref">rfirma.flatpakref</a> si el teu escriptori ho admet.',
+    "Recomanada per a les distribucions de Linux que no fan servir APT ni DNF. Dones d'alta Flathub, d'on surt el runtime <code>org.gnome.Platform</code>, i el remot de rFirma, com un repositori més: així rFirma també apareix en cercar a GNOME Software. Només cal tenir instal·lats <code>flatpak</code> i <code>xdg-desktop-portal</code>.",
   "install.apt.body":
     "Per a Debian, Ubuntu i distribucions derivades. Configura el repositori mitjançant el format modern <code>deb822</code> amb la clau GPG verificada a <code>/usr/share/keyrings/</code>.",
   "install.dnf.body":

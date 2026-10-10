@@ -152,9 +152,7 @@ export const es = {
   "install.copy.apt.aria": "Copiar órdenes para APT",
   "install.copy.dnf.aria": "Copiar órdenes para DNF",
   "install.flatpak.body":
-    "Recomendada para las distribuciones de Linux que no usan APT ni DNF. Se resuelve desde el remoto ostree propio de rFirma, y el runtime <code>org.gnome.Platform</code> se descarga de Flathub sin configurar nada. Solo necesitas tener instalados <code>flatpak</code> y <code>xdg-desktop-portal</code>.",
-  "install.flatpak.tip":
-    'También puedes descargar e instalar con doble clic el fichero <a href="https://rfirma.sgomez.me/rfirma.flatpakref">rfirma.flatpakref</a> si tu escritorio lo soporta.',
+    "Recomendada para las distribuciones de Linux que no usan APT ni DNF. Das de alta Flathub, de donde sale el runtime <code>org.gnome.Platform</code>, y el remoto de rFirma, como un repositorio más: así rFirma aparece también al buscar en GNOME Software. Solo necesitas tener instalados <code>flatpak</code> y <code>xdg-desktop-portal</code>.",
   "install.apt.body":
     "Para Debian, Ubuntu y distribuciones derivadas. Configura el repositorio mediante el formato moderno <code>deb822</code> con la clave GPG verificada en <code>/usr/share/keyrings/</code>.",
   "install.dnf.body":

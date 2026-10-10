@@ -69,12 +69,13 @@ nunca.
 | `/` | la landing |
 | `/rfirma.asc` | la clave pública: el `Signed-By` de apt y el `gpgkey` de dnf |
 | `/flatpak/` | el repositorio ostree |
-| `/rfirma.flatpakref` | instalación de un clic |
+| `/rfirma.flatpakref` | instalación de un clic, ya no anunciada |
+| `/rfirma.flatpakrepo` | el alta del remoto de rFirma |
 | `/apt/` | con `dists/stable/main/binary-amd64/` |
 | `/rpm/` | con `repodata/` |
 | `/windows/` | el `-setup.exe` y su `.sig` de cada versión, y `latest.json` |
 
-Estas rutas van dentro del `.flatpakref`, de las órdenes de alta publicadas y del *endpoint*
+Estas rutas van dentro del `.flatpakref` y del `.flatpakrepo`, de las órdenes de alta publicadas y del *endpoint*
 del *updater* embebido en cada instalación de Windows, así que se fijan aquí.
 
 **apt con una sola suite**, no repositorio plano: el plano es más barato y **no admite
@@ -383,23 +384,17 @@ misma cosa en la misma apertura del panel.
   con orden forzada, token de Coolify que sólo redespliega esa aplicación, y la privada
   minisign con su contraseña— es **trabajo humano y bloqueante**.
 
-## Enmienda: el `.flatpak` de la Release se firma en la Release
+## Enmienda: el flatpak se instala dando de alta el remoto
 
-El `.flatpak` adjunto a cada Release lleva el origen (el remoto de `rfirma.sgomez.me`, rama
-`stable`), la clave pública y la firma de su commit con la subclave GPG que ya firma los
-`.rpm`. Quien lo instala recibe las versiones nuevas, como quien usa el `.flatpakref`. No hay
-secreto nuevo.
+La vía de instalación del flatpak es dar de alta el remoto de rFirma con `rfirma.flatpakrepo`,
+después del de Flathub, de donde sale el runtime: `flatpak remote-add --if-not-exists rfirma
+https://rfirma.sgomez.me/rfirma.flatpakrepo` y `flatpak install rfirma me.sgomez.rfirma`. Un
+remoto dado de alta así es un remoto normal: GNOME Software lo incluye en la búsqueda y enseña
+la ficha que publica su rama `appstream`. El `.flatpakref` y un bundle crean un remoto de
+origen con `xa.noenumerate=true`, que la búsqueda no ve, y GNOME Software solo enseña de un
+bundle sin instalar el nombre, el resumen y la versión.
 
-**No puede hacerse en la construcción.** Un bundle con la clave dentro y sin firma no se
-instala: Flatpak exige que su commit venga firmado con ella, y la construcción no tiene
-secretos. Por eso `build.yml` sigue produciendo un bundle sin origen ni firma y `release.yml`
-lo firma con `packaging/flatpak/sign-bundle.sh`.
-
-**Firmar cambia el fichero, no el commit.** El `.flatpak` pasa a ser un paquete firmable del
-manifiesto, igual que el `.rpm`: `--against` lo da por bueno aunque su resumen cambie, y el
-orden obligatorio es firmar el `.rpm` y el `.flatpak`, calcular `SHA256SUMS`, atestar y
-adjuntar. Como el commit no cambia, el repositorio ostree se sigue montando a partir de estos
-bundles sin que nadie tenga que descargar de nuevo.
-
-**No se avisa a quien instaló antes un `.flatpak` suelto.** Flatpak no migra el origen de una
-instalación existente, y quien la tiene llegó desde la web, donde está el `.flatpakref`.
+El `.flatpak` de la Release sigue ahí, sin firmar y sin origen, pero es la materia prima con la
+que `publish.yml` monta el repositorio ostree, no un canal: ni la landing, ni el manual ni el
+README lo ofrecen como descarga. El `.flatpakref` se sigue sirviendo para no romper los enlaces
+que ya circulan, pero deja de anunciarse.

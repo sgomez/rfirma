@@ -11,10 +11,9 @@
 # con `$basearch`. Las dos cosas se comprueban contra el componente de la
 # landing que las publica, que es de donde la gente las copia.
 #
-# LAS FIRMAS NO SE PRUEBAN AQUI, y no es un olvido: firmar necesita una clave
-# privada, las claves de rFirma las crea una persona (packaging/repo/README.md)
-# y ninguna prueba puede fabricarse una que
-# valga. Por eso el arbol se construye en el modo `SIN-FIRMA-SOLO-PRUEBAS`, que
+# LAS FIRMAS NO SE PRUEBAN AQUI, y no es un olvido: las claves de rFirma las
+# crea una persona (packaging/repo/README.md) y una desechable no prueba que
+# la firma de verdad funcione. Por eso el arbol se construye en el modo `SIN-FIRMA-SOLO-PRUEBAS`, que
 # `.github/check-workflows.sh` prohibe que aparezca en un workflow: lo que se
 # publica va firmado siempre, y esa parte se ensaya con una etiqueta `-rc.N`.
 #
@@ -38,13 +37,15 @@ fallos=0
 fail() { echo "FALLO  $*" >&2; fallos=$((fallos + 1)); }
 ok() { echo "OK  $*"; }
 
-# UNA CLAVE DE MENTIRA Y NINGUNA DE VERDAD: las claves de rFirma las crea una
-# persona (packaging/repo/README.md), y aqui no hace falta ninguna
-# porque el arbol se construye sin firmar. Lo que si tiene que ser cierto es la
-# ARMADURA —el `.flatpakref` lleva la clave desempaquetada dentro—, y eso lo da
-# `gpg --enarmor`, que empaqueta unos bytes cualesquiera sin tocar ningun
-# llavero.
-printf 'clave publica de mentira' | gpg --enarmor > "$tmp/rfirma.asc"
+# UNA CLAVE DESECHABLE Y NINGUNA DE VERDAD: las claves de rFirma las crea una
+# persona (packaging/repo/README.md). El arbol se construye sin firmar, pero
+# `flatpak remote-add` importa la clave del `.flatpakrepo`, asi que tiene que
+# ser una clave de verdad, en armadura —el `.flatpakref` la lleva desempaquetada—.
+mkdir -m 700 "$tmp/gnupg"
+GNUPGHOME="$tmp/gnupg" gpg --batch --passphrase "" --quick-gen-key "rfirma prueba <prueba@example.invalid>" \
+    ed25519 sign never > /dev/null 2>&1
+GNUPGHOME="$tmp/gnupg" gpg --armor --export > "$tmp/rfirma.asc"
+GNUPGHOME="$tmp/gnupg" gpgconf --kill gpg-agent > /dev/null 2>&1 || true
 
 versiones=(0.4.0 0.4.2 0.4.10)
 
@@ -202,19 +203,6 @@ EOF
     ostree --repo="$obra/repo" rev-parse app/me.sgomez.rfirma/x86_64/stable
 }
 
-# La version mas nueva viaja firmada y con origen, como sale de la Release (ID-501).
-firmar_bundle() {
-    local bundle="$1" casa="$tmp/gnupg-firma"
-    mkdir -p -m 700 "$casa"
-    printf 'desechable' > "$tmp/passphrase-firma"
-    GNUPGHOME="$casa" gpg --batch --pinentry-mode loopback --passphrase-file "$tmp/passphrase-firma" \
-        --quick-gen-key "rfirma prueba <prueba@example.invalid>" ed25519 sign never > /dev/null 2>&1
-    local huella
-    huella="$(GNUPGHOME="$casa" gpg --batch --list-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')"
-    GNUPGHOME="$casa" "$raiz/packaging/flatpak/sign-bundle.sh" "$bundle" "$huella" "$tmp/passphrase-firma" > /dev/null 2>&1
-    GNUPGHOME="$casa" gpgconf --kill gpg-agent > /dev/null 2>&1 || true
-}
-
 deb_de_prueba() {
     local version="$1" destino="$2" obra="$tmp/obra/deb-$version"
     rm -rf "$obra"
@@ -260,7 +248,6 @@ for version in "${versiones[@]}"; do
     dir="$serie/v$version"
     mkdir -p "$dir"
     commit_de[$version]="$(bundle_de_prueba "$version" "$dir/rfirma-$version.flatpak")"
-    [ "$version" = 0.4.10 ] && firmar_bundle "$dir/rfirma-$version.flatpak"
     deb_de_prueba "$version" "$dir/rfirma_${version}_amd64.deb"
     rpm_de_prueba "$version" "$dir/rfirma-$version.x86_64.rpm"
     instalador_de_pega "$dir" "$version"
@@ -341,6 +328,31 @@ if grep -q '^Url=https://rfirma.sgomez.me/flatpak/$' "$tmp/arbol/rfirma.flatpakr
     ok "el flatpakref apunta al repositorio y lleva la clave dentro"
 else
     fail "el flatpakref no sirve para instalar de un clic"
+fi
+
+# the_flatpakrepo_points_at_the_repository_and_carries_the_same_key_as_the_flatpakref
+clave_de() { sed -n 's/^GPGKey=//p' "$1"; }
+if [ -f "$tmp/arbol/rfirma.flatpakrepo" ] \
+    && grep -q '^\[Flatpak Repo\]$' "$tmp/arbol/rfirma.flatpakrepo" \
+    && grep -q '^Url=https://rfirma.sgomez.me/flatpak/$' "$tmp/arbol/rfirma.flatpakrepo" \
+    && [ -n "$(clave_de "$tmp/arbol/rfirma.flatpakrepo")" ] \
+    && [ "$(clave_de "$tmp/arbol/rfirma.flatpakrepo")" = "$(clave_de "$tmp/arbol/rfirma.flatpakref")" ]; then
+    ok "el flatpakrepo apunta al repositorio y lleva la misma clave que el flatpakref"
+else
+    fail "el flatpakrepo no sirve para dar de alta el remoto"
+fi
+
+# flatpak_accepts_the_flatpakrepo_as_a_remote
+# `remote-add` baja el `summary` del remoto, asi que la `Url` apunta al repositorio del arbol.
+casa_flatpak="$tmp/casa-flatpak"
+mkdir -p "$casa_flatpak"
+sed "s|^Url=.*|Url=file://$tmp/arbol/flatpak|" "$tmp/arbol/rfirma.flatpakrepo" > "$casa_flatpak/rfirma.flatpakrepo"
+if XDG_DATA_HOME="$casa_flatpak/data" XDG_CONFIG_HOME="$casa_flatpak/config" \
+    flatpak remote-add --user --no-gpg-verify --if-not-exists rfirma "$casa_flatpak/rfirma.flatpakrepo" > "$casa_flatpak/salida" 2>&1; then
+    ok "flatpak remote-add acepta el flatpakrepo"
+else
+    cat "$casa_flatpak/salida" >&2
+    fail "flatpak remote-add rechaza el flatpakrepo"
 fi
 
 # ---------------------------------------------------------------------------
@@ -473,7 +485,7 @@ fi
 # Los indices firmados (`InRelease`, `repomd.xml`, el `summary` de ostree)
 # llevan fecha dentro y NO pueden ser identicos; lo que descarga un cliente si.
 huella_estable() {
-    (cd "$1" && find rfirma.asc rfirma.flatpakref apt/pool apt/rfirma.sources \
+    (cd "$1" && find rfirma.asc rfirma.flatpakref rfirma.flatpakrepo apt/pool apt/rfirma.sources \
         rpm/rfirma.repo -maxdepth 4 -type f | LC_ALL=C sort \
         | while read -r f; do printf '%s %s\n' "$f" "$(sha256sum < "$f" | cut -d' ' -f1)"; done)
     (cd "$1/rpm" && find . -maxdepth 1 -name '*.rpm' | LC_ALL=C sort \
