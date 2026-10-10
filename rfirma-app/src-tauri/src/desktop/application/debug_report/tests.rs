@@ -36,6 +36,7 @@ fn a_flatpak_report() -> DebugReport {
         pkcs11_module_override: None,
         pcsc: Some(PcscStatus::Responding(Vec::new())),
         bundled_pcsc_lite: None,
+        nss_stores: None,
     }
 }
 
@@ -403,4 +404,84 @@ fn without_a_bundled_client_no_pcsc_lite_line_appears() {
     let text = debug_report_text(&a_flatpak_report(), &ana());
 
     assert!(!text.contains("pcsc-lite"), "{text}");
+}
+
+fn a_profile(browser: &str, directory: &str, state: NssProfileState) -> NssProfile {
+    NssProfile {
+        browser: browser.to_owned(),
+        directory: PathBuf::from(directory),
+        state,
+    }
+}
+
+fn report_with_nss(profiles: Vec<NssProfile>, rfirma_store_installed: bool) -> String {
+    let mut report = a_flatpak_report();
+    report.pcsc = None;
+    report.nss_stores = Some(NssStores {
+        profiles,
+        rfirma_store_installed,
+    });
+    let text = debug_report_text(&report, &ana());
+    text.split_once("Almacenes NSS\n")
+        .map(|(_, section)| section.to_owned())
+        .unwrap_or_default()
+}
+
+#[test]
+fn a_profile_that_trusts_the_local_channel_says_until_when() {
+    let section = report_with_nss(
+        vec![a_profile(
+            "Firefox",
+            "/home/ana/.mozilla/firefox/abcd1234.default",
+            NssProfileState::TrustsLocalChannel {
+                until: Some("2027-03-14".to_owned()),
+            },
+        )],
+        false,
+    );
+
+    assert_eq!(
+        section,
+        "  Firefox: confía en el canal local · hasta 2027-03-14\n    \
+           perfil: ~/.mozilla/firefox/<perfil>\n  \
+         Almacén de rFirma: no instalado"
+    );
+}
+
+#[test]
+fn a_profile_that_does_not_trust_the_local_channel_says_so() {
+    let section = report_with_nss(
+        vec![a_profile(
+            "Firefox snap",
+            "/home/ana/snap/firefox/common/.mozilla/firefox/xyz.default",
+            NssProfileState::DoesNotTrustLocalChannel,
+        )],
+        true,
+    );
+
+    assert_eq!(
+        section,
+        "  Firefox snap: no confía en el canal local\n    \
+           perfil: ~/snap/firefox/common/.mozilla/firefox/<perfil>\n  \
+         Almacén de rFirma: instalado"
+    );
+}
+
+#[test]
+fn a_profile_without_cert9_db_is_ignored() {
+    let section = report_with_nss(
+        vec![a_profile(
+            "Firefox",
+            "/home/ana/.mozilla/firefox/old.default",
+            NssProfileState::IgnoredWithoutCertificateDatabase,
+        )],
+        false,
+    );
+
+    assert_eq!(
+        section,
+        "  Firefox: ignorado · sin cert9.db\n    \
+           perfil: ~/.mozilla/firefox/<perfil>\n  \
+         Almacén de rFirma: no instalado"
+    );
 }

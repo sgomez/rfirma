@@ -136,11 +136,16 @@ pub fn softoken_under(usr_lib: &Path) -> Option<PathBuf> {
 
 /// El Almacén de rFirma bajo `directory`, si ya se ha instalado algún certificado (ADR-0034).
 pub fn installed_stores(softoken: &Path, directory: &Path) -> Vec<Store> {
-    if directory.join("cert9.db").is_file() {
+    if has_certificate_database(directory) {
         vec![Store::installed_nss(softoken, directory)]
     } else {
         Vec::new()
     }
+}
+
+/// Si el directorio de un almacén NSS tiene ya su base de datos de certificados.
+pub fn has_certificate_database(directory: &Path) -> bool {
+    directory.join("cert9.db").is_file()
 }
 
 /// Pares de directorios de configuración y datos de Firefox en el sistema.
@@ -174,6 +179,38 @@ fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 7] {
 
 /// Descubre las rutas de perfiles NSS existentes bajo el directorio personal.
 pub fn nss_profiles(home: &Path) -> Vec<PathBuf> {
+    let mut found: Vec<PathBuf> = Vec::new();
+    for profile in nss_profile_candidates(home) {
+        if !has_certificate_database(&profile) {
+            continue;
+        }
+        add_unless_already_there(&mut found, profile);
+    }
+    found
+}
+
+/// Los directorios de perfil NSS que existen pero el descubrimiento descarta por no tener `cert9.db`.
+pub fn ignored_nss_profiles(home: &Path) -> Vec<PathBuf> {
+    let mut ignored: Vec<PathBuf> = Vec::new();
+    for profile in nss_profile_candidates(home) {
+        if profile.is_dir() && !has_certificate_database(&profile) {
+            add_unless_already_there(&mut ignored, profile);
+        }
+    }
+    ignored
+}
+
+fn add_unless_already_there(found: &mut Vec<PathBuf>, profile: PathBuf) {
+    let resolved = profile.canonicalize().unwrap_or_else(|_| profile.clone());
+    if !found
+        .iter()
+        .any(|already| already.canonicalize().unwrap_or_else(|_| already.clone()) == resolved)
+    {
+        found.push(profile);
+    }
+}
+
+fn nss_profile_candidates(home: &Path) -> Vec<PathBuf> {
     let mut profiles: Vec<PathBuf> = Vec::new();
     for (config, data) in firefox_layouts(home) {
         for relative_or_absolute in profiles_declared_in(&config.join("profiles.ini")) {
@@ -185,22 +222,7 @@ pub fn nss_profiles(home: &Path) -> Vec<PathBuf> {
     profiles.push(home.join(".local/share/pki/nssdb"));
     profiles.push(home.join("snap/chromium/current/.local/share/pki/nssdb"));
     profiles.push(home.join("snap/chromium/current/.pki/nssdb"));
-
-    let mut found: Vec<PathBuf> = Vec::new();
-    for profile in profiles {
-        if !profile.join("cert9.db").is_file() {
-            continue;
-        }
-        let resolved = profile.canonicalize().unwrap_or_else(|_| profile.clone());
-        if !found
-            .iter()
-            .any(|already| already.canonicalize().unwrap_or_else(|_| already.clone()) == resolved)
-        {
-            found.push(profile);
-        }
-    }
-
-    found
+    profiles
 }
 
 /// Rutas de perfiles declaradas en un fichero profiles.ini.

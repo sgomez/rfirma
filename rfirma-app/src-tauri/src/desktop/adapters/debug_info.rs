@@ -1,17 +1,29 @@
 //! Rellena el `DebugReport` de `--debug-info` y su `ReportOwner` leyendo el entorno de este proceso, con las rutas crudas; no formatea ni anonimiza.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+use openssl::asn1::Asn1Time;
+use x509_cert::der::DateTime;
 
 use crate::desktop::adapters::installation::{this_glibc, this_installation, this_webview};
+use crate::desktop::adapters::paths::Paths;
 use crate::desktop::adapters::registry::this_desktop;
 use crate::desktop::application::debug_report::{
-    DebugReport, LinuxEnvironment, NativeLibrary, NativeLibraryStatus, PcscStatus,
-    ProtocolHandlerStatus, ReportOwner,
+    DebugReport, LinuxEnvironment, NativeLibrary, NativeLibraryStatus, NssProfile, NssProfileState,
+    NssStores, PcscStatus, ProtocolHandlerStatus, ReportOwner,
 };
 use crate::desktop::domain::channel::Channel;
 use crate::identity::adapters as identity_adapters;
+use crate::identity::adapters::pkcs11::stores::{
+    has_certificate_database, ignored_nss_profiles, nss_profiles,
+};
+use crate::identity::domain::store::{Store, StoreClass};
 use crate::signing::adapters::ffi::{locate, NativeBridge};
 use crate::signing::domain::bridge::{BridgeError, LIBRARY_DIRECTORY_VARIABLE};
+use crate::site::adapters::local_ca_trusted_in_each;
+use crate::site::adapters::tls::LocalCaStore;
+use crate::site::ports::LocalCaSlots;
 use crate::PKCS11_MODULE_VARIABLE;
 
 const SCHEME: &str = "afirma";
@@ -36,6 +48,7 @@ pub fn this_process_report() -> DebugReport {
         pkcs11_module_override: defined_path(PKCS11_MODULE_VARIABLE),
         pcsc: pcsc_status(),
         bundled_pcsc_lite: bundled_pcsc_lite(channel),
+        nss_stores: nss_stores(),
     }
 }
 
@@ -184,4 +197,86 @@ fn native_library() -> NativeLibrary {
         status,
         path: Some(path),
     }
+}
+
+fn nss_stores() -> Option<NssStores> {
+    if std::env::consts::OS != "linux" {
+        return None;
+    }
+    let home = PathBuf::from(std::env::var_os("HOME")?);
+    let paths = Paths::from_environment().ok();
+    let local_ca = paths.as_ref().map(LocalCaStore::of);
+    let found = nss_profiles(&home);
+    let trust = local_ca.as_ref().map_or_else(
+        || vec![false; found.len()],
+        |store| local_ca_trusted_in_each(store, &found),
+    );
+    let until = local_ca.as_ref().and_then(local_ca_expiry);
+    let trusting = found.into_iter().zip(trust).map(|(directory, trusted)| {
+        let state = if trusted {
+            NssProfileState::TrustsLocalChannel {
+                until: until.clone(),
+            }
+        } else {
+            NssProfileState::DoesNotTrustLocalChannel
+        };
+        nss_profile(directory, state)
+    });
+    let ignored = ignored_nss_profiles(&home).into_iter().map(|directory| {
+        nss_profile(
+            directory,
+            NssProfileState::IgnoredWithoutCertificateDatabase,
+        )
+    });
+    Some(NssStores {
+        profiles: trusting.chain(ignored).collect(),
+        rfirma_store_installed: paths
+            .is_some_and(|paths| has_certificate_database(&paths.installed_certificates_dir())),
+    })
+}
+
+fn local_ca_expiry(store: &LocalCaStore) -> Option<String> {
+    let serving = store.serving().ok()??;
+    let epoch = Asn1Time::from_unix(0).ok()?;
+    let elapsed = epoch.diff(serving.certificate().not_after()).ok()?;
+    let seconds = u64::try_from(i64::from(elapsed.days) * 86_400 + i64::from(elapsed.secs)).ok()?;
+    let date = DateTime::from_unix_duration(Duration::from_secs(seconds)).ok()?;
+    Some(format!(
+        "{:04}-{:02}-{:02}",
+        date.year(),
+        date.month(),
+        date.day()
+    ))
+}
+
+fn nss_profile(directory: PathBuf, state: NssProfileState) -> NssProfile {
+    NssProfile {
+        browser: browser_of(&directory),
+        directory,
+        state,
+    }
+}
+
+fn browser_of(directory: &Path) -> String {
+    let name = match Store::nss(PathBuf::new(), directory).class() {
+        StoreClass::Firefox => "Firefox",
+        StoreClass::Chrome => "Chrome",
+        StoreClass::Nssdb | StoreClass::Card | StoreClass::Installed | StoreClass::Windows => {
+            "NSS del sistema"
+        }
+    };
+    let packaging = if directory
+        .components()
+        .any(|part| part.as_os_str() == "snap")
+    {
+        " snap"
+    } else if directory
+        .components()
+        .any(|part| part.as_os_str() == "org.mozilla.firefox")
+    {
+        " flatpak"
+    } else {
+        ""
+    };
+    format!("{name}{packaging}")
 }

@@ -247,6 +247,22 @@ fn skips_a_declared_profile_without_a_certificate_database() {
 }
 
 #[test]
+fn reports_a_declared_profile_without_a_certificate_database_as_ignored() {
+    let home = a_home_with(
+        &[
+            (".mozilla/firefox/aaaaaaaa.vacio", false),
+            (".mozilla/firefox/bbbbbbbb.lleno", true),
+        ],
+        Some("[Profile0]\nPath=aaaaaaaa.vacio\n\n[Profile1]\nPath=bbbbbbbb.lleno\n"),
+    );
+
+    assert_eq!(
+        ignored_nss_profiles(home.path()),
+        vec![home.path().join(".mozilla/firefox/aaaaaaaa.vacio")]
+    );
+}
+
+#[test]
 fn reads_the_shared_nssdb_too() {
     let home = a_home_with(&[(".pki/nssdb", true)], None);
 
