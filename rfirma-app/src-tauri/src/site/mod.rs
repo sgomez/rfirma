@@ -63,6 +63,7 @@ impl SiteRoot {
             &self.trust.profiles,
             self.trust.stores.as_ref(),
             Moment::Startup,
+            self.trust.mark,
         )
     }
 

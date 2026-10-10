@@ -74,6 +74,8 @@ pub enum Work {
     InstallBothOfThem,
     /// Promover la CA siguiente a vigente sin fabricar material nuevo.
     PromoteTheNextOne,
+    /// Fabricar una CA con la marca del canal que sustituye a la vigente sin marca y retirar esta.
+    ReplaceTheUnmarkedOne,
 }
 
 /// Determina la acción a realizar según el momento, etapa y existencia de CA siguiente (ADR-0005).
@@ -86,6 +88,14 @@ pub fn work_at(moment: Moment, stage: Stage, next: NextCa) -> Work {
         (Moment::Startup, Stage::Overlapping, NextCa::Waiting) => Work::InstallBothOfThem,
         (Moment::Startup, Stage::Expired, NextCa::Waiting) => Work::PromoteTheNextOne,
         (Moment::Startup, Stage::Expired, NextCa::None) => Work::MakeOneAndInstallIt,
+    }
+}
+
+/// El trabajo cuando la CA vigente no lleva marca de canal: si toca escribir, se sustituye (ADR-0005).
+pub fn replacing_the_unmarked(work: Work) -> Work {
+    match work {
+        Work::Nothing => Work::Nothing,
+        _ => Work::ReplaceTheUnmarkedOne,
     }
 }
 

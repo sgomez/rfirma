@@ -3,7 +3,7 @@ use super::fixtures::{
     a_codec_table, a_launch, a_store, invoked_with, starting_with, World, CREDENTIAL,
 };
 use crate::site::application::tests::InMemoryCaSlots;
-use crate::site::domain::local_ca::LocalCa;
+use crate::site::domain::local_ca::{ChannelMark, LocalCa};
 use crate::site::domain::protocol::RefusalSituation;
 
 #[test]
@@ -11,7 +11,10 @@ fn a_site_launch_attends_the_errand_and_never_shows_the_main_window() {
     let world = Arc::new(World::default());
     let store = a_store();
     store
-        .write_serving(&LocalCa::generate().expect("una CA local se genera sin depender de nada"))
+        .write_serving(
+            &LocalCa::generate(ChannelMark::Native)
+                .expect("una CA local se genera sin depender de nada"),
+        )
         .expect("la ranura de pruebas admite escritura");
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
@@ -90,7 +93,8 @@ fn a_refused_launch_opens_the_hidden_window_and_arms_the_channel_refusal_wait() 
 fn a_site_launch_never_writes_to_the_local_ca_slots_or_trust_stores() {
     let world = Arc::new(World::default());
     let store = InMemoryCaSlots::unwritable_serving(
-        LocalCa::generate().expect("una CA local se genera sin depender de ningún almacén"),
+        LocalCa::generate(ChannelMark::Native)
+            .expect("una CA local se genera sin depender de ningún almacén"),
     );
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
@@ -329,6 +333,7 @@ fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
             store: &store,
             profiles: &[],
             stores: &*world,
+            mark: ChannelMark::Native,
         },
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),

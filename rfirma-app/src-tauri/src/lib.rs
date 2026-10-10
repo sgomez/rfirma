@@ -111,6 +111,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
             store: Box::new(ca_store.clone()),
             profiles: site::adapters::trust_profiles(),
             stores: site::adapters::desktop_trust_stores(),
+            mark: site::application::trust::mark_of(desktop::adapters::channel::Channel::detected()),
         },
         ca_store,
         codecs: site::application::site::CodecTable {
@@ -434,6 +435,7 @@ fn attend_the_site_launch(
             store: site.trust.store.as_ref(),
             profiles: &site.trust.profiles,
             stores: site.trust.stores.as_ref(),
+            mark: site.trust.mark,
         },
         &site.codecs,
         &transport,

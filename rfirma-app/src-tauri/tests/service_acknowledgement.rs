@@ -10,7 +10,7 @@ use rfirma_lib::site::adapters::service::RawTlsService;
 use rfirma_lib::site::adapters::tls::{CaFiles, LocalCaStore};
 use rfirma_lib::site::application::errand::Transport;
 use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation};
-use rfirma_lib::site::domain::local_ca::LocalCa;
+use rfirma_lib::site::domain::local_ca::{ChannelMark, LocalCa};
 use rfirma_lib::site::domain::protocol::{AfirmaUrl, ChannelCredential, NegotiatedCredential};
 use rfirma_lib::site::ports::{Inbox, ReplyHandle};
 use tokio::io::AsyncWriteExt;
@@ -48,7 +48,7 @@ async fn a_linger_free_connection(
 #[tokio::test(flavor = "multi_thread")]
 async fn the_acknowledgement_is_not_fulfilled_for_a_service_client_already_gone() {
     let directory = tempfile::tempdir().expect("directorio temporal");
-    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("la CA local deberia generarse");
     let ca_pem = ca.certificate_pem().expect("la CA local en PEM");
     let store = LocalCaStore::new(
         CaFiles::new(

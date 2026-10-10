@@ -4,6 +4,7 @@ use crate::site::application::tests::InMemoryCaSlots;
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown, Situation,
 };
+use crate::site::domain::local_ca::ChannelMark;
 use crate::site::domain::trust_error::TrustError;
 use std::path::Path;
 use std::sync::Mutex;
@@ -198,6 +199,7 @@ pub(super) fn starting_with(
             store,
             profiles: &profiles,
             stores: &**world,
+            mark: ChannelMark::Native,
         },
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),

@@ -7,7 +7,7 @@ fn text_of(ca: &LocalCa) -> String {
 
 #[test]
 fn the_local_ca_can_only_vouch_for_the_loopback() {
-    let text = text_of(&LocalCa::generate().expect("deberia generarse"));
+    let text = text_of(&LocalCa::generate(ChannelMark::Native).expect("deberia generarse"));
 
     assert!(
         text.contains("X509v3 Name Constraints: critical"),
@@ -23,7 +23,7 @@ fn the_local_ca_can_only_vouch_for_the_loopback() {
 
 #[test]
 fn the_local_ca_signs_certificates_and_nothing_else() {
-    let text = text_of(&LocalCa::generate().expect("deberia generarse"));
+    let text = text_of(&LocalCa::generate(ChannelMark::Native).expect("deberia generarse"));
 
     assert!(text.contains("CA:TRUE, pathlen:0"), "{text}");
     assert!(
@@ -38,7 +38,7 @@ fn the_local_ca_signs_certificates_and_nothing_else() {
 
 #[test]
 fn the_local_ca_expires_between_two_and_three_years_from_now() {
-    let ca = LocalCa::generate().expect("deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
 
     let two_years = Asn1Time::days_from_now(2 * 365).expect("deberia calcularse");
     let three_years = Asn1Time::days_from_now(3 * 365).expect("deberia calcularse");
@@ -54,8 +54,8 @@ fn the_local_ca_expires_between_two_and_three_years_from_now() {
 
 #[test]
 fn two_local_ca_are_never_the_same_certificate() {
-    let one = LocalCa::generate().expect("deberia generarse");
-    let another = LocalCa::generate().expect("deberia generarse");
+    let one = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
+    let another = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
 
     assert_ne!(
         one.certificate().serial_number().to_bn().unwrap().to_vec(),
@@ -71,7 +71,7 @@ fn two_local_ca_are_never_the_same_certificate() {
 
 #[test]
 fn a_local_ca_survives_the_round_trip_through_the_two_pem_files() {
-    let original = LocalCa::generate().expect("deberia generarse");
+    let original = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
 
     let restored = LocalCa::from_pem(
         &original.certificate_pem().expect("deberia salir en PEM"),
@@ -87,8 +87,8 @@ fn a_local_ca_survives_the_round_trip_through_the_two_pem_files() {
 
 #[test]
 fn a_certificate_with_someone_elses_key_is_damaged_material() {
-    let one = LocalCa::generate().expect("deberia generarse");
-    let another = LocalCa::generate().expect("deberia generarse");
+    let one = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
+    let another = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
 
     let error = LocalCa::from_pem(
         &one.certificate_pem().expect("deberia salir en PEM"),
@@ -101,7 +101,7 @@ fn a_certificate_with_someone_elses_key_is_damaged_material() {
 
 #[test]
 fn the_stored_private_key_is_plain_pkcs8_and_not_the_certificate() {
-    let ca = LocalCa::generate().expect("deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
 
     let key = String::from_utf8(ca.private_key_pem().expect("deberia salir en PEM"))
         .expect("deberia ser UTF-8");
@@ -112,10 +112,77 @@ fn the_stored_private_key_is_plain_pkcs8_and_not_the_certificate() {
 
 #[test]
 fn the_debug_output_never_carries_the_private_key() {
-    let ca = LocalCa::generate().expect("deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
 
     let printed = format!("{ca:?}");
 
     assert!(printed.contains("LocalCa"), "{printed}");
     assert!(!printed.contains("PRIVATE"), "{printed}");
+}
+
+fn der_of(ca: &LocalCa) -> Vec<u8> {
+    ca.certificate().to_der().expect("deberia salir en DER")
+}
+
+#[test]
+fn a_fresh_local_ca_carries_its_channel_in_a_non_critical_extension_of_its_own() {
+    let text = text_of(&LocalCa::generate(ChannelMark::Flatpak).expect("deberia generarse"));
+
+    assert!(
+        text.contains(&format!("{CHANNEL_MARK_OID}: \n")),
+        "la marca va en una extension no critica con el OID propio:\n{text}"
+    );
+    assert!(text.contains("flatpak"), "{text}");
+}
+
+#[test]
+fn the_channel_mark_hangs_from_the_uuid_arc() {
+    assert!(CHANNEL_MARK_OID.starts_with("2.25."), "{CHANNEL_MARK_OID}");
+}
+
+#[test]
+fn the_channel_mark_leaves_the_subject_as_it_was() {
+    let ca = LocalCa::generate(ChannelMark::Native).expect("deberia generarse");
+
+    let subject = ca
+        .certificate()
+        .subject_name()
+        .entries()
+        .map(|entry| String::from_utf8_lossy(entry.data().as_slice()).into_owned())
+        .collect::<Vec<_>>();
+    assert_eq!(subject, vec![COMMON_NAME.to_owned()]);
+}
+
+#[test]
+fn the_mark_is_read_back_from_the_certificate_of_each_channel() {
+    for mark in [
+        ChannelMark::Native,
+        ChannelMark::Flatpak,
+        ChannelMark::Windows,
+    ] {
+        let ca = LocalCa::generate(mark).expect("deberia generarse");
+
+        assert_eq!(ChannelMark::of_certificate(&der_of(&ca)), Some(mark));
+        assert_eq!(ca.mark(), Some(mark));
+    }
+}
+
+#[test]
+fn a_local_ca_from_before_the_mark_reads_as_unmarked() {
+    let ca = LocalCa::unmarked_for_test().expect("deberia generarse");
+
+    assert_eq!(ChannelMark::of_certificate(&der_of(&ca)), None);
+    assert_eq!(ca.mark(), None);
+}
+
+#[test]
+fn what_is_not_a_certificate_carries_no_mark() {
+    assert_eq!(ChannelMark::of_certificate(b"no es un certificado"), None);
+}
+
+#[test]
+fn only_the_channels_with_nss_stores_replace_an_unmarked_local_ca() {
+    assert!(ChannelMark::Native.replaces_an_unmarked_local_ca());
+    assert!(ChannelMark::Flatpak.replaces_an_unmarked_local_ca());
+    assert!(!ChannelMark::Windows.replaces_an_unmarked_local_ca());
 }

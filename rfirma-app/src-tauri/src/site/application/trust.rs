@@ -2,7 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::site::domain::local_ca::{LocalCa, COMMON_NAME};
+use crate::desktop::domain::channel::Channel;
+use crate::site::domain::local_ca::{ChannelMark, LocalCa, COMMON_NAME};
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
 use crate::site::domain::trust::is_trusted_ssl_ca;
 use crate::site::domain::trust::{
@@ -76,12 +77,22 @@ pub fn narrate_startup_outcome(mut outcome: TrustOutcome, profiles: &[PathBuf]) 
     lines
 }
 
+/// La marca que lleva la CA local de cada canal de distribución.
+pub fn mark_of(channel: Channel) -> ChannelMark {
+    match channel {
+        Channel::Native => ChannelMark::Native,
+        Channel::Flatpak => ChannelMark::Flatpak,
+        Channel::Windows => ChannelMark::Windows,
+    }
+}
+
 /// Registra y renueva la CA local en los almacenes NSS indicados (ADR-0005).
 pub fn refresh_local_ca_trust(
     store: &dyn LocalCaSlots,
     profiles: &[PathBuf],
     stores: &dyn TrustStores,
     moment: Moment,
+    mark: ChannelMark,
 ) -> Result<TrustOutcome, TlsError> {
     let saved = store.serving()?;
     let waiting = store.next()?;
@@ -96,6 +107,13 @@ pub fn refresh_local_ca_trust(
             NextCa::None
         },
     );
+    let unmarked = saved.as_ref().is_some_and(|ca| ca.mark().is_none());
+    let work = if unmarked && mark.replaces_an_unmarked_local_ca() {
+        trust::replacing_the_unmarked(work)
+    } else {
+        work
+    };
+    let mut retired = Vec::new();
 
     let serving = || saved.clone().expect("esa etapa sale de una CA guardada");
     let certificates: Vec<LocalCa> = match work {
@@ -110,13 +128,13 @@ pub fn refresh_local_ca_trust(
         }
         Work::InstallTheOneWeHave => vec![serving()],
         Work::MakeOneAndInstallIt => {
-            let fresh = LocalCa::generate()?;
+            let fresh = LocalCa::generate(mark)?;
             store.write_serving(&fresh)?;
             store.forget_next()?;
             vec![fresh]
         }
         Work::MakeTheNextAndInstallItToo => {
-            let next = LocalCa::generate()?;
+            let next = LocalCa::generate(mark)?;
             store.write_next(&next)?;
             vec![serving(), next]
         }
@@ -127,18 +145,22 @@ pub fn refresh_local_ca_trust(
         Work::PromoteTheNextOne => vec![store
             .promote_next()?
             .expect("esta rama sale de una siguiente esperando")],
+        Work::ReplaceTheUnmarkedOne => {
+            let fresh = LocalCa::generate(mark)?;
+            retired = [saved.clone(), waiting.clone()]
+                .into_iter()
+                .flatten()
+                .map(|ca| der_of(&ca))
+                .collect::<Result<Vec<_>, _>>()?;
+            store.write_serving(&fresh)?;
+            store.forget_next()?;
+            vec![fresh]
+        }
     };
 
     let ders = certificates
         .iter()
-        .map(|ca| {
-            ca.certificate().to_der().map_err(|error| {
-                TlsError::new(
-                    TlsSituation::MaterialDamaged,
-                    format!("el certificado de la CA local no sale en DER: {error}"),
-                )
-            })
-        })
+        .map(der_of)
         .collect::<Result<Vec<_>, _>>()?;
 
     let mut trusted = 0;
@@ -146,7 +168,10 @@ pub fn refresh_local_ca_trust(
     let mut missed = Vec::new();
 
     for profile in profiles {
-        match settle(stores, profile, &ders) {
+        match settle(stores, profile, &ders).and_then(|settled| {
+            retire(stores, profile, &retired)?;
+            Ok(settled)
+        }) {
             Ok(Settled::AlreadyThere) => trusted += 1,
             Ok(Settled::JustInstalled) => {
                 trusted += 1;
@@ -172,6 +197,22 @@ pub fn refresh_local_ca_trust(
 enum Settled {
     AlreadyThere,
     JustInstalled,
+}
+
+fn der_of(ca: &LocalCa) -> Result<Vec<u8>, TlsError> {
+    ca.certificate().to_der().map_err(|error| {
+        TlsError::new(
+            TlsSituation::MaterialDamaged,
+            format!("el certificado de la CA local no sale en DER: {error}"),
+        )
+    })
+}
+
+fn retire(stores: &dyn TrustStores, profile: &Path, ders: &[Vec<u8>]) -> Result<(), TrustError> {
+    for der in ders {
+        stores.withdraw(profile, der)?;
+    }
+    Ok(())
 }
 
 fn settle(

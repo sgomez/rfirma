@@ -9,7 +9,7 @@ use rfirma_lib::site::adapters::service::RawTlsService;
 use rfirma_lib::site::adapters::tls::{CaFiles, LocalCaStore};
 use rfirma_lib::site::application::errand::Transport;
 use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation};
-use rfirma_lib::site::domain::local_ca::LocalCa;
+use rfirma_lib::site::domain::local_ca::{ChannelMark, LocalCa};
 use rfirma_lib::site::domain::protocol::{ChannelCredential, NegotiatedCredential};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -30,7 +30,7 @@ async fn a_silent_service_connection_survives_longer_than_the_original_batch_all
     }
 
     let directory = tempfile::tempdir().expect("directorio temporal");
-    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let ca = LocalCa::generate(ChannelMark::Native).expect("la CA local deberia generarse");
     let ca_pem = ca.certificate_pem().expect("la CA local en PEM");
     let store = LocalCaStore::new(
         CaFiles::new(

@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use crate::site::domain::channel::{
     ArrivalMode, ChannelError, Delivery, Situation as ChannelSituation,
 };
+use crate::site::domain::local_ca::ChannelMark;
 use crate::site::domain::trust::{blocks_the_site, Moment as TrustMoment};
 use crate::site::ports::{LocalCaSlots, TrustStores};
 
@@ -100,6 +101,8 @@ pub struct TrustAtStartup<'a> {
     pub profiles: &'a [PathBuf],
     /// Interfaz de acceso a los almacenes de confianza.
     pub stores: &'a dyn TrustStores,
+    /// La marca del canal de esta instalación.
+    pub mark: ChannelMark,
 }
 
 /// Resultado del proceso de arranque de la aplicación.
@@ -362,6 +365,7 @@ fn refresh_the_local_ca(trust: TrustAtStartup<'_>) -> (Vec<String>, LocalCaReach
         trust.profiles,
         trust.stores,
         TrustMoment::Startup,
+        trust.mark,
     ) {
         Ok(outcome) => {
             let reach = if outcome.nowhere() {
