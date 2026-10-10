@@ -7,6 +7,7 @@ pub mod console;
 pub mod debug_info;
 pub mod failures;
 pub mod firefox_lock;
+pub mod graphics_info;
 pub mod handover;
 pub mod installer;
 pub mod paths;
