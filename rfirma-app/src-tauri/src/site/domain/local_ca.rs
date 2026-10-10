@@ -113,6 +113,19 @@ impl std::fmt::Debug for LocalCa {
     }
 }
 
+/// Si el certificado DER tiene por sujeto exactamente `CN=rFirma CA local`.
+pub fn has_the_local_ca_subject(certificate_der: &[u8]) -> bool {
+    X509::from_der(certificate_der).is_ok_and(|certificate| {
+        let mut entries = certificate.subject_name().entries();
+        let only = entries.next();
+        entries.next().is_none()
+            && only.is_some_and(|entry| {
+                entry.object().nid() == Nid::COMMONNAME
+                    && entry.data().as_slice() == COMMON_NAME.as_bytes()
+            })
+    })
+}
+
 pub fn generate_key() -> Result<PKey<Private>, TlsError> {
     let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).map_err(not_generated)?;
     let key = EcKey::generate(&group).map_err(not_generated)?;
