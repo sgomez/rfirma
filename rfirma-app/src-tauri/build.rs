@@ -16,8 +16,7 @@ fn main() {
         return;
     }
     // ADR-0035: el manifiesto va también a las pruebas, que sin él no arrancan.
-    let manifest =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("windows-app-manifest.xml");
+    let manifest = crate_dir().join("windows-app-manifest.xml");
     println!("cargo:rerun-if-changed={}", manifest.display());
     println!("cargo:rustc-link-arg=/MANIFEST:EMBED");
     println!("cargo:rustc-link-arg=/MANIFESTINPUT:{}", manifest.display());
@@ -26,9 +25,16 @@ fn main() {
         .expect("tauri-build debería preparar la aplicación");
 }
 
+// Con `env!` valdría la ruta del worktree que compiló este script en el target compartido.
+fn crate_dir() -> std::path::PathBuf {
+    std::path::PathBuf::from(
+        std::env::var("CARGO_MANIFEST_DIR").expect("cargo define CARGO_MANIFEST_DIR"),
+    )
+}
+
 // ADR-0009: solo entran los idiomas al 100 %, la misma regla que `po-import`.
 fn write_the_catalog() {
-    let po = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../po");
+    let po = crate_dir().join("../po");
     println!("cargo:rerun-if-changed={}", po.display());
     let mut published = String::new();
     for tag in PO_LANGUAGES {
@@ -59,7 +65,7 @@ fn record_the_commit() {
     let git = |args: &[&str]| {
         let output = std::process::Command::new("git")
             .args(args)
-            .current_dir(env!("CARGO_MANIFEST_DIR"))
+            .current_dir(crate_dir())
             .output()
             .ok()
             .filter(|output| output.status.success())?;
