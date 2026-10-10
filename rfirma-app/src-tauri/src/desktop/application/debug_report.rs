@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::identity::domain::readers::Reader;
 
 use pkcs11::module_lines;
+pub use pkcs11::{DiscardReason, ModuleStatus, Pkcs11Module, Pkcs11Modules};
 
 /// Qué se sabe de la librería nativa tras intentar cargarla de verdad.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,41 +38,6 @@ pub enum PcscStatus {
     NotResponding,
     /// El servicio contesta, con los lectores que ve.
     Responding(Vec<Reader>),
-}
-
-/// Por qué rFirma no usa un módulo dado de alta.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum DiscardReason {
-    /// Su `disable-in` nombra a rFirma.
-    DisabledInRfirma,
-    /// Su `enable-in` no nombra a rFirma.
-    EnabledOnlyElsewhere,
-    /// Es un almacén de confianza.
-    TrustPolicy,
-    /// Su biblioteca no está instalada.
-    MissingModule,
-}
-
-/// Un módulo PKCS#11 del descubrimiento.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Pkcs11Module {
-    /// Nombre del `.module`, o de la biblioteca si es un candidato fijo.
-    pub name: String,
-    /// La biblioteca, si se conoce.
-    pub library: Option<PathBuf>,
-    /// El `.module` que lo da de alta, si lo hay.
-    pub registration: Option<PathBuf>,
-    /// Por qué se descarta; `None` si se usa.
-    pub discard: Option<DiscardReason>,
-}
-
-/// De dónde salen los módulos PKCS#11 que usa la aplicación.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Pkcs11Modules {
-    /// `RFIRMA_PKCS11_MODULE` anula el descubrimiento y es el único módulo.
-    Overridden(PathBuf),
-    /// Lo que el descubrimiento usa y descarta.
-    Discovered(Vec<Pkcs11Module>),
 }
 
 /// Qué se sabe de un perfil NSS.

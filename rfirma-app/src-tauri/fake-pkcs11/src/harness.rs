@@ -7,7 +7,9 @@ use std::path::{Path, PathBuf};
 
 use tempfile::TempDir;
 
-use crate::card::{Profile, CALL_LOG, INTERFERENCE, PROFILE, REMOVED_FROM, TRIES_LEFT};
+use crate::card::{
+    Profile, CALL_LOG, HANGS_ON_INITIALIZE, INTERFERENCE, PROFILE, REMOVED_FROM, TRIES_LEFT,
+};
 
 /// Una tarjeta aislada: cada copia del módulo es una instancia aparte, aunque viva en el mismo proceso.
 pub struct FakeCard {
@@ -51,6 +53,12 @@ impl FakeCard {
     /// Retira la tarjeta a partir de la llamada `call`, contada desde 1: esa y las siguientes fallan como sin tarjeta.
     pub fn removed_from_call(self, call: usize) -> io::Result<Self> {
         fs::write(self.dir.path().join(REMOVED_FROM), call.to_string())?;
+        Ok(self)
+    }
+
+    /// Un driver roto: `C_Initialize` no vuelve nunca.
+    pub fn hanging_on_initialize(self) -> io::Result<Self> {
+        fs::write(self.dir.path().join(HANGS_ON_INITIALIZE), "")?;
         Ok(self)
     }
 
