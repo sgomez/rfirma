@@ -1,6 +1,6 @@
-//! El informe de `--debug-info`: el texto que se pega en un informe de fallo, formateado desde un `DebugReport` ya relleno y sin ninguna ruta del equipo.
+//! El informe de `--debug-info`: el texto por secciones que se pega en un informe de fallo, formateado desde un `DebugReport` ya relleno, con las rutas sin el home ni el usuario.
 
-use crate::site::domain::protocol::IMPLEMENTED_AUTOFIRMA_VERSION;
+use std::path::{Path, PathBuf};
 
 /// Qué se sabe de la librería nativa tras intentar cargarla de verdad.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,6 +37,24 @@ pub struct LinuxEnvironment {
     pub session: String,
 }
 
+/// La librería nativa: cómo acabó y qué fichero se intentó cargar.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NativeLibrary {
+    /// Cómo acabó la carga.
+    pub status: NativeLibraryStatus,
+    /// El fichero, si se llegó a encontrar.
+    pub path: Option<PathBuf>,
+}
+
+/// De quién es la sesión: lo que ninguna línea del informe puede contener.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReportOwner {
+    /// Directorio personal.
+    pub home: PathBuf,
+    /// Nombre de usuario.
+    pub user_name: String,
+}
+
 /// Todo lo que el informe cuenta, recogido ya del entorno.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DebugReport {
@@ -55,52 +73,130 @@ pub struct DebugReport {
     /// Quién atiende `afirma://`.
     pub protocol_handler: ProtocolHandlerStatus,
     /// Estado de la librería nativa.
-    pub native_library: NativeLibraryStatus,
+    pub native_library: NativeLibrary,
+    /// `RFIRMA_LIB_DIR`, si está definida.
+    pub library_directory_override: Option<PathBuf>,
+    /// `RFIRMA_PKCS11_MODULE`, si está definida.
+    pub pkcs11_module_override: Option<PathBuf>,
 }
 
-/// Una clave y un valor por línea, en castellano.
-pub fn debug_report_text(report: &DebugReport) -> String {
-    let mut lines = vec![
-        format!("Versión de rFirma: {}", report.version),
-        format!("Compatible con AutoFirma: {IMPLEMENTED_AUTOFIRMA_VERSION}"),
-        format!("Canal de instalación: {}", report.channel),
-        format!("Sistema operativo: {}", report.operating_system),
-        format!("Arquitectura: {}", report.architecture),
-    ];
-    if let Some(linux) = &report.linux {
-        lines.push(format!("Distribución: {}", linux.distribution));
-        lines.push(format!("Entorno de escritorio: {}", linux.desktop));
-        lines.push(format!("Tipo de sesión: {}", linux.session));
+/// Una cabecera y una sección por bloque, con el patrón `clave: estado · detalle` y las rutas anonimizadas.
+pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
+    [
+        format!("rFirma {}", report.version),
+        section("Sistema", &system_lines(report)),
+        section("Integración", &integration_lines(report, owner)),
+    ]
+    .join("\n\n")
+}
+
+fn section(title: &str, lines: &[String]) -> String {
+    std::iter::once(title.to_owned())
+        .chain(lines.iter().map(|line| format!("  {line}")))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn system_lines(report: &DebugReport) -> Vec<String> {
+    let mut lines = vec![format!("Instalación: {}", report.channel)];
+    match &report.linux {
+        Some(linux) => {
+            lines.push(format!("Distribución: {}", linux.distribution));
+            lines.push(format!("Arquitectura: {}", report.architecture));
+            lines.push(format!("Escritorio: {}", linux.desktop));
+            lines.push(format!("Sesión: {}", linux.session));
+        }
+        None => {
+            lines.push(format!("Sistema operativo: {}", report.operating_system));
+            lines.push(format!("Arquitectura: {}", report.architecture));
+        }
     }
-    lines.push(format!("Idioma del sistema: {}", report.locale));
-    lines.push(format!(
-        "Manejador de afirma://: {}",
-        handler_sentence(&report.protocol_handler)
-    ));
-    lines.push(format!(
-        "Biblioteca nativa: {}",
-        library_sentence(report.native_library)
-    ));
-    lines.join("\n")
+    lines.push(format!("Idioma: {}", report.locale));
+    lines
 }
 
-fn handler_sentence(handler: &ProtocolHandlerStatus) -> String {
+fn integration_lines(report: &DebugReport, owner: &ReportOwner) -> Vec<String> {
+    let mut lines = vec![
+        format!("afirma://: {}", handler_state(&report.protocol_handler)),
+        format!(
+            "Biblioteca nativa: {}",
+            library_state(report.native_library.status)
+        ),
+    ];
+    if let Some(path) = &report.native_library.path {
+        lines.push(format!("  ruta: {}", owner.anonymized(path)));
+    }
+    for (variable, value) in [
+        ("RFIRMA_LIB_DIR", &report.library_directory_override),
+        ("RFIRMA_PKCS11_MODULE", &report.pkcs11_module_override),
+    ] {
+        if let Some(path) = value {
+            lines.push(format!("{variable}: {}", owner.anonymized(path)));
+        }
+    }
+    lines
+}
+
+fn handler_state(handler: &ProtocolHandlerStatus) -> String {
     match handler {
         ProtocolHandlerStatus::NotQueryableFromTheSandbox => {
-            "no se puede consultar desde el sandbox de flatpak".to_owned()
+            "no consultable · sandbox de flatpak".to_owned()
         }
         ProtocolHandlerStatus::NoneRegistered => "ninguno registrado".to_owned(),
         ProtocolHandlerStatus::Registered(id) => id.clone(),
     }
 }
 
-fn library_sentence(status: NativeLibraryStatus) -> &'static str {
+fn library_state(status: NativeLibraryStatus) -> &'static str {
     match status {
         NativeLibraryStatus::Loaded => "cargada",
         NativeLibraryStatus::NotFound => "no encontrada",
-        NativeLibraryStatus::IncompatibleSymbols => "símbolos incompatibles",
-        NativeLibraryStatus::NotLoadable => "encontrada, pero no se puede cargar",
+        NativeLibraryStatus::IncompatibleSymbols => "no carga · símbolos incompatibles",
+        NativeLibraryStatus::NotLoadable => "no carga",
     }
+}
+
+const SYSTEM_DIRECTORIES: [&str; 3] = ["/usr", "/etc", "/app"];
+const RUNTIME_DIRECTORY: &str = "/run/user";
+
+impl ReportOwner {
+    /// La ruta sin el home ni el nombre de usuario; las del sistema, tal cual.
+    pub fn anonymized(&self, path: &Path) -> String {
+        if SYSTEM_DIRECTORIES
+            .iter()
+            .any(|directory| path.starts_with(directory))
+        {
+            return path.display().to_string();
+        }
+        let shortened = self
+            .relative_to_home(path)
+            .or_else(|| relative_to_runtime_directory(path))
+            .unwrap_or_else(|| path.display().to_string());
+        if self.user_name.is_empty() {
+            return shortened;
+        }
+        shortened.replace(&self.user_name, "<usuario>")
+    }
+
+    fn relative_to_home(&self, path: &Path) -> Option<String> {
+        self.home.parent()?;
+        let rest = path.strip_prefix(&self.home).ok()?;
+        Some(Path::new("~").join(rest).display().to_string())
+    }
+}
+
+fn relative_to_runtime_directory(path: &Path) -> Option<String> {
+    let mut below = path.strip_prefix(RUNTIME_DIRECTORY).ok()?.components();
+    let uid = below.next()?.as_os_str().to_str()?;
+    if !uid.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    Some(
+        Path::new("$XDG_RUNTIME_DIR")
+            .join(below.as_path())
+            .display()
+            .to_string(),
+    )
 }
 
 #[cfg(test)]

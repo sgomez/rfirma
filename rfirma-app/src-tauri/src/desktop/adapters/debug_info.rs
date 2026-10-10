@@ -1,12 +1,16 @@
-//! Rellena el `DebugReport` de `--debug-info` leyendo el entorno de este proceso; no formatea nada y no deja pasar rutas.
+//! Rellena el `DebugReport` de `--debug-info` y su `ReportOwner` leyendo el entorno de este proceso, con las rutas crudas; no formatea ni anonimiza.
+
+use std::path::PathBuf;
 
 use crate::desktop::adapters::registry::this_desktop;
 use crate::desktop::application::debug_report::{
-    DebugReport, LinuxEnvironment, NativeLibraryStatus, ProtocolHandlerStatus,
+    DebugReport, LinuxEnvironment, NativeLibrary, NativeLibraryStatus, ProtocolHandlerStatus,
+    ReportOwner,
 };
 use crate::desktop::domain::channel::Channel;
-use crate::signing::adapters::ffi::NativeBridge;
-use crate::signing::domain::bridge::BridgeError;
+use crate::signing::adapters::ffi::{locate, NativeBridge};
+use crate::signing::domain::bridge::{BridgeError, LIBRARY_DIRECTORY_VARIABLE};
+use crate::PKCS11_MODULE_VARIABLE;
 
 const SCHEME: &str = "afirma";
 const UNKNOWN: &str = "desconocido";
@@ -23,7 +27,31 @@ pub fn this_process_report() -> DebugReport {
         locale: locale(),
         protocol_handler: protocol_handler(channel),
         native_library: native_library(),
+        library_directory_override: defined_path(LIBRARY_DIRECTORY_VARIABLE),
+        pkcs11_module_override: defined_path(PKCS11_MODULE_VARIABLE),
     }
+}
+
+/// El home y el nombre de quien ejecuta este proceso.
+pub fn this_process_owner() -> ReportOwner {
+    ReportOwner {
+        home: first_defined(&["HOME", "USERPROFILE"])
+            .map(PathBuf::from)
+            .unwrap_or_default(),
+        user_name: first_defined(&["USER", "USERNAME", "LOGNAME"]).unwrap_or_default(),
+    }
+}
+
+fn first_defined(names: &[&str]) -> Option<String> {
+    names
+        .iter()
+        .find_map(|name| std::env::var(name).ok().filter(|value| !value.is_empty()))
+}
+
+fn defined_path(name: &str) -> Option<PathBuf> {
+    std::env::var_os(name)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
 }
 
 fn linux_environment(channel: Channel) -> LinuxEnvironment {
@@ -112,11 +140,24 @@ fn without_directories(identifier: &str) -> String {
         .to_owned()
 }
 
-fn native_library() -> NativeLibraryStatus {
-    match NativeBridge::open() {
+fn native_library() -> NativeLibrary {
+    let located = std::env::current_exe().ok().and_then(|executable| {
+        let directory = executable.parent()?.to_path_buf();
+        locate(&|name| std::env::var_os(name), &directory).ok()
+    });
+    let Some(path) = located else {
+        return NativeLibrary {
+            status: NativeLibraryStatus::NotFound,
+            path: None,
+        };
+    };
+    let status = match NativeBridge::open_at(&path) {
         Ok(_) => NativeLibraryStatus::Loaded,
-        Err(BridgeError::NotFound(_)) => NativeLibraryStatus::NotFound,
         Err(BridgeError::MissingSymbol { .. }) => NativeLibraryStatus::IncompatibleSymbols,
         Err(_) => NativeLibraryStatus::NotLoadable,
+    };
+    NativeLibrary {
+        status,
+        path: Some(path),
     }
 }
