@@ -12,7 +12,13 @@ fn ana() -> ReportOwner {
 fn a_flatpak_report() -> DebugReport {
     DebugReport {
         version: "1.2.3".to_owned(),
-        channel: "flatpak".to_owned(),
+        installation: Installation::Flatpak(FlatpakInstallation {
+            remote: "rfirma".to_owned(),
+            branch: "stable".to_owned(),
+            runtime: "org.gnome.Platform/x86_64/48".to_owned(),
+        }),
+        glibc: None,
+        webview: None,
         operating_system: "linux".to_owned(),
         architecture: "x86_64".to_owned(),
         linux: Some(LinuxEnvironment {
@@ -38,7 +44,10 @@ fn the_report_is_a_header_then_system_then_integration() {
         "rFirma 1.2.3\n\
          \n\
          Sistema\n  \
-           Instalación: flatpak\n  \
+           Instalación: flatpak\n    \
+             Remoto: rfirma\n    \
+             Rama: stable\n    \
+             Runtime: org.gnome.Platform/x86_64/48\n  \
            Distribución: Ubuntu 24.04\n  \
            Arquitectura: x86_64\n  \
            Escritorio: GNOME\n  \
@@ -63,7 +72,7 @@ fn the_report_no_longer_says_it_is_compatible_with_autofirma() {
 fn outside_linux_the_system_is_named_instead_of_distribution_desktop_and_session() {
     let report = DebugReport {
         linux: None,
-        channel: "windows".to_owned(),
+        installation: Installation::WindowsInstaller(InstallerScope::PerUser),
         operating_system: "windows".to_owned(),
         protocol_handler: ProtocolHandlerStatus::Registered("rfirma.desktop".to_owned()),
         ..a_flatpak_report()
@@ -72,7 +81,7 @@ fn outside_linux_the_system_is_named_instead_of_distribution_desktop_and_session
     let text = debug_report_text(&report, &ana());
 
     assert!(
-        text.contains("  Instalación: windows\n  Sistema operativo: windows\n  Arquitectura:"),
+        text.contains("  Instalación: instalador de Windows · por usuario\n  Sistema operativo: windows\n  Arquitectura:"),
         "{text}"
     );
     for absent in ["Distribución", "Escritorio", "Sesión"] {
@@ -235,5 +244,80 @@ fn system_paths_are_left_as_they_are() {
     assert!(
         text.contains("  RFIRMA_PKCS11_MODULE: /usr/lib/opensc-pkcs11.so"),
         "{text}"
+    );
+}
+
+fn installation_line(installation: Installation) -> String {
+    let report = DebugReport {
+        installation,
+        ..a_flatpak_report()
+    };
+    let text = debug_report_text(&report, &ana());
+    let from = text
+        .find("  Instalación")
+        .expect("hay línea de instalación");
+    let rest = &text[from..];
+    let end = rest.find("\n  D").expect("sigue la distribución");
+    rest[..end].to_owned()
+}
+
+#[test]
+fn a_deb_and_an_rpm_say_which_package_they_are() {
+    assert_eq!(installation_line(Installation::Deb), "  Instalación: deb");
+    assert_eq!(installation_line(Installation::Rpm), "  Instalación: rpm");
+}
+
+#[test]
+fn a_development_build_says_the_commit_it_was_built_from() {
+    assert_eq!(
+        installation_line(Installation::Development {
+            commit: "8d99e4a9".to_owned()
+        }),
+        "  Instalación: compilación de desarrollo\n    Commit: 8d99e4a9"
+    );
+}
+
+#[test]
+fn a_windows_installer_says_its_scope() {
+    assert_eq!(
+        installation_line(Installation::WindowsInstaller(InstallerScope::PerMachine)),
+        "  Instalación: instalador de Windows · por equipo"
+    );
+}
+
+#[test]
+fn macos_says_so() {
+    assert_eq!(
+        installation_line(Installation::MacOs),
+        "  Instalación: macOS"
+    );
+}
+
+#[test]
+fn glibc_and_the_webview_appear_only_when_known() {
+    let native = DebugReport {
+        installation: Installation::Deb,
+        glibc: Some("2.42".to_owned()),
+        webview: Some(WebView {
+            name: "WebKitGTK".to_owned(),
+            version: "2.50.1".to_owned(),
+        }),
+        ..a_flatpak_report()
+    };
+
+    let text = debug_report_text(&native, &ana());
+
+    assert!(
+        text.contains("  Arquitectura: x86_64\n  glibc: 2.42\n  Escritorio: GNOME\n"),
+        "{text}"
+    );
+    assert!(
+        text.contains("  Idioma: es_ES.UTF-8\n  WebKitGTK: 2.50.1\n\nIntegración"),
+        "{text}"
+    );
+    let without = debug_report_text(&a_flatpak_report(), &ana());
+    assert!(
+        !without.contains("glibc") && !without.contains("WebKit"),
+        "{without}"
     );
 }

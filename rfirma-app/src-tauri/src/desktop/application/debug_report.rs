@@ -26,6 +26,55 @@ pub enum ProtocolHandlerStatus {
     Registered(String),
 }
 
+/// Dónde y con qué instalador está el flatpak.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FlatpakInstallation {
+    /// Remoto del que se instaló.
+    pub remote: String,
+    /// Rama instalada.
+    pub branch: String,
+    /// Runtime sobre el que corre.
+    pub runtime: String,
+}
+
+/// Para quién instaló el instalador de Windows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InstallerScope {
+    /// Solo para la persona que lo ejecutó.
+    PerUser,
+    /// Para todo el equipo.
+    PerMachine,
+}
+
+/// Cómo se instaló rFirma de verdad.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Installation {
+    /// Paquete de dpkg.
+    Deb,
+    /// Paquete de rpm.
+    Rpm,
+    /// Flatpak, con su origen.
+    Flatpak(FlatpakInstallation),
+    /// Instalador de Windows.
+    WindowsInstaller(InstallerScope),
+    /// Aplicación de macOS.
+    MacOs,
+    /// Ejecutable que no pertenece a ningún paquete, con el commit grabado al compilar.
+    Development {
+        /// Commit de la compilación.
+        commit: String,
+    },
+}
+
+/// El motor web y su versión.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WebView {
+    /// `WebKitGTK` o `WebView2`.
+    pub name: String,
+    /// Versión.
+    pub version: String,
+}
+
 /// Los datos que solo existen en Linux.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LinuxEnvironment {
@@ -60,8 +109,12 @@ pub struct ReportOwner {
 pub struct DebugReport {
     /// Versión de rFirma.
     pub version: String,
-    /// Canal de distribución.
-    pub channel: String,
+    /// Cómo se instaló.
+    pub installation: Installation,
+    /// Versión de glibc, solo en Linux nativo.
+    pub glibc: Option<String>,
+    /// Motor web, si se conoce su versión.
+    pub webview: Option<WebView>,
     /// Sistema operativo.
     pub operating_system: String,
     /// Arquitectura.
@@ -98,11 +151,12 @@ fn section(title: &str, lines: &[String]) -> String {
 }
 
 fn system_lines(report: &DebugReport) -> Vec<String> {
-    let mut lines = vec![format!("Instalación: {}", report.channel)];
+    let mut lines = installation_lines(&report.installation);
     match &report.linux {
         Some(linux) => {
             lines.push(format!("Distribución: {}", linux.distribution));
             lines.push(format!("Arquitectura: {}", report.architecture));
+            lines.extend(report.glibc.iter().map(|glibc| format!("glibc: {glibc}")));
             lines.push(format!("Escritorio: {}", linux.desktop));
             lines.push(format!("Sesión: {}", linux.session));
         }
@@ -112,7 +166,38 @@ fn system_lines(report: &DebugReport) -> Vec<String> {
         }
     }
     lines.push(format!("Idioma: {}", report.locale));
+    lines.extend(
+        report
+            .webview
+            .iter()
+            .map(|webview| format!("{}: {}", webview.name, webview.version)),
+    );
     lines
+}
+
+fn installation_lines(installation: &Installation) -> Vec<String> {
+    match installation {
+        Installation::Deb => vec!["Instalación: deb".to_owned()],
+        Installation::Rpm => vec!["Instalación: rpm".to_owned()],
+        Installation::MacOs => vec!["Instalación: macOS".to_owned()],
+        Installation::Flatpak(flatpak) => vec![
+            "Instalación: flatpak".to_owned(),
+            format!("  Remoto: {}", flatpak.remote),
+            format!("  Rama: {}", flatpak.branch),
+            format!("  Runtime: {}", flatpak.runtime),
+        ],
+        Installation::WindowsInstaller(scope) => vec![format!(
+            "Instalación: instalador de Windows · {}",
+            match scope {
+                InstallerScope::PerUser => "por usuario",
+                InstallerScope::PerMachine => "por equipo",
+            }
+        )],
+        Installation::Development { commit } => vec![
+            "Instalación: compilación de desarrollo".to_owned(),
+            format!("  Commit: {commit}"),
+        ],
+    }
 }
 
 fn integration_lines(report: &DebugReport, owner: &ReportOwner) -> Vec<String> {
