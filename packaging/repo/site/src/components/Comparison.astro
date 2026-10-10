@@ -8,16 +8,13 @@ interface Props {
 const { locale } = Astro.props;
 const t = translator(locale);
 const rows = [
-  "arch",
-  "keys",
+  "java",
   "pin",
   "dnie",
   "store",
   "stores",
   "stamp",
-  "ca",
   "lang",
-  "privacy",
   "os",
   "updates",
   "desktop",
@@ -44,7 +41,7 @@ const rows = [
       <table class="cmp-table">
         <thead>
           <tr>
-            <th scope="col" class="cmp-head cmp-head--aspect">{t("comparison.head.aspect")}</th>
+            <td class="cmp-head cmp-head--aspect"></td>
             <th scope="col" class="cmp-head">{t("comparison.head.autofirma")}</th>
             <th scope="col" class="cmp-head cmp-head--rfirma">{t("comparison.head.rfirma")}</th>
           </tr>
