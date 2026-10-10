@@ -42,6 +42,25 @@ pub fn is_the_system_root_store(profile: &Path) -> bool {
     profile.as_os_str() == SYSTEM_ROOT_STORE
 }
 
+/// Si la CA local vigente es de confianza en cada perfil, en el orden dado; la medición del panel de estado.
+pub fn local_ca_trusted_in_each(
+    store: &tls::LocalCaStore,
+    profiles: &[std::path::PathBuf],
+) -> Vec<bool> {
+    crate::site::application::trust::measure_local_ca_trust(
+        store,
+        profiles,
+        desktop_trust_stores().as_ref(),
+    )
+    .map(|readings| {
+        readings
+            .into_iter()
+            .map(|reading| reading.trusted)
+            .collect()
+    })
+    .unwrap_or_else(|_| vec![false; profiles.len()])
+}
+
 /// Los almacenes de confianza de esta plataforma.
 #[cfg(target_os = "linux")]
 pub fn desktop_trust_stores() -> Box<dyn TrustStores + Send + Sync> {

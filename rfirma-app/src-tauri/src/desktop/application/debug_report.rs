@@ -4,6 +4,9 @@ use std::path::{Path, PathBuf};
 
 use crate::identity::domain::readers::Reader;
 
+use nss::nss_lines;
+use pkcs11::module_lines;
+
 /// Qué se sabe de la librería nativa tras intentar cargarla de verdad.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeLibraryStatus {
@@ -70,6 +73,40 @@ pub enum Pkcs11Modules {
     Overridden(PathBuf),
     /// Lo que el descubrimiento usa y descarta.
     Discovered(Vec<Pkcs11Module>),
+}
+
+/// Qué se sabe de un perfil NSS.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NssProfileState {
+    /// El navegador confía en el canal local, hasta la fecha de caducidad de su CA.
+    TrustsLocalChannel {
+        /// Fecha `AAAA-MM-DD`, si se pudo leer.
+        until: Option<String>,
+    },
+    /// El navegador no confía en el canal local.
+    DoesNotTrustLocalChannel,
+    /// El descubrimiento lo descarta porque no tiene `cert9.db`.
+    IgnoredWithoutCertificateDatabase,
+}
+
+/// Un perfil NSS que el descubrimiento ve, con el navegador al que pertenece.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NssProfile {
+    /// Navegador, como se lee en el informe.
+    pub browser: String,
+    /// Directorio del perfil.
+    pub directory: PathBuf,
+    /// Qué se sabe de él.
+    pub state: NssProfileState,
+}
+
+/// Los almacenes NSS: los perfiles y si el Almacén de rFirma existe.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NssStores {
+    /// Perfiles encontrados o ignorados.
+    pub profiles: Vec<NssProfile>,
+    /// Si el Almacén de rFirma está instalado.
+    pub rfirma_store_installed: bool,
 }
 
 /// Dónde y con qué instalador está el flatpak.
@@ -238,6 +275,8 @@ pub struct DebugReport {
     pub bundled_pcsc_lite: Option<String>,
     /// Los módulos PKCS#11; `None` donde no hay descubrimiento que contar.
     pub pkcs11_modules: Option<Pkcs11Modules>,
+    /// Almacenes NSS; `None` donde esta versión no los consulta.
+    pub nss_stores: Option<NssStores>,
 }
 
 /// Una cabecera y una sección por bloque, con el patrón `clave: estado · detalle` y las rutas anonimizadas.
@@ -261,62 +300,15 @@ pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
             &module_lines(modules, &report.installation, owner),
         )
     }))
+    .chain(
+        report
+            .nss_stores
+            .as_ref()
+            .map(|stores| section("Almacenes NSS", &nss_lines(stores, owner))),
+    )
     .flatten()
     .collect::<Vec<_>>()
     .join("\n\n")
-}
-
-fn module_lines(
-    modules: &Pkcs11Modules,
-    installation: &Installation,
-    owner: &ReportOwner,
-) -> Vec<String> {
-    match modules {
-        Pkcs11Modules::Overridden(path) => vec![
-            "Descubrimiento: anulado · RFIRMA_PKCS11_MODULE".to_owned(),
-            format!("  módulo: {}", owner.anonymized(path)),
-        ],
-        Pkcs11Modules::Discovered(found) => {
-            let sandbox = matches!(installation, Installation::Flatpak(_)).then(|| {
-                "Módulos del anfitrión: no visibles · el sandbox solo ve el OpenSC incluido"
-                    .to_owned()
-            });
-            sandbox
-                .into_iter()
-                .chain(found.iter().flat_map(|module| module_block(module, owner)))
-                .collect()
-        }
-    }
-}
-
-fn module_block(module: &Pkcs11Module, owner: &ReportOwner) -> Vec<String> {
-    let state = match module.discard {
-        None => "encontrado".to_owned(),
-        Some(reason) => format!("descartado · {}", discard_reason_text(reason)),
-    };
-    std::iter::once(format!("{}: {state}", module.name))
-        .chain(
-            module
-                .library
-                .iter()
-                .map(|path| format!("  módulo: {}", owner.anonymized(path))),
-        )
-        .chain(
-            module
-                .registration
-                .iter()
-                .map(|path| format!("  alta: {}", owner.anonymized(path))),
-        )
-        .collect()
-}
-
-fn discard_reason_text(reason: DiscardReason) -> &'static str {
-    match reason {
-        DiscardReason::DisabledInRfirma => "disable-in",
-        DiscardReason::EnabledOnlyElsewhere => "enable-in sin rfirma",
-        DiscardReason::TrustPolicy => "trust-policy",
-        DiscardReason::MissingModule => "falta el módulo",
-    }
 }
 
 fn reader_lines(pcsc: &PcscStatus) -> Vec<String> {
@@ -520,5 +512,7 @@ fn relative_to_runtime_directory(path: &Path) -> Option<String> {
     )
 }
 
+mod nss;
+mod pkcs11;
 #[cfg(test)]
 mod tests;
