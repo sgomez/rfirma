@@ -75,3 +75,48 @@ fn a_renderer_choice_already_in_the_environment_is_respected() {
         );
     }
 }
+
+#[test]
+fn the_variable_in_force_is_the_one_rfirma_sets_when_the_environment_has_none() {
+    assert_eq!(
+        the_variable_in_force(environment(&[("WAYLAND_DISPLAY", "wayland-0")])),
+        Some(RendererVariable {
+            name: DMABUF_SWITCH.to_owned(),
+            value: "1".to_owned(),
+            origin: RendererOrigin::SetByRfirma,
+        })
+    );
+}
+
+#[test]
+fn the_variable_in_force_is_the_environments_when_it_already_chose() {
+    assert_eq!(
+        the_variable_in_force(environment(&[
+            ("WAYLAND_DISPLAY", "wayland-0"),
+            ("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1"),
+        ])),
+        Some(RendererVariable {
+            name: "WEBKIT_DMABUF_RENDERER_FORCE_SHM".to_owned(),
+            value: "1".to_owned(),
+            origin: RendererOrigin::FromTheEnvironment,
+        })
+    );
+}
+
+#[test]
+fn an_empty_renderer_variable_is_the_environments_choice_as_the_switch_reads_it() {
+    let empty_dmabuf = [("WAYLAND_DISPLAY", "wayland-0"), (DMABUF_SWITCH, "")];
+
+    assert_eq!(
+        the_switch_for_this_session(environment(&empty_dmabuf)),
+        None
+    );
+    assert_eq!(
+        the_variable_in_force(environment(&empty_dmabuf)),
+        Some(RendererVariable {
+            name: DMABUF_SWITCH.to_owned(),
+            value: String::new(),
+            origin: RendererOrigin::FromTheEnvironment,
+        })
+    );
+}

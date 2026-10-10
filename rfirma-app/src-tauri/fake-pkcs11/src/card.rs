@@ -13,6 +13,7 @@ pub(crate) const CALL_LOG: &str = "calls.log";
 pub(crate) const PROFILE: &str = "profile";
 pub(crate) const INTERFERENCE: &str = "interference";
 pub(crate) const REMOVED_FROM: &str = "removed-from";
+pub(crate) const HANGS_ON_INITIALIZE: &str = "hangs-on-initialize";
 
 /// Qué tarjeta imita el módulo: el DNIe medido, o una que da las tres señales del PIN y exige el login por firma.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -30,6 +31,10 @@ pub(crate) fn read_profile(dir: &Path) -> Profile {
         Ok(name) if name.trim() == Profile::SIGNALS_NAME => Profile::Signals,
         _ => Profile::Dnie,
     }
+}
+
+pub(crate) fn hangs_on_initialize(dir: &Path) -> bool {
+    dir.join(HANGS_ON_INITIALIZE).is_file()
 }
 
 pub(crate) fn interference_configured(dir: &Path) -> bool {

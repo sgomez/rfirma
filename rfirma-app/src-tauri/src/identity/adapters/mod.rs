@@ -27,9 +27,20 @@ pub use pending_macos_keychain::PendingMacosKeychain as DesktopKeyring;
 #[cfg(windows)]
 pub use windows_credential_manager::WindowsCredentialManager as DesktopKeyring;
 
+/// Una consulta puntual a los lectores; `None`, si PC/SC no responde.
+#[cfg(any(target_os = "linux", windows))]
+pub use pcsc::survey_readers;
 /// El vigilante de lectores de esta plataforma.
 #[cfg(any(target_os = "linux", windows))]
 pub use pcsc::PcscReaderWatch as DesktopReaderWatch;
+/// Una consulta puntual a los lectores; sin PC/SC en esta plataforma, nunca hay respuesta.
+#[cfg(not(any(target_os = "linux", windows)))]
+pub fn survey_readers() -> Option<Vec<crate::identity::domain::readers::Reader>> {
+    None
+}
+/// Si esta plataforma habla con PC/SC.
+pub const SPEAKS_PCSC: bool = cfg!(any(target_os = "linux", windows));
+
 /// El vigilante de lectores de esta plataforma.
 #[cfg(not(any(target_os = "linux", windows)))]
 pub use readers::UnavailableReaderWatch as DesktopReaderWatch;

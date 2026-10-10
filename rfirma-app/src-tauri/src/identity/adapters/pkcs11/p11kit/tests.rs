@@ -330,3 +330,86 @@ fn only_the_flatpak_searches_the_app_registry_and_root() {
     assert_eq!(app_root(Channel::Flatpak), Some(Path::new("/app")));
     assert_eq!(app_root(Channel::Native), None);
 }
+
+fn outcome_of(installation: &Installation, file: &str) -> Result<PathBuf, DiscardReason> {
+    registrations(
+        &[installation.system(), installation.user()],
+        &installation.usr(),
+        None,
+    )
+    .into_iter()
+    .find(|registration| registration.name == file)
+    .unwrap_or_else(|| panic!("{file} deberia estar entre las altas"))
+    .outcome
+}
+
+#[test]
+fn a_module_disabled_in_rfirma_says_so() {
+    let installation = Installation::new();
+    installation.registers(
+        &installation.system(),
+        "a.module",
+        "module: a.so\ndisable-in: rfirma\n",
+    );
+
+    assert_eq!(
+        outcome_of(&installation, "a"),
+        Err(DiscardReason::DisabledInRfirma)
+    );
+}
+
+#[test]
+fn a_module_enabled_only_elsewhere_says_so() {
+    let installation = Installation::new();
+    installation.registers(
+        &installation.system(),
+        "gnome-keyring.module",
+        GNOME_KEYRING,
+    );
+
+    assert_eq!(
+        outcome_of(&installation, "gnome-keyring"),
+        Err(DiscardReason::EnabledOnlyElsewhere)
+    );
+}
+
+#[test]
+fn a_trust_policy_module_says_so() {
+    let installation = Installation::new();
+    installation.registers(
+        &installation.system(),
+        "p11-kit-trust.module",
+        P11_KIT_TRUST,
+    );
+
+    assert_eq!(
+        outcome_of(&installation, "p11-kit-trust"),
+        Err(DiscardReason::TrustPolicy)
+    );
+}
+
+#[test]
+fn a_module_whose_library_is_not_installed_says_it_is_missing() {
+    let installation = Installation::new();
+    installation.registers(&installation.system(), "opensc.module", OPENSC);
+
+    let registration = registrations(&[installation.system()], &installation.usr(), None)
+        .pop()
+        .expect("el alta");
+
+    assert_eq!(registration.outcome, Err(DiscardReason::MissingModule));
+    assert_eq!(registration.library.as_deref(), Some("opensc-pkcs11.so"));
+    assert_eq!(
+        registration.file,
+        installation.system().join("opensc.module")
+    );
+}
+
+#[test]
+fn a_usable_module_carries_its_library() {
+    let installation = Installation::new();
+    let library = installation.library("lib/pkcs11/opensc-pkcs11.so");
+    installation.registers(&installation.system(), "opensc.module", OPENSC);
+
+    assert_eq!(outcome_of(&installation, "opensc"), Ok(library));
+}

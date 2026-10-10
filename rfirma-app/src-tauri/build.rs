@@ -9,6 +9,7 @@ const PO_LANGUAGES: [&str; 5] = ["es", "ca", "eu", "gl", "en"];
 
 fn main() {
     write_the_catalog();
+    record_the_commit();
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     if target_os != "windows" {
         tauri_build::build();
@@ -52,4 +53,22 @@ fn write_the_catalog() {
     );
     let out = std::path::PathBuf::from(std::env::var("OUT_DIR").expect("cargo define OUT_DIR"));
     std::fs::write(out.join("catalog.rs"), generated).expect("se escribe el catálogo generado");
+}
+
+fn record_the_commit() {
+    let git = |args: &[&str]| {
+        let output = std::process::Command::new("git")
+            .args(args)
+            .current_dir(env!("CARGO_MANIFEST_DIR"))
+            .output()
+            .ok()
+            .filter(|output| output.status.success())?;
+        Some(String::from_utf8_lossy(&output.stdout).trim().to_owned())
+    };
+    if let Some(head) = git(&["rev-parse", "--path-format=absolute", "--git-path", "HEAD"]) {
+        println!("cargo:rerun-if-changed={head}");
+    }
+    if let Some(commit) = git(&["rev-parse", "--short", "HEAD"]).filter(|c| !c.is_empty()) {
+        println!("cargo:rustc-env=RFIRMA_GIT_COMMIT={commit}");
+    }
 }

@@ -25,8 +25,38 @@ pub fn configuration_directories(home: &Path, channel: Channel) -> Vec<PathBuf> 
     directories
 }
 
-/// La biblioteca que un fichero `.module` registra para rFirma, si la registra.
-pub fn module_for_rfirma(config: &str) -> Option<String> {
+/// Por qué rFirma no usa un módulo que p11-kit tiene dado de alta.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DiscardReason {
+    /// Su `disable-in` nombra a rFirma.
+    DisabledInRfirma,
+    /// Su `enable-in` no nombra a rFirma.
+    EnabledOnlyElsewhere,
+    /// Es un almacén de confianza, no de claves.
+    TrustPolicy,
+    /// Su biblioteca no está instalada.
+    MissingModule,
+}
+
+/// Un fichero `.module`, con lo que se hizo con él.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Registration {
+    /// Nombre del fichero sin la extensión.
+    pub name: String,
+    /// El fichero `.module` que gana.
+    pub file: PathBuf,
+    /// La biblioteca tal como el fichero la nombra.
+    pub library: Option<String>,
+    /// La biblioteca instalada que se usa, o el motivo de descarte.
+    pub outcome: Result<PathBuf, DiscardReason>,
+}
+
+struct Verdict {
+    library: Option<String>,
+    usable: Result<String, DiscardReason>,
+}
+
+fn verdict(config: &str) -> Option<Verdict> {
     let value = |key: &str| {
         config.lines().find_map(|line| {
             let (found, value) = line.split_once(':')?;
@@ -38,17 +68,36 @@ pub fn module_for_rfirma(config: &str) -> Option<String> {
             .split(|c: char| c == ',' || c.is_whitespace())
             .any(|program| program == PROGRAM_NAME)
     };
+    let library = value("module").filter(|module| !module.is_empty());
+    let discarded = |reason| {
+        Some(Verdict {
+            library: library.clone(),
+            usable: Err(reason),
+        })
+    };
 
     if value("trust-policy").is_some_and(|policy| policy.eq_ignore_ascii_case("yes")) {
-        return None;
+        return discarded(DiscardReason::TrustPolicy);
     }
     if value("enable-in").is_some_and(|programs| !names_rfirma(programs)) {
-        return None;
+        return discarded(DiscardReason::EnabledOnlyElsewhere);
     }
     if value("disable-in").is_some_and(names_rfirma) {
-        return None;
+        return discarded(DiscardReason::DisabledInRfirma);
     }
-    value("module").filter(|module| !module.is_empty() && !is_trust_module(module))
+    match &library {
+        Some(module) if is_trust_module(module) => discarded(DiscardReason::TrustPolicy),
+        Some(module) => Some(Verdict {
+            library: library.clone(),
+            usable: Ok(module.clone()),
+        }),
+        None => None,
+    }
+}
+
+/// La biblioteca que un fichero `.module` registra para rFirma, si la registra.
+pub fn module_for_rfirma(config: &str) -> Option<String> {
+    verdict(config)?.usable.ok()
 }
 
 fn is_trust_module(module: &str) -> bool {
@@ -60,11 +109,28 @@ fn is_trust_module(module: &str) -> bool {
 
 /// Las bibliotecas registradas en esos directorios, resueltas bajo `usr` y `app` e instaladas.
 pub fn registered_modules(directories: &[PathBuf], usr: &Path, app: Option<&Path>) -> Vec<PathBuf> {
+    registrations(directories, usr, app)
+        .into_iter()
+        .filter_map(|registration| registration.outcome.ok())
+        .collect()
+}
+
+/// Cada `.module` que registra o descarta una biblioteca, con su motivo.
+pub fn registrations(directories: &[PathBuf], usr: &Path, app: Option<&Path>) -> Vec<Registration> {
     module_files(directories)
-        .values()
-        .filter_map(|file| std::fs::read_to_string(file).ok())
-        .filter_map(|config| module_for_rfirma(&config))
-        .filter_map(|module| installed(&module, usr, app))
+        .into_iter()
+        .filter_map(|(file_name, file)| {
+            let verdict = verdict(&std::fs::read_to_string(&file).ok()?)?;
+            let outcome = verdict.usable.and_then(|module| {
+                installed(&module, usr, app).ok_or(DiscardReason::MissingModule)
+            });
+            Some(Registration {
+                name: file_name.trim_end_matches(".module").to_owned(),
+                file,
+                library: verdict.library,
+                outcome,
+            })
+        })
         .collect()
 }
 

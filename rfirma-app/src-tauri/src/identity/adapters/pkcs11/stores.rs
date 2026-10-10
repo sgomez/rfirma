@@ -79,6 +79,69 @@ pub fn discovered_modules(
     )
 }
 
+/// Un módulo PKCS#11 que el descubrimiento ha visto, usado o descartado.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DiscoveredModule {
+    /// Nombre del `.module`, o de la biblioteca si es un candidato fijo.
+    pub name: String,
+    /// La biblioteca; la del descartado, tal como el `.module` la nombra.
+    pub library: Option<PathBuf>,
+    /// El `.module` que lo da de alta; ninguno en los candidatos fijos.
+    pub registration: Option<PathBuf>,
+    /// Por qué no se usa; `None` si se usa.
+    pub discard: Option<p11kit::DiscardReason>,
+}
+
+/// Lo que `discovered_modules` usa y lo que descarta con su motivo, sin cargar nada.
+pub fn module_discovery(
+    usr: &Path,
+    app: Option<&Path>,
+    p11kit_directories: &[PathBuf],
+) -> Vec<DiscoveredModule> {
+    let registrations = p11kit::registrations(p11kit_directories, usr, app);
+    let registration_of = |module: &Path| {
+        registrations.iter().find(|registration| {
+            registration
+                .outcome
+                .as_ref()
+                .is_ok_and(|library| same_file(library, module))
+        })
+    };
+    let mut report: Vec<DiscoveredModule> = discovered_modules(usr, app, p11kit_directories)
+        .into_iter()
+        .map(|module| match registration_of(&module) {
+            Some(registration) => DiscoveredModule {
+                name: registration.name.clone(),
+                library: Some(module),
+                registration: Some(registration.file.clone()),
+                discard: None,
+            },
+            None => DiscoveredModule {
+                name: module
+                    .file_stem()
+                    .map(|stem| stem.to_string_lossy().into_owned())
+                    .unwrap_or_default(),
+                library: Some(module),
+                registration: None,
+                discard: None,
+            },
+        })
+        .collect();
+    report.extend(registrations.iter().filter_map(|registration| {
+        Some(DiscoveredModule {
+            name: registration.name.clone(),
+            library: registration.library.as_ref().map(PathBuf::from),
+            registration: Some(registration.file.clone()),
+            discard: Some(*registration.outcome.as_ref().err()?),
+        })
+    }));
+    report
+}
+
+fn same_file(first: &Path, second: &Path) -> bool {
+    first.canonicalize().ok() == second.canonicalize().ok()
+}
+
 /// El módulo PKCS#11 descubierto que es, canonizada, la biblioteca que nombra la sede.
 pub fn discovered_module_named(stores: &[Store], library: &str) -> Option<PathBuf> {
     let named = Path::new(library).canonicalize().ok()?;
@@ -98,10 +161,7 @@ pub fn from_environment() -> Vec<Store> {
 
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let channel = Channel::detected();
-    let p11kit_directories = home
-        .as_deref()
-        .map(|home| p11kit::configuration_directories(home, channel))
-        .unwrap_or_default();
+    let p11kit_directories = environment_p11kit_directories(home.as_deref(), channel);
     let mut stores: Vec<Store> = discovered_modules(
         Path::new("/usr"),
         p11kit::app_root(channel),
@@ -122,6 +182,22 @@ pub fn from_environment() -> Vec<Store> {
     stores
 }
 
+/// Lo que el descubrimiento de este proceso usa y descarta, salvo que `RFIRMA_PKCS11_MODULE` lo anule.
+pub fn modules_from_environment() -> Vec<DiscoveredModule> {
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let channel = Channel::detected();
+    module_discovery(
+        Path::new("/usr"),
+        p11kit::app_root(channel),
+        &environment_p11kit_directories(home.as_deref(), channel),
+    )
+}
+
+fn environment_p11kit_directories(home: Option<&Path>, channel: Channel) -> Vec<PathBuf> {
+    home.map(|home| p11kit::configuration_directories(home, channel))
+        .unwrap_or_default()
+}
+
 /// Localiza la biblioteca softoken de NSS en el sistema.
 pub fn softoken() -> Option<PathBuf> {
     softoken_under(Path::new("/usr/lib"))
@@ -136,11 +212,16 @@ pub fn softoken_under(usr_lib: &Path) -> Option<PathBuf> {
 
 /// El Almacén de rFirma bajo `directory`, si ya se ha instalado algún certificado (ADR-0034).
 pub fn installed_stores(softoken: &Path, directory: &Path) -> Vec<Store> {
-    if directory.join("cert9.db").is_file() {
+    if has_certificate_database(directory) {
         vec![Store::installed_nss(softoken, directory)]
     } else {
         Vec::new()
     }
+}
+
+/// Si el directorio de un almacén NSS tiene ya su base de datos de certificados.
+pub fn has_certificate_database(directory: &Path) -> bool {
+    directory.join("cert9.db").is_file()
 }
 
 /// Pares de directorios de configuración y datos de Firefox en el sistema.
@@ -174,6 +255,38 @@ fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 7] {
 
 /// Descubre las rutas de perfiles NSS existentes bajo el directorio personal.
 pub fn nss_profiles(home: &Path) -> Vec<PathBuf> {
+    let mut found: Vec<PathBuf> = Vec::new();
+    for profile in nss_profile_candidates(home) {
+        if !has_certificate_database(&profile) {
+            continue;
+        }
+        add_unless_already_there(&mut found, profile);
+    }
+    found
+}
+
+/// Los directorios de perfil NSS que existen pero el descubrimiento descarta por no tener `cert9.db`.
+pub fn ignored_nss_profiles(home: &Path) -> Vec<PathBuf> {
+    let mut ignored: Vec<PathBuf> = Vec::new();
+    for profile in nss_profile_candidates(home) {
+        if profile.is_dir() && !has_certificate_database(&profile) {
+            add_unless_already_there(&mut ignored, profile);
+        }
+    }
+    ignored
+}
+
+fn add_unless_already_there(found: &mut Vec<PathBuf>, profile: PathBuf) {
+    let resolved = profile.canonicalize().unwrap_or_else(|_| profile.clone());
+    if !found
+        .iter()
+        .any(|already| already.canonicalize().unwrap_or_else(|_| already.clone()) == resolved)
+    {
+        found.push(profile);
+    }
+}
+
+fn nss_profile_candidates(home: &Path) -> Vec<PathBuf> {
     let mut profiles: Vec<PathBuf> = Vec::new();
     for (config, data) in firefox_layouts(home) {
         for relative_or_absolute in profiles_declared_in(&config.join("profiles.ini")) {
@@ -185,22 +298,7 @@ pub fn nss_profiles(home: &Path) -> Vec<PathBuf> {
     profiles.push(home.join(".local/share/pki/nssdb"));
     profiles.push(home.join("snap/chromium/current/.local/share/pki/nssdb"));
     profiles.push(home.join("snap/chromium/current/.pki/nssdb"));
-
-    let mut found: Vec<PathBuf> = Vec::new();
-    for profile in profiles {
-        if !profile.join("cert9.db").is_file() {
-            continue;
-        }
-        let resolved = profile.canonicalize().unwrap_or_else(|_| profile.clone());
-        if !found
-            .iter()
-            .any(|already| already.canonicalize().unwrap_or_else(|_| already.clone()) == resolved)
-        {
-            found.push(profile);
-        }
-    }
-
-    found
+    profiles
 }
 
 /// Rutas de perfiles declaradas en un fichero profiles.ini.
