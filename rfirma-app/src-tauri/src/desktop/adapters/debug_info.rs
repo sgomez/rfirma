@@ -12,7 +12,7 @@ use crate::desktop::adapters::paths::Paths;
 use crate::desktop::adapters::registry::this_desktop;
 use crate::desktop::application::debug_report::{
     DebugReport, LinuxEnvironment, NativeLibrary, NativeLibraryStatus, NssProfile, NssProfileState,
-    NssStores, PcscStatus, ProtocolHandlerStatus, ReportOwner,
+    NssStores, PcscStatus, ProtocolHandlerStatus, ReportOwner, WindowsStores,
 };
 use crate::desktop::domain::channel::Channel;
 use crate::identity::adapters as identity_adapters;
@@ -51,6 +51,7 @@ pub fn this_process_report() -> DebugReport {
         pcsc: pcsc_status(),
         bundled_pcsc_lite: bundled_pcsc_lite(channel),
         nss_stores: nss_stores(),
+        windows_stores: windows_stores(channel),
     }
 }
 
@@ -199,6 +200,33 @@ fn native_library() -> NativeLibrary {
         status,
         path: Some(path),
     }
+}
+
+fn windows_stores(channel: Channel) -> Option<WindowsStores> {
+    if channel != Channel::Windows {
+        return None;
+    }
+    let local_ca = Paths::from_environment()
+        .ok()
+        .map(|paths| LocalCaStore::of(&paths));
+    let profiles = crate::site::adapters::trust_profiles();
+    let trusted = local_ca.as_ref().is_some_and(|store| {
+        local_ca_trusted_in_each(store, &profiles)
+            .first()
+            .copied()
+            .unwrap_or(false)
+    });
+    let local_channel = if trusted {
+        NssProfileState::TrustsLocalChannel {
+            until: local_ca.as_ref().and_then(local_ca_expiry),
+        }
+    } else {
+        NssProfileState::DoesNotTrustLocalChannel
+    };
+    Some(WindowsStores {
+        local_channel,
+        minidrivers: crate::desktop::adapters::minidrivers::registered_minidrivers(),
+    })
 }
 
 fn nss_stores() -> Option<NssStores> {

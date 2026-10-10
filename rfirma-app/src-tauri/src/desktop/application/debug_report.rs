@@ -71,6 +71,15 @@ pub struct NssStores {
     pub rfirma_store_installed: bool,
 }
 
+/// Lo que solo existe en Windows: el almacén del sistema y los minidrivers de tarjeta.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WindowsStores {
+    /// Si el almacén raíz del usuario confía en el canal local; nunca es un perfil ignorado.
+    pub local_channel: NssProfileState,
+    /// Tipos de tarjeta que Windows tiene dados de alta.
+    pub minidrivers: Vec<String>,
+}
+
 /// Dónde y con qué instalador está el flatpak.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FlatpakInstallation {
@@ -237,6 +246,8 @@ pub struct DebugReport {
     pub bundled_pcsc_lite: Option<String>,
     /// Almacenes NSS; `None` donde esta versión no los consulta.
     pub nss_stores: Option<NssStores>,
+    /// Almacén de Windows y minidrivers; `None` fuera de Windows.
+    pub windows_stores: Option<WindowsStores>,
 }
 
 /// Una cabecera y una sección por bloque, con el patrón `clave: estado · detalle` y las rutas anonimizadas.
@@ -258,55 +269,12 @@ pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
         report
             .nss_stores
             .as_ref()
-            .map(|stores| section("Almacenes NSS", &nss_lines(stores, owner))),
+            .map(|stores| section("Almacenes NSS", &stores::nss_lines(stores, owner))),
     )
+    .chain(stores::windows_sections(report.windows_stores.as_ref()))
     .flatten()
     .collect::<Vec<_>>()
     .join("\n\n")
-}
-
-fn nss_lines(stores: &NssStores, owner: &ReportOwner) -> Vec<String> {
-    let rfirma_store = if stores.rfirma_store_installed {
-        "instalado"
-    } else {
-        "no instalado"
-    };
-    stores
-        .profiles
-        .iter()
-        .flat_map(|profile| {
-            [
-                format!("{}: {}", profile.browser, profile_state(&profile.state)),
-                format!(
-                    "  perfil: {}",
-                    anonymized_profile(&profile.directory, owner)
-                ),
-            ]
-        })
-        .chain(std::iter::once(format!(
-            "Almacén de rFirma: {rfirma_store}"
-        )))
-        .collect()
-}
-
-fn profile_state(state: &NssProfileState) -> String {
-    match state {
-        NssProfileState::TrustsLocalChannel { until: Some(date) } => {
-            format!("confía en el canal local · hasta {date}")
-        }
-        NssProfileState::TrustsLocalChannel { until: None } => {
-            "confía en el canal local".to_owned()
-        }
-        NssProfileState::DoesNotTrustLocalChannel => "no confía en el canal local".to_owned(),
-        NssProfileState::IgnoredWithoutCertificateDatabase => "ignorado · sin cert9.db".to_owned(),
-    }
-}
-
-fn anonymized_profile(directory: &Path, owner: &ReportOwner) -> String {
-    match directory.parent() {
-        Some(parent) => format!("{}/<perfil>", owner.anonymized(parent)),
-        None => "<perfil>".to_owned(),
-    }
 }
 
 fn reader_lines(pcsc: &PcscStatus) -> Vec<String> {
@@ -510,5 +478,9 @@ fn relative_to_runtime_directory(path: &Path) -> Option<String> {
     )
 }
 
+mod stores;
+
+#[cfg(test)]
+mod stores_tests;
 #[cfg(test)]
 mod tests;
