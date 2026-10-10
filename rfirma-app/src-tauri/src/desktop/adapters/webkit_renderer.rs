@@ -1,5 +1,7 @@
 //! Qué le quita rFirma a WebKitGTK en esta sesión (ADR-0007): solo la decisión, que fija `titlebar.rs`; no elige nada más del webview.
 
+use crate::desktop::application::debug_report::{RendererOrigin, RendererVariable};
+
 /// La variable de WebKitGTK que apaga la composición acelerada.
 pub const COMPOSITING_SWITCH: &str = "WEBKIT_DISABLE_COMPOSITING_MODE";
 
@@ -12,6 +14,27 @@ const RENDERER_CHOICES: [&str; 4] = [
     "WEBKIT_DMABUF_RENDERER_FORCE_SHM",
     "__NV_DISABLE_EXPLICIT_SYNC",
 ];
+
+/// La variable que rige el renderizador en esta sesión: la del entorno si ya eligió, o la que fijará rFirma.
+pub fn the_variable_in_force(
+    variable: impl Fn(&str) -> Option<String>,
+) -> Option<RendererVariable> {
+    if let Some((name, value)) = RENDERER_CHOICES
+        .iter()
+        .find_map(|name| variable(name).map(|value| (*name, value)))
+    {
+        return Some(RendererVariable {
+            name: name.to_owned(),
+            value,
+            origin: RendererOrigin::FromTheEnvironment,
+        });
+    }
+    the_switch_for_this_session(variable).map(|name| RendererVariable {
+        name: name.to_owned(),
+        value: "1".to_owned(),
+        origin: RendererOrigin::SetByRfirma,
+    })
+}
 
 /// La variable que hay que fijar en esta sesión, o ninguna si el entorno ya elige el renderizador.
 pub fn the_switch_for_this_session(
