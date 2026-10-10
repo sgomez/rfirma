@@ -157,9 +157,7 @@ export const eu: Dictionary = {
   "install.copy.apt.aria": "Kopiatu APTrako aginduak",
   "install.copy.dnf.aria": "Kopiatu DNFrako aginduak",
   "install.flatpak.body":
-    "APT edo DNF erabiltzen ez duten Linux banaketentzat gomendatua. rFirmaren ostree biltegi propiotik ebazten da, eta Flathub-eko <code>org.gnome.Platform</code> runtimea ezer konfiguratu gabe deskargatzen da. <code>flatpak</code> eta <code>xdg-desktop-portal</code> instalatuta izatea besterik ez duzu behar.",
-  "install.flatpak.tip":
-    '<a href="https://rfirma.sgomez.me/rfirma.flatpakref">rfirma.flatpakref</a> fitxategia deskargatu eta klik bikoitzarekin ere insta dezakezu, zure mahaigainak onartzen badu.',
+    "APT edo DNF erabiltzen ez duten Linux banaketentzat gomendatua. Flathub gehitzen duzu, <code>org.gnome.Platform</code> runtimea handik datorrelako, eta rFirmaren urruneko biltegia, beste edozein biltegi bezala: horrela rFirma GNOME Software-n bilatzean ere agertzen da. <code>flatpak</code> eta <code>xdg-desktop-portal</code> instalatuta izatea besterik ez duzu behar.",
   "install.apt.body":
     "Debian, Ubuntu eta eratorritako banaketentzat. Biltegia <code>deb822</code> formatu modernoarekin konfiguratzen du, GPG gakoa <code>/usr/share/keyrings/</code> gunean egiaztatuta.",
   "install.dnf.body":

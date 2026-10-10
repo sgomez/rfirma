@@ -56,6 +56,7 @@ gh workflow run publish.yml --ref v0.4.1 -f tag=v0.4.1
 ```
 rfirma.asc                          la clave pública: el Signed-By de apt y el gpgkey de dnf
 rfirma.flatpakref                   instalación de un clic, con la clave dentro
+rfirma.flatpakrepo                  el alta del remoto, con la misma clave
 flatpak/                            el repositorio ostree (modo archive), firmado
 apt/pool/main/r/rfirma/*.deb        toda la serie menor vigente
 apt/dists/stable/                   Release, InRelease, Release.gpg y main/binary-amd64/

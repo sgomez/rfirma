@@ -111,12 +111,10 @@ sudo dnf install rfirma</pre>
           <span class="install-copy__idle">{t("install.copy")}</span>
           <span class="install-copy__done">{t("install.copied")}</span>
         </button>
-        <pre id="code-flatpak" class="install-code">flatpak install https://rfirma.sgomez.me/rfirma.flatpakref</pre>
+        <pre id="code-flatpak" class="install-code">flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --if-not-exists rfirma https://rfirma.sgomez.me/rfirma.flatpakrepo
+flatpak install rfirma me.sgomez.rfirma</pre>
       </div>
-      <p
-        style="margin:10px 0 0;font-size:.875rem;color:var(--rf-text-muted)"
-        set:html={t("install.flatpak.tip")}
-      />
     </div>
 
     <div id="panel-windows" role="tabpanel" aria-labelledby="tab-windows" style="padding-top:24px" hidden>

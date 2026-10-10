@@ -50,15 +50,18 @@ los metadatos del repositorio.
 ## Linux con flatpak
 
 Es la opción para las distribuciones que no usan apt ni dnf. Necesitas tener
-instalados `flatpak` y `xdg-desktop-portal`; el runtime `org.gnome.Platform` se
-descarga de Flathub sin configurar nada.
+instalados `flatpak` y `xdg-desktop-portal`. El remoto de rFirma se da de alta
+como un repositorio más, después del de Flathub, de donde sale el runtime
+`org.gnome.Platform`:
 
 ```bash
-flatpak install https://rfirma.sgomez.me/rfirma.flatpakref
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --if-not-exists rfirma https://rfirma.sgomez.me/rfirma.flatpakrepo
+flatpak install rfirma me.sgomez.rfirma
 ```
 
-Si tu escritorio lo admite, también puedes abrir con doble clic el fichero
-[rfirma.flatpakref](https://rfirma.sgomez.me/rfirma.flatpakref).
+Con el remoto dado de alta así, rFirma aparece al buscar en GNOME Software y las
+versiones nuevas llegan con las actualizaciones del sistema.
 
 Bajo flatpak, rFirma solo ve las carpetas que le das a través del portal del
 sistema. Por eso, en [Preferencias](/manual/preferencias/), el destino de los

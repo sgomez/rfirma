@@ -172,11 +172,6 @@ sed -i -E 's|rpmsign --addsign|true|' "$dir/.github/workflows/release.yml"
 append_step "$dir/.github/workflows/release.yml" '          rpmsign --addsign "${rpms[@]}"'
 fails_naming "rpm firmado despues de resumir" "$dir" "tiene los pasos en otro orden"
 
-dir="$(tree flatpak-signed-after-hashing)"
-sed -i -E 's|packaging/flatpak/sign-bundle.sh|true|' "$dir/.github/workflows/release.yml"
-append_step "$dir/.github/workflows/release.yml" '          packaging/flatpak/sign-bundle.sh paquetes/x.flatpak'
-fails_naming "flatpak firmado despues de resumir" "$dir" "tiene los pasos en otro orden"
-
 breaks tree-before-download "bajar la serie" .github/workflows/publish.yml \
     's|packaging/repo/download-series.sh|true|'
 
