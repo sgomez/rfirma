@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use crate::desktop::adapters::graphics_info::this_session_graphics;
+use crate::desktop::adapters::installation::{this_glibc, this_installation, this_webview};
 use crate::desktop::adapters::registry::this_desktop;
 use crate::desktop::application::debug_report::{
     DebugReport, LinuxEnvironment, NativeLibrary, NativeLibraryStatus, ProtocolHandlerStatus,
@@ -21,7 +22,9 @@ pub fn this_process_report() -> DebugReport {
     let channel = Channel::detected();
     DebugReport {
         version: env!("CARGO_PKG_VERSION").to_owned(),
-        channel: channel.label().to_owned(),
+        installation: this_installation(channel),
+        glibc: this_glibc(channel),
+        webview: this_webview(channel),
         operating_system: std::env::consts::OS.to_owned(),
         architecture: std::env::consts::ARCH.to_owned(),
         linux: (std::env::consts::OS == "linux").then(|| linux_environment(channel)),
