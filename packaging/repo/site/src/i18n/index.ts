@@ -25,15 +25,14 @@ export const dictionaries: Record<Locale, Dictionary> = { es, ca, eu, gl, en };
 
 /** Claves cuyo texto es el mismo en los cinco idiomas: nombres propios, formatos, cifras y guiones. */
 export const invariantKeys: readonly Key[] = [
-  "comparison.arch.autofirma",
-  "comparison.arch.label",
-  "comparison.head.aspect",
   "comparison.head.autofirma",
   "comparison.head.rfirma",
+  "comparison.java.label",
   "comparison.kicker",
   "comparison.lang.label",
   "comparison.os.autofirma",
-  "comparison.privacy.autofirma",
+  "comparison.os.label",
+  "comparison.updates.rfirma",
   "footer.clienteafirma",
   "footer.col.origin",
   "footer.gpg",
@@ -62,7 +61,6 @@ export const invariantKeys: readonly Key[] = [
   "nav.aria",
   "nav.badge.alpha",
   "nav.comparison",
-  "nav.features",
   "nav.github",
   "nav.home.aria",
   "nav.install",
