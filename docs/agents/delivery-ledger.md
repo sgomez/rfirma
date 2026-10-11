@@ -443,3 +443,13 @@ siguen en `.scratch/archive/`.
 2026-10-08 spec=#899 sub=#903 model=opus effort=medium pr=#1783 verdict=CLEAN cycles=0 mergefix=0 wave=5 outcome=integrated
 2026-10-08 spec=#899 sub=#1763 model=sonnet effort=medium pr=#1784 verdict=CLEAN cycles=0 mergefix=0 wave=6 outcome=integrated
 2026-10-08 spec=#899 sub=#899 model=opus effort=medium pr=#1785 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-10-11 spec=#1884 sub=#1886 model=sonnet effort=medium pr=#1895 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=integrated
+2026-10-11 spec=#1884 sub=#1893 model=sonnet effort=medium pr=#1896 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=integrated
+2026-10-11 spec=#1884 sub=#1887 model=opus effort=medium pr=#1897 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=integrated
+2026-10-11 spec=#1884 sub=#1888 model=sonnet effort=medium pr=#1899 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=integrated
+2026-10-11 spec=#1884 sub=#1889 model=opus effort=medium pr=#1901 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=integrated
+2026-10-11 spec=#1884 sub=#1891 model=sonnet effort=medium pr=#1902 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=integrated
+2026-10-11 spec=#1884 sub=#1890 model=sonnet effort=medium pr=none verdict=— cycles=0 mergefix=0 wave=4 outcome=escalated
+2026-10-11 spec=#1884 sub=#1892 model=sonnet effort=medium pr=#1903 verdict=CLEAN cycles=0 mergefix=0 wave=5 outcome=integrated
+2026-10-11 spec=#1884 sub=#1890 model=sonnet effort=medium pr=#1905 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=integrated
+2026-10-11 spec=#1884 sub=#1884 model=opus effort=medium pr=#1904 verdict=CLEAN cycles=2 mergefix=0 wave=— outcome=merged
