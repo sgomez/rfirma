@@ -134,6 +134,39 @@ fn a_box_outside_the_page_is_refused_instead_of_being_clipped_in_silence() {
     assert_eq!(Failure::from(failure).situation, "boxOutOfPage");
 }
 
+fn an_order_outside_the_page_over(pages: PageSet) -> SigningOrder {
+    SigningOrder {
+        placement: Some(PlacementOrder {
+            rect: [72.0, 500.0, 900.0, 600.0],
+            pages,
+            ..an_order().placement.expect("el andamio trae recuadro")
+        }),
+        ..an_order()
+    }
+}
+
+#[test]
+fn a_box_outside_the_first_page_is_accepted_when_the_set_has_several_pages() {
+    for pages in [PageSet::All, PageSet::only([1, 2]).expect("hay paginas")] {
+        let order = an_order_outside_the_page_over(pages.clone());
+
+        let choice = order.choice().expect("el puente descarta las paginas");
+
+        let placement = choice.placement.expect("hay colocacion");
+        assert_eq!(placement.pages, pages);
+        assert_eq!(placement.rect.upper_right_x, 900);
+    }
+}
+
+#[test]
+fn a_box_outside_the_only_page_is_still_refused() {
+    let order = an_order_outside_the_page_over(PageSet::only_page(2));
+
+    let failure = order.choice().expect_err("se sale");
+
+    assert_eq!(Failure::from(failure).situation, "boxOutOfPage");
+}
+
 #[test]
 fn there_is_nothing_to_finish_when_no_cycle_was_started() {
     let session = SigningSession::default();

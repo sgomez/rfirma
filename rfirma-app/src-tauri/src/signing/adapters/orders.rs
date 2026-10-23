@@ -88,7 +88,7 @@ crossing! {
 }
 
 impl PlacementOrder {
-    /// La colocación en puntos PAdES, o la negativa si el destino no existe o el recuadro se sale de la página.
+    /// La colocación en puntos PAdES, o la negativa si el destino no existe o el recuadro se sale de la única página.
     pub fn placement(&self) -> Result<Placement, PlacementError> {
         self.pages.validate(self.page_count)?;
         PageSet::only_page(self.page).validate(self.page_count)?;
@@ -102,7 +102,12 @@ impl PlacementOrder {
             rotation,
         };
         let [left, bottom, right, top] = self.rect;
-        let rect = page.pades_rect(&UserSpaceRect::rounded(left, bottom, right, top))?;
+        let user_space = UserSpaceRect::rounded(left, bottom, right, top);
+        let rect = if self.pages.resolve(self.page_count).len() > 1 {
+            page.pades_rect_unchecked(&user_space)
+        } else {
+            page.pades_rect(&user_space)?
+        };
         Ok(Placement {
             rect,
             pages: self.pages.clone(),
