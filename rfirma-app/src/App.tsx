@@ -31,7 +31,7 @@ import { StatusWindow } from "./status/StatusWindow";
 import { InstallUpdateDialog } from "./updates/InstallUpdateDialog";
 import { NewVersionStrip } from "./updates/NewVersionStrip";
 import { DocumentViewer } from "./viewer/DocumentViewer";
-import { standardRectOnPageOf } from "./viewer/signatureBox";
+import { pageBoundsOnPageOf, standardRectOnPageOf } from "./viewer/signatureBox";
 
 type OpenDialog = "about" | "installUpdate" | null;
 type ActiveView = "status" | "preferences" | null;
@@ -135,9 +135,11 @@ export function App({
   const visibleRecents = rememberActivity ? documents.recents : NO_RECENTS;
 
   const standardRectOn = useMemo(() => (pdf === null ? null : standardRectOnPageOf(pdf)), [pdf]);
+  const pageBoundsOn = useMemo(() => (pdf === null ? null : pageBoundsOnPageOf(pdf)), [pdf]);
   const placementState = usePlacement({
     document: opening,
     standardRectOn,
+    pageBoundsOn,
     onChange: documents.place,
   });
   const { placement, viewPage, moveBox, sealPage } = placementState;

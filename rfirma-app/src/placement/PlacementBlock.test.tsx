@@ -35,7 +35,7 @@ function renderBlock(saved: Placement | null) {
   const document = { placement: saved, pageCount: PAGE_COUNT };
   const state: { current: PlacementState | null } = { current: null };
   function Live() {
-    const placement = usePlacement({ document, standardRectOn, onChange });
+    const placement = usePlacement({ document, standardRectOn, pageBoundsOn: null, onChange });
     state.current = placement;
     return <PlacementBlock state={placement} />;
   }

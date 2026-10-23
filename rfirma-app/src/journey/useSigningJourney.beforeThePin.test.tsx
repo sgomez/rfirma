@@ -114,7 +114,11 @@ async function journeyAbout({
 
   const { result } = renderHook(
     () => {
-      const placementState = usePlacement({ document: opening, standardRectOn: null });
+      const placementState = usePlacement({
+        document: opening,
+        standardRectOn: null,
+        pageBoundsOn: null,
+      });
       return useSigningJourney({
         ports,
         document: { active: openDocument, pdf, sizeBytes: 2_400, opening },

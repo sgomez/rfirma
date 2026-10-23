@@ -100,6 +100,7 @@ function renderJourney({
       const placement = usePlacement({
         document: opening,
         standardRectOn,
+        pageBoundsOn: null,
         onChange: (next) => saved.current.set(name, next),
       });
       const certificates = useCertificateListing(store);

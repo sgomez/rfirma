@@ -5,6 +5,7 @@ import {
   fittedInPage,
   movedBy,
   type PageSize,
+  pageBoundsOnPageOf,
   resizedBy,
   standardBox,
   standardRectOf,
@@ -12,6 +13,7 @@ import {
   toUserSpace,
   tracedBox,
 } from "./signatureBox";
+import { storyPdf } from "./testing/storyPdf";
 
 /**
  * **Grada A** (`vitest`, carril rápido). ID-21 e ID-22.
@@ -241,6 +243,15 @@ describe("la posición estándar en espacio de usuario", () => {
 
     expect(three.x0).toBeCloseTo(one.x0);
     expect(three.y0).toBeCloseTo(one.y0);
+  });
+});
+
+describe("los límites de la página en espacio de usuario", () => {
+  it("gives each page its own paper, landscape or portrait", async () => {
+    const boundsOn = pageBoundsOnPageOf(storyPdf(3, [2]));
+
+    expect(await boundsOn(1)).toEqual({ x0: 0, y0: 0, x1: 595, y1: 842 });
+    expect(await boundsOn(2)).toEqual({ x0: 0, y0: 0, x1: 842, y1: 595 });
   });
 });
 

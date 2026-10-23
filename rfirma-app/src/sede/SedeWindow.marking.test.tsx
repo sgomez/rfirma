@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { standardRectOnPageOf, toUserSpace } from "../viewer/signatureBox";
 import { box, recordingDocument, sheet, viewportAt } from "../viewer/testing/fixtures";
+import { storyPdf } from "../viewer/testing/storyPdf";
 import { SedeWindow } from "./SedeWindow";
 import { scriptedErrand } from "./testing/fixtures/sedeWindow";
 
@@ -47,6 +48,28 @@ describe("1c · marking the area of the visible signature", () => {
         rotation: 0,
         rect: [standard.x0, standard.y0, standard.x1, standard.y1],
       }),
+    );
+  });
+
+  it("hands on a box brought from a landscape page inside the portrait one, keeping its size", async () => {
+    const { port, calls } = scriptedErrand({ kind: "marking", pdf: storyPdf(2, [2]) });
+    renderWithCatalog(<SedeWindow errands={port} />);
+    await waitFor(() => expect(box()).toBeInTheDocument());
+    const pageField = screen.getByLabelText("Número de página");
+
+    fireEvent.change(pageField, { target: { value: "2" } });
+    await waitFor(() => expect(screen.getByText("En la página 1")).toBeInTheDocument());
+    traceOver(sheet(), [600, 450], [800, 550]);
+    await waitFor(() => expect(screen.getByText("En la página 2")).toBeInTheDocument());
+    fireEvent.change(pageField, { target: { value: "1" } });
+    await userEvent.click(await screen.findByRole("button", { name: "Ponerla aquí" }));
+    await waitFor(() => expect(screen.getByText("En la página 1")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() =>
+      expect(calls.markArea).toHaveBeenCalledWith(
+        expect.objectContaining({ pages: { only: [1] }, rect: [395, 45, 595, 145] }),
+      ),
     );
   });
 

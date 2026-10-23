@@ -1,9 +1,10 @@
 //! El estado de la colocación de la firma visible: el recuadro, lo que recuerda cada modo de páginas, el modo activo, la página a la vista y lo tecleado en «Varias», repuestos solos al cambiar de documento; mide con la posición estándar que se le pasa y no conoce el PDF.
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   activating,
   firstSealedPage,
+  insidePage,
   movingTo,
   type PageMode,
   type PageSet,
@@ -23,6 +24,9 @@ import { fieldTroubleOf, pageActionOf, typedPagesOf, typedTextOf } from "./place
 /** La posición estándar del recuadro en una página del documento. */
 export type StandardRectOn = (page: number) => Promise<UserSpaceRect>;
 
+/** Los límites de una página del documento, en espacio de usuario. */
+export type PageBoundsOn = (page: number) => Promise<UserSpaceRect>;
+
 /** El documento que se tiene delante; cada valor nuevo es otro documento, o el mismo vuelto a abrir. */
 export interface PlacedDocument {
   placement: Placement | null;
@@ -34,6 +38,8 @@ interface PlacementOptions {
   document: PlacedDocument | null;
   /** `null` cuando no hay documento que medir. */
   standardRectOn: StandardRectOn | null;
+  /** `null` cuando no hay documento que medir. */
+  pageBoundsOn: PageBoundsOn | null;
   onChange?: (placement: Placement | null) => unknown;
 }
 
@@ -76,8 +82,19 @@ function inStep(front: Front): Front {
   return { ...front, typed: typedOf(these, front.document?.pageCount ?? 0) };
 }
 
+function onlySealedPage(placing: Placing, pageCount: number): number | null {
+  const pages = pagesOf(placing.sets, placing.mode);
+  const sealed = pages === null ? [] : sealedPages(pages, pageCount);
+  return sealed.length === 1 ? (sealed[0] ?? null) : null;
+}
+
 /** La colocación de la firma visible y las órdenes que la cambian. */
-export function usePlacement({ document, standardRectOn, onChange }: PlacementOptions) {
+export function usePlacement({
+  document,
+  standardRectOn,
+  pageBoundsOn,
+  onChange,
+}: PlacementOptions) {
   const [front, setFront] = useState(() => frontOf(document));
   const current = inStep(front.document === document ? front : frontOf(document));
   if (current !== front) setFront(current);
@@ -99,6 +116,20 @@ export function usePlacement({ document, standardRectOn, onChange }: PlacementOp
     },
     [onChange],
   );
+
+  useEffect(() => {
+    const page = onlySealedPage(placing, pageCount);
+    if (placing.rect === null || page === null || pageBoundsOn === null) return;
+    const rect = placing.rect;
+    let stale = false;
+    void pageBoundsOn(page).then((bounds) => {
+      const inside = insidePage(rect, bounds);
+      if (!stale && inside !== rect) apply(movingTo(placing, inside));
+    });
+    return () => {
+      stale = true;
+    };
+  }, [placing, pageCount, pageBoundsOn, apply]);
 
   const placeStandard = useCallback(
     async (next: Placing) => {
