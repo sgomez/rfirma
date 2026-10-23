@@ -259,3 +259,4 @@ fn the_dnie_store_comes_after_the_platform_stores() {
         vec![first, second, dnie_store()]
     );
 }
+mod beside_a_card;

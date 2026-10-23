@@ -62,6 +62,28 @@ impl Token for MacosToken {
         RealToken.every_certificate(store)
     }
 
+    fn list_skipping(
+        &self,
+        store: &Store,
+        skipped: &[String],
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
+        if is_a_keychain(store) {
+            return self.list(store);
+        }
+        RealToken.list_skipping(store, skipped)
+    }
+
+    fn every_certificate_skipping(
+        &self,
+        store: &Store,
+        skipped: &[String],
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
+        if is_a_keychain(store) {
+            return self.every_certificate(store);
+        }
+        RealToken.every_certificate_skipping(store, skipped)
+    }
+
     fn list_authenticated(
         &self,
         store: &Store,

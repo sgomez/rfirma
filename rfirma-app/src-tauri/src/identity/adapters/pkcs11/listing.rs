@@ -2,9 +2,11 @@
 
 use std::collections::HashSet;
 
+use cryptoki::context::Pkcs11;
 use cryptoki::error::{Error, RvError};
 use cryptoki::object::{Attribute, AttributeType, ObjectClass};
 use cryptoki::session::{Session, UserType};
+use cryptoki::slot::Slot;
 use cryptoki::types::AuthPin;
 
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -49,12 +51,15 @@ pub(super) fn list_authenticated(
     Ok(found)
 }
 
-pub(super) fn list_holding_the_turn(store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+pub(super) fn list_holding_the_turn(
+    store: &Store,
+    skipped: &[String],
+) -> Result<Vec<TokenCertificate>, TokenError> {
     the_store_is_really_there(store)?;
     let context = context(store)?;
     let mut found = Vec::new();
 
-    for slot in usable_slots(&context)? {
+    for slot in slots_besides(&context, skipped)? {
         let info = context.get_token_info(slot)?;
         let token_label = info.label().trim().to_owned();
         let session = context.open_ro_session(slot)?;
@@ -72,6 +77,27 @@ pub(super) fn list_holding_the_turn(store: &Store) -> Result<Vec<TokenCertificat
     }
 
     Ok(found)
+}
+
+/// Las ranuras con token, salvo las de los lectores `skipped`.
+fn slots_besides(context: &Pkcs11, skipped: &[String]) -> Result<Vec<Slot>, TokenError> {
+    let slots = usable_slots(context)?;
+    if skipped.is_empty() {
+        return Ok(slots);
+    }
+    let mut kept = Vec::new();
+    for slot in slots {
+        if !describes_one_of(context.get_slot_info(slot)?.slot_description(), skipped) {
+            kept.push(slot);
+        }
+    }
+    Ok(kept)
+}
+
+/// Si la descripción de una ranura nombra a uno de `readers`, aunque los 64 bytes del campo la corten.
+fn describes_one_of(description: &str, readers: &[String]) -> bool {
+    let description = description.trim_end_matches([' ', char::REPLACEMENT_CHARACTER]);
+    !description.is_empty() && readers.iter().any(|reader| reader.starts_with(description))
 }
 
 /// Inicia sesión automáticamente antes de listar si la ranura lo requiere.
@@ -205,20 +231,20 @@ fn all_certificates_in_session(
 
 /// Los certificados de un almacén sin filtrar por clave privada: también las autoridades que lo emitieron.
 pub(super) fn list_every_certificate(
-    store: impl Into<Store>,
+    store: &Store,
+    skipped: &[String],
 ) -> Result<Vec<TokenCertificate>, TokenError> {
-    let store = store.into();
-    the_store_is_really_there(&store)?;
-    let context = context(&store)?;
+    the_store_is_really_there(store)?;
+    let context = context(store)?;
     let mut found = Vec::new();
 
-    for slot in usable_slots(&context)? {
+    for slot in slots_besides(&context, skipped)? {
         let info = context.get_token_info(slot)?;
         let token_label = info.label().trim().to_owned();
         let session = context.open_ro_session(slot)?;
 
         let logged_in = log_in_before_listing(&session, &info, store.class());
-        found.extend(all_certificates_in_session(&session, &store, &token_label)?);
+        found.extend(all_certificates_in_session(&session, store, &token_label)?);
         if logged_in {
             let _ = session.logout();
         }
