@@ -3,7 +3,7 @@ import type { Dictionary } from "./es";
 export const en: Dictionary = {
   "meta.title": "rFirma: e-signature without Java, an AutoFirma alternative",
   "meta.description":
-    "An AutoFirma alternative with no Java. Sign PDFs with your digital certificate or DNIe on Linux and Windows, including on the government sites that require AutoFirma. Alpha version.",
+    "An AutoFirma alternative with no Java. Sign PDFs with your digital certificate or DNIe on Linux, macOS and Windows, including on the government sites that require AutoFirma. Alpha version.",
   "meta.image.alt":
     "The rFirma logo on a green background with the tagline “Alternativa a AutoFirma” and the domain rfirma.sgomez.me",
 
@@ -123,7 +123,7 @@ export const en: Dictionary = {
   "comparison.lang.rfirma": "Spanish, Catalan, Basque, Galician and English",
   "comparison.os.label": "Operating systems",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android and iOS",
-  "comparison.os.rfirma": "Linux and Windows",
+  "comparison.os.rfirma": "Linux, macOS and Windows",
   "comparison.updates.label": "Updates",
   "comparison.updates.autofirma": "Manual download",
   "comparison.updates.rfirma": "Automatic",

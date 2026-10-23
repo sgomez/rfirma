@@ -3,7 +3,7 @@ import type { Dictionary } from "./es";
 export const gl: Dictionary = {
   "meta.title": "rFirma: sinatura electrónica sen Java, alternativa a AutoFirma",
   "meta.description":
-    "Alternativa a AutoFirma sen Java. Asina PDF co teu certificado dixital ou DNIe en Linux e Windows, tamén nas sedes que piden AutoFirma. Versión alfa.",
+    "Alternativa a AutoFirma sen Java. Asina PDF co teu certificado dixital ou DNIe en Linux, macOS e Windows, tamén nas sedes que piden AutoFirma. Versión alfa.",
   "meta.image.alt":
     "Logotipo de rFirma sobre fondo verde co lema «Alternativa a AutoFirma» e o dominio rfirma.sgomez.me",
 
@@ -122,7 +122,7 @@ export const gl: Dictionary = {
   "comparison.lang.rfirma": "Castelán, catalán, éuscaro, galego e inglés",
   "comparison.os.label": "Sistemas operativos",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android e iOS",
-  "comparison.os.rfirma": "Linux e Windows",
+  "comparison.os.rfirma": "Linux, macOS e Windows",
   "comparison.updates.label": "Actualizacións",
   "comparison.updates.autofirma": "Descarga a man",
   "comparison.updates.rfirma": "Automáticas",
