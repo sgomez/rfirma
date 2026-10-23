@@ -1,7 +1,7 @@
 //! El recuadro de la firma visible en píxeles: conversión desde y hacia el espacio de usuario, arrastre, redimensionado, trazado, posición estándar y tamaño mínimo. Sin React.
 
 import type { UserSpaceRect } from "../placement/pageSets";
-import type { StandardRectOn } from "../placement/usePlacement";
+import type { PageBoundsOn, StandardRectOn } from "../placement/usePlacement";
 import type { PdfDocument, Viewport } from "./pdf";
 
 /**
@@ -200,6 +200,14 @@ export function standardRectOf(viewport: Viewport): UserSpaceRect {
 /** La posición estándar del recuadro en cada página de `pdf`, la que pide la colocación. */
 export function standardRectOnPageOf(pdf: PdfDocument): StandardRectOn {
   return async (page) => standardRectOf((await pdf.getPage(page)).getViewport({ scale: 1 }));
+}
+
+/** Los límites de cada página de `pdf` en espacio de usuario, los que pide la colocación. */
+export function pageBoundsOnPageOf(pdf: PdfDocument): PageBoundsOn {
+  return async (page) => {
+    const viewport = (await pdf.getPage(page)).getViewport({ scale: 1 });
+    return toUserSpace(viewport, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+  };
 }
 
 /** Un punto del lienzo, que es de donde salen y adonde van los trazos. */

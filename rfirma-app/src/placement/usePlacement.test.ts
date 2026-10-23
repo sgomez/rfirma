@@ -1,7 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { PageMode, PageSet, Placement, UserSpaceRect } from "./pageSets";
-import { type PlacedDocument, type StandardRectOn, usePlacement } from "./usePlacement";
+import {
+  type PageBoundsOn,
+  type PlacedDocument,
+  type StandardRectOn,
+  usePlacement,
+} from "./usePlacement";
 
 const PAGE_COUNT = 5;
 
@@ -13,6 +18,13 @@ const fakeStandardRectOn: StandardRectOn = async (page) => standardOn(page);
 
 const SAVED_RECT: UserSpaceRect = { x0: 10, y0: 20, x1: 210, y1: 100 };
 
+const PORTRAIT: UserSpaceRect = { x0: 0, y0: 0, x1: 595, y1: 842 };
+const LANDSCAPE: UserSpaceRect = { x0: 0, y0: 0, x1: 842, y1: 595 };
+const LANDSCAPE_PAGE = 2;
+
+const fakePageBoundsOn: PageBoundsOn = async (page) =>
+  page === LANDSCAPE_PAGE ? LANDSCAPE : PORTRAIT;
+
 function aDocument(placement: Placement | null = null): PlacedDocument {
   return { placement, pageCount: PAGE_COUNT };
 }
@@ -20,10 +32,11 @@ function aDocument(placement: Placement | null = null): PlacedDocument {
 function renderPlacement(
   onChange?: (placement: Placement | null) => void,
   first: PlacedDocument | null = aDocument(),
+  pageBoundsOn: PageBoundsOn = fakePageBoundsOn,
 ) {
   return renderHook(
     ({ document }: { document: PlacedDocument | null }) =>
-      usePlacement({ document, standardRectOn: fakeStandardRectOn, onChange }),
+      usePlacement({ document, standardRectOn: fakeStandardRectOn, pageBoundsOn, onChange }),
     { initialProps: { document: first } },
   );
 }
@@ -388,12 +401,111 @@ describe("the page button", () => {
   it("places nothing while there is no document to measure", async () => {
     const onChange = vi.fn();
     const { result } = renderHook(() =>
-      usePlacement({ document: aDocument(), standardRectOn: null, onChange }),
+      usePlacement({ document: aDocument(), standardRectOn: null, pageBoundsOn: null, onChange }),
     );
 
     await act(async () => result.current.sealViewedPage());
 
     expect(result.current.placement).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("a box that does not fit its only page", () => {
+  const BOTTOM_RIGHT_OF_LANDSCAPE: UserSpaceRect = { x0: 600, y0: 40, x1: 800, y1: 120 };
+  const PUSHED_INTO_PORTRAIT: UserSpaceRect = { x0: 395, y0: 40, x1: 595, y1: 120 };
+
+  async function settled() {
+    for (let tick = 0; tick < 5; tick += 1) await act(async () => {});
+  }
+
+  it("goes inside the portrait page it is taken to with the page button, keeping its size", async () => {
+    const onChange = vi.fn();
+    const { result } = renderPlacement(
+      onChange,
+      aDocument({ rect: BOTTOM_RIGHT_OF_LANDSCAPE, pages: { only: [LANDSCAPE_PAGE] } }),
+    );
+    act(() => result.current.viewPage(1));
+
+    act(() => result.current.sealViewedPage());
+
+    const inside = { rect: PUSHED_INTO_PORTRAIT, pages: { only: [1] } };
+    await waitFor(() => expect(result.current.placement).toEqual(inside));
+    expect(onChange).toHaveBeenLastCalledWith(inside);
+  });
+
+  it("shrinks until it fits when it is larger than the page", async () => {
+    const { result } = renderPlacement(
+      undefined,
+      aDocument({ rect: { x0: 0, y0: 40, x1: 800, y1: 120 }, pages: { only: [LANDSCAPE_PAGE] } }),
+    );
+    act(() => result.current.viewPage(1));
+
+    act(() => result.current.sealViewedPage());
+
+    await waitFor(() =>
+      expect(result.current.placement).toEqual({
+        rect: { x0: 0, y0: 40, x1: 595, y1: 120 },
+        pages: { only: [1] },
+      }),
+    );
+  });
+
+  it("goes inside when «these pages» is typed down to a single number", async () => {
+    const { result } = renderPlacement(
+      undefined,
+      aDocument({ rect: BOTTOM_RIGHT_OF_LANDSCAPE, pages: { only: [LANDSCAPE_PAGE, 3] } }),
+    );
+
+    act(() => result.current.typePages("1"));
+
+    await waitFor(() =>
+      expect(result.current.placement).toEqual({
+        rect: PUSHED_INTO_PORTRAIT,
+        pages: { only: [1] },
+      }),
+    );
+  });
+
+  it("goes inside when a remembered placement is brought to a single page", async () => {
+    const onChange = vi.fn();
+    const { result } = renderPlacement(
+      onChange,
+      aDocument({ rect: BOTTOM_RIGHT_OF_LANDSCAPE, pages: { only: [1] } }),
+    );
+
+    const inside = { rect: PUSHED_INTO_PORTRAIT, pages: { only: [1] } };
+    await waitFor(() => expect(result.current.placement).toEqual(inside));
+    expect(onChange).toHaveBeenLastCalledWith(inside);
+  });
+
+  it.each<PageSet>([{ only: [1, 3] }, "all"])("stays put over several pages: %j", async (pages) => {
+    const onChange = vi.fn();
+    const { result } = renderPlacement(
+      onChange,
+      aDocument({ rect: BOTTOM_RIGHT_OF_LANDSCAPE, pages }),
+    );
+
+    await settled();
+
+    expect(result.current.placement).toEqual({ rect: BOTTOM_RIGHT_OF_LANDSCAPE, pages });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("drops an adjustment that arrives after the placement changed again", async () => {
+    const pending: Array<(bounds: UserSpaceRect) => void> = [];
+    const slowBounds: PageBoundsOn = () => new Promise((resolve) => pending.push(resolve));
+    const { result } = renderPlacement(
+      undefined,
+      aDocument({ rect: BOTTOM_RIGHT_OF_LANDSCAPE, pages: { only: [1] } }),
+      slowBounds,
+    );
+    await waitFor(() => expect(pending).toHaveLength(1));
+
+    act(() => result.current.moveBox(SAVED_RECT));
+    await act(async () => pending[0]?.(PORTRAIT));
+    await settled();
+
+    expect(result.current.placement).toEqual({ rect: SAVED_RECT, pages: { only: [1] } });
   });
 });
