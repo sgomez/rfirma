@@ -6,7 +6,6 @@ use rdnie_emulator::{EmulatedDnie, Step};
 
 use super::super::{dnie_store, CardOpener, DnieToken};
 use super::OfThePolice;
-use crate::identity::adapters::macos_store::MacosToken;
 use crate::identity::application::certificates::{
     certificates_with_their_chains, rows_of, ListedCertificates,
 };
@@ -39,16 +38,16 @@ impl CardOpener for RemovedAfterListing {
     }
 }
 
-/// El token de macOS con, además del DNIe, un almacén que siempre responde.
+/// El DNIe con, además del DNIe, un almacén que siempre responde.
 struct WithAnotherStore {
-    macos: MacosToken,
+    dnie: DnieToken<RemovedAfterListing>,
     another: Store,
 }
 
 impl Token for WithAnotherStore {
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         if *store != self.another {
-            return self.macos.list(store);
+            return self.dnie.list(store);
         }
         Ok(vec![TokenCertificate::new(
             CertificateRef::new(self.another.clone(), "otro", "OTRO", vec![0x02]),
@@ -58,7 +57,7 @@ impl Token for WithAnotherStore {
 
     fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         if *store != self.another {
-            return self.macos.every_certificate(store);
+            return self.dnie.every_certificate(store);
         }
         Ok(Vec::new())
     }
@@ -68,7 +67,7 @@ impl Token for WithAnotherStore {
         store: &Store,
         pin: &ProtectedSecret,
     ) -> Result<Vec<TokenCertificate>, TokenError> {
-        self.macos.list_authenticated(store, pin)
+        self.dnie.list_authenticated(store, pin)
     }
 
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
@@ -126,9 +125,9 @@ fn a_card_taken_out_between_the_listing_and_the_signature_is_an_absent_token_not
 ) {
     let another = Store::module("/usr/lib/another.so");
     let token = WithAnotherStore {
-        macos: MacosToken::with_the_dnie(DnieToken::new(RemovedAfterListing {
+        dnie: DnieToken::new(RemovedAfterListing {
             opened: Arc::new(AtomicUsize::new(0)),
-        })),
+        }),
         another: another.clone(),
     };
     let stores = [dnie_store(), another];

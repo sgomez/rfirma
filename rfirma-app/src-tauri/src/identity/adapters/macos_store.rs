@@ -1,14 +1,12 @@
 //! `MacosToken`, el Almacén de macOS detrás del puerto `Token`, por Security.framework; los módulos PKCS#11 siguen en `RealToken` (ADR-0040).
 
-mod dnie;
 mod installs;
 mod keychain;
 
 use std::path::Path;
 use std::sync::Arc;
 
-pub use dnie::{dnie_store, seen_dnie, CardOpener, DnieToken, PcscCard, RDNIE_VERSION};
-
+use super::dnie::{dnie_store, DnieToken, PcscCard};
 use super::pkcs11::RealToken;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
