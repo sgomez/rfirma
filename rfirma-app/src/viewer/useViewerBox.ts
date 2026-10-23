@@ -5,6 +5,7 @@ import { type Placement, sealsPage, type UserSpaceRect } from "../placement/page
 import type { Viewport } from "./pdf";
 import {
   fitsInPage,
+  fittedInPage,
   MIN_BOX_POINTS,
   movedBy,
   type PixelRect,
@@ -107,6 +108,12 @@ export function useViewerBox({
     onMove?.(toUserSpace(viewport, moved));
   };
 
+  /** Mete en la página a la vista el recuadro que se sale y lo informa como un movimiento más. */
+  const relocate = () => {
+    if (!pixels || !viewport) return;
+    place(fittedInPage(pixels, viewport));
+  };
+
   // Los dos gestos avisan de que empiezan y de que acaban, sin que `useBoxDrag`
   // tenga que saber para qué: quien compone el sello sólo quiere el ciclo al
   // soltar, y el arrastre sigue sin pasar por el estado de React.
@@ -201,5 +208,5 @@ export function useViewerBox({
     else setOutOfPage(true);
   };
 
-  return { boxElement, sheet, ghost, pixels, drag, tracing, gesturing, nudge };
+  return { boxElement, sheet, ghost, pixels, drag, tracing, gesturing, nudge, relocate };
 }

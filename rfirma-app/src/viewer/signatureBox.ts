@@ -84,6 +84,18 @@ export function fitsInPage(rect: PixelRect, page: PageSize): boolean {
   );
 }
 
+/** El recuadro metido en la página: desplazado al borde más cercano y, si es mayor, reducido. */
+export function fittedInPage(rect: PixelRect, page: PageSize): PixelRect {
+  const width = Math.min(rect.width, page.width);
+  const height = Math.min(rect.height, page.height);
+  return {
+    x: Math.min(Math.max(rect.x, 0), page.width - width),
+    y: Math.min(Math.max(rect.y, 0), page.height - height),
+    width,
+    height,
+  };
+}
+
 /**
  * La **posición estándar** del recuadro.
  *

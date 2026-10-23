@@ -116,8 +116,6 @@ interface DocumentViewerProps {
   stamp?: StampPreview;
   /** «Ver cómo queda», y también «Reintentar». */
   onComposeStamp?: () => void;
-  /** Meter dentro de la página a la vista el recuadro que se sale de ella. */
-  onRelocate?: () => void;
   /** Dónde va el hueco punteado de la rúbrica que falta por cargar. */
   rubricGap?: RubricGap | null;
   /** El modo de zoom de partida, si no es `DEFAULT_ZOOM`. */
@@ -159,7 +157,6 @@ export function DocumentViewer({
   onGesture,
   stamp,
   onComposeStamp,
-  onRelocate,
   rubricGap = null,
   initialZoom,
 }: DocumentViewerProps) {
@@ -188,18 +185,19 @@ export function DocumentViewer({
     onPageChange?.(page);
   }, [page, onPageChange]);
 
-  const { boxElement, sheet, ghost, pixels, drag, tracing, gesturing, nudge } = useViewerBox({
-    placement,
-    onMove,
-    onTrace,
-    canPlace,
-    onGesture,
-    page,
-    zoom,
-    viewport,
-    surface,
-    setOutOfPage,
-  });
+  const { boxElement, sheet, ghost, pixels, drag, tracing, gesturing, nudge, relocate } =
+    useViewerBox({
+      placement,
+      onMove,
+      onTrace,
+      canPlace,
+      onGesture,
+      page,
+      zoom,
+      viewport,
+      surface,
+      setOutOfPage,
+    });
 
   const offThisPage = pixels !== null && viewport !== null && !fitsInPage(pixels, viewport);
 
@@ -358,13 +356,13 @@ export function DocumentViewer({
         <p className="viewer__alert rf-body" role="alert">
           {t("viewer.outOfPage")}
         </p>
-      ) : offThisPage && onRelocate ? (
+      ) : offThisPage && onMove ? (
         <div className="viewer__stamp" role="status">
           <div className="viewer__stamp-text">
             <p className="rf-body viewer__stamp-line">{t("viewer.offThisPage")}</p>
           </div>
           <span className="viewer__stamp-slot">
-            <Button variant="secondary" className="viewer__stamp-button" onClick={onRelocate}>
+            <Button variant="secondary" className="viewer__stamp-button" onClick={relocate}>
               {t("viewer.relocate")}
             </Button>
           </span>
