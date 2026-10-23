@@ -13,7 +13,7 @@ import "./DocumentViewer.css";
 import type { Placement, UserSpaceRect } from "../placement/pageSets";
 import type { PdfDocument } from "./pdf";
 import { StampPill } from "./StampPill";
-import { GRIP_PX } from "./signatureBox";
+import { fitsInPage, GRIP_PX } from "./signatureBox";
 import type { DocumentFailure } from "./source";
 import { useViewerBox } from "./useViewerBox";
 import { useViewerPage } from "./useViewerPage";
@@ -116,6 +116,8 @@ interface DocumentViewerProps {
   stamp?: StampPreview;
   /** «Ver cómo queda», y también «Reintentar». */
   onComposeStamp?: () => void;
+  /** Meter dentro de la página a la vista el recuadro que se sale de ella. */
+  onRelocate?: () => void;
   /** Dónde va el hueco punteado de la rúbrica que falta por cargar. */
   rubricGap?: RubricGap | null;
   /** El modo de zoom de partida, si no es `DEFAULT_ZOOM`. */
@@ -157,6 +159,7 @@ export function DocumentViewer({
   onGesture,
   stamp,
   onComposeStamp,
+  onRelocate,
   rubricGap = null,
   initialZoom,
 }: DocumentViewerProps) {
@@ -197,6 +200,8 @@ export function DocumentViewer({
     surface,
     setOutOfPage,
   });
+
+  const offThisPage = pixels !== null && viewport !== null && !fitsInPage(pixels, viewport);
 
   const percent = new Intl.NumberFormat(i18n.language, {
     style: "percent",
@@ -353,6 +358,17 @@ export function DocumentViewer({
         <p className="viewer__alert rf-body" role="alert">
           {t("viewer.outOfPage")}
         </p>
+      ) : offThisPage && onRelocate ? (
+        <div className="viewer__stamp" role="status">
+          <div className="viewer__stamp-text">
+            <p className="rf-body viewer__stamp-line">{t("viewer.offThisPage")}</p>
+          </div>
+          <span className="viewer__stamp-slot">
+            <Button variant="secondary" className="viewer__stamp-button" onClick={onRelocate}>
+              {t("viewer.relocate")}
+            </Button>
+          </span>
+        </div>
       ) : (
         stamp && <StampPill state={stamp} onCompose={onComposeStamp ?? noop} />
       )}

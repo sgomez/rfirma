@@ -401,6 +401,12 @@ msgstr "Arrossega per col·locar"
 msgid "viewer.outOfPage"
 msgstr "El requadre no pot sortir de la pàgina."
 
+msgid "viewer.offThisPage"
+msgstr "El requadre surt d'aquesta pàgina."
+
+msgid "viewer.relocate"
+msgstr "Recol·locar"
+
 msgid "viewer.stamp.onDemand"
 msgstr "Document gran: la signatura visible no es recalcula sola"
 
@@ -1513,18 +1519,23 @@ msgstr "Aquesta seu fa servir un mètode de signatura poc segur"
 msgid "sede.received.siteServer"
 msgstr "El servidor de la seu prepara la signatura amb aquest document"
 
+#. Encabezado del lote remoto: cuenta firmas, porque los documentos no se ven.
 msgid "sede.received.signatures"
 msgid_plural "sede.received.signatures"
 msgstr[0] "Faràs 1 signatura"
 msgstr[1] "Faràs {{count}} signatures"
 msgstr[2] "Faràs {{count}} signatures"
 
+#. Aviso de lo recibido en un lote remoto: los documentos los tiene el servidor de la sede.
 msgid "sede.received.remoteBatch"
-msgstr "Els documents es queden al servidor de la seu, i rFirma no te'ls pot ensenyar"
+msgstr ""
+"Els documents es queden al servidor de la seu, i rFirma no te'ls pot ensenyar"
 
 #. Aviso informativo: la sede solo manda la huella del documento y rFirma no tiene qué enseñar.
 msgid "sede.received.precalculatedHash"
-msgstr "La seu només envia l'empremta del document, així que rFirma no pot ensenyar-te'l"
+msgstr ""
+"La seu només envia l'empremta del document, així que rFirma no pot ensenyar-"
+"te'l"
 
 #. El botón de firmar cuando la sede pide SHA-1 sin permiso en Preferencias; lleva la cuenta atrás obligada.
 msgid "sede.received.signAnyway"
