@@ -8,7 +8,7 @@ use crate::identity::domain::readers::Reader;
 pub use crate::identity::domain::seen_dnie::{DnieInTheReader, SeenDnie};
 use pkcs11::module_lines;
 pub use pkcs11::{DiscardReason, ModuleStatus, Pkcs11Module, Pkcs11Modules};
-pub use stores::{MacosStores, WindowsStores};
+pub use stores::{DnieReading, MacosStores, WindowsStores};
 
 /// Qué se sabe de la librería nativa tras intentar cargarla de verdad.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -258,6 +258,8 @@ pub struct DebugReport {
     pub windows_stores: Option<WindowsStores>,
     /// Almacén de macOS y controladores de tarjeta; `None` fuera de macOS.
     pub macos_stores: Option<MacosStores>,
+    /// El DNIe que ve rdnie y su versión; `None` donde no se lee con rdnie.
+    pub dnie: Option<DnieReading>,
 }
 
 /// Una cabecera y una sección por bloque, con el patrón `clave: estado · detalle` y las rutas anonimizadas.
@@ -289,6 +291,7 @@ pub fn debug_report_text(report: &DebugReport, owner: &ReportOwner) -> String {
     )
     .chain(stores::windows_sections(report.windows_stores.as_ref()))
     .chain(stores::macos_sections(report.macos_stores.as_ref()))
+    .chain([stores::dnie_section(report.dnie.as_ref())])
     .flatten()
     .collect::<Vec<_>>()
     .join("\n\n")

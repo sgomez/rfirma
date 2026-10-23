@@ -44,6 +44,7 @@ pub(super) fn a_flatpak_report() -> DebugReport {
         nss_stores: None,
         windows_stores: None,
         macos_stores: None,
+        dnie: None,
     }
 }
 
