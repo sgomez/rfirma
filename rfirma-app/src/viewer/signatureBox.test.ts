@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Viewport } from "./pdf";
 import {
   fitsInPage,
+  fittedInPage,
   movedBy,
   type PageSize,
   resizedBy,
@@ -107,6 +108,42 @@ describe("la guardia de página", () => {
     expect(fitsInPage({ x: 10, y: -1, width: 100, height: 50 }, page)).toBe(false);
     expect(fitsInPage({ x: 500, y: 10, width: 100, height: 50 }, page)).toBe(false);
     expect(fitsInPage({ x: 10, y: 800, width: 100, height: 50 }, page)).toBe(false);
+  });
+});
+
+describe("meter el recuadro en la página", () => {
+  const page = { width: 595, height: 842 };
+
+  it("returns the same box when it already fits", () => {
+    const box = { x: 10, y: 20, width: 100, height: 50 };
+    expect(fittedInPage(box, page)).toEqual(box);
+  });
+
+  it("slides a box hanging off the right and bottom edges to the nearest edge", () => {
+    expect(fittedInPage({ x: 550, y: 820, width: 100, height: 50 }, page)).toEqual({
+      x: 495,
+      y: 792,
+      width: 100,
+      height: 50,
+    });
+  });
+
+  it("slides a box hanging off the left and top edges back to the origin", () => {
+    expect(fittedInPage({ x: -30, y: -5, width: 100, height: 50 }, page)).toEqual({
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 50,
+    });
+  });
+
+  it("shrinks a box bigger than the page", () => {
+    expect(fittedInPage({ x: 100, y: 100, width: 900, height: 50 }, page)).toEqual({
+      x: 0,
+      y: 100,
+      width: 595,
+      height: 50,
+    });
   });
 });
 

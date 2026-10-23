@@ -57,7 +57,7 @@ export const SignatureBoxOffThisPage: Story = {
   args: {
     pdf: storyPdf(3, [2]),
     placement: { rect: { x0: 600, y0: 60, x1: 800, y1: 140 }, pages: "all" },
-    onRelocate: fn(),
+    onMove: fn(),
   },
 };
 
