@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { Placement } from "../placement/pageSets";
+import type { Placement, UserSpaceRect } from "../placement/pageSets";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
 import { box, goToPage, noop, recordingDocument, reportingTo, seated } from "./testing/fixtures";
@@ -389,3 +389,93 @@ describe("el recuadro que se trae a la vista", () => {
  * El panel necesita saber por dónde va el visor para elegir la cara del botón
  * de sellar (#194, antes ID-100).
  */
+
+describe("el aviso de recuadro fuera de la página", () => {
+  const hanging: Placement = {
+    rect: { x0: 500, y0: 60, x1: 700, y1: 140 },
+    pages: "all",
+  };
+
+  it("offers to relocate a box hanging off the page, and reports one that fits", async () => {
+    const onMove = vi.fn();
+    const { document, renders } = recordingDocument(3);
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={hanging} onMove={onMove} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(screen.getByText("El recuadro se sale de esta página.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Recolocar" }));
+
+    expect(onMove).toHaveBeenCalledTimes(1);
+    const moved: UserSpaceRect = onMove.mock.calls[0]?.[0];
+    expect(moved.x1).toBeLessThanOrEqual(595);
+    expect(moved.x0).toBeGreaterThanOrEqual(0);
+    expect(moved.x1 - moved.x0).toBeCloseTo(200);
+  });
+
+  it("says nothing when the box fits", async () => {
+    const { document, renders } = recordingDocument(3);
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onMove={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(screen.queryByText("El recuadro se sale de esta página.")).not.toBeInTheDocument();
+  });
+
+  it("says nothing on a page outside the set", async () => {
+    const { document, renders } = recordingDocument(3);
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={{ ...hanging, pages: { only: [1] } }}
+        onMove={noop}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(screen.getByText("El recuadro se sale de esta página.")).toBeInTheDocument();
+
+    await goToPage(2, renders);
+
+    expect(screen.queryByText("El recuadro se sale de esta página.")).not.toBeInTheDocument();
+  });
+
+  it("shows only on the page in view where the box hangs off, not on the landscape one where it fits", async () => {
+    const { document, renders } = recordingDocument(2, [2]);
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={{ rect: { x0: 600, y0: 60, x1: 800, y1: 140 }, pages: "all" }}
+        onMove={noop}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(screen.getByText("El recuadro se sale de esta página.")).toBeInTheDocument();
+
+    await goToPage(2, renders);
+
+    expect(screen.queryByText("El recuadro se sale de esta página.")).not.toBeInTheDocument();
+  });
+
+  it("goes away once the placement is the relocated one", async () => {
+    const { document, renders } = recordingDocument(3);
+    const { rerender } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={hanging} onMove={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={{ ...hanging, rect: { x0: 395, y0: 60, x1: 595, y1: 140 } }}
+        onMove={noop}
+        onOpen={noop}
+      />,
+    );
+
+    expect(screen.queryByText("El recuadro se sale de esta página.")).not.toBeInTheDocument();
+  });
+});

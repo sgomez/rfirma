@@ -7,6 +7,7 @@ import { firstSealedPage, type Placement, sealedPages } from "../placement/pageS
 import type { PlacedDocument } from "../placement/usePlacement";
 import type { Certificate } from "../signing/certificate";
 import { isUsable } from "../signing/certificate";
+import type { SigningFailure } from "../signing/failure";
 import type { SigningBackend, SigningOrder } from "../signing/flow";
 import {
   type PreviousSignaturesReport,
@@ -46,6 +47,7 @@ interface SignFlowInput {
     order: SigningOrder,
     singleDestinationId?: string | null,
   ) => Promise<void>;
+  refuseSigning: (order: SigningOrder, failure: SigningFailure) => void;
 }
 
 /**
@@ -70,6 +72,7 @@ export function useSignFlow({
   singleDestinationId,
   previousSignatures,
   startSigning,
+  refuseSigning,
 }: SignFlowInput) {
   // El diálogo de páginas sin sello, guardado con la orden y el
   // certificado ya armados: `Firmar de todos modos` no rehace el viaje a
@@ -225,22 +228,39 @@ export function useSignFlow({
     // PDF: son espacios distintos en cuanto la `/Rotate` no es 0, y la
     // conversión (`T⁻¹`) no tiene copia en TypeScript — se pide al backend,
     // que es quien la aplica de verdad al armar la orden.
-    const chosenPages = sealedPages(placement.pages, pdf.pageCount);
-    const views = await Promise.all(
-      chosenPages.map(async (number) => ({ number, view: (await pdf.getPage(number)).view })),
-    );
-    const [lowerLeftX, lowerLeftY] = await signer.padesLowerLeft(order.placement);
-    const fallen = pagesWithoutSeal({ x: lowerLeftX, y: lowerLeftY }, views);
-    if (fallen.length > 0) {
-      setSealLossPrompt({
-        fallen: fallen.length,
-        certificate: chosen,
-        order,
+    const { fallen, chosenPages } = await pagesWithoutSealOrNone(pdf, placement, order.placement);
+    if (fallen > 0 && fallen === chosenPages) {
+      refuseSigning(order, {
+        situation: "boxOutOfPage",
+        detail: `la esquina inferior izquierda no cae en ninguna de las ${chosenPages} páginas`,
       });
+      return;
+    }
+    if (fallen > 0) {
+      setSealLossPrompt({ fallen, certificate: chosen, order });
       return;
     }
 
     await startSigning(chosen, order, singleDestinationId);
+  };
+
+  // Si la consulta falla no hay aviso que dar: la firma sigue y su fallo sale por el camino normal.
+  const pagesWithoutSealOrNone = async (
+    pdf: PdfDocument,
+    placement: Placement,
+    padesPlacement: NonNullable<SigningOrder["placement"]>,
+  ): Promise<{ fallen: number; chosenPages: number }> => {
+    const chosenPages = sealedPages(placement.pages, pdf.pageCount);
+    try {
+      const views = await Promise.all(
+        chosenPages.map(async (number) => ({ number, view: (await pdf.getPage(number)).view })),
+      );
+      const [lowerLeftX, lowerLeftY] = await signer.padesLowerLeft(padesPlacement);
+      const fallen = pagesWithoutSeal({ x: lowerLeftX, y: lowerLeftY }, views).length;
+      return { fallen, chosenPages: chosenPages.length };
+    } catch {
+      return { fallen: 0, chosenPages: chosenPages.length };
+    }
   };
 
   // `Firmar de todos modos` de «¿Firmar de todos modos?»: el resto del recorrido

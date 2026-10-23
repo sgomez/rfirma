@@ -109,7 +109,11 @@ function renderJourney(
   const reopenDocument = vi.fn();
   const rendered = renderHook(
     ({ active }: { active: DocumentInHand }) => {
-      const placement = usePlacement({ document: opening, standardRectOn: null });
+      const placement = usePlacement({
+        document: opening,
+        standardRectOn: null,
+        pageBoundsOn: null,
+      });
       return useSigningJourney({
         ports,
         document: { active, pdf, sizeBytes: 2_400, opening },

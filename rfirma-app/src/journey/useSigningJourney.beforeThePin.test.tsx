@@ -59,6 +59,7 @@ interface Scenario {
   views?: readonly (readonly [number, number, number, number])[];
   pages?: Placement["pages"];
   active?: DocumentInHand;
+  signerOverrides?: Partial<SigningBackend>;
 }
 
 async function journeyAbout({
@@ -66,6 +67,7 @@ async function journeyAbout({
   views = [A4, A4, A4],
   pages = { only: [1] },
   active,
+  signerOverrides,
 }: Scenario) {
   const presigned: SigningOrder[] = [];
   const signer: SigningBackend = {
@@ -82,6 +84,7 @@ async function journeyAbout({
     previousSignatures: async () => ({ ...NO_PREVIOUS_SIGNATURES, ...report }),
     signedDocumentSignatures: async () => NO_PREVIOUS_SIGNATURES,
     discard: async () => {},
+    ...signerOverrides,
   };
   const placement: Placement = { rect, pages };
   const openDocument = active ?? document("factura.pdf", { placement });
@@ -111,7 +114,11 @@ async function journeyAbout({
 
   const { result } = renderHook(
     () => {
-      const placementState = usePlacement({ document: opening, standardRectOn: null });
+      const placementState = usePlacement({
+        document: opening,
+        standardRectOn: null,
+        pageBoundsOn: null,
+      });
       return useSigningJourney({
         ports,
         document: { active: openDocument, pdf, sizeBytes: 2_400, opening },
@@ -174,6 +181,51 @@ describe("useSigningJourney, antes del PIN: páginas sin sello", () => {
 
     await waitFor(() => expect(presigned).toHaveLength(1));
     expect(result.current.dialogs.sealLoss).toBeNull();
+  });
+
+  it("asks to move the box, and signs nothing, when it fits in none of the chosen pages", async () => {
+    const { result, presigned, sign } = await journeyAbout({
+      views: [SMALL, SMALL, SMALL],
+      pages: "all",
+    });
+
+    await sign();
+
+    expect(result.current.dialogs.sealLoss).toBeNull();
+    expect(result.current.failure?.situation).toBe("boxOutOfPage");
+    expect(presigned).toHaveLength(0);
+  });
+});
+
+describe("useSigningJourney, antes del PIN: la consulta de la esquina falla", () => {
+  const cornerFails: Partial<SigningBackend> = {
+    padesLowerLeft: async () => {
+      throw new Error("the placement does not fit");
+    },
+  };
+
+  it("still attempts the signature", async () => {
+    const { presigned, sign } = await journeyAbout({ signerOverrides: cornerFails });
+
+    await sign();
+
+    await waitFor(() => expect(presigned).toHaveLength(1));
+  });
+
+  it("shows the person the failure of that signature", async () => {
+    const { result, sign } = await journeyAbout({
+      signerOverrides: {
+        ...cornerFails,
+        presign: async () => ({
+          ok: false,
+          failure: { situation: "tokenAbsent", detail: "CKR_DEVICE_REMOVED", attemptsLeft: null },
+        }),
+      },
+    });
+
+    await sign();
+
+    await waitFor(() => expect(result.current.failure?.situation).toBe("tokenAbsent"));
   });
 });
 

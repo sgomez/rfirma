@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activating,
   firstSealedPage,
+  insidePage,
   NO_PAGE_SETS,
   type PageSets,
   pageSetOf,
@@ -120,5 +121,53 @@ describe("los tres conjuntos del bloque «Colocación»", () => {
   /** Sin nada colocado en ninguna parte, la única respuesta es la que se mira. */
   it("falls back to the page on screen when nothing has ever been placed", () => {
     expect(activating(NO_PAGE_SETS, "single", null, 8, 6).single).toBe(6);
+  });
+});
+
+describe("el recuadro metido en la página", () => {
+  const portrait = { x0: 0, y0: 0, x1: 595, y1: 842 };
+
+  it("leaves a box that fits where it is", () => {
+    const rect = { x0: 50, y0: 60, x1: 250, y1: 140 };
+
+    expect(insidePage(rect, portrait)).toBe(rect);
+  });
+
+  it("pushes a box past the right edge back against it, keeping its size", () => {
+    expect(insidePage({ x0: 600, y0: 40, x1: 800, y1: 120 }, portrait)).toEqual({
+      x0: 395,
+      y0: 40,
+      x1: 595,
+      y1: 120,
+    });
+  });
+
+  it("pushes a box below the bottom edge up against it", () => {
+    expect(insidePage({ x0: 50, y0: -30, x1: 250, y1: 50 }, portrait)).toEqual({
+      x0: 50,
+      y0: 0,
+      x1: 250,
+      y1: 80,
+    });
+  });
+
+  it("works on a page whose user space does not start at the origin", () => {
+    const shifted = { x0: 100, y0: 200, x1: 695, y1: 1042 };
+
+    expect(insidePage({ x0: 10, y0: 1000, x1: 210, y1: 1080 }, shifted)).toEqual({
+      x0: 100,
+      y0: 962,
+      x1: 300,
+      y1: 1042,
+    });
+  });
+
+  it("shrinks a box larger than the page until it fits", () => {
+    expect(insidePage({ x0: -10, y0: 100, x1: 700, y1: 180 }, portrait)).toEqual({
+      x0: 0,
+      y0: 100,
+      x1: 595,
+      y1: 180,
+    });
   });
 });

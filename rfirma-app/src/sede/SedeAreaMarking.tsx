@@ -11,7 +11,7 @@ import { firstSealedPage, type Placement } from "../placement/pageSets";
 import { usePlacement } from "../placement/usePlacement";
 import { DocumentViewer } from "../viewer/DocumentViewer";
 import type { PdfDocument } from "../viewer/pdf";
-import { standardRectOnPageOf } from "../viewer/signatureBox";
+import { pageBoundsOnPageOf, standardRectOnPageOf } from "../viewer/signatureBox";
 import type { MarkedArea } from "./errand";
 import { SedeBody } from "./SedeFrame";
 import { SedeOrigin } from "./SedeOrigin";
@@ -31,11 +31,12 @@ interface SedeAreaMarkingProps {
 export function SedeAreaMarking({ pdf, origin, asks, onMark, onCancel }: SedeAreaMarkingProps) {
   const { t } = useTranslation();
   const standardRectOn = useMemo(() => (pdf === null ? null : standardRectOnPageOf(pdf)), [pdf]);
+  const pageBoundsOn = useMemo(() => (pdf === null ? null : pageBoundsOnPageOf(pdf)), [pdf]);
   const document = useMemo(
     () => (pdf === null ? null : { placement: null, pageCount: pdf.pageCount }),
     [pdf],
   );
-  const placementState = usePlacement({ document, standardRectOn });
+  const placementState = usePlacement({ document, standardRectOn, pageBoundsOn });
   const { placement, rangeError, viewPage, moveBox, sealPage, placeOnViewedPage } = placementState;
   const placedFor = useRef<PdfDocument | null>(null);
   useEffect(() => {

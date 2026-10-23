@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { Viewport } from "./pdf";
 import {
   fitsInPage,
+  fittedInPage,
   movedBy,
   type PageSize,
+  pageBoundsOnPageOf,
   resizedBy,
   standardBox,
   standardRectOf,
@@ -11,6 +13,7 @@ import {
   toUserSpace,
   tracedBox,
 } from "./signatureBox";
+import { storyPdf } from "./testing/storyPdf";
 
 /**
  * **Grada A** (`vitest`, carril rápido). ID-21 e ID-22.
@@ -110,6 +113,42 @@ describe("la guardia de página", () => {
   });
 });
 
+describe("meter el recuadro en la página", () => {
+  const page = { width: 595, height: 842 };
+
+  it("returns the same box when it already fits", () => {
+    const box = { x: 10, y: 20, width: 100, height: 50 };
+    expect(fittedInPage(box, page)).toEqual(box);
+  });
+
+  it("slides a box hanging off the right and bottom edges to the nearest edge", () => {
+    expect(fittedInPage({ x: 550, y: 820, width: 100, height: 50 }, page)).toEqual({
+      x: 495,
+      y: 792,
+      width: 100,
+      height: 50,
+    });
+  });
+
+  it("slides a box hanging off the left and top edges back to the origin", () => {
+    expect(fittedInPage({ x: -30, y: -5, width: 100, height: 50 }, page)).toEqual({
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 50,
+    });
+  });
+
+  it("shrinks a box bigger than the page", () => {
+    expect(fittedInPage({ x: 100, y: 100, width: 900, height: 50 }, page)).toEqual({
+      x: 0,
+      y: 100,
+      width: 595,
+      height: 50,
+    });
+  });
+});
+
 describe("la posición estándar", () => {
   it("fits in the page it is drawn on", () => {
     const viewport = viewportOf(1);
@@ -204,6 +243,15 @@ describe("la posición estándar en espacio de usuario", () => {
 
     expect(three.x0).toBeCloseTo(one.x0);
     expect(three.y0).toBeCloseTo(one.y0);
+  });
+});
+
+describe("los límites de la página en espacio de usuario", () => {
+  it("gives each page its own paper, landscape or portrait", async () => {
+    const boundsOn = pageBoundsOnPageOf(storyPdf(3, [2]));
+
+    expect(await boundsOn(1)).toEqual({ x0: 0, y0: 0, x1: 595, y1: 842 });
+    expect(await boundsOn(2)).toEqual({ x0: 0, y0: 0, x1: 842, y1: 595 });
   });
 });
 

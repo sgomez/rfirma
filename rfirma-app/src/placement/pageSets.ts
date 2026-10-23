@@ -255,3 +255,18 @@ export function unsealingAt(placing: Placing, page: number, pageCount: number): 
     sets: storing(placing.sets, placing.mode, rest?.pages ?? null, pageCount),
   };
 }
+
+/** El recuadro dentro de `page`: el mismo si cabe, pegado al borde más cercano si no, y reducido si no cabe entero. */
+export function insidePage(rect: UserSpaceRect, page: UserSpaceRect): UserSpaceRect {
+  const fits = rect.x0 >= page.x0 && rect.y0 >= page.y0 && rect.x1 <= page.x1 && rect.y1 <= page.y1;
+  if (fits) return rect;
+  const [x0, x1] = alongAxis(rect.x0, rect.x1, page.x0, page.x1);
+  const [y0, y1] = alongAxis(rect.y0, rect.y1, page.y0, page.y1);
+  return { x0, y0, x1, y1 };
+}
+
+function alongAxis(start: number, end: number, low: number, high: number): [number, number] {
+  const length = Math.min(end - start, high - low);
+  const from = Math.min(Math.max(start, low), high - length);
+  return [from, from + length];
+}

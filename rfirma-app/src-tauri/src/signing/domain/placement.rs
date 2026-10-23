@@ -204,14 +204,19 @@ impl Page {
     /// Convierte coordenadas de espacio de usuario a puntos PAdES.
     pub fn pades_rect(&self, rect: &UserSpaceRect) -> Result<PadesRect, OutOfPage> {
         self.check_fits(rect)?;
+        Ok(self.pades_rect_unchecked(rect))
+    }
+
+    /// Convierte a puntos PAdES sin exigir que el recuadro quepa en la página.
+    pub fn pades_rect_unchecked(&self, rect: &UserSpaceRect) -> PadesRect {
         let (ax, ay) = self.inverse_itext(rect.lower_left_x, rect.lower_left_y);
         let (bx, by) = self.inverse_itext(rect.upper_right_x, rect.upper_right_y);
-        Ok(PadesRect {
+        PadesRect {
             lower_left_x: ax.min(bx),
             lower_left_y: ay.min(by),
             upper_right_x: ax.max(bx),
             upper_right_y: ay.max(by),
-        })
+        }
     }
 
     /// Aplica la transformación inversa a un punto según la rotación de la página.

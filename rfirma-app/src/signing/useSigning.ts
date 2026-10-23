@@ -57,6 +57,8 @@ export interface Signing {
    * su propio pie en la postfirma y no queda nada a medias que olvidar.
    */
   signAnother: () => void;
+  /** Da por fallida, sin llegar al backend, la firma de `order` que la ventana ya sabe imposible. */
+  refuse: (order: SigningOrder, failure: SigningFailure) => void;
 }
 
 /**
@@ -126,7 +128,10 @@ export function useSigning(backend: SigningBackend): Signing {
 
   const signAnother = () => setState({ kind: "idle" });
 
-  return { state, start, cancel, signAnother };
+  const refuse = (order: SigningOrder, failure: SigningFailure) =>
+    setState({ kind: "failed", failure, origin: order.document });
+
+  return { state, start, cancel, signAnother, refuse };
 }
 
 /**

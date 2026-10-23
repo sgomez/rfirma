@@ -119,6 +119,7 @@ export function useSigningJourney({
     singleDestinationId,
     previousSignatures,
     startSigning: signing.start,
+    refuseSigning: signing.refuse,
   });
   const { stamp } = signFlow;
 
