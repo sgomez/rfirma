@@ -236,10 +236,12 @@ security-framework-sys = "2.17"
 core-foundation = "0.10"
 # Como en Windows: el `.app` se actualiza sola, también la que instaló Homebrew (ADR-0040).
 tauri-plugin-updater = { version = "2", default-features = false, features = ["native-tls"] }
+
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
 # El DNIe por PC/SC, sin controlador del sistema; versión fija (ADR-0040).
 rdnie = "=0.1.1"
 
-[target.'cfg(target_os = "macos")'.dev-dependencies]
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dev-dependencies]
 # El DNIe emulado de las pruebas, que activa la feature `emulator` de rdnie; `faults` queda fuera de
 # semver, así que la versión es exacta y se revisa al actualizarla.
 rdnie-emulator = { version = "=0.1.0", features = ["faults"] }

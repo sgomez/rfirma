@@ -13,7 +13,6 @@ use rdnie_emulator::{EmulatedDnie, HolderCertificate, Step, DNIE_3_ATR, DNIE_4_A
 use rsa::traits::PublicKeyParts;
 
 use super::{dnie_store, seen_dnie, CardOpener, DnieToken};
-use crate::identity::adapters::macos_store::MacosToken;
 use crate::identity::application::certificates::{certificates_with_their_chains, on_the_desktop};
 use crate::identity::application::readers::LastListing;
 use crate::identity::application::tests::a_dnie_der;
@@ -303,16 +302,6 @@ fn the_signing_panel_offers_only_the_signing_certificate_of_the_dnie() {
         assert_eq!(labels_of(&offered), vec![SIGNATURE_LABEL], "{version}");
         assert!(offered[0].is_from_a_dnie(), "{version}");
     }
-}
-
-#[test]
-fn the_macos_token_hands_the_dnie_store_to_the_dnie() {
-    let token = MacosToken::with_the_dnie(the_dnie(EmulatedDnie::dnie_4));
-
-    assert_eq!(
-        labels_of(&listed_by(&token)),
-        vec![AUTHENTICATION_LABEL, SIGNATURE_LABEL]
-    );
 }
 
 fn hex(bytes: &[u8]) -> String {

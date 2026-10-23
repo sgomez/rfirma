@@ -1,5 +1,7 @@
 //! Adaptadores de `identity`: todo lo que toca el mundo, incluidas las órdenes y las vistas de Tauri.
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub mod dnie;
 pub mod failures;
 pub mod folder;
 #[cfg(target_os = "linux")]
@@ -78,20 +80,20 @@ pub use pkcs11::stores::from_environment as desktop_stores;
 #[cfg(windows)]
 pub use windows_store::from_environment as desktop_stores;
 
-/// El DNIe que ve el lector de esta plataforma; solo macOS lo lee con rdnie.
-#[cfg(target_os = "macos")]
+/// El DNIe que ve el lector de esta plataforma; solo Linux y macOS lo leen con rdnie.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn this_dnie() -> crate::identity::domain::seen_dnie::DnieInTheReader {
-    macos_store::seen_dnie(&macos_store::PcscCard)
+    dnie::seen_dnie(&dnie::PcscCard)
 }
-/// El DNIe que ve el lector de esta plataforma; solo macOS lo lee con rdnie.
-#[cfg(not(target_os = "macos"))]
+/// El DNIe que ve el lector de esta plataforma; solo Linux y macOS lo leen con rdnie.
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn this_dnie() -> crate::identity::domain::seen_dnie::DnieInTheReader {
     crate::identity::domain::seen_dnie::DnieInTheReader::Absent
 }
 
-/// La versión de rdnie compilada; sin ella fuera de macOS.
-#[cfg(target_os = "macos")]
-pub const RDNIE_VERSION: &str = macos_store::RDNIE_VERSION;
-/// La versión de rdnie compilada; sin ella fuera de macOS.
-#[cfg(not(target_os = "macos"))]
+/// La versión de rdnie compilada; sin ella en Windows.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub const RDNIE_VERSION: &str = dnie::RDNIE_VERSION;
+/// La versión de rdnie compilada; sin ella en Windows.
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub const RDNIE_VERSION: &str = "no incluido";

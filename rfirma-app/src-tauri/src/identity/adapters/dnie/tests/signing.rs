@@ -4,7 +4,6 @@ use sha2::{Digest, Sha256, Sha384, Sha512};
 
 use super::in_the_reader::{the_pin, the_signing_certificate, InTheReader};
 use super::{the_dnie, the_two_versions};
-use crate::identity::adapters::macos_store::MacosToken;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::error::Situation;
 use crate::identity::domain::secret::PinWarning;
@@ -56,10 +55,10 @@ fn signs_with_sha256_sha384_and_sha512_and_the_signature_verifies_with_the_card_
 }
 
 #[test]
-fn the_macos_token_signs_the_dnie_copy_through_rdnie_with_its_attempts_left() {
+fn the_dnie_signs_its_copy_through_rdnie_with_its_attempts_left() {
     let reader = InTheReader::new(EmulatedDnie::dnie_4().with_pin_retries(2));
     let key = reader.card().signing_public_key();
-    let token = MacosToken::with_the_dnie(reader.token());
+    let token = reader.token();
 
     let warning = token.pin_warning(&the_signing_certificate());
     let signature = token
