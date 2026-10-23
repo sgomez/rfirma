@@ -11,9 +11,9 @@ use crate::desktop::adapters::installation::{this_glibc, this_installation, this
 use crate::desktop::adapters::paths::{Paths, Platform};
 use crate::desktop::adapters::registry::this_desktop;
 use crate::desktop::application::debug_report::{
-    DebugReport, DiscardReason, LinuxEnvironment, MacosStores, ModuleStatus, NativeLibrary,
-    NativeLibraryStatus, NssProfile, NssProfileState, NssStores, OwnerFolder, PcscStatus,
-    Pkcs11Module, Pkcs11Modules, ProtocolHandlerStatus, ReportOwner, WindowsStores,
+    DebugReport, DiscardReason, DnieReading, LinuxEnvironment, MacosStores, ModuleStatus,
+    NativeLibrary, NativeLibraryStatus, NssProfile, NssProfileState, NssStores, OwnerFolder,
+    PcscStatus, Pkcs11Module, Pkcs11Modules, ProtocolHandlerStatus, ReportOwner, WindowsStores,
 };
 use crate::desktop::domain::channel::Channel;
 use crate::identity::adapters as identity_adapters;
@@ -58,6 +58,7 @@ pub fn this_process_report() -> DebugReport {
         nss_stores: nss_stores(),
         windows_stores: windows_stores(channel),
         macos_stores: macos_stores(channel),
+        dnie: dnie_reading(channel),
     }
 }
 
@@ -285,7 +286,12 @@ fn macos_stores(channel: Channel) -> Option<MacosStores> {
     (channel == Channel::MacOs).then(|| MacosStores {
         local_channel: user_trust_state(),
         card_drivers: crate::desktop::adapters::card_drivers::system_card_drivers(),
-        dnie: identity_adapters::this_dnie(),
+    })
+}
+
+fn dnie_reading(channel: Channel) -> Option<DnieReading> {
+    (channel != Channel::Windows).then(|| DnieReading {
+        card: identity_adapters::this_dnie(),
         rdnie_version: identity_adapters::RDNIE_VERSION.to_owned(),
     })
 }

@@ -18,8 +18,13 @@ pub struct MacosStores {
     pub local_channel: NssProfileState,
     /// Controladores de tarjeta que macOS tiene instalados.
     pub card_drivers: Vec<String>,
+}
+
+/// Lo que solo existe donde rdnie lee el DNIe: la tarjeta que se ve y la versión compilada.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DnieReading {
     /// Lo que rFirma ve en el lector.
-    pub dnie: DnieInTheReader,
+    pub card: DnieInTheReader,
     /// Versión de rdnie con la que se compiló.
     pub rdnie_version: String,
 }
@@ -44,9 +49,9 @@ pub(super) fn windows_sections(stores: Option<&WindowsStores>) -> [Option<String
     ]
 }
 
-pub(super) fn macos_sections(stores: Option<&MacosStores>) -> [Option<String>; 3] {
+pub(super) fn macos_sections(stores: Option<&MacosStores>) -> [Option<String>; 2] {
     let Some(stores) = stores else {
-        return [None, None, None];
+        return [None, None];
     };
     let trust = format!(
         "Confianza del usuario: {}",
@@ -64,12 +69,15 @@ pub(super) fn macos_sections(stores: Option<&MacosStores>) -> [Option<String>; 3
     [
         section("Almacén de macOS", &[trust]),
         section("Controladores de tarjeta", &drivers),
-        section("DNIe", &dnie_lines(stores)),
     ]
 }
 
-fn dnie_lines(stores: &MacosStores) -> Vec<String> {
-    let card = match &stores.dnie {
+pub(super) fn dnie_section(reading: Option<&DnieReading>) -> Option<String> {
+    section("DNIe", &dnie_lines(reading?))
+}
+
+fn dnie_lines(reading: &DnieReading) -> Vec<String> {
+    let card = match &reading.card {
         DnieInTheReader::Seen(dnie) => vec![
             format!("ATR: {}", dnie.atr),
             format!("versión: {}", dnie.version),
@@ -79,7 +87,7 @@ fn dnie_lines(stores: &MacosStores) -> Vec<String> {
         DnieInTheReader::Unopened(error) => vec![format!("tarjeta: rdnie no la abre · {error}")],
     };
     card.into_iter()
-        .chain(std::iter::once(format!("rdnie: {}", stores.rdnie_version)))
+        .chain(std::iter::once(format!("rdnie: {}", reading.rdnie_version)))
         .collect()
 }
 
