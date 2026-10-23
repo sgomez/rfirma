@@ -17,7 +17,7 @@ use security_framework::import_export::Pkcs12ImportOptions;
 use security_framework::os::macos::keychain::{CreateOptions, SecKeychain};
 
 use super::keychain::{import_pkcs12 as install, situation_of};
-use super::{dnie_store, installs, keychain_store, stores_besides, user_store, MacosToken};
+use super::{installs, keychain_store, stores_besides, user_store, MacosToken};
 use crate::identity::application::certificates::certificates_with_their_chains;
 use crate::identity::application::readers::LastListing;
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
@@ -205,17 +205,14 @@ fn the_user_store_is_the_macos_store_and_not_a_card() {
 }
 
 #[test]
-fn the_macos_store_comes_before_the_pkcs11_stores_unless_a_module_is_named_and_the_dnie_after() {
+fn the_macos_store_comes_before_the_pkcs11_stores_unless_a_module_is_named() {
     let card = Store::module("/opt/homebrew/lib/opensc-pkcs11.so");
 
     assert_eq!(
         stores_besides(vec![card.clone()], false),
-        vec![user_store(), card.clone(), dnie_store()]
+        vec![user_store(), card.clone()]
     );
-    assert_eq!(
-        stores_besides(vec![card.clone()], true),
-        vec![card, dnie_store()]
-    );
+    assert_eq!(stores_besides(vec![card.clone()], true), vec![card]);
 }
 
 #[test]
