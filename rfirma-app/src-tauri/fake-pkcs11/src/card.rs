@@ -14,6 +14,9 @@ pub(crate) const PROFILE: &str = "profile";
 pub(crate) const INTERFERENCE: &str = "interference";
 pub(crate) const REMOVED_FROM: &str = "removed-from";
 pub(crate) const HANGS_ON_INITIALIZE: &str = "hangs-on-initialize";
+pub(crate) const READER: &str = "reader";
+
+const DEFAULT_READER: &str = "Lector falso de DNIe";
 
 /// Qué tarjeta imita el módulo: el DNIe medido, o una que da las tres señales del PIN y exige el login por firma.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -31,6 +34,11 @@ pub(crate) fn read_profile(dir: &Path) -> Profile {
         Ok(name) if name.trim() == Profile::SIGNALS_NAME => Profile::Signals,
         _ => Profile::Dnie,
     }
+}
+
+/// El nombre del lector donde está la tarjeta.
+pub(crate) fn reader_name(dir: &Path) -> String {
+    fs::read_to_string(dir.join(READER)).unwrap_or_else(|_| DEFAULT_READER.to_owned())
 }
 
 pub(crate) fn hangs_on_initialize(dir: &Path) -> bool {

@@ -40,6 +40,22 @@ impl Token for RealToken {
         list_every_certificate(store.clone())
     }
 
+    fn list_skipping(
+        &self,
+        store: &Store,
+        skipped: &[String],
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
+        with_token_turn(|| listing::list_holding_the_turn(store, skipped))
+    }
+
+    fn every_certificate_skipping(
+        &self,
+        store: &Store,
+        skipped: &[String],
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
+        with_token_turn(|| listing::list_every_certificate(store, skipped))
+    }
+
     fn list_authenticated(
         &self,
         store: &Store,
@@ -125,7 +141,7 @@ pub fn list_certificates_across(stores: &[Store]) -> Result<Vec<TokenCertificate
 /// Lista los certificados firmables disponibles en el almacén indicado.
 pub fn list_certificates(store: impl Into<Store>) -> Result<Vec<TokenCertificate>, TokenError> {
     let store = store.into();
-    with_token_turn(|| listing::list_holding_the_turn(&store))
+    with_token_turn(|| listing::list_holding_the_turn(&store, &[]))
 }
 
 /// Los certificados de un almacén sin filtrar por clave privada: también las autoridades que lo emitieron.
@@ -133,7 +149,7 @@ pub fn list_every_certificate(
     store: impl Into<Store>,
 ) -> Result<Vec<TokenCertificate>, TokenError> {
     let store = store.into();
-    with_token_turn(|| listing::list_every_certificate(store))
+    with_token_turn(|| listing::list_every_certificate(&store, &[]))
 }
 
 /// Cómo hay que pedirle el secreto al almacén leyendo las banderas de su ranura.

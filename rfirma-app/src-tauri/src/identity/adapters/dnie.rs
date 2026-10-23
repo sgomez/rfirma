@@ -30,6 +30,11 @@ pub trait CardOpener: Send + Sync {
 
     /// Una sesión nueva con el DNIe.
     fn open(&self) -> Result<Session<Self::Card>, rdnie::Error>;
+
+    /// El lector donde rdnie reconoce un DNIe, sin abrir su canal seguro; ninguno si no lo sabe.
+    fn claimed_reader(&self) -> Option<String> {
+        None
+    }
 }
 
 /// El primer lector PC/SC con un DNIe, con la sesión normal de rdnie.
@@ -41,6 +46,12 @@ impl CardOpener for PcscCard {
 
     fn open(&self) -> Result<Session<PcscTransport>, rdnie::Error> {
         Session::open(PcscTransport::connect_first_dnie()?)
+    }
+
+    fn claimed_reader(&self) -> Option<String> {
+        PcscTransport::connect_first_dnie()
+            .ok()
+            .map(|card| card.reader())
     }
 }
 
@@ -67,6 +78,11 @@ impl<O: CardOpener> DnieToken<O> {
             opener,
             login: Mutex::new(Login::default()),
         }
+    }
+
+    /// El lector donde rdnie reconoce este DNIe, sin abrir su canal seguro.
+    pub fn claimed_reader(&self) -> Option<String> {
+        self.opener.claimed_reader()
     }
 
     fn login(&self) -> MutexGuard<'_, Login> {

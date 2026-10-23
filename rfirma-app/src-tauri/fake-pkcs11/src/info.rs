@@ -25,9 +25,9 @@ pub(crate) fn library() -> CK_INFO {
     }
 }
 
-pub(crate) fn slot(card_present: bool) -> CK_SLOT_INFO {
+pub(crate) fn slot(reader: &str, card_present: bool) -> CK_SLOT_INFO {
     CK_SLOT_INFO {
-        slotDescription: padded("Lector falso de DNIe"),
+        slotDescription: padded(reader),
         manufacturerID: padded("rfirma"),
         flags: if card_present {
             CKF_TOKEN_PRESENT | CKF_REMOVABLE_DEVICE | CKF_HW_SLOT
@@ -75,10 +75,10 @@ pub(crate) fn mechanism() -> CK_MECHANISM_INFO {
     }
 }
 
-/// Un texto PKCS#11: rellenado con espacios y sin cero final.
+/// Un texto PKCS#11: cortado a su campo, rellenado con espacios y sin cero final.
 fn padded<const N: usize>(text: &str) -> [u8; N] {
     let mut field = [b' '; N];
-    let bytes = text.as_bytes();
+    let bytes = &text.as_bytes()[..text.len().min(N)];
     field[..bytes.len()].copy_from_slice(bytes);
     field
 }

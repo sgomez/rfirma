@@ -3,13 +3,13 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use super::dnie::{dnie_store, DnieToken, PcscCard};
+use super::dnie::{dnie_store, CardOpener, DnieToken, PcscCard};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
-use crate::identity::domain::store::Store;
+use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::Token;
 
 /// Los almacenes de la plataforma y, detrás, el del DNIe.
@@ -20,11 +20,22 @@ pub fn and_the_dnie_store(stores: Vec<Store>) -> Vec<Store> {
         .collect()
 }
 
+/// El DNIe detrás del puerto [`Token`], que además dice en qué lector lo ha reconocido rdnie.
+trait Dnie: Token + Send + Sync {
+    fn claimed_reader(&self) -> Option<String>;
+}
+
+impl<O: CardOpener> Dnie for DnieToken<O> {
+    fn claimed_reader(&self) -> Option<String> {
+        DnieToken::claimed_reader(self)
+    }
+}
+
 /// El adaptador de [`Token`] que reparte entre rdnie, para el almacén del DNIe, y el token de la plataforma.
 #[derive(Clone)]
 pub struct WithTheDnie<T> {
     platform: T,
-    dnie: Arc<dyn Token + Send + Sync>,
+    dnie: Arc<dyn Dnie>,
 }
 
 impl<T: Token + Default> Default for WithTheDnie<T> {
@@ -35,7 +46,7 @@ impl<T: Token + Default> Default for WithTheDnie<T> {
 
 impl<T: Token> WithTheDnie<T> {
     /// `platform`, con el DNIe que abre `dnie`.
-    pub fn new(platform: T, dnie: impl Token + Send + Sync + 'static) -> Self {
+    pub fn new<O: CardOpener + 'static>(platform: T, dnie: DnieToken<O>) -> Self {
         Self {
             platform,
             dnie: Arc::new(dnie),
@@ -48,15 +59,30 @@ impl<T: Token> WithTheDnie<T> {
         }
         &self.platform
     }
+
+    /// El lector del DNIe, si el almacén es de tarjeta y rdnie ha reconocido uno: su ranura PKCS#11 no se abre.
+    fn skipped_for(&self, store: &Store) -> Vec<String> {
+        if store.class() != StoreClass::Card {
+            return Vec::new();
+        }
+        self.dnie.claimed_reader().into_iter().collect()
+    }
 }
 
 impl<T: Token> Token for WithTheDnie<T> {
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
-        self.holding(store).list(store)
+        if store.is_the_dnie() {
+            return self.dnie.list(store);
+        }
+        self.platform.list_skipping(store, &self.skipped_for(store))
     }
 
     fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
-        self.holding(store).every_certificate(store)
+        if store.is_the_dnie() {
+            return self.dnie.every_certificate(store);
+        }
+        self.platform
+            .every_certificate_skipping(store, &self.skipped_for(store))
     }
 
     fn list_authenticated(
