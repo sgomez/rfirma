@@ -9,6 +9,7 @@ use super::pkcs11::RealToken;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::listed::ListedSkipping;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::readers::with_the_cards_present;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
@@ -73,9 +74,9 @@ impl Token for WindowsToken {
         &self,
         store: &Store,
         skipped: &[String],
-    ) -> Result<Vec<TokenCertificate>, TokenError> {
+    ) -> Result<ListedSkipping, TokenError> {
         if is_the_user_store(store) {
-            return self.list(store);
+            return Ok(ListedSkipping::of_every_slot(self.list(store)?));
         }
         RealToken.list_skipping(store, skipped)
     }

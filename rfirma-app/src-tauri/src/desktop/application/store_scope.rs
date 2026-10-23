@@ -34,7 +34,7 @@ pub fn within_the_scope(
             .filter(|certificate| certificate.reference().store().class() == StoreClass::Macos)
             .collect(),
         (_, Some(module)) => certificates
-            .filter(|certificate| certificate.reference().module() == module)
+            .filter(|certificate| certificate.is_served_by(&module))
             .collect(),
         _ => certificates.collect(),
     })

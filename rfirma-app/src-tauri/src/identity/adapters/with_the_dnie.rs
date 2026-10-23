@@ -1,7 +1,8 @@
 //! `WithTheDnie`, el token de una plataforma con el DNIe delante: el almacén del DNIe va a rdnie y cualquier otro, al token envuelto (ADR-0040, ADR-0047).
 
-use std::path::Path;
-use std::sync::Arc;
+use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use super::dnie::{dnie_store, CardOpener, DnieToken, PcscCard};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
@@ -36,6 +37,7 @@ impl<O: CardOpener> Dnie for DnieToken<O> {
 pub struct WithTheDnie<T> {
     platform: T,
     dnie: Arc<dyn Dnie>,
+    stood_in_for: Arc<Mutex<BTreeSet<PathBuf>>>,
 }
 
 impl<T: Token + Default> Default for WithTheDnie<T> {
@@ -50,6 +52,29 @@ impl<T: Token> WithTheDnie<T> {
         Self {
             platform,
             dnie: Arc::new(dnie),
+            stood_in_for: Arc::default(),
+        }
+    }
+
+    /// Los módulos que, en su último listado, se han saltado la ranura del DNIe.
+    fn modules_stood_in_for(&self) -> Vec<PathBuf> {
+        self.stood_in_for
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .iter()
+            .cloned()
+            .collect()
+    }
+
+    fn remember(&self, store: &Store, skipped_a_slot: bool) {
+        let mut stood_in_for = self
+            .stood_in_for
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        if skipped_a_slot {
+            stood_in_for.insert(store.path().to_path_buf());
+        } else {
+            stood_in_for.remove(store.path());
         }
     }
 
@@ -72,9 +97,19 @@ impl<T: Token> WithTheDnie<T> {
 impl<T: Token> Token for WithTheDnie<T> {
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         if store.is_the_dnie() {
-            return self.dnie.list(store);
+            let modules = self.modules_stood_in_for();
+            return Ok(self
+                .dnie
+                .list(store)?
+                .into_iter()
+                .map(|certificate| certificate.standing_in_for(modules.clone()))
+                .collect());
         }
-        self.platform.list_skipping(store, &self.skipped_for(store))
+        let listed = self
+            .platform
+            .list_skipping(store, &self.skipped_for(store))?;
+        self.remember(store, listed.skipped_a_slot);
+        Ok(listed.certificates)
     }
 
     fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {

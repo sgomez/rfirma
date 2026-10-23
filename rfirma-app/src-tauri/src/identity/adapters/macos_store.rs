@@ -9,6 +9,7 @@ use super::pkcs11::RealToken;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::listed::ListedSkipping;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::{Store, StoreClass, MACOS_STORE_PREFIX};
@@ -66,9 +67,9 @@ impl Token for MacosToken {
         &self,
         store: &Store,
         skipped: &[String],
-    ) -> Result<Vec<TokenCertificate>, TokenError> {
+    ) -> Result<ListedSkipping, TokenError> {
         if is_a_keychain(store) {
-            return self.list(store);
+            return Ok(ListedSkipping::of_every_slot(self.list(store)?));
         }
         RealToken.list_skipping(store, skipped)
     }

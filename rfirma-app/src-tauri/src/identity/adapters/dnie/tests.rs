@@ -388,6 +388,38 @@ fn the_rdnie_version_is_the_one_in_the_lockfile() {
         super::RDNIE_VERSION
     );
 }
+
+const DNIE_2_ATR: [u8; 20] = [
+    0x3B, 0x7F, 0x38, 0x00, 0x00, 0x00, 0x6A, 0x44, 0x4E, 0x49, 0x65, 0x10, 0x02, 0x4C, 0x34, 0x01,
+    0x13, 0x03, 0x90, 0x00,
+];
+
+fn burned(atr: &[u8]) -> Vec<u8> {
+    let mut burned = atr.to_vec();
+    let end = burned.len();
+    burned[end - 2..].copy_from_slice(&[0x65, 0x81]);
+    burned
+}
+
+#[test]
+fn rdnie_opens_a_dnie_3_and_a_dnie_4() {
+    assert!(super::rdnie_opens(&DNIE_3_ATR));
+    assert!(super::rdnie_opens(&DNIE_4_ATR));
+}
+
+#[test]
+fn rdnie_leaves_a_dnie_2_to_pkcs11() {
+    assert!(rdnie::is_dnie(&DNIE_2_ATR));
+    assert!(!super::rdnie_opens(&DNIE_2_ATR));
+}
+
+#[test]
+fn rdnie_leaves_a_burned_dnie_to_pkcs11() {
+    let burned = burned(&DNIE_4_ATR);
+    assert!(rdnie::is_dnie(&burned));
+    assert!(!super::rdnie_opens(&burned));
+}
+
 mod failures;
 mod in_the_reader;
 mod prompting;

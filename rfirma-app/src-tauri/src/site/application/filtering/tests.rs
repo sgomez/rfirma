@@ -290,6 +290,58 @@ fn a_site_that_names_a_module_only_sees_the_certificates_of_that_module() {
     assert_eq!(engine.asked.borrow()[0].1, "Ag==");
 }
 
+fn a_dnie_certificate_standing_in_for(label: &str, der: &[u8], module: &str) -> TokenCertificate {
+    TokenCertificate::new(
+        CertificateRef::new("dnie:pcsc", "DNIe", label, None),
+        der.to_vec(),
+    )
+    .standing_in_for(vec![module.into()])
+}
+
+#[test]
+fn a_site_that_names_the_module_whose_slot_rdnie_took_sees_the_dnie() {
+    let engine = AnEngine::answering(&[0, 1]);
+    let certificates = vec![
+        a_card_certificate("TARJETA", &[0x02]),
+        a_dnie_certificate_standing_in_for("DNIE", &[0x04], OPENSC),
+    ];
+    let listed = ListedCertificates::new();
+
+    let kept = keep_what_the_site_accepts(
+        &engine,
+        &a_filter("ssl:true").within(StoreScope::Module(OPENSC.to_owned())),
+        certificates.clone(),
+        &a_directory(&certificates, &listed),
+    )
+    .expect("el modulo esta descubierto");
+
+    let labels: Vec<&str> = kept.iter().map(|kept| kept.reference().label()).collect();
+    assert_eq!(labels, ["TARJETA", "DNIE"]);
+}
+
+#[test]
+fn a_site_that_names_another_module_does_not_see_the_dnie() {
+    let engine = AnEngine::answering(&[0]);
+    let certificates = vec![
+        a_certificate("SOFTHSM", &[0x01]),
+        a_dnie_certificate_standing_in_for("DNIE", &[0x04], OPENSC),
+    ];
+    let listed = ListedCertificates::new();
+
+    let kept = keep_what_the_site_accepts(
+        &engine,
+        &a_filter("ssl:true").within(StoreScope::Module(
+            "/usr/lib/softhsm/libsofthsm2.so".to_owned(),
+        )),
+        certificates.clone(),
+        &a_directory(&certificates, &listed),
+    )
+    .expect("el modulo esta descubierto");
+
+    assert_eq!(kept.len(), 1);
+    assert_eq!(kept[0].reference().label(), "SOFTHSM");
+}
+
 #[test]
 fn a_site_that_names_the_nss_does_not_see_the_certificates_of_a_card() {
     let engine = AnEngine::answering(&[0]);

@@ -1,9 +1,11 @@
+use std::path::Path;
+
 use fake_pkcs11::FakeCard;
 use rdnie::Session;
 use rdnie_emulator::EmulatedDnie;
 
 use super::super::WithTheDnie;
-use crate::identity::adapters::dnie::{CardOpener, DnieToken};
+use crate::identity::adapters::dnie::{dnie_store, CardOpener, DnieToken};
 use crate::identity::adapters::pkcs11::RealToken;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::Store;
@@ -13,6 +15,7 @@ const DNIE_READER: &str = "Lector de la mesa con el DNIe 00 00";
 const LONG_DNIE_READER: &str =
     "Lector de nombre muy largo, el del DNIe, que no cabe en la ranura PKCS#11 00 00";
 const SIGNING_CERTIFICATE: &str = "CertFirmaDigital";
+const SOFTHSM: &str = "/usr/lib/softhsm/libsofthsm2.so";
 
 /// Un DNIe emulado que rdnie ha reconocido en el lector `reader`.
 struct InTheReader {
@@ -95,4 +98,39 @@ fn a_reader_name_cut_to_the_slot_description_is_skipped_as_well() {
     assert_eq!(labels_of(&listed), Vec::<&str>::new());
     assert_eq!(labels_of(&every), Vec::<&str>::new());
     assert_eq!(card.calls_to("C_OpenSession"), Vec::<String>::new());
+}
+
+#[test]
+fn the_dnie_stands_in_for_the_module_that_skipped_its_slot_and_for_no_other() {
+    let card = a_card_in(DNIE_READER);
+    let token = with_the_dnie_in(DNIE_READER);
+    let stores = [Store::module(card.module()), dnie_store()];
+
+    let found = token
+        .list_across(&stores)
+        .expect("el DNIe deberia listarse");
+
+    assert!(labels_of(&found).contains(&SIGNING_CERTIFICATE));
+    assert!(found
+        .iter()
+        .all(|certificate| certificate.is_served_by(&card.module())));
+    assert!(!found
+        .iter()
+        .any(|certificate| certificate.is_served_by(Path::new(SOFTHSM))));
+}
+
+#[test]
+fn the_dnie_stands_in_for_no_module_when_none_skipped_its_slot() {
+    let card = a_card_in("Otro lector 01 00");
+    let token = with_the_dnie_in(DNIE_READER);
+
+    token
+        .list(&Store::module(card.module()))
+        .expect("la tarjeta deberia listarse");
+    let from_the_dnie = token.list(&dnie_store()).expect("el DNIe deberia listarse");
+
+    assert!(!from_the_dnie.is_empty());
+    assert!(!from_the_dnie
+        .iter()
+        .any(|certificate| certificate.is_served_by(&card.module())));
 }

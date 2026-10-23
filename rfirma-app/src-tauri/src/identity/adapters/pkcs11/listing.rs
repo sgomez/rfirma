@@ -11,6 +11,7 @@ use cryptoki::types::AuthPin;
 
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::listed::ListedSkipping;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::store::{Store, StoreClass};
 
@@ -54,12 +55,13 @@ pub(super) fn list_authenticated(
 pub(super) fn list_holding_the_turn(
     store: &Store,
     skipped: &[String],
-) -> Result<Vec<TokenCertificate>, TokenError> {
+) -> Result<ListedSkipping, TokenError> {
     the_store_is_really_there(store)?;
     let context = context(store)?;
     let mut found = Vec::new();
+    let (slots, skipped_a_slot) = slots_besides(&context, skipped)?;
 
-    for slot in slots_besides(&context, skipped)? {
+    for slot in slots {
         let info = context.get_token_info(slot)?;
         let token_label = info.label().trim().to_owned();
         let session = context.open_ro_session(slot)?;
@@ -76,22 +78,28 @@ pub(super) fn list_holding_the_turn(
         }
     }
 
-    Ok(found)
+    Ok(ListedSkipping {
+        certificates: found,
+        skipped_a_slot,
+    })
 }
 
-/// Las ranuras con token, salvo las de los lectores `skipped`.
-fn slots_besides(context: &Pkcs11, skipped: &[String]) -> Result<Vec<Slot>, TokenError> {
+/// Las ranuras con token, salvo las de los lectores `skipped`, y si se ha quedado fuera alguna.
+fn slots_besides(context: &Pkcs11, skipped: &[String]) -> Result<(Vec<Slot>, bool), TokenError> {
     let slots = usable_slots(context)?;
     if skipped.is_empty() {
-        return Ok(slots);
+        return Ok((slots, false));
     }
     let mut kept = Vec::new();
+    let mut left_out = false;
     for slot in slots {
-        if !describes_one_of(context.get_slot_info(slot)?.slot_description(), skipped) {
+        if describes_one_of(context.get_slot_info(slot)?.slot_description(), skipped) {
+            left_out = true;
+        } else {
             kept.push(slot);
         }
     }
-    Ok(kept)
+    Ok((kept, left_out))
 }
 
 /// Si la descripción de una ranura nombra a uno de `readers`, aunque los 64 bytes del campo la corten.
@@ -238,7 +246,7 @@ pub(super) fn list_every_certificate(
     let context = context(store)?;
     let mut found = Vec::new();
 
-    for slot in slots_besides(&context, skipped)? {
+    for slot in slots_besides(&context, skipped)?.0 {
         let info = context.get_token_info(slot)?;
         let token_label = info.label().trim().to_owned();
         let session = context.open_ro_session(slot)?;

@@ -4,6 +4,23 @@ use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::store::Store;
 
+/// Lo que da un almacén listado sin abrir las ranuras de unos lectores: sus certificados y si se ha saltado alguna.
+#[derive(Clone, Debug, Default)]
+pub struct ListedSkipping {
+    pub certificates: Vec<TokenCertificate>,
+    pub skipped_a_slot: bool,
+}
+
+impl ListedSkipping {
+    /// Lo de un almacén que no se ha saltado ninguna ranura.
+    pub fn of_every_slot(certificates: Vec<TokenCertificate>) -> Self {
+        Self {
+            certificates,
+            skipped_a_slot: false,
+        }
+    }
+}
+
 /// Lo que han dicho los almacenes al listarlos, uno a uno.
 #[derive(Clone, Debug, Default)]
 pub struct Listed {

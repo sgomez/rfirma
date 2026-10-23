@@ -16,6 +16,7 @@ use std::sync::Mutex;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::listed::ListedSkipping;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::Store;
@@ -44,7 +45,7 @@ impl Token for RealToken {
         &self,
         store: &Store,
         skipped: &[String],
-    ) -> Result<Vec<TokenCertificate>, TokenError> {
+    ) -> Result<ListedSkipping, TokenError> {
         with_token_turn(|| listing::list_holding_the_turn(store, skipped))
     }
 
@@ -142,6 +143,7 @@ pub fn list_certificates_across(stores: &[Store]) -> Result<Vec<TokenCertificate
 pub fn list_certificates(store: impl Into<Store>) -> Result<Vec<TokenCertificate>, TokenError> {
     let store = store.into();
     with_token_turn(|| listing::list_holding_the_turn(&store, &[]))
+        .map(|listed| listed.certificates)
 }
 
 /// Los certificados de un almacén sin filtrar por clave privada: también las autoridades que lo emitieron.

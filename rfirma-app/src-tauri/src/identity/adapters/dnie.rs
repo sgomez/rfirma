@@ -49,11 +49,19 @@ impl CardOpener for PcscCard {
     }
 
     fn claimed_reader(&self) -> Option<String> {
-        PcscTransport::connect_first_dnie()
-            .ok()
-            .map(|card| card.reader())
+        let card = PcscTransport::connect_first_dnie().ok()?;
+        rdnie_opens(&card.atr().ok()?).then(|| card.reader())
     }
 }
+
+/// Si el ATR es de un DNIe que abre rdnie: un 3.0 o 4.0 sin quemar; el 1.0 y el 2.0 siguen por PKCS#11.
+fn rdnie_opens(atr: &[u8]) -> bool {
+    rdnie::is_dnie(atr) && !atr.ends_with(&BURNED_STATUS) && atr.get(OS_VERSION) == Some(&DNIE_3_OS)
+}
+
+const BURNED_STATUS: [u8; 2] = [0x65, 0x81];
+const OS_VERSION: usize = 15;
+const DNIE_3_OS: u8 = 0x04;
 
 /// El adaptador de [`Token`] para el almacén del DNIe.
 #[derive(Debug, Default)]
