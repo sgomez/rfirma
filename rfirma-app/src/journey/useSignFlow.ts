@@ -225,22 +225,31 @@ export function useSignFlow({
     // PDF: son espacios distintos en cuanto la `/Rotate` no es 0, y la
     // conversión (`T⁻¹`) no tiene copia en TypeScript — se pide al backend,
     // que es quien la aplica de verdad al armar la orden.
-    const chosenPages = sealedPages(placement.pages, pdf.pageCount);
-    const views = await Promise.all(
-      chosenPages.map(async (number) => ({ number, view: (await pdf.getPage(number)).view })),
-    );
-    const [lowerLeftX, lowerLeftY] = await signer.padesLowerLeft(order.placement);
-    const fallen = pagesWithoutSeal({ x: lowerLeftX, y: lowerLeftY }, views);
-    if (fallen.length > 0) {
-      setSealLossPrompt({
-        fallen: fallen.length,
-        certificate: chosen,
-        order,
-      });
+    const fallen = await pagesWithoutSealOrNone(pdf, placement, order.placement);
+    if (fallen > 0) {
+      setSealLossPrompt({ fallen, certificate: chosen, order });
       return;
     }
 
     await startSigning(chosen, order, singleDestinationId);
+  };
+
+  // Si la consulta falla no hay aviso que dar: la firma sigue y su fallo sale por el camino normal.
+  const pagesWithoutSealOrNone = async (
+    pdf: PdfDocument,
+    placement: Placement,
+    padesPlacement: NonNullable<SigningOrder["placement"]>,
+  ): Promise<number> => {
+    try {
+      const chosenPages = sealedPages(placement.pages, pdf.pageCount);
+      const views = await Promise.all(
+        chosenPages.map(async (number) => ({ number, view: (await pdf.getPage(number)).view })),
+      );
+      const [lowerLeftX, lowerLeftY] = await signer.padesLowerLeft(padesPlacement);
+      return pagesWithoutSeal({ x: lowerLeftX, y: lowerLeftY }, views).length;
+    } catch {
+      return 0;
+    }
   };
 
   // `Firmar de todos modos` de «¿Firmar de todos modos?»: el resto del recorrido
