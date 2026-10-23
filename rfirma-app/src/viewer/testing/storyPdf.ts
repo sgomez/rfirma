@@ -4,13 +4,15 @@ import type { UserSpaceRect } from "../../placement/pageSets";
 import type { PdfDocument, PdfPage, Viewport } from "../pdf";
 
 const A4 = { width: 595, height: 842 };
+const A4_LANDSCAPE = { width: 842, height: 595 };
+type Size = typeof A4;
 
-function viewportAt(scale: number): Viewport {
+function viewportAt(scale: number, size: Size = A4): Viewport {
   return {
-    width: A4.width * scale,
-    height: A4.height * scale,
-    convertToPdfPoint: (x, y) => [x / scale, A4.height - y / scale],
-    convertToViewportPoint: (x, y) => [x * scale, (A4.height - y) * scale],
+    width: size.width * scale,
+    height: size.height * scale,
+    convertToPdfPoint: (x, y) => [x / scale, size.height - y / scale],
+    convertToViewportPoint: (x, y) => [x * scale, (size.height - y) * scale],
   };
 }
 
@@ -27,12 +29,12 @@ function stampImage({ x0, y0, x1, y1 }: UserSpaceRect): string {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 0 0 / 100% 100% no-repeat`;
 }
 
-function pageOf(number: number, background = RULES): PdfPage {
+function pageOf(number: number, background = RULES, size: Size = A4): PdfPage {
   return {
     number,
     rotate: 0,
-    view: [0, 0, A4.width, A4.height],
-    getViewport: ({ scale }) => viewportAt(scale),
+    view: [0, 0, size.width, size.height],
+    getViewport: ({ scale }) => viewportAt(scale, size),
     render: ({ canvas }) => {
       canvas.style.background = background;
       return { promise: Promise.resolve(), cancel: () => {} };
@@ -40,9 +42,13 @@ function pageOf(number: number, background = RULES): PdfPage {
   };
 }
 
-/** Un documento de `pageCount` hojas que se pinta al instante. */
-export function storyPdf(pageCount = 3): PdfDocument {
-  return { pageCount, getPage: (number) => Promise.resolve(pageOf(number)) };
+/** Un documento de `pageCount` hojas que se pinta al instante; las de `landscape`, apaisadas. */
+export function storyPdf(pageCount = 3, landscape: readonly number[] = []): PdfDocument {
+  return {
+    pageCount,
+    getPage: (number) =>
+      Promise.resolve(pageOf(number, RULES, landscape.includes(number) ? A4_LANDSCAPE : A4)),
+  };
 }
 
 /** El mismo documento con el sello ya estampado en `rect`, en la página 1. */

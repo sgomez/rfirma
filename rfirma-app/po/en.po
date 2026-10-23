@@ -401,6 +401,12 @@ msgstr "Drag to place"
 msgid "viewer.outOfPage"
 msgstr "The box can't go off the page."
 
+msgid "viewer.offThisPage"
+msgstr "The box goes off this page."
+
+msgid "viewer.relocate"
+msgstr "Reposition"
+
 msgid "viewer.stamp.onDemand"
 msgstr "The document is large: the visible signature isn't redrawn on its own"
 
@@ -1511,18 +1517,22 @@ msgstr "This site uses an insecure signing method"
 msgid "sede.received.siteServer"
 msgstr "The site's server prepares the signature with this document"
 
+#. Encabezado del lote remoto: cuenta firmas, porque los documentos no se ven.
 msgid "sede.received.signatures"
 msgid_plural "sede.received.signatures"
 msgstr[0] "You are making 1 signature"
 msgstr[1] "You are making {{count}} signatures"
 msgstr[2] "You are making {{count}} signatures"
 
+#. Aviso de lo recibido en un lote remoto: los documentos los tiene el servidor de la sede.
 msgid "sede.received.remoteBatch"
-msgstr "The documents stay on the site's server, and rFirma cannot show them to you"
+msgstr ""
+"The documents stay on the site's server, and rFirma cannot show them to you"
 
 #. Aviso informativo: la sede solo manda la huella del documento y rFirma no tiene qué enseñar.
 msgid "sede.received.precalculatedHash"
-msgstr "The site only sends the document's hash, so rFirma cannot show it to you"
+msgstr ""
+"The site only sends the document's hash, so rFirma cannot show it to you"
 
 #. El botón de firmar cuando la sede pide SHA-1 sin permiso en Preferencias; lleva la cuenta atrás obligada.
 msgid "sede.received.signAnyway"

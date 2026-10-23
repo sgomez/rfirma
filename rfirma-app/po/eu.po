@@ -402,6 +402,12 @@ msgstr "Arrastatu kokatzeko"
 msgid "viewer.outOfPage"
 msgstr "Laukia ezin da orrialdetik atera."
 
+msgid "viewer.offThisPage"
+msgstr "Laukia orri honetatik ateratzen da."
+
+msgid "viewer.relocate"
+msgstr "Berriz kokatu"
+
 msgid "viewer.stamp.onDemand"
 msgstr "Dokumentu handia: sinadura ikusgaia ez da bere kabuz birkalkulatzen"
 
@@ -1516,18 +1522,24 @@ msgstr "Egoitza honek sinatzeko metodo ez oso segurua erabiltzen du"
 msgid "sede.received.siteServer"
 msgstr "Egoitzaren zerbitzariak sinadura dokumentu honekin prestatzen du"
 
+#. Encabezado del lote remoto: cuenta firmas, porque los documentos no se ven.
 msgid "sede.received.signatures"
 msgid_plural "sede.received.signatures"
 msgstr[0] "Sinadura 1 egingo duzu"
 msgstr[1] "{{count}} sinadura egingo dituzu"
 msgstr[2] "{{count}} sinadura egingo dituzu"
 
+#. Aviso de lo recibido en un lote remoto: los documentos los tiene el servidor de la sede.
 msgid "sede.received.remoteBatch"
-msgstr "Dokumentuak egoitzaren zerbitzarian geratzen dira, eta rFirmak ezin dizkizu erakutsi"
+msgstr ""
+"Dokumentuak egoitzaren zerbitzarian geratzen dira, eta rFirmak ezin dizkizu "
+"erakutsi"
 
 #. Aviso informativo: la sede solo manda la huella del documento y rFirma no tiene qué enseñar.
 msgid "sede.received.precalculatedHash"
-msgstr "Egoitzak dokumentuaren hatz-marka soilik bidaltzen du, beraz rFirmak ezin dizu erakutsi"
+msgstr ""
+"Egoitzak dokumentuaren hatz-marka soilik bidaltzen du, beraz rFirmak ezin "
+"dizu erakutsi"
 
 #. El botón de firmar cuando la sede pide SHA-1 sin permiso en Preferencias; lleva la cuenta atrás obligada.
 msgid "sede.received.signAnyway"

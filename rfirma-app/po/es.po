@@ -401,6 +401,12 @@ msgstr "Arrastra para colocar"
 msgid "viewer.outOfPage"
 msgstr "El recuadro no puede salir de la página."
 
+msgid "viewer.offThisPage"
+msgstr "El recuadro se sale de esta página."
+
+msgid "viewer.relocate"
+msgstr "Recolocar"
+
 msgid "viewer.stamp.onDemand"
 msgstr "Documento grande: la firma visible no se recalcula sola"
 
@@ -1510,18 +1516,24 @@ msgstr "Esta sede usa un método de firma poco seguro"
 msgid "sede.received.siteServer"
 msgstr "El servidor de la sede prepara la firma con este documento"
 
+#. Encabezado del lote remoto: cuenta firmas, porque los documentos no se ven.
 msgid "sede.received.signatures"
 msgid_plural "sede.received.signatures"
 msgstr[0] "Vas a hacer 1 firma"
 msgstr[1] "Vas a hacer {{count}} firmas"
 msgstr[2] "Vas a hacer {{count}} firmas"
 
+#. Aviso de lo recibido en un lote remoto: los documentos los tiene el servidor de la sede.
 msgid "sede.received.remoteBatch"
-msgstr "Los documentos se quedan en el servidor de la sede, y rFirma no puede enseñártelos"
+msgstr ""
+"Los documentos se quedan en el servidor de la sede, y rFirma no puede "
+"enseñártelos"
 
 #. Aviso informativo: la sede solo manda la huella del documento y rFirma no tiene qué enseñar.
 msgid "sede.received.precalculatedHash"
-msgstr "La sede solo envía la huella del documento, así que rFirma no puede enseñártelo"
+msgstr ""
+"La sede solo envía la huella del documento, así que rFirma no puede "
+"enseñártelo"
 
 #. El botón de firmar cuando la sede pide SHA-1 sin permiso en Preferencias; lleva la cuenta atrás obligada.
 msgid "sede.received.signAnyway"

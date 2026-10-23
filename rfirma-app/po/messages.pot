@@ -391,6 +391,12 @@ msgstr ""
 msgid "viewer.outOfPage"
 msgstr ""
 
+msgid "viewer.offThisPage"
+msgstr ""
+
+msgid "viewer.relocate"
+msgstr ""
+
 msgid "viewer.stamp.onDemand"
 msgstr ""
 
