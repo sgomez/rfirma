@@ -17,14 +17,16 @@ import type { PdfDocument, PdfPage, RenderTask, Viewport } from "../pdf";
 export const A4 = { width: 595, height: 842 };
 
 /** Un viewport con la transformación de `pdf.js` sin rotación: escala y voltea. */
-export function viewportAt(scale: number): Viewport {
+export function viewportAt(scale: number, size = A4): Viewport {
   return {
-    width: A4.width * scale,
-    height: A4.height * scale,
-    convertToPdfPoint: (x, y) => [x / scale, A4.height - y / scale],
-    convertToViewportPoint: (x, y) => [x * scale, (A4.height - y) * scale],
+    width: size.width * scale,
+    height: size.height * scale,
+    convertToPdfPoint: (x, y) => [x / scale, size.height - y / scale],
+    convertToViewportPoint: (x, y) => [x * scale, (size.height - y) * scale],
   };
 }
+
+const A4_LANDSCAPE = { width: A4.height, height: A4.width };
 
 export interface Recorder {
   document: PdfDocument;
@@ -33,39 +35,42 @@ export interface Recorder {
 }
 
 /** Un documento cuyas pintadas no acaban solas: las termina la prueba. */
-export function recordingDocument(pageCount = 3): Recorder {
+export function recordingDocument(pageCount = 3, landscape: readonly number[] = []): Recorder {
   const renders: Recorder["renders"] = [];
 
-  const pageOf = (number: number): PdfPage => ({
-    number,
-    rotate: 0,
-    view: [0, 0, 595, 842],
-    getViewport: ({ scale }) => viewportAt(scale),
-    render: ({ viewport }) => {
-      let settle: () => void = () => {};
-      let fail: (error: unknown) => void = () => {};
-      const entry = {
-        page: number,
-        scale: viewport.width / A4.width,
-        cancelled: false,
-        finish: () => settle(),
-      };
-      renders.push(entry);
-      const task: RenderTask = {
-        promise: new Promise<void>((resolve, reject) => {
-          settle = resolve;
-          fail = reject;
-        }),
-        cancel: () => {
-          entry.cancelled = true;
-          const cancellation = new Error("Rendering cancelled");
-          cancellation.name = "RenderingCancelledException";
-          fail(cancellation);
-        },
-      };
-      return task;
-    },
-  });
+  const pageOf = (number: number): PdfPage => {
+    const size = landscape.includes(number) ? A4_LANDSCAPE : A4;
+    return {
+      number,
+      rotate: 0,
+      view: [0, 0, size.width, size.height],
+      getViewport: ({ scale }) => viewportAt(scale, size),
+      render: ({ viewport }) => {
+        let settle: () => void = () => {};
+        let fail: (error: unknown) => void = () => {};
+        const entry = {
+          page: number,
+          scale: viewport.width / size.width,
+          cancelled: false,
+          finish: () => settle(),
+        };
+        renders.push(entry);
+        const task: RenderTask = {
+          promise: new Promise<void>((resolve, reject) => {
+            settle = resolve;
+            fail = reject;
+          }),
+          cancel: () => {
+            entry.cancelled = true;
+            const cancellation = new Error("Rendering cancelled");
+            cancellation.name = "RenderingCancelledException";
+            fail(cancellation);
+          },
+        };
+        return task;
+      },
+    };
+  };
 
   return {
     renders,

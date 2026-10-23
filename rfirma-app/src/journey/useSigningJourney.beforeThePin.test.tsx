@@ -182,6 +182,19 @@ describe("useSigningJourney, antes del PIN: páginas sin sello", () => {
     await waitFor(() => expect(presigned).toHaveLength(1));
     expect(result.current.dialogs.sealLoss).toBeNull();
   });
+
+  it("asks to move the box, and signs nothing, when it fits in none of the chosen pages", async () => {
+    const { result, presigned, sign } = await journeyAbout({
+      views: [SMALL, SMALL, SMALL],
+      pages: "all",
+    });
+
+    await sign();
+
+    expect(result.current.dialogs.sealLoss).toBeNull();
+    expect(result.current.failure?.situation).toBe("boxOutOfPage");
+    expect(presigned).toHaveLength(0);
+  });
 });
 
 describe("useSigningJourney, antes del PIN: la consulta de la esquina falla", () => {

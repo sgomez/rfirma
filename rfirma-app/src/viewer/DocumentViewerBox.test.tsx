@@ -442,6 +442,24 @@ describe("el aviso de recuadro fuera de la página", () => {
     expect(screen.queryByText("El recuadro se sale de esta página.")).not.toBeInTheDocument();
   });
 
+  it("shows only on the page in view where the box hangs off, not on the landscape one where it fits", async () => {
+    const { document, renders } = recordingDocument(2, [2]);
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={{ rect: { x0: 600, y0: 60, x1: 800, y1: 140 }, pages: "all" }}
+        onMove={noop}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(screen.getByText("El recuadro se sale de esta página.")).toBeInTheDocument();
+
+    await goToPage(2, renders);
+
+    expect(screen.queryByText("El recuadro se sale de esta página.")).not.toBeInTheDocument();
+  });
+
   it("goes away once the placement is the relocated one", async () => {
     const { document, renders } = recordingDocument(3);
     const { rerender } = renderWithCatalog(
