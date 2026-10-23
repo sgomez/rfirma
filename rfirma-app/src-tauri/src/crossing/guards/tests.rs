@@ -317,6 +317,20 @@ fn the_command_that_takes_the_pin_runs_off_the_main_thread() {
 }
 
 #[test]
+fn listing_the_certificates_runs_off_the_main_thread() {
+    let source = production_half(source_of("identity/adapters/tauri.rs"));
+    let declaration = source
+        .find("pub fn list_certificates(")
+        .expect("no esta la orden «list_certificates»");
+
+    assert!(
+        source[..declaration].ends_with("#[tauri::command(async)]\n"),
+        "«list_certificates» lee las tarjetas, segundos con un DNIe: tiene que ser \
+         #[tauri::command(async)] o la ventana se queda en negro mientras lista"
+    );
+}
+
+#[test]
 fn the_pin_is_taken_by_a_single_command() {
     let takers: Vec<(&str, usize)> = sources()
         .iter()

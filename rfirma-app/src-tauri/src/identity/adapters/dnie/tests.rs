@@ -420,6 +420,7 @@ fn rdnie_leaves_a_burned_dnie_to_pkcs11() {
     assert!(!super::rdnie_opens(&burned));
 }
 
+mod at_once;
 mod failures;
 mod in_the_reader;
 mod prompting;

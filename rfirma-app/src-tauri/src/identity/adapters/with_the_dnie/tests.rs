@@ -1,6 +1,6 @@
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 
 use rdnie::{Session, SIGNATURE_LABEL};
 use rdnie_emulator::{EmulatedDnie, DEFAULT_PIN};
@@ -44,6 +44,7 @@ impl CardOpener for Emulated {
 #[derive(Clone, Default)]
 struct Platform {
     asked: Arc<Mutex<Vec<Store>>>,
+    held: Arc<Mutex<Option<mpsc::Receiver<()>>>>,
 }
 
 impl Platform {
@@ -62,6 +63,10 @@ impl Platform {
 impl Token for Platform {
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         self.heard(store);
+        let held = self.held.lock().expect("sin envenenar").take();
+        if let Some(release) = held {
+            release.recv().expect("la prueba suelta");
+        }
         Ok(vec![TokenCertificate::new(
             CertificateRef::new(store.clone(), "plataforma", PLATFORM_LABEL, vec![0x01]),
             TestAuthority::root("Firmante de la plataforma").der(),
@@ -259,4 +264,5 @@ fn the_dnie_store_comes_after_the_platform_stores() {
         vec![first, second, dnie_store()]
     );
 }
+mod arriving;
 mod beside_a_card;

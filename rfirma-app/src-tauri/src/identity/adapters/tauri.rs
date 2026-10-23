@@ -35,7 +35,7 @@ fn keyring_for_installing(
 }
 
 /// Certificados de los tokens conectados.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_certificates(
     identity: State<'_, IdentityRoot>,
 ) -> Result<Vec<CertificateView>, Failure> {

@@ -8,6 +8,7 @@ use super::dnie::{dnie_store, CardOpener, DnieToken, PcscCard};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::listed::Listed;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::{Store, StoreClass};
@@ -24,11 +25,26 @@ pub fn and_the_dnie_store(stores: Vec<Store>) -> Vec<Store> {
 /// El DNIe detrás del puerto [`Token`], que además dice en qué lector lo ha reconocido rdnie.
 trait Dnie: Token + Send + Sync {
     fn claimed_reader(&self) -> Option<String>;
+    fn readers_with_a_card(&self) -> Option<Vec<String>>;
+    fn readings(&self) -> u64;
+    fn list_since(&self, store: &Store, arrived: u64) -> Result<Vec<TokenCertificate>, TokenError>;
 }
 
 impl<O: CardOpener> Dnie for DnieToken<O> {
+    fn readings(&self) -> u64 {
+        DnieToken::readings(self)
+    }
+
+    fn list_since(&self, store: &Store, arrived: u64) -> Result<Vec<TokenCertificate>, TokenError> {
+        DnieToken::list_since(self, store, arrived)
+    }
+
     fn claimed_reader(&self) -> Option<String> {
         DnieToken::claimed_reader(self)
+    }
+
+    fn readers_with_a_card(&self) -> Option<Vec<String>> {
+        DnieToken::readers_with_a_card(self)
     }
 }
 
@@ -92,32 +108,77 @@ impl<T: Token> WithTheDnie<T> {
         }
         self.dnie.claimed_reader().into_iter().collect()
     }
+
+    /// OpenSC arranca su driver en cada tarjeta al enumerar ranuras: sin más tarjeta que el DNIe, ni se abre.
+    fn sees_only_the_dnie(&self, store: &Store, skipped: &[String]) -> bool {
+        !skipped.is_empty()
+            && is_opensc(store)
+            && self
+                .dnie
+                .readers_with_a_card()
+                .is_some_and(|readers| readers.iter().all(|reader| skipped.contains(reader)))
+    }
 }
 
-impl<T: Token> Token for WithTheDnie<T> {
-    fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+fn is_opensc(store: &Store) -> bool {
+    store
+        .path()
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.starts_with("opensc-pkcs11"))
+}
+
+impl<T: Token> WithTheDnie<T> {
+    /// Lo que enseña `store` a un listado que empezó tras `arrived` lecturas del DNIe.
+    fn list_arrived(
+        &self,
+        store: &Store,
+        arrived: u64,
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
         if store.is_the_dnie() {
             let modules = self.modules_stood_in_for();
             return Ok(self
                 .dnie
-                .list(store)?
+                .list_since(store, arrived)?
                 .into_iter()
                 .map(|certificate| certificate.standing_in_for(modules.clone()))
                 .collect());
         }
-        let listed = self
-            .platform
-            .list_skipping(store, &self.skipped_for(store))?;
+        let skipped = self.skipped_for(store);
+        if self.sees_only_the_dnie(store, &skipped) {
+            self.remember(store, true);
+            return Ok(Vec::new());
+        }
+        let listed = self.platform.list_skipping(store, &skipped)?;
         self.remember(store, listed.skipped_a_slot);
         Ok(listed.certificates)
+    }
+}
+
+impl<T: Token> Token for WithTheDnie<T> {
+    fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+        self.list_arrived(store, self.dnie.readings())
+    }
+
+    /// Un listado que empieza mientras se lee el DNIe se queda con esa lectura al llegar a su almacén.
+    fn list_each(&self, stores: &[Store]) -> Listed {
+        let arrived = self.dnie.readings();
+        let mut listed = Listed::default();
+        for store in stores {
+            listed.heard(store, self.list_arrived(store, arrived));
+        }
+        listed
     }
 
     fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         if store.is_the_dnie() {
             return self.dnie.every_certificate(store);
         }
-        self.platform
-            .every_certificate_skipping(store, &self.skipped_for(store))
+        let skipped = self.skipped_for(store);
+        if self.sees_only_the_dnie(store, &skipped) {
+            return Ok(Vec::new());
+        }
+        self.platform.every_certificate_skipping(store, &skipped)
     }
 
     fn list_authenticated(
