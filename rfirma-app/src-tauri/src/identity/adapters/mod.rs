@@ -20,6 +20,8 @@ pub mod views;
 pub mod windows_credential_manager;
 #[cfg(windows)]
 pub mod windows_store;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub mod with_the_dnie;
 
 /// El llavero del escritorio de esta plataforma.
 #[cfg(target_os = "linux")]
@@ -51,7 +53,7 @@ pub use readers::UnavailableReaderWatch as DesktopReaderWatch;
 
 /// El token de esta plataforma.
 #[cfg(target_os = "macos")]
-pub use macos_store::MacosToken as DesktopToken;
+pub type DesktopToken = with_the_dnie::WithTheDnie<macos_store::MacosToken>;
 /// El token de esta plataforma.
 #[cfg(target_os = "linux")]
 pub use pkcs11::RealToken as DesktopToken;
@@ -72,7 +74,9 @@ pub fn desktop_token() -> DesktopToken {
 
 /// Los almacenes de certificados de esta plataforma.
 #[cfg(target_os = "macos")]
-pub use macos_store::from_environment as desktop_stores;
+pub fn desktop_stores() -> Vec<crate::identity::domain::store::Store> {
+    with_the_dnie::and_the_dnie_store(macos_store::from_environment())
+}
 /// Los almacenes de certificados de esta plataforma.
 #[cfg(target_os = "linux")]
 pub use pkcs11::stores::from_environment as desktop_stores;
