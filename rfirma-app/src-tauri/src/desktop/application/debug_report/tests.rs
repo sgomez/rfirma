@@ -36,6 +36,7 @@ pub(super) fn a_flatpak_report() -> DebugReport {
             status: NativeLibraryStatus::Loaded,
             path: Some(PathBuf::from("/app/lib/rfirma/librfirma_crypto.so")),
         },
+        rades: None,
         library_directory_override: None,
         pkcs11_module_override: None,
         pcsc: Some(PcscStatus::Responding(Vec::new())),
@@ -67,10 +68,27 @@ fn the_report_is_a_header_then_system_then_integration() {
          Integración\n  \
            afirma://: no consultable · sandbox de flatpak\n  \
            Biblioteca nativa: cargada\n    \
-             ruta: /app/lib/rfirma/librfirma_crypto.so\n\
+             ruta: /app/lib/rfirma/librfirma_crypto.so\n  \
+           rades: no incorporado\n\
          \n\
          Lectores\n  \
            pcscd: responde"
+    );
+}
+
+#[test]
+fn rades_compiled_in_shows_its_version_and_commit() {
+    let text = debug_report_text(
+        &DebugReport {
+            rades: Some("0.1.0 · 7f1497e".to_owned()),
+            ..a_flatpak_report()
+        },
+        &ana(),
+    );
+
+    assert!(
+        text.contains("librfirma_crypto.so\n  rades: 0.1.0 · 7f1497e\n"),
+        "{text}"
     );
 }
 
@@ -274,7 +292,7 @@ fn a_library_that_is_not_found_has_no_path_below_it() {
     );
 
     assert!(
-        text.contains("  Biblioteca nativa: no encontrada\n\nLectores"),
+        text.contains("  Biblioteca nativa: no encontrada\n  rades:"),
         "{text}"
     );
 }
@@ -301,7 +319,7 @@ fn a_library_that_does_not_load_shows_why_and_its_anonymized_path() {
 
         assert!(
             text.contains(&format!(
-                "  Biblioteca nativa: {line}\n    ruta: ~/rfirma/lib/librfirma_crypto.so\n\nLectores"
+                "  Biblioteca nativa: {line}\n    ruta: ~/rfirma/lib/librfirma_crypto.so\n  rades:"
             )),
             "{text}"
         );

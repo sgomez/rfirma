@@ -255,6 +255,7 @@ fn a_cades_signature_goes_all_the_way_from_the_operation_to_the_wire() {
     the_whole_errand_asking_for("CAdES", Format::Cades);
 }
 
+#[cfg(not(feature = "rades"))]
 #[test]
 fn a_cms_signature_goes_all_the_way_from_the_operation_to_the_wire() {
     the_whole_errand_asking_for("CMS/PKCS#7", Format::Cms);

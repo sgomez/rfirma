@@ -46,6 +46,8 @@ path = "src/lib.rs"
 custom-protocol = ["tauri/custom-protocol"]
 # El binario `rfirma-console`, que solo empaqueta el instalador de Windows (ADR-0041).
 console = []
+# CMS y CAdES firmados en Rust en vez de en el puente; solo la activa `just dev`, nunca un paquete.
+rades = ["dep:rades"]
 
 [build-dependencies]
 # ADR-0013: build.rs se queda en tauri-build (y el manifiesto de Windows, ADR-0035). No invoca a Maven ni a
@@ -177,6 +179,8 @@ ecb = "0.2.1"
 sys-locale = "0.3"
 # La fecha declarada de `verify -v`, en hora local y con su desplazamiento.
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+# Por git y fijado a un `rev`, para iterar sobre él sin sacar versión; tras la feature `rades`.
+rades = { git = "https://github.com/sgomez/rades", rev = "7f1497e21cea6f52731b066f5d0827e980b10391", optional = true }
 
 # Lo que solo existe en un escritorio Linux; Windows y macOS llevan en su lugar
 # sus adaptadores o los pendientes (ADR-0035).

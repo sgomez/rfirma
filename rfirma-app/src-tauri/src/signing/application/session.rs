@@ -16,6 +16,8 @@ use crate::signing::application::bare_pkcs1::BarePkcs1;
 use crate::signing::application::cycle::{
     self, CycleError, OpenCycle, SigningRequest, NOTHING_FROM_A_SITE,
 };
+#[cfg(feature = "rades")]
+use crate::signing::application::rades::Rades;
 use crate::signing::application::reading::signatures_of;
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{
@@ -456,6 +458,10 @@ fn on_the_bridge_of<T: Send + 'static>(
 ) -> Result<T, CycleFailure> {
     if format.signed_without_the_bridge() {
         return task(&BarePkcs1).map_err(CycleFailure::from);
+    }
+    #[cfg(feature = "rades")]
+    if Rades::signs(format) {
+        return task(&Rades::on_the_system_clock()).map_err(CycleFailure::from);
     }
     on_the_bridge(isolate, task)
 }

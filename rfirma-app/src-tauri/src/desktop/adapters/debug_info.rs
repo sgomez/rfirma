@@ -50,6 +50,7 @@ pub fn this_process_report() -> DebugReport {
         locale: locale(),
         protocol_handler: protocol_handler(channel),
         native_library: native_library(),
+        rades: option_env!("RFIRMA_RADES_VERSION").map(str::to_owned),
         library_directory_override: defined_path(LIBRARY_DIRECTORY_VARIABLE),
         pkcs11_module_override: defined_path(PKCS11_MODULE_VARIABLE),
         pcsc: pcsc_status(),

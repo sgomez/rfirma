@@ -5,6 +5,8 @@ pub mod configuration;
 pub mod configuration_memory;
 pub mod cycle;
 pub mod preview;
+#[cfg(feature = "rades")]
+pub mod rades;
 pub mod reading;
 pub mod session;
 

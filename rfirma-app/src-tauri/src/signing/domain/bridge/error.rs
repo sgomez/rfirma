@@ -45,6 +45,8 @@ pub enum BridgeError {
     FormatNotBridged(Format),
     /// El firmador del original no hace esa operación en ese formato.
     UnsupportedOperation(Format, SignatureOperation),
+    /// rades no hace lo que se pide: la clave, el valor o el algoritmo que lo nombra.
+    NotSupported(String),
     /// El firmador del original rechaza los datos por no ser lo que el formato pide.
     DataRejected(DataRejection, String),
 }
@@ -100,6 +102,7 @@ impl fmt::Display for BridgeError {
             Self::UnsupportedOperation(format, operation) => {
                 write!(f, "el formato {format} no admite {}", operation.name())
             }
+            Self::NotSupported(what) => write!(f, "rades no admite {what}"),
             Self::DataRejected(_, detail) => {
                 write!(f, "el firmador rechaza los datos: {detail}")
             }

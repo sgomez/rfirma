@@ -486,3 +486,122 @@ fn there_are_no_signatures_to_read_before_the_first_signature_of_the_session() {
 
     assert!(signed_document_signatures_in(&files, &engine, &session).is_err());
 }
+
+const SITE_DATA_PATH: &str = "/run/user/1000/sede/datos.bin";
+const SITE_DATA: &[u8] = b"los datos de la sede";
+
+fn a_site_signature_begun_in(
+    format: Format,
+    session: &SigningSession,
+) -> Result<crate::identity::domain::secret::StoreSecret, super::CycleFailure> {
+    use super::{begin_for_the_site, DeclaredByTheSite};
+    use crate::identity::domain::algorithm::SignatureAlgorithm;
+    use crate::signing::domain::bridge::SignatureOperation;
+
+    begin_for_the_site(
+        &DocumentsInMemory::default().with(SITE_DATA_PATH, SITE_DATA),
+        DocumentToSign {
+            handle: "asa".to_owned(),
+            document: Document::opened(SITE_DATA_PATH),
+        },
+        &TestAuthority::root("FIRMANTE DE PRUEBAS").as_certificate("FIRMA"),
+        DeclaredByTheSite {
+            format,
+            algorithm: SignatureAlgorithm::Sha256Ecdsa,
+            operation: SignatureOperation::Sign,
+            parameters: &std::collections::BTreeMap::new(),
+            allow_unregistered_signatures: false,
+        },
+        &ATokenThatMarksWhatItSigns,
+        &NoIsolate,
+        session,
+    )
+}
+
+#[cfg(not(feature = "rades"))]
+#[test]
+fn without_rades_a_cms_and_a_cades_for_the_site_go_to_the_bridge() {
+    for format in [Format::Cms, Format::Cades] {
+        let refused = a_site_signature_begun_in(format, &SigningSession::default())
+            .expect_err("sin rades los prefirma el puente, que en grada A no está");
+
+        assert!(
+            format!("{refused:?}").contains("no hay libreria en grada A"),
+            "{format}: {refused:?}"
+        );
+    }
+}
+
+#[cfg(feature = "rades")]
+#[test]
+fn with_rades_the_cades_asic_s_still_goes_to_the_bridge() {
+    let refused = a_site_signature_begun_in(Format::CadesAsicS, &SigningSession::default())
+        .expect_err("el puente no está en grada A");
+
+    assert!(
+        format!("{refused:?}").contains("no hay libreria en grada A"),
+        "{refused:?}"
+    );
+}
+
+/// Un token que devuelve un `ECDSA-Sig-Value` con la forma debida, sin firmar nada.
+#[cfg(feature = "rades")]
+struct AnEcdsaShapedToken;
+
+#[cfg(feature = "rades")]
+impl crate::signing::ports::Signer for AnEcdsaShapedToken {
+    fn secret_of(
+        &self,
+        reference: &crate::identity::domain::certificate::CertificateRef,
+    ) -> Result<
+        crate::identity::domain::secret::StoreSecret,
+        crate::identity::domain::error::TokenError,
+    > {
+        ATokenThatMarksWhatItSigns.secret_of(reference)
+    }
+
+    fn offers(
+        &self,
+        reference: &crate::identity::domain::certificate::CertificateRef,
+        algorithm: crate::identity::domain::algorithm::SignatureAlgorithm,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        ATokenThatMarksWhatItSigns.offers(reference, algorithm)
+    }
+
+    fn sign_with_secret(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        _algorithm: crate::identity::domain::algorithm::SignatureAlgorithm,
+        _data: &[u8],
+    ) -> Result<Vec<u8>, crate::identity::domain::error::TokenError> {
+        Ok(vec![0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x01])
+    }
+
+    fn accepts_the_secret(
+        &self,
+        reference: &crate::identity::domain::certificate::CertificateRef,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        ATokenThatMarksWhatItSigns.accepts_the_secret(reference, secret)
+    }
+}
+
+#[cfg(feature = "rades")]
+#[test]
+fn with_rades_a_cms_for_the_site_is_presigned_and_postsigned_without_the_bridge() {
+    let session = SigningSession::default();
+
+    a_site_signature_begun_in(Format::Cms, &session)
+        .expect("rades prefirma el CMS sin el hilo del puente");
+    sign_on_token(
+        &AnEcdsaShapedToken,
+        &session,
+        &ProtectedSecret::from_str(""),
+    )
+    .expect("el token firma");
+    let signed = finish(&NoIsolate, &session).expect("rades postfirma sin el hilo del puente");
+
+    let decoded = ::rades::cades::decode(signed.completed.signed_document()).expect("sale un CMS");
+    assert_eq!(decoded.content(), Some(SITE_DATA));
+}

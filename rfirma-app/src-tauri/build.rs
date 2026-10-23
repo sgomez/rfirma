@@ -11,6 +11,7 @@ fn main() {
     write_the_catalog();
     record_the_commit();
     record_the_rdnie_version();
+    record_the_rades_version();
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     link_libxslt(&target_os);
     if target_os != "windows" {
@@ -114,17 +115,44 @@ fn record_the_commit() {
 }
 
 fn record_the_rdnie_version() {
+    let version = locked_package("rdnie")
+        .and_then(|package| field(&package, "version"))
+        .unwrap_or_else(|| "desconocida".to_owned());
+    println!("cargo:rustc-env=RFIRMA_RDNIE_VERSION={version}");
+}
+
+fn record_the_rades_version() {
+    if std::env::var_os("CARGO_FEATURE_RADES").is_none() {
+        return;
+    }
+    let Some(package) = locked_package("rades") else {
+        return;
+    };
+    let version = field(&package, "version").unwrap_or_else(|| "desconocida".to_owned());
+    let commit = field(&package, "source").and_then(|source| {
+        source
+            .rsplit_once('#')
+            .map(|(_, sha)| sha.chars().take(7).collect::<String>())
+    });
+    let line = match commit {
+        Some(commit) => format!("{version} · {commit}"),
+        None => version,
+    };
+    println!("cargo:rustc-env=RFIRMA_RADES_VERSION={line}");
+}
+
+fn locked_package(name: &str) -> Option<String> {
     let lock = crate_dir().join("Cargo.lock");
     println!("cargo:rerun-if-changed={}", lock.display());
-    let text = std::fs::read_to_string(lock).unwrap_or_default();
-    let version = text
-        .split("[[package]]")
-        .find(|package| package.contains("\nname = \"rdnie\"\n"))
-        .and_then(|package| {
-            package
-                .lines()
-                .find_map(|line| line.strip_prefix("version = "))
-        })
-        .map_or("desconocida", |quoted| quoted.trim_matches('"'));
-    println!("cargo:rustc-env=RFIRMA_RDNIE_VERSION={version}");
+    let text = std::fs::read_to_string(lock).ok()?;
+    text.split("[[package]]")
+        .find(|package| package.contains(&format!("\nname = \"{name}\"\n")))
+        .map(str::to_owned)
+}
+
+fn field(package: &str, key: &str) -> Option<String> {
+    package
+        .lines()
+        .find_map(|line| line.strip_prefix(&format!("{key} = ")))
+        .map(|quoted| quoted.trim_matches('"').to_owned())
 }

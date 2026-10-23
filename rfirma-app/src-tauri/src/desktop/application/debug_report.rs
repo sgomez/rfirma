@@ -242,6 +242,8 @@ pub struct DebugReport {
     pub protocol_handler: ProtocolHandlerStatus,
     /// Estado de la librería nativa.
     pub native_library: NativeLibrary,
+    /// Versión y commit de rades; `None` si se compiló sin la feature `rades`.
+    pub rades: Option<String>,
     /// `RFIRMA_LIB_DIR`, si está definida.
     pub library_directory_override: Option<PathBuf>,
     /// `RFIRMA_PKCS11_MODULE`, si está definida.
@@ -422,6 +424,10 @@ fn integration_lines(report: &DebugReport, owner: &ReportOwner) -> Vec<String> {
     if let Some(path) = &report.native_library.path {
         lines.push(format!("  ruta: {}", owner.anonymized(path)));
     }
+    lines.push(format!(
+        "rades: {}",
+        report.rades.as_deref().unwrap_or("no incorporado")
+    ));
     for (variable, value) in [
         ("RFIRMA_LIB_DIR", &report.library_directory_override),
         ("RFIRMA_PKCS11_MODULE", &report.pkcs11_module_override),

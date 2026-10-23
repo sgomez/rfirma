@@ -320,6 +320,7 @@ fn with_the_preference_a_signature_outside_xml_is_signed_with_sha1_on_the_token(
             a_request("op=sign&format=PAdES&algorithm=SHA1", Some(A_PDF), ""),
             "sign en PAdES",
         ),
+        #[cfg(not(feature = "rades"))]
         (
             a_request("op=sign&format=CMS/PKCS#7&algorithm=SHA-1", Some(A_PDF), ""),
             "sign en CMS",

@@ -14,6 +14,7 @@ set dotenv-override := true
 windows := if os_family() == "windows" { "true" } else { "false" }
 macos := if os() == "macos" { "true" } else { "false" }
 rust_workspace := if windows == "true" { "--workspace --exclude fake-pkcs11" } else { "--workspace" }
+prod_features := "--features custom-protocol,console"
 
 # Cargo y las herramientas de `~/.local/bin` quedan fuera del PATH de una shell no interactiva: las recetas se llaman sin prefijo.
 export PATH := if windows == "true" { env("PATH", "") } else { home_directory() / ".cargo/bin" + ":" + home_directory() / ".local/bin" + ":" + env("PATH", "/usr/local/bin:/usr/bin:/bin") }
@@ -397,7 +398,7 @@ test-site-driver:
 [group('ci')]
 test-native: (certs "install") check-native build-ts llvm-cov-tag
     mkdir -p "{{ coverage_out }}/crap-ffi"
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ no_debuginfo }} {{ cov_lock }} cargo llvm-cov nextest --all-features --run-ignored only --test-threads 8 \
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ no_debuginfo }} {{ cov_lock }} cargo llvm-cov nextest {{ prod_features }} --run-ignored only --test-threads 8 \
         --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info"
     cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
     cd {{ bridge }} && {{ maven }} test -DexcludedGroups= -Dgroups=gradaC
@@ -406,7 +407,7 @@ test-native: (certs "install") check-native build-ts llvm-cov-tag
 [group('ci')]
 test-windows: vcpkg-libs build-ts
     mkdir -p "{{ coverage_out }}/windows"
-    cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lib --test channel_client --test channel_operations --test service_acknowledgement --lcov --output-path "{{ coverage_out }}/windows/lcov.info"
+    cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov {{ prod_features }} --lib --test channel_client --test channel_operations --test service_acknowledgement --lcov --output-path "{{ coverage_out }}/windows/lcov.info"
     cd {{ tauri }} && cargo crap --path '{{ windows_allow }}' --lcov "{{ coverage_out }}/windows/lcov.info" --threshold 30 --fail-above
 
 # La prueba de humo del binario de consola de Windows: `rfirma.com` desde cmd, PowerShell y Git Bash (ADR-0041).
@@ -419,7 +420,7 @@ smoke-console: vcpkg-libs build-ts
 [group('ci')]
 test-macos: build-ts
     mkdir -p "{{ coverage_out }}/macos"
-    cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lib --test channel_client --test channel_operations --test service_acknowledgement --lcov --output-path "{{ coverage_out }}/macos/lcov.info"
+    cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov {{ prod_features }} --lib --test channel_client --test channel_operations --test service_acknowledgement --lcov --output-path "{{ coverage_out }}/macos/lcov.info"
     cd {{ tauri }} && cargo crap --path '{{ macos_store_allow }}' --lcov "{{ coverage_out }}/macos/lcov.info" --threshold 30 --fail-above
     cd {{ tauri }} && cargo crap --path '{{ macos_trust_allow }}' --lcov "{{ coverage_out }}/macos/lcov.info" --threshold 30 --fail-above
 
@@ -437,7 +438,7 @@ llvm-cov-tag:
 [private]
 coverage: (certs "install") build-ts llvm-cov-tag
     mkdir -p "{{ coverage_out }}/coverage"
-    cd {{ tauri }} && {{ no_debuginfo }} {{ cov_lock }} {{ root }}/scripts/token-per-test.sh cargo llvm-cov --workspace --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
+    cd {{ tauri }} && {{ no_debuginfo }} {{ cov_lock }} {{ root }}/scripts/token-per-test.sh cargo llvm-cov --workspace {{ prod_features }} --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
         --fail-under-lines {{ coverage_floor }}
 
 # La puerta del carril rapido, con el modulo FFI oculto.
@@ -708,10 +709,10 @@ build-storybook: po-import
 storybook-a11y: po-import
     cd {{ app }} && node tools/storybook-a11y.mjs
 
-# Abre la ventana con recarga en caliente; los argumentos van a la aplicacion.
+# Abre la ventana con recarga en caliente y la feature `rades`; los argumentos van a la aplicacion.
 [group('dev')]
 dev *args: vcpkg-libs check-native po-import
-    cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev -- -- {{ args }}
+    cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev --features rades -- -- {{ args }}
 
 # Como `dev`, con la tarjeta falsa de las pruebas como unico almacen: `tries` intentos (0, bloqueada)
 # y perfil `dnie` o `signals`. Cada arranque la restaura; su registro, en <target>/fake-card/calls.log.
