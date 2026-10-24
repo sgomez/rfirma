@@ -202,7 +202,7 @@ fn card_removed() -> bool {
 unsafe extern "C" fn get_slot_info(slot: CK_SLOT_ID, target: *mut CK_SLOT_INFO) -> CK_RV {
     reader_entry("C_GetSlotInfo", "", |_| {
         check_slot(slot)?;
-        *out(target)? = info::slot(!card_removed());
+        *out(target)? = info::slot(&card::reader_name(card::card_dir()), !card_removed());
         Ok(())
     })
 }

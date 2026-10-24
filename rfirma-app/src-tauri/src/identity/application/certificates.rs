@@ -138,20 +138,15 @@ pub fn certificates_by_class(
     installed_dir: &Path,
 ) -> Vec<(StoreClass, usize)> {
     let mut counted: Vec<(StoreClass, usize)> = Vec::new();
-    for store in stores {
-        let found = token.list(store).map_or(0, |certificates| {
-            certificates
-                .iter()
-                .filter(|certificate| !certificate.is_a_macos_token_identity())
-                .count()
-        });
-        if found == 0 {
-            continue;
-        }
-        let class = store.class_under(installed_dir);
+    let found = token.list_each(stores).certificates().unwrap_or_default();
+    for certificate in found
+        .iter()
+        .filter(|certificate| !certificate.is_a_macos_token_identity())
+    {
+        let class = certificate.reference().store().class_under(installed_dir);
         match counted.iter_mut().find(|(seen, _)| *seen == class) {
-            Some((_, certificates)) => *certificates += found,
-            None => counted.push((class, found)),
+            Some((_, certificates)) => *certificates += 1,
+            None => counted.push((class, 1)),
         }
     }
     counted

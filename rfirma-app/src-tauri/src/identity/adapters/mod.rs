@@ -1,5 +1,7 @@
 //! Adaptadores de `identity`: todo lo que toca el mundo, incluidas las órdenes y las vistas de Tauri.
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub mod dnie;
 pub mod failures;
 pub mod folder;
 #[cfg(target_os = "linux")]
@@ -18,6 +20,8 @@ pub mod views;
 pub mod windows_credential_manager;
 #[cfg(windows)]
 pub mod windows_store;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub mod with_the_dnie;
 
 /// El llavero del escritorio de esta plataforma.
 #[cfg(target_os = "linux")]
@@ -49,49 +53,56 @@ pub use readers::UnavailableReaderWatch as DesktopReaderWatch;
 
 /// El token de esta plataforma.
 #[cfg(target_os = "macos")]
-pub use macos_store::MacosToken as DesktopToken;
+pub type DesktopToken = with_the_dnie::WithTheDnie<macos_store::MacosToken>;
 /// El token de esta plataforma.
 #[cfg(target_os = "linux")]
-pub use pkcs11::RealToken as DesktopToken;
+pub type DesktopToken = with_the_dnie::WithTheDnie<pkcs11::RealToken>;
 /// El token de esta plataforma.
 #[cfg(windows)]
 pub use windows_store::WindowsToken as DesktopToken;
 
-/// El token de esta plataforma, con el lector del DNIe en macOS.
-#[cfg(target_os = "macos")]
+/// El token de esta plataforma, con el lector del DNIe en Linux y macOS.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn desktop_token() -> DesktopToken {
     DesktopToken::default()
 }
 /// El token de esta plataforma.
-#[cfg(any(target_os = "linux", windows))]
+#[cfg(windows)]
 pub fn desktop_token() -> DesktopToken {
     DesktopToken
 }
 
 /// Los almacenes de certificados de esta plataforma.
 #[cfg(target_os = "macos")]
-pub use macos_store::from_environment as desktop_stores;
+pub fn desktop_stores() -> Vec<crate::identity::domain::store::Store> {
+    with_the_dnie::and_the_dnie_store(macos_store::from_environment())
+}
 /// Los almacenes de certificados de esta plataforma.
 #[cfg(target_os = "linux")]
-pub use pkcs11::stores::from_environment as desktop_stores;
+pub fn desktop_stores() -> Vec<crate::identity::domain::store::Store> {
+    with_the_dnie::and_the_dnie_store(pkcs11::stores::from_environment())
+}
 /// Los almacenes de certificados de esta plataforma.
 #[cfg(windows)]
 pub use windows_store::from_environment as desktop_stores;
 
-/// El DNIe que ve el lector de esta plataforma; solo macOS lo lee con rdnie.
-#[cfg(target_os = "macos")]
+/// El DNIe que ve el lector de esta plataforma; solo Linux y macOS lo leen con rdnie.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn this_dnie() -> crate::identity::domain::seen_dnie::DnieInTheReader {
-    macos_store::seen_dnie(&macos_store::PcscCard)
+    dnie::seen_dnie(&dnie::PcscCard)
 }
-/// El DNIe que ve el lector de esta plataforma; solo macOS lo lee con rdnie.
-#[cfg(not(target_os = "macos"))]
+/// El DNIe que ve el lector de esta plataforma; solo Linux y macOS lo leen con rdnie.
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn this_dnie() -> crate::identity::domain::seen_dnie::DnieInTheReader {
     crate::identity::domain::seen_dnie::DnieInTheReader::Absent
 }
 
-/// La versión de rdnie compilada; sin ella fuera de macOS.
-#[cfg(target_os = "macos")]
-pub const RDNIE_VERSION: &str = macos_store::RDNIE_VERSION;
-/// La versión de rdnie compilada; sin ella fuera de macOS.
-#[cfg(not(target_os = "macos"))]
+/// La versión de rdnie compilada; sin ella en Windows.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub const RDNIE_VERSION: &str = dnie::RDNIE_VERSION;
+/// La versión de rdnie compilada; sin ella en Windows.
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub const RDNIE_VERSION: &str = "no incluido";
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests;

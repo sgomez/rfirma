@@ -9,7 +9,7 @@ use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, To
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::holder::PromptedHolder;
 use crate::identity::domain::keyring::KeyringError;
-use crate::identity::domain::listed::Listed;
+use crate::identity::domain::listed::{Listed, ListedSkipping};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::readers::{Reader, ReadyCard};
 use crate::identity::domain::secret::{PinWarning, SecretName, StoreSecret};
@@ -24,6 +24,24 @@ pub trait Token {
 
     /// Todos los certificados de un almacén, también los que no firman: con ellos se completa una cadena.
     fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError>;
+
+    /// Los certificados firmables de un almacén sin abrir la ranura de los lectores `skipped`, y si se ha saltado alguna; por defecto, ninguna.
+    fn list_skipping(
+        &self,
+        store: &Store,
+        _skipped: &[String],
+    ) -> Result<ListedSkipping, TokenError> {
+        Ok(ListedSkipping::of_every_slot(self.list(store)?))
+    }
+
+    /// Todos los certificados de un almacén, sin abrir la ranura de los lectores `skipped`; por defecto, todas.
+    fn every_certificate_skipping(
+        &self,
+        store: &Store,
+        _skipped: &[String],
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
+        self.every_certificate(store)
+    }
 
     /// Los certificados firmables de un almacén, autenticándose con `pin` (ADR-0034).
     fn list_authenticated(

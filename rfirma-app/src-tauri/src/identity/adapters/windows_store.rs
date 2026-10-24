@@ -9,6 +9,7 @@ use super::pkcs11::RealToken;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::listed::ListedSkipping;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::readers::with_the_cards_present;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
@@ -67,6 +68,28 @@ impl Token for WindowsToken {
             return cng::every_certificate();
         }
         RealToken.every_certificate(store)
+    }
+
+    fn list_skipping(
+        &self,
+        store: &Store,
+        skipped: &[String],
+    ) -> Result<ListedSkipping, TokenError> {
+        if is_the_user_store(store) {
+            return Ok(ListedSkipping::of_every_slot(self.list(store)?));
+        }
+        RealToken.list_skipping(store, skipped)
+    }
+
+    fn every_certificate_skipping(
+        &self,
+        store: &Store,
+        skipped: &[String],
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
+        if is_the_user_store(store) {
+            return self.every_certificate(store);
+        }
+        RealToken.every_certificate_skipping(store, skipped)
     }
 
     fn list_authenticated(

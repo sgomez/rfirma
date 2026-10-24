@@ -106,7 +106,7 @@ fn within_the_scope(
                 .ok_or_else(|| FilteringError::ModuleNotDiscovered(named.clone()))?;
             Ok(certificates
                 .into_iter()
-                .filter(|certificate| certificate.reference().module() == module)
+                .filter(|certificate| certificate.is_served_by(&module))
                 .collect())
         }
     }

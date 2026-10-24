@@ -70,6 +70,34 @@ fn the_card_presents_itself_as_a_dnie_in_a_removable_reader() {
 }
 
 #[test]
+fn the_slot_describes_the_reader_it_is_put_in() {
+    let card = FakeCard::new()
+        .and_then(|card| card.in_reader("Lector de la mesa 00 00"))
+        .unwrap();
+    let (context, slot) = process(&card);
+
+    let reader = context.get_slot_info(slot).unwrap();
+
+    assert_eq!(reader.slot_description().trim(), "Lector de la mesa 00 00");
+}
+
+#[test]
+fn a_long_reader_name_is_cut_to_the_sixty_four_characters_of_the_slot_description() {
+    let name = format!("{} 00 00", "Lector de nombre muy largo".repeat(3));
+    let card = FakeCard::new()
+        .and_then(|card| card.in_reader(&name))
+        .unwrap();
+    let (context, slot) = process(&card);
+
+    let reader = context.get_slot_info(slot).unwrap();
+
+    assert_eq!(
+        reader.slot_description(),
+        "Lector de nombre muy largoLector de nombre muy largoLector de no"
+    );
+}
+
+#[test]
 fn the_slot_offers_rsa_signing_with_its_digest() {
     let card = FakeCard::new().unwrap();
     let (context, slot) = process(&card);

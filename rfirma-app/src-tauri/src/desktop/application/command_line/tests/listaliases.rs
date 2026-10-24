@@ -169,3 +169,50 @@ fn listaliases_help_does_not_announce_password_fd() {
     assert!(!xml_stdout(&outcome).contains("password-fd"));
     assert!(xml_stdout(&outcome).contains("--xml"));
 }
+
+/// Un certificado de `/modulo.so` y el del DNIe, en lugar de lo que `/modulo.so` habría leído de su tarjeta.
+struct WithTheDnieStandingIn;
+
+impl CertificateStores for WithTheDnieStandingIn {
+    fn certificates(&self) -> Result<Vec<TokenCertificate>, TokenError> {
+        Ok(vec![
+            TokenCertificate::new(
+                CertificateRef::new(Store::module("/modulo.so"), "token", "UNO", None),
+                Vec::new(),
+            ),
+            TokenCertificate::new(
+                CertificateRef::new(Store::module("dnie:pcsc"), "DNIe", "DNIE", None),
+                Vec::new(),
+            )
+            .standing_in_for(vec![PathBuf::from("/modulo.so")]),
+        ])
+    }
+
+    fn discovered_module(&self, library: &str) -> Option<PathBuf> {
+        ["/modulo.so", "/otro.so"]
+            .contains(&library)
+            .then(|| PathBuf::from(library))
+    }
+}
+
+#[test]
+fn listaliases_with_the_module_whose_slot_rdnie_took_lists_the_dnie_as_well() {
+    let outcome = attended_with(
+        &["listaliases", "-store", "pkcs11:/modulo.so"],
+        &WithTheDnieStandingIn,
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED);
+    assert_eq!(String::from_utf8(outcome.stdout).unwrap(), "UNO\nDNIE\n");
+}
+
+#[test]
+fn listaliases_with_another_module_leaves_the_dnie_out() {
+    let outcome = attended_with(
+        &["listaliases", "-store", "pkcs11:/otro.so"],
+        &WithTheDnieStandingIn,
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED);
+    assert!(outcome.stdout.is_empty());
+}

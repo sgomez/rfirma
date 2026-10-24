@@ -161,6 +161,7 @@ pub struct TokenCertificate {
     reference: CertificateRef,
     der: Vec<u8>,
     issuers: Vec<Vec<u8>>,
+    stands_in_for: Vec<PathBuf>,
 }
 
 impl TokenCertificate {
@@ -170,7 +171,19 @@ impl TokenCertificate {
             reference,
             der,
             issuers: Vec::new(),
+            stands_in_for: Vec::new(),
         }
+    }
+
+    /// El mismo certificado, en lugar de los de los módulos `modules`, que se han saltado la ranura de su tarjeta.
+    pub fn standing_in_for(mut self, modules: Vec<PathBuf>) -> Self {
+        self.stands_in_for = modules;
+        self
+    }
+
+    /// Si lo sirve `module`: es su módulo, o está en lugar de lo que ese módulo habría leído de su tarjeta.
+    pub fn is_served_by(&self, module: &Path) -> bool {
+        self.reference.module() == module || self.stands_in_for.iter().any(|other| other == module)
     }
 
     /// El mismo certificado acompañado de los emisores que completan su cadena.
