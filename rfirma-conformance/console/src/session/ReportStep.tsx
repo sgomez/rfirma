@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import type { ClientKind } from "../contract/ClientKind";
 import type { Header } from "../contract/Header";
 import type { NewReport } from "../contract/NewReport";
 import type { ReportEntry } from "../contract/ReportEntry";
@@ -16,6 +17,7 @@ export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
   const [editing, setEditing] = useState(false);
   const [creating, setCreating] = useState(false);
   const [correcting, setCorrecting] = useState(false);
+  const [cloning, setCloning] = useState<string | null>(null);
   const name = snapshot.report_name;
   const view = snapshot.report;
   const client = snapshot.client;
@@ -27,6 +29,16 @@ export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
 
   const openReport = (report: string) =>
     suite.openReport(report).catch(complain("No se pudo abrir el informe"));
+  const archiveReport = (report: string) =>
+    suite.archiveReport(report).catch(complain("No se pudo archivar el informe"));
+  const actions = {
+    current: name,
+    busy,
+    clientKind: client?.kind ?? null,
+    open: openReport,
+    clone: setCloning,
+    archive: archiveReport,
+  };
 
   return (
     <Step
@@ -90,16 +102,12 @@ export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
               <ReportList
                 label="Se pueden continuar"
                 entries={snapshot.reports.filter((entry) => entry.continuable)}
-                current={name}
-                busy={busy}
-                open={openReport}
+                {...actions}
               />
               <ReportList
                 label="Solo lectura"
                 entries={snapshot.reports.filter((entry) => !entry.continuable)}
-                current={name}
-                busy={busy}
-                open={openReport}
+                {...actions}
               />
             </>
           ) : (
@@ -126,6 +134,7 @@ export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
         <CorrectHeaderModal header={view.header} onClose={() => setCorrecting(false)} />
       )}
       {creating && <NewReportModal onClose={() => setCreating(false)} />}
+      {cloning && <CloneReportModal from={cloning} onClose={() => setCloning(null)} />}
     </Step>
   );
 }
@@ -307,6 +316,39 @@ function NewReportModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function CloneReportModal({ from, onClose }: { from: string; onClose: () => void }) {
+  const { suite } = useLive();
+  const [initial, setInitial] = useState<Draft>(BLANK);
+  const [complaint, setComplaint] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([suite.defaults(), suite.reportView(from)])
+      .then(([deduced, source]) =>
+        setInitial({
+          ...BLANK,
+          ...deduced,
+          notes: source.header.notes,
+          scope: source.header.scope,
+        }),
+      )
+      .catch((error: unknown) =>
+        setComplaint(error instanceof Error ? error.message : String(error)),
+      );
+  }, [suite, from]);
+
+  return (
+    <HeaderModal
+      title={`Clonar ${from}`}
+      submit="Clonar"
+      initial={initial}
+      withName
+      notice={complaint}
+      onSubmit={(report) => suite.cloneReport({ from, report })}
+      onClose={onClose}
+    />
+  );
+}
+
 function CorrectHeaderModal({ header, onClose }: { header: Header; onClose: () => void }) {
   const { suite } = useLive();
   const [initial] = useState<Draft>(() => ({ ...BLANK, ...header }));
@@ -336,13 +378,19 @@ function ReportList({
   entries,
   current,
   busy,
+  clientKind,
   open,
+  clone,
+  archive,
 }: {
   label: string;
   entries: ReportEntry[];
   current: string | null;
   busy: boolean;
+  clientKind: ClientKind | null;
   open: (name: string) => Promise<unknown>;
+  clone: (name: string) => void;
+  archive: (name: string) => Promise<unknown>;
 }) {
   const { suite } = useLive();
   if (entries.length === 0) return null;
@@ -363,25 +411,45 @@ function ReportList({
             {entry.why_not && <span className="muted">{entry.why_not}</span>}
           </span>
           <span className="muted report-date">{calendarDate(entry.date)}</span>
-          {entry.continuable ? (
+          <span className="report-actions">
             <button
               type="button"
-              className="button small"
-              disabled={busy || entry.name === current}
-              onClick={() => void open(entry.name)}
-            >
-              {entry.name === current ? "Abierto" : "Abrir"}
-            </button>
-          ) : (
-            <a
               className="button ghost small"
-              href={suite.page(`/informe/${encodeURIComponent(entry.name)}`)}
-              target="_blank"
-              rel="noopener"
+              aria-label={`Clonar ${entry.name}`}
+              disabled={busy || entry.kind === null || entry.kind !== clientKind}
+              onClick={() => clone(entry.name)}
             >
-              Ver en otra ventana <ExternalIcon />
-            </a>
-          )}
+              Clonar…
+            </button>
+            <button
+              type="button"
+              className="button ghost small"
+              aria-label={`Archivar ${entry.name}`}
+              disabled={busy || entry.name === current}
+              onClick={() => void archive(entry.name)}
+            >
+              Archivar
+            </button>
+            {entry.continuable ? (
+              <button
+                type="button"
+                className="button small"
+                disabled={busy || entry.name === current}
+                onClick={() => void open(entry.name)}
+              >
+                {entry.name === current ? "Abierto" : "Abrir"}
+              </button>
+            ) : (
+              <a
+                className="button ghost small"
+                href={suite.page(`/informe/${encodeURIComponent(entry.name)}`)}
+                target="_blank"
+                rel="noopener"
+              >
+                Ver en otra ventana <ExternalIcon />
+              </a>
+            )}
+          </span>
         </li>
       ))}
     </ul>

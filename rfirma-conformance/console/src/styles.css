@@ -1036,8 +1036,10 @@ select.input {
   white-space: nowrap;
 }
 
-.report-list .button {
-  justify-self: end;
+.report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s1);
 }
 
 .run-summary {
