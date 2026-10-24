@@ -261,7 +261,7 @@ fn the_intermediate_ca_completes_the_chain_of_the_signing_certificate_for_a_site
 }
 
 #[test]
-fn a_full_listing_opens_the_card_for_the_holder_and_again_for_the_chain() {
+fn a_full_listing_opens_the_card_once_for_the_holder_and_its_chain() {
     for (version, card) in the_two_versions() {
         let police = OfThePolice::new();
         let opened = Arc::new(AtomicUsize::new(0));
@@ -276,12 +276,12 @@ fn a_full_listing_opens_the_card_for_the_holder_and_again_for_the_chain() {
                 .expect("el DNIe deberia listarse");
 
         assert_eq!(offered.len(), 1, "{version}");
-        assert_eq!(opened.load(Ordering::SeqCst), 2, "{version}");
+        assert_eq!(opened.load(Ordering::SeqCst), 1, "{version}");
     }
 }
 
 #[test]
-fn the_chain_of_a_later_listing_is_read_from_the_card_again() {
+fn a_later_listing_and_its_chain_come_from_the_session_already_open() {
     let police = OfThePolice::new();
     let opened = Arc::new(AtomicUsize::new(0));
     let counter = Arc::clone(&opened);
@@ -295,7 +295,7 @@ fn the_chain_of_a_later_listing_is_read_from_the_card_again() {
     certificates_with_their_chains(&dnie, &[dnie_store()], &LastListing::default())
         .expect("el DNIe deberia listarse");
 
-    assert_eq!(opened.load(Ordering::SeqCst), 4);
+    assert_eq!(opened.load(Ordering::SeqCst), 1);
 }
 
 #[test]
@@ -430,6 +430,7 @@ mod at_once;
 mod failures;
 mod files_read;
 mod in_the_reader;
+mod one_insertion;
 mod prompting;
 mod removed_card;
 mod signing;

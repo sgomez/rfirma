@@ -147,11 +147,11 @@ fn a_listing_that_arrives_while_the_card_is_read_takes_that_reading() {
 
     assert_eq!(first.join().expect("sin pánico"), (1, 3));
     assert_eq!(second.join().expect("sin pánico"), (1, 3));
-    assert_eq!(opened.load(Ordering::SeqCst), 2);
+    assert_eq!(opened.load(Ordering::SeqCst), 1);
 }
 
 #[test]
-fn a_listing_that_arrives_after_the_reading_reads_the_card_again() {
+fn a_listing_that_arrives_after_the_reading_takes_it_from_the_session() {
     let opened = Arc::new(AtomicUsize::new(0));
     let (inside, _entered) = mpsc::channel();
     let (released, release) = mpsc::channel();
@@ -165,7 +165,7 @@ fn a_listing_that_arrives_after_the_reading_reads_the_card_again() {
     dnie.list(&dnie_store()).expect("el DNIe deberia listarse");
     dnie.list(&dnie_store()).expect("el DNIe deberia listarse");
 
-    assert_eq!(opened.load(Ordering::SeqCst), 2);
+    assert_eq!(opened.load(Ordering::SeqCst), 1);
 }
 
 /// Cuenta las aperturas de una tarjeta emulada.

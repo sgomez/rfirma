@@ -1,6 +1,8 @@
 //! El vigilante PC/SC de Linux, Windows y macOS: espera a `SCardGetStatusChange` sobre todos los lectores y las notificaciones PnP (ADR-0048).
 
+use std::collections::hash_map::DefaultHasher;
 use std::ffi::CString;
+use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
 use pcsc::{Context, ReaderState, Scope, State};
@@ -149,6 +151,28 @@ fn readers_in(states: &[(CString, State)]) -> Vec<Reader> {
 
 /// Una consulta puntual a PC/SC; `None`, si no responde.
 pub fn survey_readers() -> Option<Vec<Reader>> {
+    let observed: ReaderStates = surveyed()?
+        .iter()
+        .map(|state| (state.name().to_owned(), state.event_state()))
+        .collect();
+    Some(readers_in(&observed))
+}
+
+/// Un número que cambia cada vez que se mete o se saca una tarjeta de cualquier lector; `None`, si PC/SC no responde.
+pub fn card_events() -> Option<u64> {
+    let mut hasher = DefaultHasher::new();
+    for state in surveyed()? {
+        state.name().hash(&mut hasher);
+        state
+            .event_state()
+            .contains(State::PRESENT)
+            .hash(&mut hasher);
+        state.event_count().hash(&mut hasher);
+    }
+    Some(hasher.finish())
+}
+
+fn surveyed() -> Option<Vec<ReaderState>> {
     let context = Context::establish(Scope::System).ok()?;
     let names = reader_names(&context)?;
     let mut states: Vec<ReaderState> = names
@@ -160,11 +184,7 @@ pub fn survey_readers() -> Option<Vec<Reader>> {
             .get_status_change(Duration::ZERO, &mut states)
             .ok()?;
     }
-    let observed: ReaderStates = states
-        .iter()
-        .map(|state| (state.name().to_owned(), state.event_state()))
-        .collect();
-    Some(readers_in(&observed))
+    Some(states)
 }
 
 #[cfg(test)]
