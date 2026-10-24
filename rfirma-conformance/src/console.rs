@@ -25,6 +25,7 @@ use crate::livelog::{CheckLog, LiveLogSink, Provenance};
 use crate::outcome::CheckState;
 use crate::report::{HeaderCoordinates, Report, THE_REPORT_FILE};
 use crate::report_view::report_view;
+use crate::selection::{resolve as resolve_the_selection, SelectionResolution};
 use crate::snapshot::{snapshot_of, Activity, ReportEntry};
 use crate::transcript::{log_path_of, transcript_path_of};
 use crate::validation::{
@@ -437,6 +438,11 @@ impl Console {
             &self.open_to_see(b)?,
             &self.shared.catalogue,
         ))
+    }
+
+    /// Lo que resuelve `text` contra el catálogo y el alcance `scope`, sin tocar la sesión.
+    pub(crate) fn resolve_selection(&self, text: &str, scope: Option<&str>) -> SelectionResolution {
+        resolve_the_selection(text, &self.shared.catalogue, scope)
     }
 
     fn open_to_see(&self, name: &str) -> Result<Report, String> {
@@ -1069,6 +1075,17 @@ expects.completes = {}
             console.report_view("nadie").unwrap_err(),
             "no hay informe llamado «nadie»"
         );
+    }
+
+    #[test]
+    fn a_selection_is_resolved_without_a_report_or_a_client() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = Console::new(a_catalogue(), dir.path().to_owned(), Duration::ZERO);
+
+        let resolution = console.resolve_selection("saludo, nadie", None);
+
+        assert_eq!(resolution.ids, ["a_greeting"]);
+        assert_eq!(resolution.unknown, ["nadie"]);
     }
 
     #[test]
