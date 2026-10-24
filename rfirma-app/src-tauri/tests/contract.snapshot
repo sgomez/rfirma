@@ -30,7 +30,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async open_opened_document(document: String) -> Result<(), Failure>
   async open_opened_folder(document: String) -> Result<(), Failure>
   async open_signed_folder() -> Result<(), Failure>
-        list_certificates() -> Result<Vec<CertificateView>, Failure>
+  async list_certificates() -> Result<Vec<CertificateView>, Failure>
   async list_certificates_other_than_cards() -> Result<Vec<CertificateView>, Failure>
         read_card_readers() -> ReaderStatusView
   async install_certificate() -> Result<bool, Failure>
