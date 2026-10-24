@@ -7,7 +7,7 @@
 #
 # Almacenes:
 #
-# * rsa, ec, several, expired: una NSS sin contrasena con los certificados de
+# * rsa, ec, several, expired, rsa_without_sha1: una NSS sin contrasena con los certificados de
 #   testdata/fnmt/ que le tocan; SOFTHSM2_CONF apunta a un directorio de
 #   tokens propio y vacio del perfil. Ningun cliente pide PIN.
 # * token: la NSS vacia con SoftHSM registrado, un token propio del perfil con
@@ -21,6 +21,8 @@
 #   1234.
 # * dnie: la NSS vacia con el OpenSC del sistema registrado; del DNIe no se
 #   copia nada: la tarjeta esta en el lector y la persona teclea el PIN.
+# * rsa_without_sha1: el de rsa, con rFirma sin SHA-1 permitido en sus
+#   preferencias; AutoFirma no tiene esa preferencia y lo ve igual que rsa.
 #
 # Ningun envoltorio apunta nunca al SOFTHSM2_CONF de quien corre la suite:
 # cada perfil monta el suyo, este lo use o no.
@@ -30,7 +32,8 @@
 # script dentro del perfil, sin lanzar el cliente; la raiz de AutoFirma es la de
 # su instalacion. rFirma arranca en castellano, con el tema claro, sin la
 # cuenta atras de consentir, sin el asistente del primer arranque y con SHA-1
-# permitido, como si la persona lo hubiera elegido en sus preferencias.
+# permitido salvo en rsa_without_sha1, como si la persona lo hubiera elegido en
+# sus preferencias.
 #
 # El perfil se rehace entero en cada llamada.
 
@@ -44,7 +47,7 @@ source "$here/../testdata/softhsm/platform.sh"
 subject="${1:-}"
 store="${3:-rsa}"
 if [ ! -x "$subject" ]; then
-    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token|token_apart|ed25519|several|expired|dnie]" >&2
+    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token|token_apart|ed25519|several|expired|dnie|rsa_without_sha1]" >&2
     exit 2
 fi
 
@@ -55,7 +58,7 @@ case "${2:-$(basename "$subject")}" in
 esac
 
 case "$store" in
-    rsa) p12s="active-rsa.p12" ;;
+    rsa | rsa_without_sha1) p12s="active-rsa.p12" ;;
     ec) p12s="active-ecc.p12" ;;
     token) p12s="" ;;
     token_apart) p12s="pseudonym-rsa.p12" ;;
@@ -64,7 +67,7 @@ case "$store" in
     expired) p12s="active-ecc.p12 expired-rsa.p12" ;;
     dnie) p12s="" ;;
     *)
-        echo "almacen desconocido: $store (rsa, ec, token, token_apart, ed25519, several, expired o dnie)" >&2
+        echo "almacen desconocido: $store (rsa, ec, token, token_apart, ed25519, several, expired, dnie o rsa_without_sha1)" >&2
         exit 2
         ;;
 esac
@@ -226,9 +229,11 @@ the_local_ca_of_rfirma() {
 
 the_configuration_of_rfirma() {
     local dir="$profile/.config/rfirma"
+    local allow_sha1=true
+    [ "$store" = rsa_without_sha1 ] && allow_sha1=false
     mkdir -p "$dir"
-    printf '{"version": 1, "consent_countdown": false, "honour_automatic_selection": true, "setup_wizard_seen": true, "allow_sha1": true, "language": "es", "theme": "light"}\n' \
-        > "$dir/config.json"
+    printf '{"version": 1, "consent_countdown": false, "honour_automatic_selection": true, "setup_wizard_seen": true, "allow_sha1": %s, "language": "es", "theme": "light"}\n' \
+        "$allow_sha1" > "$dir/config.json"
 }
 
 trust_root=""

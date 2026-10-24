@@ -1461,6 +1461,23 @@ act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma f
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
 
 [[check]]
+id = "a_xades_signature_with_sha1_is_made_once_the_person_allows_it"
+set = "firma"
+citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+statement = """
+Una firma XAdES pedida con SHA1withRSA se hace con SHA-1 aunque el perfil no tenga SHA-1 permitido
+de antemano: si el cliente pide permiso, concederlo para esa firma basta, y la firma que vuelve
+declara ese resumen y verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signxadessha1"
+store = "rsa_without_sha1"
+act.consent = "Si aparece un aviso de SHA-1, pulsa «Firmar solo esta vez»."
+expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
+
+[[check]]
 id = "a_pades_signature_is_made_with_the_sha1_requested"
 set = "firma"
 citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"

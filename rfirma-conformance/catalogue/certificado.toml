@@ -423,7 +423,6 @@ expects.completes.conditions = ["a-new-selection-after-the-release"]
 id = "a_certificate_pinned_by_selectcert_signs_without_asking"
 set = "certificado"
 citation = "ProtocolInvocationLauncherSelectCert.java:195-197; ProtocolInvocationLauncherSign.java:518-521"
-explained_by.rfirma = "ADR-0010"
 statement = """
 El certificado que fija selectcert con sticky lo usa la firma siguiente con sticky sin volver a
 preguntar: la fijación es del proceso, no de la operación.
@@ -434,6 +433,38 @@ mode = "v4"
 script = "stickysigns"
 store = "several"
 expects.completes.conditions = ["signed-with-the-pinned-certificate"]
+
+[[check]]
+id = "a_signature_with_sticky_pins_the_certificate_for_the_next_signature"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSign.java:518-521, 643"
+statement = """
+Un sign con sticky fija el certificado con el que firmó, sin un selectcert previo: el sign
+siguiente con sticky lo usa sin volver a preguntar.
+"""
+
+[check.drive]
+mode = "v4"
+script = "stickysignpins"
+store = "several"
+expects.completes.conditions = ["the-signature-pinned-the-certificate-for-the-next"]
+
+[[check]]
+id = "the_series_of_a_portafirmas_signs_with_the_certificate_of_its_first_signature"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSign.java:518-521, 643"
+statement = """
+La serie del Portafirmas web de la AGE: una firma XAdES SHA-1 con sticky identifica el certificado,
+y las firmas siguientes con sticky, filtradas por su número de serie, salen con él sin preguntar,
+aunque sus parámetros traigan líneas que no son clave y valor.
+"""
+
+[check.drive]
+mode = "v3"
+script = "portafirmasseries"
+store = "several"
+act.consent = "Elige cualquiera de los certificados. Las dos firmas siguientes no deberían preguntar nada."
+expects.completes.conditions = ["the-series-signed-with-the-identified-certificate"]
 
 [[check]]
 id = "a_pinned_certificate_ignores_the_filters_of_the_next_request"
@@ -455,7 +486,6 @@ expects.completes.conditions = ["the-pinned-certificate-despite-the-filters"]
 id = "selectcert_answers_the_pinned_certificate_without_asking"
 set = "certificado"
 citation = "ProtocolInvocationLauncherSelectCert.java:139-142"
-explained_by.rfirma = "ADR-0010"
 statement = """
 Con un certificado fijado, selectcert con sticky lo devuelve sin abrir el diálogo de selección.
 """
