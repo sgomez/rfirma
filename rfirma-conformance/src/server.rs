@@ -13,7 +13,7 @@ use serde_json::json;
 use ts_rs::TS;
 
 use crate::client::ClientKind;
-use crate::console::{Console, NewReport, Request};
+use crate::console::{Console, NewReport, ReportClone, Request};
 use crate::report::HeaderCorrection;
 
 /// Los puertos en que la consola intenta escuchar: por debajo de 49152, donde el cliente publicado
@@ -369,6 +369,15 @@ fn attend(mut stream: TcpStream, gate: &Gate, build: &Build, console: &Console) 
         ("POST", "/api/reports") => answer(
             &mut stream,
             body_of::<NewReport>(&request).and_then(|new| console.create_report(new)),
+        ),
+        ("POST", "/api/reports/clone") => answer(
+            &mut stream,
+            body_of::<ReportClone>(&request).and_then(|clone| console.clone_report(clone)),
+        ),
+        ("POST", "/api/report/archive") => answer(
+            &mut stream,
+            body_of::<ReportChoice>(&request)
+                .and_then(|choice| console.archive_report(choice.name)),
         ),
         ("POST", "/api/report") => answer(
             &mut stream,

@@ -36,7 +36,7 @@ impl Transcript {
     }
 }
 
-fn transcripts_directory_of(report: &Path) -> PathBuf {
+pub(crate) fn transcripts_directory_of(report: &Path) -> PathBuf {
     report.join("transcripts")
 }
 

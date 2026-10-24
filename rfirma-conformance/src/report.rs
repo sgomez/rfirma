@@ -82,6 +82,9 @@ struct Contents {
     checks: BTreeMap<String, CheckRecord>,
     #[serde(default)]
     errands: BTreeMap<ErrandKey, ObservedErrand>,
+    /// Fuera de la lista de informes; se deshace a mano en el JSON.
+    #[serde(default)]
+    archived: bool,
 }
 
 /// El nombre del fichero del informe dentro de su directorio.
@@ -107,6 +110,45 @@ impl Report {
         catalogue: &[Check],
         coordinates: HeaderCoordinates,
     ) -> Result<Self, String> {
+        Self::create_with(
+            path,
+            (client, kind, origin),
+            catalogue,
+            coordinates,
+            BTreeMap::new(),
+            BTreeMap::new(),
+        )
+    }
+
+    /// Crea en `path` un informe nuevo con los resultados y los trámites de `source`, abierto
+    /// contra `catalogue`; lo que este no tenga queda fuera.
+    pub fn create_from(
+        source: &Self,
+        path: &Path,
+        client: &str,
+        kind: ClientKind,
+        origin: Origin,
+        catalogue: &[Check],
+        coordinates: HeaderCoordinates,
+    ) -> Result<Self, String> {
+        Self::create_with(
+            path,
+            (client, kind, origin),
+            catalogue,
+            coordinates,
+            source.contents.checks.clone(),
+            source.contents.errands.clone(),
+        )
+    }
+
+    fn create_with(
+        path: &Path,
+        (client, kind, origin): (&str, ClientKind, Origin),
+        catalogue: &[Check],
+        coordinates: HeaderCoordinates,
+        checks: BTreeMap<String, CheckRecord>,
+        errands: BTreeMap<ErrandKey, ObservedErrand>,
+    ) -> Result<Self, String> {
         let mut report = Self {
             path: path.to_owned(),
             contents: Contents {
@@ -122,8 +164,9 @@ impl Report {
                     notes: String::new(),
                     scope: coordinates.scope,
                 },
-                checks: BTreeMap::new(),
-                errands: BTreeMap::new(),
+                checks,
+                errands,
+                archived: false,
             },
             orphans: BTreeMap::new(),
             in_scope: None,
@@ -241,6 +284,16 @@ impl Report {
 
     pub fn header(&self) -> &Header {
         &self.contents.header
+    }
+
+    pub fn is_archived(&self) -> bool {
+        self.contents.archived
+    }
+
+    /// Lo saca de la lista de informes y lo deja escrito antes de devolver el control.
+    pub fn archive(&mut self) -> Result<(), String> {
+        self.contents.archived = true;
+        self.save()
     }
 
     #[cfg(test)]
