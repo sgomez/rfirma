@@ -18,6 +18,7 @@ describe("the comparison", () => {
         ],
         differing: 1,
         requests_differing: 0,
+        out_of_scope: 0,
       };
     });
 
@@ -30,6 +31,23 @@ describe("the comparison", () => {
     expect(within(table).getByText("empty_uri_rejected")).toBeInTheDocument();
     expect(within(table).queryByText("greeting_echoes")).not.toBeInTheDocument();
     expect(within(table).getByRole("rowheader", { name: /errores/ })).toBeInTheDocument();
+  });
+
+  it("says how many checks it hides for being outside the scope of one of the two reports", async () => {
+    renderConsoleAt("/comparar?a=uno&b=dos", aSnapshot(), (fake) => {
+      fake.comparison = {
+        a: { client: "/usr/bin/autofirma", kind: "autofirma", client_version: "1.9.2" },
+        b: { client: "/usr/bin/rfirma", kind: "rfirma", client_version: "0.10.0" },
+        rows: [row("empty_uri_rejected", "errores", "NO CONFORME", "CONFORME", true)],
+        differing: 1,
+        requests_differing: 0,
+        out_of_scope: 3,
+      };
+    });
+
+    expect(
+      await screen.findByText("3 comprobaciones fuera del alcance de alguno de los dos"),
+    ).toBeInTheDocument();
   });
 
   it("shows a check with the same result whose requests differ, with the requests of each side and what differs", async () => {
@@ -55,6 +73,7 @@ describe("the comparison", () => {
         ],
         differing: 0,
         requests_differing: 1,
+        out_of_scope: 0,
       };
     });
 
@@ -97,6 +116,7 @@ describe("the comparison", () => {
         ],
         differing: 1,
         requests_differing: 1,
+        out_of_scope: 0,
       };
     });
 
