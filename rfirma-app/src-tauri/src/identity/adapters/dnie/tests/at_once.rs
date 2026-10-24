@@ -43,6 +43,10 @@ impl Transport for Counted {
         self.card.transmit_raw(apdu)
     }
 
+    fn atr(&self) -> Result<Vec<u8>, rdnie::Error> {
+        self.card.atr()
+    }
+
     fn reset(&mut self) -> Result<Vec<u8>, rdnie::Error> {
         self.card.reset()
     }
@@ -79,7 +83,7 @@ fn two_listings_at_once_take_turns_on_the_card() {
         })
         .collect();
     for listing in listings {
-        assert_eq!(listing.join().expect("sin pánico").len(), 2);
+        assert_eq!(listing.join().expect("sin pánico").len(), 1);
     }
 
     assert_eq!(held.most.load(Ordering::SeqCst), 1);
@@ -141,9 +145,9 @@ fn a_listing_that_arrives_while_the_card_is_read_takes_that_reading() {
     thread::sleep(Duration::from_millis(100));
     released.send(()).expect("la primera lectura espera");
 
-    assert_eq!(first.join().expect("sin pánico"), (2, 3));
-    assert_eq!(second.join().expect("sin pánico"), (2, 3));
-    assert_eq!(opened.load(Ordering::SeqCst), 1);
+    assert_eq!(first.join().expect("sin pánico"), (1, 3));
+    assert_eq!(second.join().expect("sin pánico"), (1, 3));
+    assert_eq!(opened.load(Ordering::SeqCst), 2);
 }
 
 #[test]
@@ -162,4 +166,47 @@ fn a_listing_that_arrives_after_the_reading_reads_the_card_again() {
     dnie.list(&dnie_store()).expect("el DNIe deberia listarse");
 
     assert_eq!(opened.load(Ordering::SeqCst), 2);
+}
+
+/// Cuenta las aperturas de una tarjeta emulada.
+struct CountingOpener(Arc<AtomicUsize>);
+
+impl CardOpener for CountingOpener {
+    type Card = EmulatedDnie;
+
+    fn open(&self) -> Result<Session<EmulatedDnie>, rdnie::Error> {
+        self.0.fetch_add(1, Ordering::SeqCst);
+        let card = OfThePolice::new().on(EmulatedDnie::dnie_4());
+        let root = card.component_root();
+        Session::open_trusting(card, root)
+    }
+}
+
+#[test]
+fn the_debug_report_waits_for_the_listing_that_holds_the_card() {
+    let (inside, entered) = mpsc::channel();
+    let (released, release) = mpsc::channel();
+    let dnie = Arc::new(DnieToken::new(HeldOnTheFirstOpening {
+        opened: Arc::new(AtomicUsize::new(0)),
+        inside: Mutex::new(Some(inside)),
+        release: Mutex::new(Some(release)),
+    }));
+    let listing = {
+        let dnie = Arc::clone(&dnie);
+        thread::spawn(move || dnie.list(&dnie_store()).expect("el DNIe deberia listarse"))
+    };
+    entered.recv().expect("la lectura deberia empezar");
+    let opened_by_the_report = Arc::new(AtomicUsize::new(0));
+    let report = {
+        let opener = CountingOpener(Arc::clone(&opened_by_the_report));
+        thread::spawn(move || super::super::seen_dnie(&opener))
+    };
+
+    thread::sleep(Duration::from_millis(100));
+    assert_eq!(opened_by_the_report.load(Ordering::SeqCst), 0);
+    released.send(()).expect("la lectura espera");
+    listing.join().expect("sin pánico");
+    report.join().expect("sin pánico");
+
+    assert_eq!(opened_by_the_report.load(Ordering::SeqCst), 1);
 }

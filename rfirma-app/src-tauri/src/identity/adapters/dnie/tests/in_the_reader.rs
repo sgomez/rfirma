@@ -60,6 +60,10 @@ impl Transport for Connection {
         self.0.card().transmit_raw(apdu)
     }
 
+    fn atr(&self) -> Result<Vec<u8>, rdnie::Error> {
+        self.0.card().atr()
+    }
+
     fn reset(&mut self) -> Result<Vec<u8>, rdnie::Error> {
         self.0.card().reset()
     }
