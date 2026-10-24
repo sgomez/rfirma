@@ -3,6 +3,7 @@ import type { ClientChoice } from "../contract/ClientChoice";
 import type { Comparison } from "../contract/Comparison";
 import type { DeducedCoordinates } from "../contract/DeducedCoordinates";
 import type { HeaderCorrection } from "../contract/HeaderCorrection";
+import type { LogLine } from "../contract/LogLine";
 import type { NewReport } from "../contract/NewReport";
 import type { ReportChoice } from "../contract/ReportChoice";
 import type { ReportView } from "../contract/ReportView";
@@ -67,7 +68,7 @@ export function suiteOver(wire: Wire, token: string) {
     page: (path: string, params?: Params) => url(path, params),
     events: () => wire.events(url("/api/events")),
     defaults: () => get<DeducedCoordinates>("/api/defaults"),
-    log: (check: string, report?: string) => text("/api/log", { check, report }),
+    log: (check: string, report?: string) => get<LogLine[]>("/api/log", { check, report }),
     transcript: (check: string, report?: string) => text("/api/transcript", { check, report }),
     reportView: (report: string) => get<ReportView>("/api/report-view", { report }),
     catalogue: () => get<CatalogueSet[]>("/api/catalogue"),

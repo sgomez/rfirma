@@ -5,6 +5,7 @@ import type { SelectionResolution } from "../contract/SelectionResolution";
 import { useScopePreview } from "../session/ScopeField";
 import { PlayIcon, ResultIcon } from "../ui/icons";
 import { Modal } from "../ui/Modal";
+import { isListOf, useStoredState } from "../ui/preferences";
 import { moveAmongChecks, useShortcuts } from "../ui/shortcuts";
 import { countOf, RESULTS } from "../words";
 import { type Controls, type Progress, SetSection } from "./SetSection";
@@ -28,7 +29,17 @@ export function ReportBody({
 }: ReportBodyProps) {
   const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const [shown, setShown] = useState<ReadonlySet<ResultName>>(new Set(RESULTS));
+  const [shownResults, setShownResults] = useStoredState<readonly ResultName[]>(
+    "results",
+    RESULTS,
+    isListOf(RESULTS),
+  );
+  const shown = useMemo<ReadonlySet<ResultName>>(() => new Set(shownResults), [shownResults]);
+  const setShown = useCallback(
+    (change: (was: ReadonlySet<ResultName>) => ReadonlySet<ResultName>) =>
+      setShownResults((was) => [...change(new Set(was))]),
+    [setShownResults],
+  );
   const [text, setText] = useState("");
   const [resetting, setResetting] = useState(false);
   const field = useRef<HTMLInputElement>(null);

@@ -4,4 +4,4 @@ import type { Provenance } from "./Provenance";
 /**
  * Una línea del registro en vivo y la comprobación que la dio.
  */
-export type LiveLine = { check: string, provenance: Provenance, line: string, };
+export type LiveLine = { check: string, provenance: Provenance, clock: string, text: string, };

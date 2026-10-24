@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { aReportView, aSnapshot } from "../test/fixtures";
 import { renderConsoleAt } from "../test/render";
@@ -491,5 +491,84 @@ describe("the session", () => {
     await user.click(within(dialog).getByRole("button", { name: "Reiniciar" }));
 
     expect(server.posted("/api/reset")).toEqual([{ selection: "errores" }]);
+  });
+
+  describe("the log", () => {
+    const running = (id: string) =>
+      aSnapshot({
+        running: { ids: [id], elapsed_ms: 0 },
+        batch: { total: 3, done: 0, running: 1, elapsed_ms: 0 },
+      });
+    const logOf = () => screen.getByLabelText("Registro").querySelector(".log-check");
+
+    it("turns the tracking on when a batch starts even if it had been switched off", async () => {
+      const { server, user } = renderConsoleAt("/");
+      await screen.findByText("greeting_echoes");
+      await user.click(screen.getByRole("checkbox", { name: "Ir a la comprobación en curso" }));
+      expect(
+        screen.getByRole("checkbox", { name: "Ir a la comprobación en curso" }),
+      ).not.toBeChecked();
+
+      act(() => server.publish(running("greeting_echoes")));
+
+      await waitFor(() => expect(logOf()).toHaveTextContent("greeting_echoes"));
+      expect(screen.getByRole("checkbox", { name: "Ir a la comprobación en curso" })).toBeChecked();
+    });
+
+    it("suspends the tracking on looking at another check and takes it back with the next one", async () => {
+      const { server, user } = renderConsoleAt("/", running("greeting_echoes"));
+      await waitFor(() => expect(logOf()).toHaveTextContent("greeting_echoes"));
+
+      await user.click(screen.getByText("unknown_operation_rejected"));
+      expect(logOf()).toHaveTextContent("unknown_operation_rejected");
+      expect(screen.getByRole("checkbox", { name: "Ir a la comprobación en curso" })).toBeChecked();
+
+      act(() => server.publish(running("empty_uri_rejected")));
+      await waitFor(() => expect(logOf()).toHaveTextContent("empty_uri_rejected"));
+    });
+
+    it("remembers the view preferences across a reload, and works without storage", async () => {
+      const first = renderConsoleAt("/");
+      await screen.findByText("greeting_echoes");
+      await first.user.click(
+        screen.getByRole("checkbox", { name: "Ir a la comprobación en curso" }),
+      );
+      await first.user.click(screen.getByRole("button", { name: /^sede$/ }));
+      await first.user.keyboard("l");
+      await first.user.click(screen.getByRole("button", { name: /^PENDIENTE\s*\d/ }));
+      cleanup();
+
+      renderConsoleAt("/");
+      await screen.findByRole("checkbox", { name: "Ir a la comprobación en curso" });
+      expect(
+        screen.getByRole("checkbox", { name: "Ir a la comprobación en curso" }),
+      ).not.toBeChecked();
+      expect(screen.getByRole("button", { name: /^sede$/ })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+      expect(screen.getByRole("button", { name: /Reanudar/ })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^PENDIENTE\s*\d/ })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+      cleanup();
+
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new Error("sin almacenamiento");
+      });
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new Error("sin almacenamiento");
+      });
+      const third = renderConsoleAt("/");
+      await screen.findByText("greeting_echoes");
+      await third.user.click(
+        screen.getByRole("checkbox", { name: "Ir a la comprobación en curso" }),
+      );
+      expect(
+        screen.getByRole("checkbox", { name: "Ir a la comprobación en curso" }),
+      ).not.toBeChecked();
+      vi.restoreAllMocks();
+    });
   });
 });
