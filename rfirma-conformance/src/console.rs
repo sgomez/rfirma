@@ -574,6 +574,12 @@ impl Console {
 
     pub(crate) fn validate(&self, report: &str, reference: &str) -> Result<Validation, String> {
         let report = self.open_to_see(report)?;
+        if report.header().scope.is_some() {
+            return Err(
+                "un informe con alcance no se valida: «validado» habla de la suite entera"
+                    .to_owned(),
+            );
+        }
         let reference = read_the_reference(&the_reference_dir(), reference)?;
         Ok(validate(&report, &self.shared.catalogue, &reference))
     }
@@ -2045,6 +2051,20 @@ expects.code = "SAF_03"
         assert_eq!(view["summary"]["total"], 2);
         assert_eq!(view["summary"]["pending"], 2);
         assert_eq!(view["header"]["scope"], "canal");
+    }
+
+    #[test]
+    fn a_report_with_a_scope_is_not_validated_against_the_reference() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = a_console_to_scope(dir.path(), a_catalogue_to_scope(&[]));
+        console
+            .create_report(a_report_scoped_to(Some("canal")))
+            .unwrap();
+        let reference = the_references_in(&the_reference_dir()).unwrap().remove(0);
+
+        let refused = console.validate("scoped", &reference).unwrap_err();
+
+        assert!(refused.contains("alcance"), "{refused}");
     }
 
     #[test]
