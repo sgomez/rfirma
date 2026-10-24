@@ -141,18 +141,14 @@ fn embeds_its_frontend(binary: &mut impl Read) -> bool {
 
 fn names_a_script_asset(bytes: &[u8]) -> bool {
     const PREFIX: &[u8] = b"/assets/";
-    bytes
-        .windows(PREFIX.len())
-        .enumerate()
-        .filter(|(_, candidate)| *candidate == PREFIX)
-        .any(|(at, _)| {
-            let name: Vec<u8> = bytes[at + PREFIX.len()..]
-                .iter()
-                .copied()
-                .take_while(|byte| byte.is_ascii_alphanumeric() || b"_.-".contains(byte))
-                .collect();
-            name.len() > ".js".len() && name.ends_with(b".js")
-        })
+    memchr::memmem::find_iter(bytes, PREFIX).any(|at| {
+        let name: Vec<u8> = bytes[at + PREFIX.len()..]
+            .iter()
+            .copied()
+            .take_while(|byte| byte.is_ascii_alphanumeric() || b"_.-".contains(byte))
+            .collect();
+        name.len() > ".js".len() && name.ends_with(b".js")
+    })
 }
 
 fn the_dev_server_is_up() -> bool {
