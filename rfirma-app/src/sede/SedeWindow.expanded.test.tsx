@@ -183,9 +183,11 @@ describe("2 · the expanded consent", () => {
 
       await user.click(screen.getByRole("button", { name: "Ver documentos" }));
       const list = screen.getByRole("navigation", { name: "Vas a firmar 4 documentos" });
-      await user.click(
-        within(list).getAllByRole("button", { name: "Una huella del documento" })[0]!,
-      );
+      const firstDigest = within(list)
+        .getAllByRole("button", { name: "Una huella del documento" })
+        .at(0);
+      if (firstDigest === undefined) throw new Error("esperaba una huella en la lista");
+      await user.click(firstDigest);
 
       expect(
         screen.getByText("Este tipo de archivo no se puede mostrar aquí."),
