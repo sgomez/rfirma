@@ -196,6 +196,15 @@ de cada una. Se ve igual lo esté corriendo o no, y desde cualquier ventana; sol
 mismo cliente y la misma versión con que se creó.
 _Avoid_: expediente, tanda (para el informe), dossier
 
+**Alcance**:
+Las comprobaciones que mide un **informe**, nombradas al crearlo por su id o por su **conjunto**
+entero; un informe sin alcance mide el catálogo entero. Se guarda tal como se nombró, así que un
+conjunto incluye las comprobaciones que gane después. El **saludo** de cada familia de trámite que
+toca entra solo. Lo que queda fuera no está PENDIENTE ni cuenta en ningún recuento. Un informe con
+alcance no se **valida**, y al comparar dos informes, lo que queda fuera del alcance de uno de ellos
+no es comparable.
+_Avoid_: filtro, subconjunto
+
 **Huérfana**:
 Una comprobación que el **informe** guarda y el catálogo ya no tiene, casi siempre porque se
 renombró. Se ve aparte, no cuenta en ningún recuento y se poda la próxima vez que se escribe el
