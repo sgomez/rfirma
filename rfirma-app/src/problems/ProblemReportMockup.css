@@ -1,0 +1,55 @@
+/* Mockup del informe de problema. */
+
+.problems-menu {
+  position: relative;
+  width: 240px;
+  height: 260px;
+}
+
+.report__footer {
+  justify-content: flex-end;
+}
+
+.report {
+  width: 720px;
+  max-width: 720px;
+}
+
+.report__text {
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: var(--rf-space-sm);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+  font-family: ui-monospace, monospace;
+  font-size: var(--rf-caption-size);
+  line-height: var(--rf-caption-leading);
+  white-space: pre;
+}
+
+.report__description {
+  resize: vertical;
+  font: inherit;
+}
+
+.report__gap {
+  flex: 1;
+}
+
+.problems__heading {
+  margin: 0;
+  font-size: var(--rf-heading-size);
+}
+
+.problems__site {
+  font-weight: var(--rf-title-weight);
+}
+
+.problems__line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}

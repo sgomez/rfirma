@@ -26,17 +26,19 @@ interface SedeEndingProps {
   outcome: SiteOutcome;
   onClose: () => void;
   onOpenHelp?: () => void;
+  onReport?: () => void;
 }
 
 /** El desenlace: quién lo pidió arriba, lo que pasó en medio y «Cerrar» con su cuenta atrás donde estaba «Firmar». */
-export function SedeEnding({ origin, outcome, onClose, onOpenHelp }: SedeEndingProps) {
+export function SedeEnding({ origin, outcome, onClose, onOpenHelp, onReport }: SedeEndingProps) {
   const { t } = useTranslation();
   const carriesHelp = outcome.kind === "refused" && outcome.situation === "unknown";
   const asksToAct =
     outcome.kind === "refused" &&
     isSedeRefusal(outcome.situation) &&
     REFUSAL_ACTION_OF[outcome.situation] === "closeOther";
-  const staysOpen = carriesHelp || asksToAct;
+  const staysOpen =
+    carriesHelp || asksToAct || (outcome.kind === "refused" && onReport !== undefined);
   useOutcomeClock(onClose, !staysOpen);
   const seconds = useClosingSeconds(!staysOpen);
   const closeButton = useDefaultButton();
@@ -48,14 +50,23 @@ export function SedeEnding({ origin, outcome, onClose, onOpenHelp }: SedeEndingP
       primary={closeButton}
       onEscape={onClose}
       footer={
-        <Button
-          ref={closeButton}
-          variant="primary"
-          className="sede-ending__close"
-          onClick={onClose}
-        >
-          {!staysOpen && seconds > 0 ? t("sede.outcome.closeIn", { seconds }) : t("actions.close")}
-        </Button>
+        <>
+          {outcome.kind === "refused" && onReport !== undefined && (
+            <Button variant="ghost" onClick={onReport}>
+              Informar del problema
+            </Button>
+          )}
+          <Button
+            ref={closeButton}
+            variant="primary"
+            className="sede-ending__close"
+            onClick={onClose}
+          >
+            {!staysOpen && seconds > 0
+              ? t("sede.outcome.closeIn", { seconds })
+              : t("actions.close")}
+          </Button>
+        </>
       }
     >
       <div className="sede-ending">

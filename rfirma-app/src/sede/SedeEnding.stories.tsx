@@ -105,9 +105,16 @@ interface EndingDesignProps {
   kind: keyof typeof ENDINGS;
   situation: RefusalSituation;
   withOrigin: boolean;
+  withReport?: boolean;
 }
 
-function EndingDesign({ ending, kind, situation, withOrigin }: EndingDesignProps) {
+function EndingDesign({
+  ending,
+  kind,
+  situation,
+  withOrigin,
+  withReport = false,
+}: EndingDesignProps) {
   const outcome: SiteOutcome =
     ending === "outcome"
       ? ENDINGS[kind]
@@ -120,6 +127,7 @@ function EndingDesign({ ending, kind, situation, withOrigin }: EndingDesignProps
       outcome={outcome}
       onClose={sedeViewActions.onClose}
       onOpenHelp={sedeViewActions.onOpenHelp}
+      onReport={withReport ? sedeViewActions.onClose : undefined}
     />
   );
 }
@@ -192,3 +200,8 @@ export const Refused: Story = {
 };
 
 export const RefusedUnknown: Story = { args: { ending: "refused", situation: "unknown" } };
+
+export const RefusedWithReport: Story = {
+  name: "Mockup · Rechazado, con informe",
+  args: { ending: "refused", situation: "batchPostsignerUnreachable", withReport: true },
+};
