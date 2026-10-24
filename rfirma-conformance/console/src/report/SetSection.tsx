@@ -1,5 +1,6 @@
 import { memo } from "react";
 import type { CheckView } from "../contract/CheckView";
+import type { RunMode } from "../contract/RunMode";
 import type { SetView } from "../contract/SetView";
 import type { Activity } from "../ui/icons";
 import { Chevron, PlayIcon } from "../ui/icons";
@@ -13,6 +14,8 @@ export interface Progress {
 }
 
 export interface Controls {
+  run: (selection: string, mode: RunMode) => void;
+  reset: (selection: string) => void;
   runCheck: (id: string) => void;
   resetCheck: (id: string) => void;
   runSet: (set: string, pendingOnly: boolean) => void;

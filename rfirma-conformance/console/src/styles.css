@@ -1392,6 +1392,14 @@ select.input {
   flex: 1 1 auto;
 }
 
+.selection-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 1 280px;
+  font-family: var(--font-mono);
+}
+
 .toolbar-actions {
   display: flex;
   gap: 2px;

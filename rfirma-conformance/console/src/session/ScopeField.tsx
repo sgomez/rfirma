@@ -16,8 +16,8 @@ interface Preview {
   resolution: SelectionResolution;
 }
 
-/** Lo que la sesión resuelve de `text`; `null` mientras llega la respuesta a lo último escrito. */
-export function useScopePreview(text: string): SelectionResolution | null {
+/** Lo que la sesión resuelve de `text` dentro de `scope`; `null` mientras llega la respuesta a lo último escrito. */
+export function useScopePreview(text: string, scope?: string | null): SelectionResolution | null {
   const { suite, complain } = useLive();
   const [preview, setPreview] = useState<Preview | null>(null);
 
@@ -28,13 +28,13 @@ export function useScopePreview(text: string): SelectionResolution | null {
     }
     let current = true;
     suite
-      .selection(text)
+      .selection(text, scope ?? undefined)
       .then((resolution) => current && setPreview({ text, resolution }))
-      .catch(complain("No se pudo resolver el alcance"));
+      .catch(complain("No se pudo resolver la selección"));
     return () => {
       current = false;
     };
-  }, [suite, complain, text]);
+  }, [suite, complain, text, scope]);
 
   return preview?.text === text ? preview.resolution : null;
 }

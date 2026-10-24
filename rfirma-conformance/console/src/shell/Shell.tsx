@@ -87,6 +87,8 @@ const SHORTCUTS: [string, [string[], string][]][] = [
     "Ejecutar",
     [
       [["p"], "Pendientes del informe"],
+      [["e"], "Ejecutar lo visible"],
+      [["⇧", "E"], "Relanzar lo visible"],
       [["r"], "Ejecutar la comprobación seleccionada"],
       [["x"], "Saltar esta"],
       [["⇧", "X"], "Detener"],
@@ -103,6 +105,7 @@ const SHORTCUTS: [string, [string[], string][]][] = [
   [
     "Moverse",
     [
+      [["/"], "Ir al campo de selección"],
       [["j"], "Comprobación siguiente"],
       [["k"], "Comprobación anterior"],
       [["Intro"], "Desplegar o plegar la comprobación"],
