@@ -153,12 +153,13 @@ pub(crate) struct IsolatedStore {
     pub(crate) store: Store,
 }
 
-/// Lo que se propone solo al crear un informe: su nombre, el sistema y, si el cliente la dice, su
+/// Lo que se propone solo al crear un informe: su nombre, su título, el sistema y, si el cliente la dice, su
 /// versión.
 #[derive(Debug, Serialize, TS)]
 #[ts(export)]
 pub(crate) struct DeducedCoordinates {
     name: String,
+    title: String,
     os: String,
     os_version: String,
     client_version: String,
@@ -285,6 +286,12 @@ pub(crate) fn the_deduced_coordinates(client: &Client) -> DeducedCoordinates {
     let client_version = client.identity.version.clone().unwrap_or_default();
     DeducedCoordinates {
         name: the_proposed_name(client.kind, &client_version),
+        title: [client.kind.name(), client_version.as_str()]
+            .iter()
+            .filter(|part| !part.is_empty())
+            .copied()
+            .collect::<Vec<_>>()
+            .join(" "),
         os: uname("-s"),
         os_version: uname("-r"),
         client_version,
