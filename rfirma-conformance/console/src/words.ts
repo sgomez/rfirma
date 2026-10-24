@@ -43,7 +43,7 @@ export function explanationTally(summary: Summary): string {
 }
 
 export function isExplained(check: CheckView): boolean {
-  return check.state === "NO CONFORME" && check.labels.length > 0;
+  return check.explained;
 }
 
 export const requestsComparisonName: Record<RequestsComparison, string> = {
