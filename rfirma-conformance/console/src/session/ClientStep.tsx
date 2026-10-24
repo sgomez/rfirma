@@ -15,7 +15,7 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
   const { suite, complain } = useLive();
   const client = snapshot.client;
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Draft>({ kind: "autofirma", binary: "", trustRoot: "" });
+  const [draft, setDraft] = useState<Draft>({ kind: "rfirma", binary: "", trustRoot: "" });
   const kindId = useId();
   const binaryId = useId();
   const candidatesId = useId();
@@ -43,14 +43,19 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
     (draft.kind !== client.kind ||
       (draft.binary !== "" && draft.binary !== client.binary) ||
       (draft.trustRoot !== "" && draft.trustRoot !== trustRoot));
-  const resolve = () =>
+  const resolve = (binary = draft.binary) =>
     suite
       .chooseClient({
         kind: draft.kind,
-        binary: draft.binary.trim() || null,
+        binary: binary.trim() || null,
         trust_root: draft.trustRoot.trim() || null,
       })
       .catch(complain("No se pudo preparar el cliente"));
+  const offered = snapshot.candidates.filter((candidate) => candidate.kind === draft.kind);
+  const pick = (binary: string) => {
+    setDraft({ ...draft, binary });
+    void resolve(binary);
+  };
 
   return (
     <Step
@@ -119,6 +124,33 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
               ))}
             </div>
           </div>
+          {offered.length > 0 && (
+            <div className="field-group grow">
+              <span className="field-label" id={candidatesId}>
+                Candidatos
+              </span>
+              <div className="candidates" role="radiogroup" aria-labelledby={candidatesId}>
+                {offered.map((candidate) => (
+                  <label key={candidate.binary} className="candidate">
+                    <input
+                      type="radio"
+                      name="client-candidate"
+                      checked={client?.binary === candidate.binary && !unsettled}
+                      disabled={busy || snapshot.resolving_client}
+                      onChange={() => pick(candidate.binary)}
+                    />
+                    <span className="facts">
+                      <span>{originName[candidate.origin]}</span>
+                      {identityText(candidate.identity) && (
+                        <span>{identityText(candidate.identity)}</span>
+                      )}
+                      <code>{candidate.binary}</code>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="field-group grow">
             <label className="field-label" htmlFor={binaryId}>
               Binario
@@ -128,21 +160,9 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
               className="input mono"
               value={draft.binary}
               placeholder="vacío: se busca en el PATH"
-              list={candidatesId}
               onChange={(event) => setDraft({ ...draft, binary: event.target.value })}
               spellCheck={false}
             />
-            <datalist id={candidatesId}>
-              {snapshot.candidates
-                .filter((candidate) => candidate.kind === draft.kind)
-                .map((candidate) => (
-                  <option key={candidate.binary} value={candidate.binary}>
-                    {[originName[candidate.origin], identityText(candidate.identity)]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </option>
-                ))}
-            </datalist>
           </div>
           <div className="field-group grow">
             <label className="field-label" htmlFor={rootId}>
