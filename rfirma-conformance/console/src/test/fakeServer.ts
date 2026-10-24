@@ -44,6 +44,7 @@ export class FakeServer implements Wire {
   reportViews = new Map<string, ReportView>();
   logs = new Map<string, string>();
   comparison: Comparison | null = null;
+  sharingAnErrand: string[] = [];
   deduced: DeducedCoordinates = {
     name: "autofirma-1.9.2-2026-10-24",
     title: "autofirma 1.9.2",
@@ -112,7 +113,7 @@ export class FakeServer implements Wire {
       greetings_added: [],
       unknown: [],
       out_of_scope: [],
-      sharing_an_errand: [],
+      sharing_an_errand: [...this.sharingAnErrand],
     };
     for (const name of text.split(/[\s,]+/).filter(Boolean)) {
       const hit = this.catalogue.flatMap((set) =>

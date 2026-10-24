@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Assistance } from "../contract/Assistance";
+import type { PendingByTranches } from "../contract/PendingByTranches";
 import type { ReportView } from "../contract/ReportView";
 import type { Tranches } from "../contract/Tranches";
 import { LogDock } from "../log/LogDock";
@@ -14,7 +14,7 @@ import { askToNotify } from "../ui/notify";
 import { focusedCheck, useShortcuts } from "../ui/shortcuts";
 import { BatchBar } from "./BatchBar";
 import { ClientStep } from "./ClientStep";
-import { useBatch, useProgress } from "./progress";
+import { useProgress } from "./progress";
 import { ReportStep } from "./ReportStep";
 import { Step } from "./Step";
 
@@ -25,7 +25,6 @@ export function SessionPage() {
   const [transcript, setTranscript] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
   const progress = useProgress(snapshot, true);
-  const batch = useBatch(snapshot);
   const head = snapshot?.running?.ids[0] ?? null;
   const view = snapshot?.report ?? null;
 
@@ -44,6 +43,9 @@ export function SessionPage() {
 
   const controls = useMemo<Controls>(
     () => ({
+      run: (selection, mode) =>
+        void suite.run({ selection, mode }).catch(complain("No se pudo poner en cola")),
+      reset: (selection) => void suite.reset(selection).catch(complain("No se pudo resetear")),
       runCheck: (check) =>
         void suite
           .run({ selection: check, mode: isPending(view, check) ? "reuse" : "relaunch" })
@@ -63,7 +65,7 @@ export function SessionPage() {
   };
 
   useShortcuts({
-    p: view && view.summary.pending > 0 ? () => runTranches("all") : undefined,
+    p: (snapshot?.pending_by_tranches?.all ?? 0) > 0 ? () => runTranches("all") : undefined,
     r: view
       ? () => {
           const check = focusedCheck();
@@ -76,6 +78,7 @@ export function SessionPage() {
 
   const busy = snapshot.running !== null || snapshot.queued.length > 0 || snapshot.resolving_client;
   const ready = snapshot.client !== null && view !== null;
+  const current = head ?? snapshot.queued[0] ?? "";
 
   return (
     <>
@@ -106,8 +109,8 @@ export function SessionPage() {
           actions={
             view && (
               <>
-                {TRANCHE_BUTTONS.map(([tranches, label, takes]) => {
-                  const count = pendingIn(view, takes);
+                {TRANCHE_BUTTONS.map(([tranches, label]) => {
+                  const count = snapshot.pending_by_tranches?.[tranches] ?? 0;
                   const all = tranches === "all";
                   return (
                     <button
@@ -131,7 +134,14 @@ export function SessionPage() {
           }
         />
       </div>
-      {batch && <BatchBar batch={batch} instructions={warningOf(view, head)} />}
+      {snapshot.batch && (
+        <BatchBar
+          batch={snapshot.batch}
+          set={setOf(view, current)}
+          current={current}
+          instructions={warningOf(view, head)}
+        />
+      )}
       {view ? (
         <ReportBody
           view={view}
@@ -163,16 +173,14 @@ export function SessionPage() {
   );
 }
 
-const TRANCHE_BUTTONS: [Tranches, string, (assistance: Assistance) => boolean][] = [
-  ["unattended", "Solo las automáticas", (assistance) => assistance === "none"],
-  ["attended", "Las que te necesitan", (assistance) => assistance !== "none"],
-  ["all", "Ejecutar todas", () => true],
+const TRANCHE_BUTTONS: [Tranches & keyof PendingByTranches, string][] = [
+  ["unattended", "Solo las automáticas"],
+  ["attended", "Las que te necesitan"],
+  ["all", "Ejecutar todas"],
 ];
 
-function pendingIn(view: ReportView, takes: (assistance: Assistance) => boolean): number {
-  return view.sets
-    .flatMap((set) => set.checks)
-    .filter((check) => check.state === "PENDIENTE" && takes(check.assistance ?? "none")).length;
+function setOf(view: ReportView | null, id: string): string | null {
+  return view?.sets.find((set) => set.checks.some((check) => check.id === id))?.name ?? null;
 }
 
 function isPending(view: ReportView | null, id: string): boolean {

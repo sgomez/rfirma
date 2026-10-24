@@ -1,14 +1,22 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import type { BatchView } from "../contract/BatchView";
 import { useLive } from "../suite/live";
 import { Elapsed } from "../ui/Elapsed";
 import { ActivityIcon, SkipIcon, StopIcon } from "../ui/icons";
 import { notify } from "../ui/notify";
 import { useShortcuts } from "../ui/shortcuts";
-import type { Batch } from "./progress";
 
-/** La tanda en curso, única dueña de saltar y detener. */
-export function BatchBar({ batch, instructions }: { batch: Batch; instructions: string | null }) {
+interface BatchBarProps {
+  batch: BatchView;
+  set: string | null;
+  current: string;
+  instructions: string | null;
+}
+
+/** La tanda en curso que cuenta la sesión, única dueña de saltar y detener. */
+export function BatchBar({ batch, set, current, instructions }: BatchBarProps) {
   const { suite, complain } = useLive();
+  const startedAt = useMemo(() => performance.now() - batch.elapsed_ms, [batch.elapsed_ms]);
   const skip = () => void suite.skip().catch(complain("No se pudo saltar"));
   const stop = () => void suite.stop().catch(complain("No se pudo detener"));
 
@@ -26,11 +34,11 @@ export function BatchBar({ batch, instructions }: { batch: Batch; instructions: 
       <div className="batch-line">
         <ActivityIcon activity="running" />
         <div className="batch-what">
-          <span className="batch-set">{batch.set ?? "…"}</span>
+          <span className="batch-set">{set ?? "…"}</span>
           <span className="batch-sep" aria-hidden="true">
             /
           </span>
-          <code className="batch-check">{batch.current}</code>
+          <code className="batch-check">{current}</code>
         </div>
         <div className="batch-progress">
           <progress
@@ -44,7 +52,7 @@ export function BatchBar({ batch, instructions }: { batch: Batch; instructions: 
           </span>
         </div>
         <span className="batch-time" title="Tiempo desde que empezó">
-          <Elapsed since={batch.startedAt} />
+          <Elapsed since={startedAt} />
         </span>
         <div className="batch-actions">
           <button type="button" className="button small" onClick={skip} aria-keyshortcuts="x">

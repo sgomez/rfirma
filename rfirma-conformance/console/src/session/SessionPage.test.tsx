@@ -52,15 +52,15 @@ describe("the session", () => {
     expect(screen.getByRole("button", { name: "Resetear empty_uri_rejected" })).toBeDisabled();
   });
 
-  it("runs each tranche of the pending checks from its own button, and all of them with p", async () => {
-    const report = aReportView();
-    const attended = report.sets[1]?.checks[2];
-    if (attended) attended.assistance = "click";
-    const { server, user } = renderConsoleAt("/", aSnapshot({ report }));
+  it("runs each tranche from its own button with the count of the session, and all of them with p", async () => {
+    const { server, user } = renderConsoleAt(
+      "/",
+      aSnapshot({ pending_by_tranches: { unattended: 4, attended: 3, all: 7 } }),
+    );
 
-    await user.click(await screen.findByRole("button", { name: /Solo las automáticas \(1\)/ }));
-    await user.click(screen.getByRole("button", { name: /Las que te necesitan \(1\)/ }));
-    await user.click(screen.getByRole("button", { name: /Ejecutar todas \(2\)/ }));
+    await user.click(await screen.findByRole("button", { name: /Solo las automáticas \(4\)/ }));
+    await user.click(screen.getByRole("button", { name: /Las que te necesitan \(3\)/ }));
+    await user.click(screen.getByRole("button", { name: /Ejecutar todas \(7\)/ }));
     await user.keyboard("p");
 
     expect(server.posted("/api/run")).toEqual([
@@ -90,7 +90,11 @@ describe("the session", () => {
     }
     renderConsoleAt(
       "/",
-      aSnapshot({ report, running: { ids: ["empty_uri_rejected"], elapsed_ms: 0 } }),
+      aSnapshot({
+        report,
+        running: { ids: ["empty_uri_rejected"], elapsed_ms: 0 },
+        batch: { total: 1, done: 0, running: 1, elapsed_ms: 0 },
+      }),
     );
 
     expect(await screen.findByText("Lo que te toca")).toBeInTheDocument();
@@ -145,7 +149,7 @@ describe("the session", () => {
     expect(screen.getByText("greeting_opens_the_channel")).toBeInTheDocument();
   });
 
-  it("shows the batch bar only while something runs, and skips and stops from it", async () => {
+  it("shows the batch the session counts only while it runs, and skips and stops from it", async () => {
     const { server, user } = renderConsoleAt("/");
     await screen.findByText("greeting_echoes");
     expect(screen.queryByRole("region", { name: "En curso" })).not.toBeInTheDocument();
@@ -155,12 +159,13 @@ describe("the session", () => {
         aSnapshot({
           running: { ids: ["empty_uri_rejected"], elapsed_ms: 1200 },
           queued: ["greeting_echoes"],
+          batch: { total: 5, done: 3, running: 1, elapsed_ms: 9000 },
         }),
       ),
     );
     const bar = await screen.findByRole("region", { name: "En curso" });
     expect(within(bar).getByText("errores")).toBeInTheDocument();
-    expect(within(bar).getByText("0/2")).toBeInTheDocument();
+    expect(within(bar).getByText("3/5")).toBeInTheDocument();
 
     await user.click(within(bar).getByRole("button", { name: /Saltar esta/ }));
     await user.keyboard("X");
@@ -183,7 +188,11 @@ describe("the session", () => {
     }
     renderConsoleAt(
       "/",
-      aSnapshot({ report, running: { ids: ["empty_uri_rejected"], elapsed_ms: 0 } }),
+      aSnapshot({
+        report,
+        running: { ids: ["empty_uri_rejected"], elapsed_ms: 0 },
+        batch: { total: 1, done: 0, running: 1, elapsed_ms: 0 },
+      }),
     );
 
     const bar = await screen.findByRole("region", { name: "En curso" });
@@ -418,5 +427,69 @@ describe("the session", () => {
     expect(server.posted("/api/client")).toEqual([
       { kind: "rfirma", binary: "/work/target/release/rfirma", trust_root: null },
     ]);
+  });
+
+  it("filters the view with the selection field, combined with the result chips", async () => {
+    const { user } = renderConsoleAt("/");
+    await screen.findByText("greeting_echoes");
+
+    await user.type(screen.getByRole("searchbox", { name: "Selección" }), "errores");
+    await waitFor(() => expect(screen.queryByText("greeting_echoes")).not.toBeInTheDocument());
+    expect(screen.getByText("empty_uri_rejected")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^PENDIENTE\s*\d/ }));
+    expect(screen.queryByText("empty_uri_rejected")).not.toBeInTheDocument();
+    expect(screen.getByText("unknown_operation_rejected")).toBeInTheDocument();
+  });
+
+  it("runs what is seen with e and relaunches it with E, naming the checks once a chip hides some", async () => {
+    const { server, user } = renderConsoleAt("/");
+    await screen.findByText("greeting_echoes");
+
+    await user.type(screen.getByRole("searchbox", { name: "Selección" }), "errores");
+    await waitFor(() => expect(screen.queryByText("greeting_echoes")).not.toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /Ejecutar lo visible/ }));
+    await user.click(screen.getByRole("button", { name: /^PENDIENTE\s*\d/ }));
+    await user.keyboard("e");
+    await user.keyboard("E");
+
+    expect(server.posted("/api/run")).toEqual([
+      { selection: "errores", mode: "reuse" },
+      { selection: "unsupported_protocol_uri_rejected unknown_operation_rejected", mode: "reuse" },
+      {
+        selection: "unsupported_protocol_uri_rejected unknown_operation_rejected",
+        mode: "relaunch",
+      },
+    ]);
+  });
+
+  it("takes the focus to the selection field with /", async () => {
+    const { user } = renderConsoleAt("/");
+    await screen.findByText("greeting_echoes");
+
+    await user.keyboard("/");
+
+    const field = screen.getByRole("searchbox", { name: "Selección" });
+    expect(field).toHaveFocus();
+    expect(field).toHaveValue("");
+  });
+
+  it("previews the reset of what is seen, with the checks outside that share their errand", async () => {
+    const { server, user } = renderConsoleAt("/", aSnapshot(), (fake) => {
+      fake.sharingAnErrand = ["greeting_echoes"];
+    });
+    await screen.findByText("greeting_echoes");
+
+    await user.type(screen.getByRole("searchbox", { name: "Selección" }), "errores");
+    await waitFor(() => expect(screen.queryByText("greeting_echoes")).not.toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /Reiniciar lo visible/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Reiniciar lo visible" });
+    expect(within(dialog).getByText(/3 comprobaciones/)).toBeInTheDocument();
+    expect(await within(dialog).findByText("greeting_echoes")).toBeInTheDocument();
+    expect(server.posted("/api/reset")).toEqual([]);
+
+    await user.click(within(dialog).getByRole("button", { name: "Reiniciar" }));
+
+    expect(server.posted("/api/reset")).toEqual([{ selection: "errores" }]);
   });
 });
