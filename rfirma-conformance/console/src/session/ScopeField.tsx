@@ -39,17 +39,25 @@ export function useScopePreview(text: string, scope?: string | null): SelectionR
   return preview?.text === text ? preview.resolution : null;
 }
 
+function isUnder(set: string, name: string): boolean {
+  return set === name || set.startsWith(`${name}.`);
+}
+
 function rewritten(
   sets: CatalogueSet[],
   marked: Set<string>,
   resolution: SelectionResolution,
+  written: string,
 ): string | null {
-  const names = sets.flatMap((set) =>
-    set.checks.every((id) => marked.has(id))
-      ? [set.name]
-      : set.checks.filter((id) => marked.has(id)),
-  );
-  const text = [...names, ...resolution.unknown].join(" ");
+  const whole = (set: CatalogueSet) => set.checks.every((id) => marked.has(id));
+  const kept = written.split(/[\s,]+/).filter((name) => {
+    const under = sets.filter((set) => isUnder(set.name, name));
+    return under.length > 0 && under.every(whole);
+  });
+  const names = sets
+    .filter((set) => !kept.some((name) => isUnder(set.name, name)))
+    .flatMap((set) => (whole(set) ? [set.name] : set.checks.filter((id) => marked.has(id))));
+  const text = [...new Set([...kept, ...names, ...resolution.unknown])].join(" ");
   return text === "" ? null : text;
 }
 
@@ -80,7 +88,7 @@ export function ScopeField({
       if (all) next.delete(id);
       else next.add(id);
     }
-    onChange(rewritten(sets, next, resolution));
+    onChange(rewritten(sets, next, resolution, value ?? ""));
   };
 
   return (

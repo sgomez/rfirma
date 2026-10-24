@@ -76,7 +76,7 @@ export function SessionPage() {
       resetCheck: (check) => void suite.reset(check).catch(complain("No se pudo resetear")),
       runSet: (set, pendingOnly) =>
         void suite
-          .run({ selection: set, mode: pendingOnly ? "reuse" : "relaunch" })
+          .run({ selection: set, mode: pendingOnly ? "pending" : "relaunch" })
           .catch(complain("No se pudo poner en cola")),
     }),
     [suite, complain, view],
@@ -84,7 +84,9 @@ export function SessionPage() {
 
   const runTranches = (tranches: Tranches) => {
     if (tranches === "all") askToNotify();
-    void suite.run({ selection: "", tranches }).catch(complain("No se pudo poner en cola"));
+    void suite
+      .run({ selection: "", mode: "pending", tranches })
+      .catch(complain("No se pudo poner en cola"));
   };
 
   useShortcuts({

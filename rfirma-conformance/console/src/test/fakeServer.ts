@@ -118,7 +118,9 @@ export class FakeServer implements Wire {
     };
     for (const name of text.split(/[\s,]+/).filter(Boolean)) {
       const hit = this.catalogue.flatMap((set) =>
-        set.name === name ? set.checks : set.checks.filter((id) => id === name),
+        set.name === name || set.name.startsWith(`${name}.`)
+          ? set.checks
+          : set.checks.filter((id) => id === name),
       );
       if (hit.length === 0) resolution.unknown.push(name);
       for (const id of hit) if (!resolution.ids.includes(id)) resolution.ids.push(id);

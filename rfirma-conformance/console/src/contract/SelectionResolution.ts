@@ -9,6 +9,6 @@ export type SelectionResolution = {
  */
 ids: Array<string>, greetings_added: Array<string>, unknown: Array<string>, out_of_scope: Array<string>, 
 /**
- * Las de fuera de la selección, dentro del alcance, con el mismo trámite que alguna de dentro.
+ * Las no nombradas, dentro del alcance, con el mismo trámite que alguna nombrada.
  */
 sharing_an_errand: Array<string>, };

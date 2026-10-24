@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { Header } from "../contract/Header";
 import type { NewReport } from "../contract/NewReport";
 import type { ReportEntry } from "../contract/ReportEntry";
@@ -297,7 +297,7 @@ function NewReportModal({ onClose }: { onClose: () => void }) {
 
 function CorrectHeaderModal({ header, onClose }: { header: Header; onClose: () => void }) {
   const { suite } = useLive();
-  const initial = useMemo<Draft>(() => ({ ...BLANK, ...header }), [header]);
+  const [initial] = useState<Draft>(() => ({ ...BLANK, ...header }));
   return (
     <HeaderModal
       title="Cabecera del informe"

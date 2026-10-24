@@ -52,7 +52,8 @@ pub(crate) struct Request {
     tranches: Option<Tranches>,
 }
 
-/// Cómo se corre una Selección: reutilizando los trámites guardados o relanzando el cliente.
+/// Cómo se corre una Selección: reutilizando los trámites guardados, solo lo pendiente o relanzando
+/// el cliente.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
@@ -60,6 +61,8 @@ pub(crate) enum RunMode {
     /// Corre las PENDIENTE y vuelve a juzgar las resueltas con trámite, lanzándolo si se olvidó.
     #[default]
     Reuse,
+    /// Corre solo las PENDIENTE.
+    Pending,
     /// Abre el cliente para todo lo seleccionado y sustituye los trámites guardados.
     Relaunch,
 }
@@ -439,13 +442,15 @@ impl Console {
         {
             return Err(complaint);
         }
-        let selected = self.the_selected(&open.report, &request.selection)?;
-        let relaunch = request.mode.unwrap_or_default() == RunMode::Relaunch;
-        let in_batch = selected.len() > 1;
+        let (selected, greetings_added) = self.the_selection(&open.report, &request.selection)?;
+        let mode = request.mode.unwrap_or_default();
+        let in_batch = selected.len() - greetings_added.len() > 1;
+        let relaunches =
+            |check: &Check| mode == RunMode::Relaunch && !greetings_added.contains(&check.id);
         let worth_running = |check: &Check| {
-            relaunch
+            relaunches(check)
                 || open.report.state_of(&check.id) == Some(CheckState::Pending)
-                || ErrandKey::of(check).is_some()
+                || (mode != RunMode::Pending && ErrandKey::of(check).is_some())
         };
         let fresh: Vec<Queued> = selected
             .into_iter()
@@ -459,7 +464,7 @@ impl Console {
             .map(|check| Queued {
                 id: check.id.clone(),
                 in_batch,
-                relaunch,
+                relaunch: relaunches(check),
             })
             .collect();
         if fresh.is_empty() {
@@ -509,14 +514,20 @@ impl Console {
         Ok(())
     }
 
-    /// Lo que resuelve `text` en `report`, con los saludos que añade; en blanco, todo su alcance.
-    fn the_selected(&self, report: &Report, text: &str) -> Result<Vec<&Check>, String> {
-        let ids = if text.trim().is_empty() {
-            self.the_covered(report)
-        } else {
-            self.the_resolution_in(report, text)?.ids
-        };
-        Ok(self.the_checks_named(&ids))
+    /// Lo que resuelve `text` en `report`, con los saludos que añade, y cuáles añade; en blanco, todo su alcance.
+    fn the_selection(
+        &self,
+        report: &Report,
+        text: &str,
+    ) -> Result<(Vec<&Check>, Vec<String>), String> {
+        if text.trim().is_empty() {
+            return Ok((self.the_checks_named(&self.the_covered(report)), Vec::new()));
+        }
+        let resolution = self.the_resolution_in(report, text)?;
+        Ok((
+            self.the_checks_named(&resolution.ids),
+            resolution.greetings_added,
+        ))
     }
 
     /// Lo que nombra `text` en `report`, sin los saludos que añade; en blanco, todo su alcance.
@@ -1053,7 +1064,7 @@ fn take_the_next_group(shared: &Arc<Shared>, session: &mut Session) -> Option<Ne
             .cloned();
         session.log = already
             .is_none()
-            .then(|| CheckLog::open(&log_path_of(&dir, &group[0])).ok())
+            .then(|| the_logs_opened_anew(&dir, &group))
             .flatten();
         session.running = group.clone();
         session.started = Some(Instant::now());
@@ -1068,6 +1079,15 @@ fn take_the_next_group(shared: &Arc<Shared>, session: &mut Session) -> Option<Ne
         });
     }
     None
+}
+
+/// El registro de la cabeza de `group`, con el de cada miembro vaciado de la pasada anterior.
+fn the_logs_opened_anew(dir: &Path, group: &[String]) -> Option<CheckLog> {
+    let head = CheckLog::open(&log_path_of(dir, &group[0])).ok();
+    for member in &group[1..] {
+        let _ = std::fs::write(log_path_of(dir, member), "");
+    }
+    head
 }
 
 /// Apunta en el informe lo que dejó el grupo y el trámite nuevo con su clave, y copia a cada
@@ -1827,6 +1847,99 @@ expects.code = "SAF_03"
         assert_eq!(
             the_state_of(&console, "its_twin"),
             Some(CheckState::Pending)
+        );
+    }
+
+    fn the_queued_ids(console: &Console) -> Vec<String> {
+        console
+            .shared
+            .lock()
+            .queue
+            .iter()
+            .map(|queued| queued.id.clone())
+            .collect()
+    }
+
+    fn only_pending(selection: &str) -> Request {
+        Request {
+            mode: Some(RunMode::Pending),
+            ..reusing(selection)
+        }
+    }
+
+    #[test]
+    fn running_only_the_pending_leaves_what_is_resolved_out_of_the_queue() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console.enqueue(reusing("a_rejection")).unwrap();
+        run_the_queue(&console);
+
+        console
+            .enqueue(Request {
+                tranches: Some(Tranches::All),
+                ..only_pending("")
+            })
+            .unwrap();
+        let by_tranches = the_queued_ids(&console);
+        console.shared.lock().queue.clear();
+        console.enqueue(only_pending("errores")).unwrap();
+
+        assert_eq!(
+            by_tranches.len(),
+            the_published_state(&console)["pending_by_tranches"]["all"]
+        );
+        assert!(!by_tranches.contains(&"a_rejection".to_owned()));
+        assert!(!the_queued_ids(&console).contains(&"a_rejection".to_owned()));
+    }
+
+    #[test]
+    fn a_group_starts_with_the_log_of_every_member_empty() {
+        let runner = a_rejecting_runner();
+        let (console, dir) = a_console_replaying(&runner);
+        console
+            .enqueue(relaunching("a_rejection its_twin"))
+            .unwrap();
+        run_the_queue(&console);
+        let report = dir.path().join("a-report");
+        for id in ["a_rejection", "its_twin"] {
+            std::fs::write(log_path_of(&report, id), "OLD PASS\n").unwrap();
+        }
+
+        console
+            .enqueue(relaunching("a_rejection its_twin"))
+            .unwrap();
+        take_the_next_group(&console.shared, &mut console.shared.lock());
+
+        for id in ["a_rejection", "its_twin"] {
+            assert_eq!(
+                std::fs::read_to_string(log_path_of(&report, id)).unwrap(),
+                "",
+                "{id}"
+            );
+        }
+    }
+
+    #[test]
+    fn relaunching_one_check_reuses_the_greeting_it_adds_and_is_not_a_batch() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = a_console_to_scope(dir.path(), a_catalogue_to_scope(&[]));
+        console.create_report(a_report_scoped_to(None)).unwrap();
+
+        console.enqueue(relaunching("ws_echo")).unwrap();
+
+        let queued: Vec<(String, bool, bool)> = console
+            .shared
+            .lock()
+            .queue
+            .iter()
+            .map(|queued| (queued.id.clone(), queued.relaunch, queued.in_batch))
+            .collect();
+        assert_eq!(
+            queued,
+            [
+                ("ws_greeting".to_owned(), false, false),
+                ("ws_echo".to_owned(), true, false)
+            ]
         );
     }
 

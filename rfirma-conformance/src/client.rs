@@ -227,8 +227,8 @@ pub(crate) fn resolve(
     })
 }
 
-/// El binario con que se restaura el cliente de un informe: el suyo si aún se ofrece; si no, el
-/// candidato de su clase, su origen y su versión; si no, el suyo si aún se puede ejecutar.
+/// El binario con que se restaura el cliente de un informe: de los candidatos que lo continúan, el
+/// suyo o, si no, el de su origen; si ninguno lo continúa, el suyo si aún se puede ejecutar.
 pub(crate) fn the_binary_to_restore(
     kind: ClientKind,
     origin: Option<Origin>,
@@ -236,23 +236,19 @@ pub(crate) fn the_binary_to_restore(
     version: &str,
     candidates: &[Candidate],
 ) -> Option<PathBuf> {
-    let of_its_kind = || {
-        candidates
-            .iter()
-            .filter(move |offered| offered.kind == kind)
-    };
-    of_its_kind()
-        .find(|offered| offered.binary == binary)
-        .or_else(|| {
-            of_its_kind().find(|offered| {
-                Some(offered.origin) == origin
-                    && offered
-                        .identity
-                        .version
-                        .as_deref()
-                        .is_none_or(|said| said == version)
-            })
+    let continuing = || {
+        candidates.iter().filter(move |offered| {
+            offered.kind == kind
+                && offered
+                    .identity
+                    .version
+                    .as_deref()
+                    .is_none_or(|said| said == version)
         })
+    };
+    continuing()
+        .find(|offered| offered.binary == binary)
+        .or_else(|| continuing().find(|offered| Some(offered.origin) == origin))
         .map(|offered| offered.binary.clone())
         .or_else(|| is_executable(binary).then(|| binary.to_owned()))
 }
@@ -515,6 +511,32 @@ mod tests {
         );
 
         assert_eq!(restored, Some(PathBuf::from("/w/new/rfirma")));
+    }
+
+    #[test]
+    fn a_report_client_rebuilt_to_another_version_is_restored_from_a_candidate_that_continues_it() {
+        let candidates = [
+            a_candidate(
+                Origin::LocalBuild,
+                "/src/target/debug/rfirma",
+                Some("0.17.0"),
+            ),
+            a_candidate(
+                Origin::LocalBuild,
+                "/src/target/release/rfirma",
+                Some("0.16.0"),
+            ),
+        ];
+
+        let restored = the_binary_to_restore(
+            ClientKind::Rfirma,
+            Some(Origin::LocalBuild),
+            Path::new("/src/target/debug/rfirma"),
+            "0.16.0",
+            &candidates,
+        );
+
+        assert_eq!(restored, Some(PathBuf::from("/src/target/release/rfirma")));
     }
 
     #[test]

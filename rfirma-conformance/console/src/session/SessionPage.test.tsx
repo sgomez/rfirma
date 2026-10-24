@@ -26,7 +26,7 @@ describe("the session", () => {
     );
 
     expect(server.posted("/api/run")).toEqual([
-      { selection: "errores", mode: "reuse" },
+      { selection: "errores", mode: "pending" },
       { selection: "saludo", mode: "relaunch" },
     ]);
   });
@@ -64,10 +64,10 @@ describe("the session", () => {
     await user.keyboard("p");
 
     expect(server.posted("/api/run")).toEqual([
-      { selection: "", tranches: "unattended" },
-      { selection: "", tranches: "attended" },
-      { selection: "", tranches: "all" },
-      { selection: "", tranches: "all" },
+      { selection: "", mode: "pending", tranches: "unattended" },
+      { selection: "", mode: "pending", tranches: "attended" },
+      { selection: "", mode: "pending", tranches: "all" },
+      { selection: "", mode: "pending", tranches: "all" },
     ]);
   });
 
@@ -271,6 +271,26 @@ describe("the session", () => {
     await waitFor(() => expect(field).toHaveValue("saludo"));
   });
 
+  it("keeps a prefix written in the scope field while the tree still marks all it covers", async () => {
+    const { server, user } = renderConsoleAt("/", aSnapshot({ report_name: null, report: null }));
+    server.catalogue = [
+      { name: "canal.websocket", checks: ["ws_echo"] },
+      { name: "canal.servicio", checks: ["service_one"] },
+      ...server.catalogue,
+    ];
+
+    await user.click(await screen.findByRole("button", { name: "Informe nuevo…" }));
+    const dialog = await screen.findByRole("dialog");
+    const field = within(dialog).getByLabelText("Alcance");
+    await user.type(field, "canal");
+    await waitFor(() =>
+      expect(within(dialog).getByRole("checkbox", { name: "Marcar canal.servicio" })).toBeChecked(),
+    );
+    await user.click(within(dialog).getByRole("checkbox", { name: "Marcar errores" }));
+
+    await waitFor(() => expect(field).toHaveValue("canal errores"));
+  });
+
   it("previews what the scope resolves and refuses to create while a name does not match", async () => {
     const { server, user } = renderConsoleAt("/", aSnapshot({ report_name: null, report: null }));
 
@@ -332,6 +352,21 @@ describe("the session", () => {
         scope: "saludo",
       },
     ]);
+  });
+
+  it("keeps what is being written in the header while the session publishes its state", async () => {
+    const view = aReportView();
+    view.header.title = "Antes";
+    const { server, user } = renderConsoleAt("/", aSnapshot({ report: view }));
+
+    await user.click(await screen.findByRole("button", { name: "Editar cabecera" }));
+    const dialog = await screen.findByRole("dialog");
+    const title = within(dialog).getByLabelText("Título");
+    await user.clear(title);
+    await user.type(title, "Despues");
+    act(() => server.publish(structuredClone(server.snapshot)));
+
+    expect(title).toHaveValue("Despues");
   });
 
   it("lists the reports that can be continued apart from those that are read-only, with the reason and the title", async () => {

@@ -18,7 +18,7 @@ pub(crate) struct SelectionResolution {
     pub greetings_added: Vec<String>,
     pub unknown: Vec<String>,
     pub out_of_scope: Vec<String>,
-    /// Las de fuera de la selección, dentro del alcance, con el mismo trámite que alguna de dentro.
+    /// Las no nombradas, dentro del alcance, con el mismo trámite que alguna nombrada.
     pub sharing_an_errand: Vec<String>,
 }
 
@@ -87,13 +87,14 @@ pub(crate) fn resolve(text: &str, catalogue: &[Check], scope: Option<&str>) -> S
     let selected = |check: &Check| is_named(check) || added.contains(check.id.as_str());
     let keys: BTreeSet<ErrandKey> = reachable
         .iter()
-        .filter(|check| selected(check))
+        .filter(|check| is_named(check))
         .filter_map(|check| ErrandKey::of(check))
         .collect();
     for check in &reachable {
         if selected(check) {
             resolution.ids.push(check.id.clone());
-        } else if ErrandKey::of(check).is_some_and(|key| keys.contains(&key)) {
+        }
+        if !is_named(check) && ErrandKey::of(check).is_some_and(|key| keys.contains(&key)) {
             resolution.sharing_an_errand.push(check.id.clone());
         }
         if added.contains(check.id.as_str()) {
@@ -255,7 +256,10 @@ mod tests {
     #[test]
     fn the_checks_outside_that_share_an_errand_are_named() {
         let resolution = resolved("sign_cades");
-        assert_eq!(resolution.sharing_an_errand, ["sign_and_save"]);
+        assert_eq!(
+            resolution.sharing_an_errand,
+            ["sign_greeting", "sign_and_save"]
+        );
         assert!(resolved("relay_one").sharing_an_errand.is_empty());
     }
 
@@ -269,6 +273,9 @@ mod tests {
 
     #[test]
     fn with_a_scope_nothing_outside_it_shares_an_errand() {
-        assert!(within("firma", "sign_cades").sharing_an_errand.is_empty());
+        assert_eq!(
+            within("firma", "sign_cades").sharing_an_errand,
+            ["sign_greeting"]
+        );
     }
 }
