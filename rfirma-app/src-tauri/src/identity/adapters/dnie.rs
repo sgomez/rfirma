@@ -1,10 +1,11 @@
-//! `DnieToken`, el DNIe leído con rdnie detrás del puerto `Token`: lista sin PIN, da los intentos restantes y firma el resumen, abriendo la tarjeta en cada operación y nunca entre ellas (ADR-0040, ADR-0047).
+//! `DnieToken`, el DNIe leído con rdnie detrás del puerto `Token`: lista sin PIN, da los intentos restantes y firma el resumen sobre una sesión que dura lo que la tarjeta sigue en el lector (ADR-0040, ADR-0047).
 
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
 
 use rdnie::{
-    HashAlgorithm, PcscTransport, Pin, Session, Transport, INTERMEDIATE_CA_LABEL, SIGNATURE_LABEL,
+    HashAlgorithm, KeyReference, PcscTransport, Pin, Session, Transport, INTERMEDIATE_CA_LABEL,
+    SIGNATURE_LABEL,
 };
 
 use crate::identity::domain::algorithm::SignatureAlgorithm;
@@ -24,10 +25,10 @@ pub fn dnie_store() -> Store {
     Store::module(format!("{DNIE_STORE_PREFIX}pcsc"))
 }
 
-/// Quien abre la tarjeta para cada operación: el lector en producción, el emulador en las pruebas.
+/// Quien abre la tarjeta al empezar cada inserción: el lector en producción, el emulador en las pruebas.
 pub trait CardOpener: Send + Sync {
     /// Por dónde viajan las órdenes a la tarjeta.
-    type Card: Transport;
+    type Card: Transport + Send;
 
     /// Una sesión nueva con el DNIe.
     fn open(&self) -> Result<Session<Self::Card>, rdnie::Error>;
@@ -39,6 +40,11 @@ pub trait CardOpener: Send + Sync {
 
     /// Los lectores con una tarjeta dentro, según PC/SC; ninguno si no lo sabe.
     fn readers_with_a_card(&self) -> Option<Vec<String>> {
+        None
+    }
+
+    /// Un número que cambia cada vez que se mete o se saca una tarjeta; ninguno si no lo sabe.
+    fn insertion(&self) -> Option<u64> {
         None
     }
 }
@@ -69,6 +75,10 @@ impl CardOpener for PcscCard {
                 .collect(),
         )
     }
+
+    fn insertion(&self) -> Option<u64> {
+        super::pcsc::card_events()
+    }
 }
 
 /// Si el ATR es de un DNIe que abre rdnie: un 3.0 o 4.0 sin quemar; el 1.0 y el 2.0 siguen por PKCS#11.
@@ -87,33 +97,27 @@ fn take_the_card_turn() -> MutexGuard<'static, ()> {
 }
 
 /// El adaptador de [`Token`] para el almacén del DNIe.
-#[derive(Debug, Default)]
-pub struct DnieToken<O> {
+pub struct DnieToken<O: CardOpener> {
     opener: O,
+    inserted: Mutex<Option<Inserted<O::Card>>>,
     login: Mutex<Login>,
+}
+
+/// La sesión de la tarjeta que sigue en el lector, con la inserción en que se abrió.
+struct Inserted<T: Transport> {
+    session: Session<T>,
+    insertion: Option<u64>,
 }
 
 /// Una sola tarjeta física: el turno es de todo el proceso, también para el informe de depuración.
 static CARD_TURN: Mutex<()> = Mutex::new(());
 
-/// Lo que el adaptador recuerda entre llamadas, sin retener la tarjeta.
+/// Lo que el adaptador recuerda del ciclo de firma entre llamadas.
 #[derive(Debug, Default)]
 struct Login {
     shown_attempts: Option<u8>,
     depth: usize,
     cut: Option<TokenError>,
-    readings: u64,
-    last_reading: Option<Reading>,
-}
-
-/// Lo último leído de la tarjeta: los titulares y, una vez leída, la lista entera que aún deben sus listados.
-#[derive(Debug)]
-struct Reading {
-    number: u64,
-    store: Store,
-    holders: Vec<TokenCertificate>,
-    every: Option<Vec<TokenCertificate>>,
-    chains_owed: usize,
 }
 
 impl<O: CardOpener> DnieToken<O> {
@@ -121,6 +125,7 @@ impl<O: CardOpener> DnieToken<O> {
     pub fn new(opener: O) -> Self {
         Self {
             opener,
+            inserted: Mutex::new(None),
             login: Mutex::new(Login::default()),
         }
     }
@@ -135,44 +140,68 @@ impl<O: CardOpener> DnieToken<O> {
         self.opener.readers_with_a_card()
     }
 
-    /// Cuántas veces se ha leído la tarjeta: lo que apunta un listado al empezar.
-    pub fn readings(&self) -> u64 {
-        self.login().readings
-    }
-
-    /// Los titulares para un listado que empezó tras `arrived` lecturas: de la que acabó después, si la hay.
-    pub fn list_since(
-        &self,
-        store: &Store,
-        arrived: u64,
-    ) -> Result<Vec<TokenCertificate>, TokenError> {
-        let _turn = self.card_turn();
-        if let Some(holders) = self.reading_since(store, arrived) {
-            return Ok(holders);
-        }
-        self.read_holders(store)
-    }
-
     fn login(&self) -> MutexGuard<'_, Login> {
         self.login
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    /// Con el turno, ninguna operación corta a otra a medias.
-    fn card_turn(&self) -> MutexGuard<'static, ()> {
-        take_the_card_turn()
+    fn inserted(&self) -> MutexGuard<'_, Option<Inserted<O::Card>>> {
+        self.inserted
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    fn session(&self) -> Result<Session<O::Card>, TokenError> {
-        self.opener.open().map_err(|error| token_error(&error))
+    /// Un listado sobre la sesión de esta inserción: tras un reset ajeno, o en la sesión de una tarjeta ya sacada, se repite una vez.
+    fn listing<R>(
+        &self,
+        mut operation: impl FnMut(&mut Session<O::Card>) -> Result<R, rdnie::Error>,
+    ) -> Result<Option<R>, TokenError> {
+        let _turn = take_the_card_turn();
+        let mut inserted = self.inserted();
+        let mut retried = false;
+        loop {
+            let reused = inserted.is_some();
+            let failure = match opened(&mut inserted, &self.opener) {
+                Ok(session) => match operation(session) {
+                    Ok(done) => return Ok(Some(done)),
+                    Err(failure) => failure,
+                },
+                Err(error) if is_no_readable_dnie(&error) => return Ok(None),
+                Err(error) => error,
+            };
+            let spent = forgotten_if_spent(&mut inserted, &failure);
+            let worth_another_go = matches!(failure, rdnie::Error::CardReset) || (spent && reused);
+            if retried || !worth_another_go {
+                return Err(token_error(&failure));
+            }
+            retried = true;
+        }
+    }
+
+    /// Un paso de la firma sobre la sesión de esta inserción, que nunca se repite (ADR-0047).
+    fn signing<R>(
+        &self,
+        operation: impl FnOnce(&mut Session<O::Card>) -> Result<R, rdnie::Error>,
+    ) -> Result<R, TokenError> {
+        let _turn = take_the_card_turn();
+        let mut inserted = self.inserted();
+        let failure = match opened(&mut inserted, &self.opener) {
+            Ok(session) => match operation(session) {
+                Ok(done) => return Ok(done),
+                Err(failure) => failure,
+            },
+            Err(error) => error,
+        };
+        forgotten_if_spent(&mut inserted, &failure);
+        Err(token_error(&failure))
     }
 
     fn attempts_left(&self) -> Result<u8, TokenError> {
-        match self.session()?.pin_retries() {
+        self.signing(|session| match session.pin_retries() {
             Err(rdnie::Error::PinBlocked) => Ok(0),
-            read => read.map_err(|error| token_error(&error)),
-        }
+            read => read,
+        })
     }
 
     /// rdnie no expone un VERIFY suelto: el PIN se comprueba con una firma que nunca sale de aquí (ADR-0047).
@@ -203,140 +232,104 @@ impl<O: CardOpener> DnieToken<O> {
         let hash = hash_of(algorithm)?;
         let digest = ecdsa::digest(algorithm, data)?;
         let pin = pin_of(secret)?;
-        let mut session = self.session()?;
-        let key = session
-            .certificates()
-            .map_err(|error| token_error(&error))?
-            .into_iter()
-            .find(|certificate| certificate.label == reference.label())
-            .ok_or_else(|| {
-                TokenError::new(
+        self.signing(|session| {
+            let Some(key) = key_of(session, reference.label())? else {
+                return Ok(Err(TokenError::new(
                     Situation::CertificateNotFound,
                     format!("el DNIe no tiene la clave de {}", reference.label()),
-                )
-            })?
-            .key;
-        let left = session.pin_retries().map_err(|error| token_error(&error))?;
-        unchanged_since_shown(left, shown)?;
-        session
-            .sign(&digest, hash, &key, pin)
-            .map_err(|error| token_error(&error))
+                )));
+            };
+            let left = session.pin_retries()?;
+            if let Err(changed) = unchanged_since_shown(left, shown) {
+                return Ok(Err(changed));
+            }
+            session.sign(&digest, hash, &key, pin).map(Ok)
+        })?
     }
 
-    /// La lectura que acabó después de llegar el listado `arrived`, que vale tanto como una nueva.
-    fn reading_since(&self, store: &Store, arrived: u64) -> Option<Vec<TokenCertificate>> {
-        let mut login = self.login();
-        let reading = login.last_reading.as_mut()?;
-        if reading.number <= arrived || &reading.store != store {
-            return None;
-        }
-        reading.chains_owed += 1;
-        Some(reading.holders.clone())
+    fn signing_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+        Ok(self
+            .listing(|session| session.certificate(SIGNATURE_LABEL))?
+            .flatten()
+            .map(|der| in_the_store(store, SIGNATURE_LABEL, der))
+            .into_iter()
+            .collect())
     }
 
-    /// El certificado de firma, el único que enseña un listado; se queda para los listados que lleguen mientras tanto.
-    fn read_holders(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
-        let Some(mut session) = self.open_if_readable()? else {
-            return Ok(Vec::new());
-        };
-        let holders = signing_certificate(store, &mut session)?;
-        let mut login = self.login();
-        login.readings += 1;
-        login.last_reading = Some(Reading {
-            number: login.readings,
-            store: store.clone(),
-            holders: holders.clone(),
-            every: None,
-            chains_owed: 1,
-        });
-        Ok(holders)
-    }
-
-    fn read_every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
-        let owed = self.chain_is_owed(store);
-        if let Some(every) = self.shared_every(store) {
-            return Ok(every);
-        }
-        let Some(mut session) = self.open_if_readable()? else {
-            return Ok(Vec::new());
-        };
-        let every = every_certificate_of(store, &mut session)?;
-        if owed {
-            self.share_every(store, &every);
-        }
-        Ok(every)
-    }
-
-    fn chain_is_owed(&self, store: &Store) -> bool {
-        self.login()
-            .last_reading
-            .as_ref()
-            .is_some_and(|reading| reading.chains_owed > 0 && &reading.store == store)
-    }
-
-    fn shared_every(&self, store: &Store) -> Option<Vec<TokenCertificate>> {
-        let mut login = self.login();
-        let reading = login.last_reading.as_mut()?;
-        if reading.chains_owed == 0 || &reading.store != store {
-            return None;
-        }
-        let every = reading.every.clone()?;
-        reading.chains_owed -= 1;
-        Some(every)
-    }
-
-    fn share_every(&self, store: &Store, every: &[TokenCertificate]) {
-        let mut login = self.login();
-        if let Some(reading) = login
-            .last_reading
-            .as_mut()
-            .filter(|reading| &reading.store == store && reading.chains_owed > 0)
-        {
-            reading.every = Some(every.to_vec());
-            reading.chains_owed -= 1;
-        }
-    }
-
-    fn open_if_readable(&self) -> Result<Option<Session<O::Card>>, TokenError> {
-        match self.opener.open() {
-            Ok(session) => Ok(Some(session)),
-            Err(error) if is_no_readable_dnie(&error) => Ok(None),
-            Err(error) => Err(token_error(&error)),
-        }
+    fn every_certificate_of(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+        Ok(self
+            .listing(every_der)?
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(label, der)| in_the_store(store, &label, der))
+            .collect())
     }
 }
 
-fn signing_certificate<T: Transport>(
-    store: &Store,
+/// La sesión de esta inserción, abierta si aún no la hay; la de una tarjeta que el lector ya ha visto salir falla como `CardRemoved`.
+fn opened<'a, O: CardOpener>(
+    inserted: &'a mut Option<Inserted<O::Card>>,
+    opener: &O,
+) -> Result<&'a mut Session<O::Card>, rdnie::Error> {
+    let insertion = opener.insertion();
+    let held = match inserted.take() {
+        Some(held) if held.insertion == insertion => held,
+        Some(_) => return Err(rdnie::Error::CardRemoved),
+        None => Inserted {
+            session: opener.open()?,
+            insertion,
+        },
+    };
+    Ok(&mut inserted.insert(held).session)
+}
+
+/// Olvida la sesión si `failure` ha dejado su transporte inservible, y dice si lo ha hecho.
+fn forgotten_if_spent<T: Transport>(
+    inserted: &mut Option<Inserted<T>>,
+    failure: &rdnie::Error,
+) -> bool {
+    let spent = leaves_the_transport_spent(failure);
+    if spent {
+        *inserted = None;
+    }
+    spent
+}
+
+fn key_of<T: Transport>(
     session: &mut Session<T>,
-) -> Result<Vec<TokenCertificate>, TokenError> {
-    let der = session
-        .certificate(SIGNATURE_LABEL)
-        .map_err(|error| token_error(&error))?;
-    Ok(der
-        .map(|der| in_the_store(store, SIGNATURE_LABEL, der))
+    label: &str,
+) -> Result<Option<KeyReference>, rdnie::Error> {
+    Ok(session
+        .certificates()?
         .into_iter()
-        .collect())
+        .find(|certificate| certificate.label == label)
+        .map(|certificate| certificate.key))
 }
 
-fn every_certificate_of<T: Transport>(
-    store: &Store,
+/// Tras estos errores el transporte ya no sirve y la sesión de la inserción se descarta.
+fn leaves_the_transport_spent(error: &rdnie::Error) -> bool {
+    matches!(
+        error,
+        rdnie::Error::CardRemoved
+            | rdnie::Error::NoCard
+            | rdnie::Error::NoReader
+            | rdnie::Error::Transport(_)
+    )
+}
+
+fn every_der<T: Transport>(
     session: &mut Session<T>,
-) -> Result<Vec<TokenCertificate>, TokenError> {
+) -> Result<Vec<(String, Vec<u8>)>, rdnie::Error> {
     let mut labels: Vec<String> = session
-        .certificates()
-        .map_err(|error| token_error(&error))?
+        .certificates()?
         .into_iter()
         .map(|certificate| certificate.label)
         .collect();
     labels.push(INTERMEDIATE_CA_LABEL.to_owned());
     let mut found = Vec::new();
     for label in labels {
-        if let Some(der) = session
-            .certificate(&label)
-            .map_err(|error| token_error(&error))?
-        {
-            found.push(in_the_store(store, &label, der));
+        if let Some(der) = session.certificate(&label)? {
+            found.push((label, der));
         }
     }
     Ok(found)
@@ -415,12 +408,11 @@ fn has_a_length_the_dnie_admits(secret: &ProtectedSecret) -> bool {
 
 impl<O: CardOpener> Token for DnieToken<O> {
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
-        self.list_since(store, self.readings())
+        self.signing_certificate(store)
     }
 
     fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
-        let _turn = self.card_turn();
-        self.read_every_certificate(store)
+        self.every_certificate_of(store)
     }
 
     fn list_authenticated(
@@ -436,7 +428,6 @@ impl<O: CardOpener> Token for DnieToken<O> {
     }
 
     fn pin_warning(&self, _reference: &CertificateRef) -> Result<PinWarning, TokenError> {
-        let _turn = self.card_turn();
         let left = self.attempts_left()?;
         self.login().shown_attempts = Some(left);
         Ok(PinWarning::AttemptsLeft(u32::from(left)))
@@ -461,7 +452,6 @@ impl<O: CardOpener> Token for DnieToken<O> {
         if !has_a_length_the_dnie_admits(secret) {
             return Err(token_error(&rdnie::Error::InvalidPinFormat));
         }
-        let _turn = self.card_turn();
         let left = self.attempts_left()?;
         let shown = self.login().shown_attempts.take();
         unchanged_since_shown(left, shown)?;
@@ -483,10 +473,7 @@ impl<O: CardOpener> Token for DnieToken<O> {
             }
             login.shown_attempts.take()
         };
-        let signed = {
-            let _turn = self.card_turn();
-            self.signed(reference, secret, algorithm, data, shown)
-        };
+        let signed = self.signed(reference, secret, algorithm, data, shown);
         if let Err(failure) = &signed {
             let mut login = self.login();
             if login.depth > 0 {

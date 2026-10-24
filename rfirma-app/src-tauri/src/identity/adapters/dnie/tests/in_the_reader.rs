@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use rdnie::{Session, Transport, SIGNATURE_LABEL};
@@ -13,6 +13,8 @@ use crate::identity::domain::protected_secret::ProtectedSecret;
 pub(super) struct InTheReader {
     card: Arc<Mutex<EmulatedDnie>>,
     sessions: Arc<AtomicUsize>,
+    openings: Arc<AtomicUsize>,
+    taken_out: Arc<AtomicBool>,
 }
 
 impl InTheReader {
@@ -20,7 +22,15 @@ impl InTheReader {
         Self {
             card: Arc::new(Mutex::new(card)),
             sessions: Arc::new(AtomicUsize::new(0)),
+            openings: Arc::new(AtomicUsize::new(0)),
+            taken_out: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    /// Saca la tarjeta del lector, como lo vería PC/SC.
+    pub(super) fn take_the_card_out(&self) {
+        self.card().remove_card();
+        self.taken_out.store(true, Ordering::SeqCst);
     }
 
     pub(super) fn card(&self) -> MutexGuard<'_, EmulatedDnie> {
@@ -35,6 +45,10 @@ impl InTheReader {
 
     pub(super) fn open_sessions(&self) -> usize {
         self.sessions.load(Ordering::SeqCst)
+    }
+
+    pub(super) fn openings(&self) -> usize {
+        self.openings.load(Ordering::SeqCst)
     }
 
     pub(super) fn pins_sent(&self) -> usize {
@@ -81,8 +95,13 @@ impl CardOpener for InTheReader {
 
     fn open(&self) -> Result<Session<Connection>, rdnie::Error> {
         self.sessions.fetch_add(1, Ordering::SeqCst);
+        self.openings.fetch_add(1, Ordering::SeqCst);
         let root = self.card().component_root();
         Session::open_trusting(Connection(self.clone()), root)
+    }
+
+    fn insertion(&self) -> Option<u64> {
+        Some(u64::from(self.taken_out.load(Ordering::SeqCst)))
     }
 }
 
