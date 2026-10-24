@@ -20,6 +20,7 @@ mod outcome;
 mod report;
 mod report_view;
 pub mod saf_table;
+mod selection;
 pub mod server;
 mod snapshot;
 mod transcript;

@@ -21,6 +21,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/console.rs` | La sesión: cliente e informe elegidos, la cola en tramos, el único hilo que corre las comprobaciones y el testigo de verdad, que cuenta lo que pasa en la página. |
 | `src/witness.rs` | El testigo, el seam entre quien corre las comprobaciones y la persona, que le cuenta lo que pasa; con su falso para las pruebas. |
 | `src/report_view.rs` | La vista de un informe, igual lo corra la sesión o no: conjuntos en el orden del catálogo con sus recuentos; no sabe de la sesión. |
+| `src/selection.rs` | La Selección: un texto de ids y conjuntos, que valen también como prefijo por segmentos, resuelto contra el catálogo y el alcance, con los saludos que añade y lo de fuera que comparte trámite. |
 | `src/snapshot.rs` | El estado de la sesión activa que recibe la página: la vista de su informe más cliente, cola, y comprobación en curso. |
 | `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`, `token_apart`, `ed25519`, `several`, `expired`, `dnie`, `rsa_without_sha1`), cada uno con su envoltorio y su raíz de confianza. |
 | `src/catalogue.rs` | La comprobación como tipo —exigencia, cómo se provoca, qué hace la persona y una sola expectativa— y la lectura del catálogo con lo que el tipo no puede decir: ids repetidos, dos comprobaciones que miden lo mismo y lo que no casa con el manifiesto de la sede. |

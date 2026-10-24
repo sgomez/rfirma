@@ -307,13 +307,16 @@ pub(crate) fn the_greetings_already_failed(
 pub(crate) fn the_greeting_that_stops<'a>(check: &Check, failed: &[&'a Check]) -> Option<&'a str> {
     failed
         .iter()
-        .find(|greeting| {
-            greeting.id != check.id
-                && greeting.family.is_some()
-                && greeting.family == check.family
-                && greeting.assistance() <= check.assistance()
-        })
+        .find(|greeting| the_greeting_opens(greeting, check))
         .map(|greeting| greeting.id.as_str())
+}
+
+/// Si `greeting` es el de la familia de `check` en su tramo o en uno anterior.
+pub(crate) fn the_greeting_opens(greeting: &Check, check: &Check) -> bool {
+    greeting.id != check.id
+        && greeting.family.is_some()
+        && greeting.family == check.family
+        && greeting.assistance() <= check.assistance()
 }
 
 pub(crate) fn the_reason_behind_a_failed_greeting(greeting: &str) -> String {
