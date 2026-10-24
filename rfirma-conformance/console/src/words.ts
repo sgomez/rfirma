@@ -1,6 +1,8 @@
 import type { Assistance } from "./contract/Assistance";
 import type { CheckView } from "./contract/CheckView";
 import type { ClientKind } from "./contract/ClientKind";
+import type { Identity } from "./contract/Identity";
+import type { Origin } from "./contract/Origin";
 import type { RemoteService } from "./contract/RemoteService";
 import type { RequestsComparison } from "./contract/RequestsComparison";
 import type { ResultName } from "./contract/ResultName";
@@ -71,6 +73,18 @@ export function clientName(kind: ClientKind | null | undefined): string {
   if (kind === "autofirma") return "AutoFirma";
   if (kind === "rfirma") return "rFirma";
   return "cliente desconocido";
+}
+
+export const originName: Record<Origin, string> = {
+  installed: "instalado",
+  local_build: "build local",
+  worktree: "build de un worktree",
+  given: "dado a mano",
+};
+
+export function identityText(identity: Identity): string | null {
+  if (!identity.version) return null;
+  return identity.channel ? `${identity.version} (${identity.channel})` : identity.version;
 }
 
 const seconds = new Intl.NumberFormat("es-ES", {

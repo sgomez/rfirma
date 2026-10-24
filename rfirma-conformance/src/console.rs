@@ -18,14 +18,15 @@ use crate::checks::{
     the_reason_behind_a_failed_greeting, Settled, Settlement,
 };
 use crate::client::{
-    prepare, resolve, the_deduced_coordinates, Client, ClientKind, DeducedCoordinates, Profile,
-    Store,
+    prepare, resolve, the_deduced_coordinates, Candidate, Client, ClientKind, DeducedCoordinates,
+    Profile, Store,
 };
 use crate::comparison::{compare, Comparison};
 use crate::errand::{ErrandKey, ErrandRunner, NodeRunner, ObservedErrand};
 use crate::hand::the_assistance_of;
 use crate::livelog::{CheckLog, LiveLogSink, Provenance};
 use crate::outcome::CheckState;
+use crate::recipe::the_recipe_of;
 use crate::report::{HeaderCoordinates, Report, THE_REPORT_FILE};
 use crate::report_view::report_view;
 use crate::selection::{resolve as resolve_the_selection, SelectionResolution};
@@ -126,6 +127,7 @@ struct Shared {
 #[derive(Default)]
 struct Session {
     client: Option<Client>,
+    candidates: Vec<Candidate>,
     profiles: Vec<Profile>,
     client_complaints: Vec<String>,
     resolving_client: bool,
@@ -217,9 +219,11 @@ impl Console {
             session.resolving_client = true;
             self.shared.publish(&session);
         }
-        let resolved = resolve(kind, binary, trust_root);
+        let candidates = the_candidates();
+        let resolved = resolve(kind, binary, trust_root, &candidates);
         let mut session = self.shared.lock();
         session.resolving_client = false;
+        session.candidates = candidates;
         session.profiles.clear();
         match resolved {
             Ok(client) => {
@@ -235,10 +239,18 @@ impl Console {
         Ok(())
     }
 
+    /// Busca los binarios que se pueden medir y los publica.
+    pub fn discover_the_candidates(&self) {
+        let candidates = the_candidates();
+        let mut session = self.shared.lock();
+        session.candidates = candidates;
+        self.shared.publish(&session);
+    }
+
     pub(crate) fn the_deduced_coordinates(&self) -> Result<DeducedCoordinates, String> {
         let session = self.shared.lock();
-        session.client.as_ref().ok_or(NO_CLIENT)?;
-        Ok(the_deduced_coordinates())
+        let client = session.client.as_ref().ok_or(NO_CLIENT)?;
+        Ok(the_deduced_coordinates(client))
     }
 
     pub(crate) fn create_report(&self, new: NewReport) -> Result<(), String> {
@@ -247,9 +259,7 @@ impl Console {
             return Err(format!("ya hay un informe llamado «{}»", new.name));
         }
         if new.client_version.trim().is_empty() {
-            return Err(
-                "falta la versión del cliente: es la única que nadie puede deducir".to_owned(),
-            );
+            return Err("falta la versión del cliente: AutoFirma no la dice, escríbela".to_owned());
         }
         let coordinates = HeaderCoordinates {
             os: new.os,
@@ -500,6 +510,7 @@ impl Shared {
         let reports = reports_in(&self.reports_dir);
         let activity = Activity {
             client: session.client.as_ref(),
+            candidates: &session.candidates,
             client_complaints: &session.client_complaints,
             resolving_client: session.resolving_client,
             running: &session.running,
@@ -688,6 +699,13 @@ fn the_profile_prepared_for(
     })?;
     shared.lock().profiles.push(profile.clone());
     Ok(profile)
+}
+
+fn the_candidates() -> Vec<Candidate> {
+    [ClientKind::Rfirma, ClientKind::Autofirma]
+        .into_iter()
+        .flat_map(|kind| the_recipe_of(kind).the_candidates())
+        .collect()
 }
 
 fn run_the_group_catching_panics(
@@ -1271,7 +1289,10 @@ expects.code = "SAF_03"
             let mut session = console.shared.lock();
             session.client = Some(Client {
                 kind: ClientKind::Rfirma,
+                origin: crate::client::Origin::Installed,
                 binary: PathBuf::from("/usr/bin/rfirma"),
+                library_dir: None,
+                identity: crate::client::Identity::default(),
                 trust_root: None,
             });
             session.profiles = Store::ALL

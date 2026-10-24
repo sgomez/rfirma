@@ -1,11 +1,14 @@
-//! La receta de cada clase de cliente: cómo se completa el perfil aislado de un almacén para lanzarlo.
+//! La receta de cada clase de cliente: sus binarios candidatos, lo que dice de sí mismo y cómo se completa el perfil aislado de un almacén para lanzarlo.
 
 use std::ffi::OsString;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::client::{ClientKind, IsolatedStore, Profile, Store};
+use crate::candidates::{the_identity_of_rfirma, the_rfirma_candidates};
+use crate::client::{
+    the_binary_on_the_path, Candidate, ClientKind, Identity, IsolatedStore, Origin, Profile, Store,
+};
 
 /// Lo que la suite sabe de una clase de cliente para lanzarla contra un almacén montado.
 pub(crate) trait Recipe: Sync {
@@ -16,6 +19,16 @@ pub(crate) trait Recipe: Sync {
         isolated: IsolatedStore,
         given_root: Option<PathBuf>,
     ) -> Result<Profile, String>;
+
+    /// Los binarios de esta clase que se pueden medir, cada uno con su origen.
+    fn the_candidates(&self) -> Vec<Candidate>;
+
+    /// Lo que dice de sí mismo el cliente de `binary`, o por qué no se puede medir.
+    fn the_identity_of(
+        &self,
+        binary: &Path,
+        library_dir: Option<&Path>,
+    ) -> Result<Identity, String>;
 }
 
 pub(crate) fn the_recipe_of(kind: ClientKind) -> &'static dyn Recipe {
@@ -50,6 +63,18 @@ impl Recipe for RfirmaRecipe {
             environment,
             trust_root: given_root.unwrap_or(local_ca),
         })
+    }
+
+    fn the_candidates(&self) -> Vec<Candidate> {
+        the_rfirma_candidates()
+    }
+
+    fn the_identity_of(
+        &self,
+        binary: &Path,
+        library_dir: Option<&Path>,
+    ) -> Result<Identity, String> {
+        the_identity_of_rfirma(binary, library_dir)
     }
 }
 
@@ -139,6 +164,23 @@ impl Recipe for AutofirmaRecipe {
             environment,
             trust_root,
         })
+    }
+
+    fn the_candidates(&self) -> Vec<Candidate> {
+        the_binary_on_the_path(ClientKind::Autofirma.name())
+            .map(|binary| Candidate {
+                kind: ClientKind::Autofirma,
+                origin: Origin::Installed,
+                binary,
+                library_dir: None,
+                identity: Identity::default(),
+            })
+            .into_iter()
+            .collect()
+    }
+
+    fn the_identity_of(&self, _: &Path, _: Option<&Path>) -> Result<Identity, String> {
+        Ok(Identity::default())
     }
 }
 

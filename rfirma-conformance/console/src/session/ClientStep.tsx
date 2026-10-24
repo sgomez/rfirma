@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from "react";
 import type { ClientKind } from "../contract/ClientKind";
 import type { Snapshot } from "../contract/Snapshot";
 import { useLive } from "../suite/live";
-import { clientName } from "../words";
+import { clientName, identityText, originName } from "../words";
 import { Step } from "./Step";
 
 interface Draft {
@@ -18,6 +18,7 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
   const [draft, setDraft] = useState<Draft>({ kind: "autofirma", binary: "", trustRoot: "" });
   const kindId = useId();
   const binaryId = useId();
+  const candidatesId = useId();
   const rootId = useId();
 
   const trustRoot = client?.trust_root ?? "";
@@ -63,6 +64,10 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
         ) : client ? (
           <span className="facts">
             <strong>{clientName(client.kind)}</strong>
+            {identityText(client.identity) && (
+              <span title="Versión">{identityText(client.identity)}</span>
+            )}
+            <span className="fact-label">{originName[client.origin]}</span>
             <code title="Binario">{client.binary}</code>
             <span className="fact-label">raíz</span>
             <code title="Raíz de confianza">{trustRoot || "la de cada almacén"}</code>
@@ -123,9 +128,21 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
               className="input mono"
               value={draft.binary}
               placeholder="vacío: se busca en el PATH"
+              list={candidatesId}
               onChange={(event) => setDraft({ ...draft, binary: event.target.value })}
               spellCheck={false}
             />
+            <datalist id={candidatesId}>
+              {snapshot.candidates
+                .filter((candidate) => candidate.kind === draft.kind)
+                .map((candidate) => (
+                  <option key={candidate.binary} value={candidate.binary}>
+                    {[originName[candidate.origin], identityText(candidate.identity)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </option>
+                ))}
+            </datalist>
           </div>
           <div className="field-group grow">
             <label className="field-label" htmlFor={rootId}>

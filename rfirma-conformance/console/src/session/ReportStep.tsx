@@ -138,7 +138,7 @@ export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
 
 const FIELDS: [keyof NewReport, string, string?][] = [
   ["name", "Nombre", "letras, cifras, «.», «-» o «_»"],
-  ["client_version", "Versión del cliente", "nadie puede deducirla"],
+  ["client_version", "Versión del cliente", "rFirma la dice; la de AutoFirma, a mano"],
   ["os", "Sistema"],
   ["os_version", "Versión del sistema"],
 ];
