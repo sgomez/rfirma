@@ -29,7 +29,9 @@ use crate::outcome::CheckState;
 use crate::recipe::the_recipe_of;
 use crate::report::{HeaderCoordinates, HeaderCorrection, Report, THE_REPORT_FILE};
 use crate::report_view::report_view;
-use crate::selection::{resolve as resolve_the_selection, SelectionResolution};
+use crate::selection::{
+    resolve as resolve_the_selection, the_sets_of, CatalogueSet, SelectionResolution,
+};
 use crate::snapshot::{snapshot_of, Activity, ReportEntry};
 use crate::transcript::{log_path_of, transcript_path_of};
 use crate::validation::{
@@ -552,6 +554,10 @@ impl Console {
     /// Lo que resuelve `text` contra el catálogo y el alcance `scope`, sin tocar la sesión.
     pub(crate) fn resolve_selection(&self, text: &str, scope: Option<&str>) -> SelectionResolution {
         resolve_the_selection(text, &self.shared.catalogue, scope)
+    }
+
+    pub(crate) fn catalogue_sets(&self) -> Vec<CatalogueSet<'_>> {
+        the_sets_of(&self.shared.catalogue)
     }
 
     fn open_to_see(&self, name: &str) -> Result<Report, String> {

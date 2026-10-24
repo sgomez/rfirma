@@ -2,11 +2,13 @@ import { useEffect, useId, useMemo, useState } from "react";
 import type { Header } from "../contract/Header";
 import type { NewReport } from "../contract/NewReport";
 import type { ReportEntry } from "../contract/ReportEntry";
+import type { SelectionResolution } from "../contract/SelectionResolution";
 import type { Snapshot } from "../contract/Snapshot";
 import { useLive } from "../suite/live";
 import { ExternalIcon } from "../ui/icons";
 import { Modal } from "../ui/Modal";
 import { calendarDate, clientName } from "../words";
+import { ScopeField, useScopePreview } from "./ScopeField";
 import { Step } from "./Step";
 
 export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boolean }) {
@@ -142,10 +144,12 @@ const OPTIONAL: (keyof Draft)[] = ["title"];
 
 function HeaderFields({
   draft,
+  resolution,
   onChange,
   withName,
 }: {
   draft: Draft;
+  resolution: SelectionResolution | null;
   onChange: (draft: Draft) => void;
   withName: boolean;
 }) {
@@ -174,6 +178,11 @@ function HeaderFields({
           onChange={(event) => onChange({ ...draft, notes: event.target.value })}
         />
       </label>
+      <ScopeField
+        value={draft.scope}
+        resolution={resolution}
+        onChange={(scope) => onChange({ ...draft, scope })}
+      />
     </>
   );
 }
@@ -198,6 +207,8 @@ function HeaderModal({
   const formId = useId();
   const [draft, setDraft] = useState<Draft>(initial);
   const [complaint, setComplaint] = useState<string | null>(null);
+  const resolution = useScopePreview(draft.scope ?? "");
+  const unmatched = (resolution?.unknown.length ?? 0) > 0;
 
   useEffect(() => {
     setDraft(initial);
@@ -221,7 +232,7 @@ function HeaderModal({
           <button type="button" className="button ghost" onClick={onClose}>
             Cancelar
           </button>
-          <button type="submit" form={formId} className="button primary">
+          <button type="submit" form={formId} className="button primary" disabled={unmatched}>
             {submit}
           </button>
         </>
@@ -235,7 +246,12 @@ function HeaderModal({
           void send();
         }}
       >
-        <HeaderFields draft={draft} onChange={setDraft} withName={withName} />
+        <HeaderFields
+          draft={draft}
+          resolution={resolution}
+          onChange={setDraft}
+          withName={withName}
+        />
         {(complaint ?? notice) && <p className="complaint">{complaint ?? notice}</p>}
       </form>
     </Modal>
@@ -295,7 +311,7 @@ function CorrectHeaderModal({ header, onClose }: { header: Header; onClose: () =
           client_version: draft.client_version,
           os: draft.os,
           os_version: draft.os_version,
-          scope: header.scope,
+          scope: draft.scope,
         })
       }
       onClose={onClose}
