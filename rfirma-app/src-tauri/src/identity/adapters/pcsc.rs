@@ -1,6 +1,8 @@
 //! El vigilante PC/SC de Linux, Windows y macOS: espera a `SCardGetStatusChange` sobre todos los lectores y las notificaciones PnP (ADR-0048).
 
+use std::collections::hash_map::DefaultHasher;
 use std::ffi::CString;
+use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
 use pcsc::{Context, ReaderState, Scope, State};
@@ -149,6 +151,38 @@ fn readers_in(states: &[(CString, State)]) -> Vec<Reader> {
 
 /// Una consulta puntual a PC/SC; `None`, si no responde.
 pub fn survey_readers() -> Option<Vec<Reader>> {
+    let observed: ReaderStates = surveyed()?
+        .iter()
+        .map(|state| (state.name().to_owned(), state.event_state()))
+        .collect();
+    Some(readers_in(&observed))
+}
+
+/// Un número que cambia cada vez que se mete o se saca una tarjeta de `reader`, o de cualquier lector si no se sabe cuál; `None`, si PC/SC no responde.
+pub fn card_events(reader: Option<&str>) -> Option<u64> {
+    let observed: Vec<(String, bool, u32)> = surveyed()?
+        .iter()
+        .map(|state| {
+            (
+                state.name().to_string_lossy().into_owned(),
+                state.event_state().contains(State::PRESENT),
+                state.event_count(),
+            )
+        })
+        .collect();
+    Some(events_in(&observed, reader))
+}
+
+fn events_in(observed: &[(String, bool, u32)], reader: Option<&str>) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    observed
+        .iter()
+        .filter(|(name, ..)| reader.is_none_or(|reader| name == reader))
+        .for_each(|state| state.hash(&mut hasher));
+    hasher.finish()
+}
+
+fn surveyed() -> Option<Vec<ReaderState>> {
     let context = Context::establish(Scope::System).ok()?;
     let names = reader_names(&context)?;
     let mut states: Vec<ReaderState> = names
@@ -160,11 +194,7 @@ pub fn survey_readers() -> Option<Vec<Reader>> {
             .get_status_change(Duration::ZERO, &mut states)
             .ok()?;
     }
-    let observed: ReaderStates = states
-        .iter()
-        .map(|state| (state.name().to_owned(), state.event_state()))
-        .collect();
-    Some(readers_in(&observed))
+    Some(states)
 }
 
 #[cfg(test)]

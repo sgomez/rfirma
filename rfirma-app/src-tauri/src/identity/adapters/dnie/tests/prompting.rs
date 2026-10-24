@@ -135,12 +135,12 @@ fn the_dialog_says_the_attempts_left_and_a_wrong_pin_is_reread_before_the_next_o
                 Seen {
                     warning: PinWarning::AttemptsLeft(3),
                     retry: false,
-                    open_sessions: 0
+                    open_sessions: 1
                 },
                 Seen {
                     warning: PinWarning::AttemptsLeft(2),
                     retry: true,
-                    open_sessions: 0
+                    open_sessions: 1
                 },
             ],
             "{version}"

@@ -18,7 +18,6 @@ use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 
-const AUTHENTICATION_LABEL: &str = "CertAutenticacion";
 const PLATFORM_LABEL: &str = "DE LA PLATAFORMA";
 const PLATFORM_SIGNATURE: [u8; 2] = [0xAB, 0xCD];
 const SIGNED: &[u8] = b"los atributos firmados de un documento";
@@ -185,10 +184,7 @@ fn the_dnie_store_goes_to_rdnie() {
         .list(&dnie_store())
         .expect("el DNIe deberia listarse");
 
-    assert_eq!(
-        labels_of(&listed),
-        vec![AUTHENTICATION_LABEL, SIGNATURE_LABEL]
-    );
+    assert_eq!(labels_of(&listed), vec![SIGNATURE_LABEL]);
     assert_eq!(arranged.platform.asked(), Vec::<Store>::new());
 }
 

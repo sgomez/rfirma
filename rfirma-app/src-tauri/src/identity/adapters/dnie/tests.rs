@@ -77,36 +77,46 @@ fn the_dnie_store_is_a_card() {
 }
 
 #[test]
-fn lists_the_signing_and_the_authentication_certificates_without_a_pin() {
+fn lists_only_the_signing_certificate_without_a_pin() {
     for (version, card) in the_two_versions() {
-        let emulated = card();
-        let signing_key = emulated.signing_public_key().n().to_bytes_be();
-        let authentication_key = emulated.authentication_public_key().n().to_bytes_be();
+        let signing_key = card().signing_public_key().n().to_bytes_be();
 
         let found = listed_by(&the_dnie(card));
 
+        assert_eq!(labels_of(&found), vec![SIGNATURE_LABEL], "{version}");
+        assert_eq!(modulus_of(found[0].der()), signing_key, "{version}");
+        assert_eq!(found[0].reference().store(), dnie_store(), "{version}");
+    }
+}
+
+#[test]
+fn every_certificate_gives_the_authentication_the_signing_and_the_intermediate_ca() {
+    for (version, card) in the_two_versions() {
+        let police = OfThePolice::new();
+        let dnie = police.clone().in_the(card);
+
+        let every = dnie
+            .every_certificate(&dnie_store())
+            .expect("el DNIe deberia listarse");
+
         assert_eq!(
-            labels_of(&found),
-            vec![AUTHENTICATION_LABEL, SIGNATURE_LABEL],
+            labels_of(&every),
+            vec![AUTHENTICATION_LABEL, INTERMEDIATE_CA_LABEL, SIGNATURE_LABEL],
             "{version}"
         );
-        let key_of = |label: &str| {
-            found
+        let der_of = |label: &str| {
+            every
                 .iter()
                 .find(|certificate| certificate.reference().label() == label)
-                .map(|certificate| modulus_of(certificate.der()))
+                .map(|certificate| certificate.der().to_vec())
         };
-        assert_eq!(key_of(SIGNATURE_LABEL), Some(signing_key), "{version}");
         assert_eq!(
-            key_of(AUTHENTICATION_LABEL),
-            Some(authentication_key),
-            "{version}"
+            der_of(INTERMEDIATE_CA_LABEL),
+            Some(police.intermediate.clone())
         );
-        assert!(
-            found
-                .iter()
-                .all(|certificate| certificate.reference().store() == dnie_store()),
-            "{version}"
+        assert_eq!(
+            der_of(AUTHENTICATION_LABEL),
+            Some(police.authentication.clone())
         );
     }
 }
@@ -230,7 +240,7 @@ fn the_dnie_intermediate_der() -> Vec<u8> {
 }
 
 #[test]
-fn the_intermediate_ca_completes_the_chain_of_both_certificates_for_a_site() {
+fn the_intermediate_ca_completes_the_chain_of_the_signing_certificate_for_a_site() {
     for (version, card) in the_two_versions() {
         let police = OfThePolice::new();
         let dnie = police.clone().in_the(card);
@@ -239,11 +249,7 @@ fn the_intermediate_ca_completes_the_chain_of_both_certificates_for_a_site() {
             certificates_with_their_chains(&dnie, &[dnie_store()], &LastListing::default())
                 .expect("el DNIe deberia listarse");
 
-        assert_eq!(
-            labels_of(&offered),
-            vec![AUTHENTICATION_LABEL, SIGNATURE_LABEL],
-            "{version}"
-        );
+        assert_eq!(labels_of(&offered), vec![SIGNATURE_LABEL], "{version}");
         for certificate in &offered {
             assert_eq!(
                 certificate.chain(),
@@ -255,7 +261,7 @@ fn the_intermediate_ca_completes_the_chain_of_both_certificates_for_a_site() {
 }
 
 #[test]
-fn a_full_listing_with_holders_and_chain_opens_the_card_once() {
+fn a_full_listing_opens_the_card_once_for_the_holder_and_its_chain() {
     for (version, card) in the_two_versions() {
         let police = OfThePolice::new();
         let opened = Arc::new(AtomicUsize::new(0));
@@ -269,13 +275,13 @@ fn a_full_listing_with_holders_and_chain_opens_the_card_once() {
             certificates_with_their_chains(&dnie, &[dnie_store()], &LastListing::default())
                 .expect("el DNIe deberia listarse");
 
-        assert_eq!(offered.len(), 2, "{version}");
+        assert_eq!(offered.len(), 1, "{version}");
         assert_eq!(opened.load(Ordering::SeqCst), 1, "{version}");
     }
 }
 
 #[test]
-fn the_chain_of_a_later_listing_is_read_from_the_card_again() {
+fn a_later_listing_and_its_chain_come_from_the_session_already_open() {
     let police = OfThePolice::new();
     let opened = Arc::new(AtomicUsize::new(0));
     let counter = Arc::clone(&opened);
@@ -289,7 +295,7 @@ fn the_chain_of_a_later_listing_is_read_from_the_card_again() {
     certificates_with_their_chains(&dnie, &[dnie_store()], &LastListing::default())
         .expect("el DNIe deberia listarse");
 
-    assert_eq!(opened.load(Ordering::SeqCst), 2);
+    assert_eq!(opened.load(Ordering::SeqCst), 1);
 }
 
 #[test]
@@ -422,7 +428,9 @@ fn rdnie_leaves_a_burned_dnie_to_pkcs11() {
 
 mod at_once;
 mod failures;
+mod files_read;
 mod in_the_reader;
+mod one_insertion;
 mod prompting;
 mod removed_card;
 mod signing;
