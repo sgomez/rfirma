@@ -289,12 +289,15 @@ impl Report {
         self.save()
     }
 
-    /// Deja `id` pendiente y olvida el trámite de `key`, para que la próxima vez se lance de nuevo.
-    pub fn forget(&mut self, id: &str, key: Option<&ErrandKey>) -> Result<(), String> {
-        if let Some(record) = self.contents.checks.get_mut(id) {
-            *record = CheckRecord::pending();
+    /// Deja `ids` pendientes y olvida los trámites de `keys`, para que la próxima vez se lancen de
+    /// nuevo, con un solo guardado.
+    pub fn forget(&mut self, ids: &[String], keys: &[ErrandKey]) -> Result<(), String> {
+        for id in ids {
+            if let Some(record) = self.contents.checks.get_mut(id) {
+                *record = CheckRecord::pending();
+            }
         }
-        if let Some(key) = key {
+        for key in keys {
             self.contents.errands.remove(key);
         }
         self.save()

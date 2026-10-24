@@ -132,6 +132,8 @@ export function aSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
     running: null,
     queued: [],
     why_pending: {},
+    batch: null,
+    pending_by_tranches: null,
     ...overrides,
   };
 }

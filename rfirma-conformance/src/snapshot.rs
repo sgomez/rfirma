@@ -24,6 +24,29 @@ pub(crate) struct Activity<'a> {
     pub(crate) running_for: Duration,
     pub(crate) queued: Vec<&'a str>,
     pub(crate) reasons: Option<&'a BTreeMap<String, String>>,
+    pub(crate) batch: Option<BatchView>,
+    pub(crate) pending_by_tranches: Option<PendingByTranches>,
+}
+
+/// La tanda en curso, contada por la sesión: cuántas se le han pedido, cuántas ya terminaron y
+/// cuántas corren ahora.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct BatchView {
+    pub(crate) total: usize,
+    pub(crate) done: usize,
+    pub(crate) running: usize,
+    #[ts(type = "number")]
+    pub(crate) elapsed_ms: u128,
+}
+
+/// Las pendientes del informe que tomaría cada petición de tramos.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct PendingByTranches {
+    pub(crate) unattended: usize,
+    pub(crate) attended: usize,
+    pub(crate) all: usize,
 }
 
 /// Un informe del directorio de informes, tal y como se ofrece para elegirlo o compararlo.
@@ -55,6 +78,8 @@ pub(crate) struct Snapshot<'a> {
     running: Option<RunningView<'a>>,
     queued: &'a [&'a str],
     why_pending: BTreeMap<&'a str, &'a str>,
+    batch: Option<BatchView>,
+    pending_by_tranches: Option<PendingByTranches>,
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -87,6 +112,8 @@ pub(crate) fn snapshot_of<'a>(
         }),
         queued: &activity.queued,
         why_pending: the_reasons_still_pending(report, activity),
+        batch: activity.batch.clone(),
+        pending_by_tranches: activity.pending_by_tranches.clone(),
     }
 }
 

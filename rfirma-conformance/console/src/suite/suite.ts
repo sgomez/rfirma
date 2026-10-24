@@ -77,7 +77,7 @@ export function suiteOver(wire: Wire, token: string) {
     correctHeader: (correction: HeaderCorrection) => post("/api/report/header", correction),
     openReport: (name: string) => post("/api/report", { name } satisfies ReportChoice),
     run: (request: Request) => post("/api/run", request),
-    reset: (check: string) => post("/api/reset", { check } satisfies Reset),
+    reset: (selection: string) => post("/api/reset", { selection } satisfies Reset),
     stop: () => post("/api/stop", {}),
     skip: () => post("/api/skip", {}),
   };

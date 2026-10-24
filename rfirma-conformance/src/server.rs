@@ -383,7 +383,7 @@ fn attend(mut stream: TcpStream, gate: &Gate, build: &Build, console: &Console) 
         ),
         ("POST", "/api/reset") => answer(
             &mut stream,
-            body_of::<Reset>(&request).and_then(|reset| console.reset(&reset.check)),
+            body_of::<Reset>(&request).and_then(|reset| console.reset(&reset.selection)),
         ),
         ("POST", "/api/stop") => {
             console.stop();
@@ -419,10 +419,11 @@ struct ReportChoice {
     name: String,
 }
 
+/// Lo que se pide reiniciar: una Selección, en blanco todo el alcance del informe.
 #[derive(Deserialize, TS)]
 #[ts(export)]
 struct Reset {
-    check: String,
+    selection: String,
 }
 
 fn body_of<'a, T: Deserialize<'a>>(request: &'a HttpRequest) -> Result<T, String> {
