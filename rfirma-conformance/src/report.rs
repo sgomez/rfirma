@@ -42,6 +42,21 @@ pub struct Header {
     pub os_version: String,
     pub client_version: String,
     pub date: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub notes: String,
+}
+
+/// Lo que se puede corregir de la cabecera de un informe ya creado; la fecha no.
+#[derive(Debug, Clone, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct HeaderCorrection {
+    pub title: String,
+    pub notes: String,
+    pub client_version: String,
+    pub os: String,
+    pub os_version: String,
 }
 
 /// Las coordenadas que da quien crea el informe, sin la fecha: esa la pone el informe.
@@ -95,6 +110,8 @@ impl Report {
                     os_version: coordinates.os_version,
                     client_version: coordinates.client_version,
                     date: today(),
+                    title: String::new(),
+                    notes: String::new(),
                 },
                 checks: BTreeMap::new(),
                 errands: BTreeMap::new(),
@@ -250,6 +267,17 @@ impl Report {
         if let Some(key) = key {
             self.contents.errands.remove(key);
         }
+        self.save()
+    }
+
+    /// Corrige la cabecera y la deja escrita antes de devolver el control.
+    pub fn correct_header(&mut self, correction: HeaderCorrection) -> Result<(), String> {
+        let header = &mut self.contents.header;
+        header.title = correction.title;
+        header.notes = correction.notes;
+        header.client_version = correction.client_version;
+        header.os = correction.os;
+        header.os_version = correction.os_version;
         self.save()
     }
 

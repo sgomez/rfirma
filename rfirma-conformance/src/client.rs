@@ -10,6 +10,7 @@ use ts_rs::TS;
 
 use crate::errand::the_published_client;
 use crate::recipe::the_recipe_of;
+use crate::report::today;
 
 /// Qué cliente es, que solo decide cómo se lanza.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -152,11 +153,12 @@ pub(crate) struct IsolatedStore {
     pub(crate) store: Store,
 }
 
-/// Las coordenadas que se deducen solas al crear un informe: el sistema y, si el cliente la dice, su
+/// Lo que se propone solo al crear un informe: su nombre, el sistema y, si el cliente la dice, su
 /// versión.
 #[derive(Debug, Serialize, TS)]
 #[ts(export)]
 pub(crate) struct DeducedCoordinates {
+    name: String,
     os: String,
     os_version: String,
     client_version: String,
@@ -280,11 +282,33 @@ fn with_the_library_of(client: &Client, mut profile: Profile) -> Profile {
 }
 
 pub(crate) fn the_deduced_coordinates(client: &Client) -> DeducedCoordinates {
+    let client_version = client.identity.version.clone().unwrap_or_default();
     DeducedCoordinates {
+        name: the_proposed_name(client.kind, &client_version),
         os: uname("-s"),
         os_version: uname("-r"),
-        client_version: client.identity.version.clone().unwrap_or_default(),
+        client_version,
     }
+}
+
+fn the_proposed_name(kind: ClientKind, version: &str) -> String {
+    let version: String = version
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '.' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    let parts = [kind.name(), version.trim_matches('-'), &today()];
+    parts
+        .iter()
+        .filter(|part| !part.is_empty())
+        .copied()
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
 fn uname(flag: &str) -> String {

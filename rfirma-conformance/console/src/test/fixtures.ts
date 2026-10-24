@@ -91,6 +91,8 @@ export function aReportView(): ReportView {
       os_version: "6.8.0",
       client_version: "1.9.2",
       date: "2026-09-21",
+      title: "",
+      notes: "",
     },
     summary: summaryOf(sets.flatMap((set) => set.checks)),
     sets,

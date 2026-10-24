@@ -27,7 +27,7 @@ use crate::hand::the_assistance_of;
 use crate::livelog::{CheckLog, LiveLogSink, Provenance};
 use crate::outcome::CheckState;
 use crate::recipe::the_recipe_of;
-use crate::report::{HeaderCoordinates, Report, THE_REPORT_FILE};
+use crate::report::{HeaderCoordinates, HeaderCorrection, Report, THE_REPORT_FILE};
 use crate::report_view::report_view;
 use crate::selection::{resolve as resolve_the_selection, SelectionResolution};
 use crate::snapshot::{snapshot_of, Activity, ReportEntry};
@@ -285,6 +285,20 @@ impl Console {
             let _ = std::fs::remove_dir_all(&dir);
         })?;
         self.shared.install(&mut session, new.name, dir, report);
+        Ok(())
+    }
+
+    pub(crate) fn correct_header(&self, correction: HeaderCorrection) -> Result<(), String> {
+        if correction.client_version.trim().is_empty() {
+            return Err("falta la versión del cliente".to_owned());
+        }
+        let mut session = self.shared.lock();
+        let open = session
+            .report
+            .as_mut()
+            .ok_or("elige o abre un informe antes de corregir su cabecera")?;
+        open.report.correct_header(correction)?;
+        self.shared.publish(&session);
         Ok(())
     }
 
@@ -1723,5 +1737,81 @@ expects.code = "SAF_03"
         console.enqueue(check()).unwrap();
         run_the_queue(&console);
         assert_eq!(runner.runs().len(), 2);
+    }
+
+    #[test]
+    fn a_new_report_is_proposed_a_name_and_a_version_from_its_client() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console.shared.lock().client = Some(an_rfirma_at("/usr/bin/rfirma", "0.10.0+rades"));
+
+        let proposed = serde_json::to_value(console.the_deduced_coordinates().unwrap()).unwrap();
+
+        assert_eq!(proposed["client_version"], "0.10.0+rades");
+        assert_eq!(
+            proposed["name"],
+            format!("rfirma-0.10.0-rades-{}", crate::report::today())
+        );
+        assert!(is_a_report_name(proposed["name"].as_str().unwrap()));
+    }
+
+    #[test]
+    fn the_header_of_an_open_report_is_corrected_and_the_view_shows_it() {
+        let runner = a_rejecting_runner();
+        let (console, dir) = a_console_replaying(&runner);
+
+        console
+            .correct_header(HeaderCorrection {
+                title: "Prueba de rades".to_owned(),
+                notes: "Con el build local".to_owned(),
+                client_version: "0.11.0".to_owned(),
+                os: "Fedora".to_owned(),
+                os_version: "44".to_owned(),
+            })
+            .unwrap();
+
+        let view = console.report_view("a-report").unwrap();
+        assert_eq!(view["header"]["title"], "Prueba de rades");
+        assert_eq!(view["header"]["notes"], "Con el build local");
+        assert_eq!(view["header"]["client_version"], "0.11.0");
+        assert_eq!(view["header"]["os"], "Fedora");
+        assert_eq!(view["header"]["os_version"], "44");
+        assert!(dir.path().join("a-report").is_dir());
+    }
+
+    #[test]
+    fn a_header_without_a_version_is_not_accepted_as_a_correction() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+
+        let refused = console
+            .correct_header(HeaderCorrection {
+                title: String::new(),
+                notes: String::new(),
+                client_version: " ".to_owned(),
+                os: "Linux".to_owned(),
+                os_version: "6.0".to_owned(),
+            })
+            .unwrap_err();
+
+        assert!(refused.contains("falta la versión"), "{refused}");
+    }
+
+    #[test]
+    fn a_report_written_before_titles_and_notes_is_read_with_both_empty() {
+        let runner = a_rejecting_runner();
+        let (console, dir) = a_console_replaying(&runner);
+        let path = dir.path().join("a-report").join(THE_REPORT_FILE);
+        let mut json: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        let header = json["header"].as_object_mut().unwrap();
+        header.remove("title");
+        header.remove("notes");
+        std::fs::write(&path, json.to_string()).unwrap();
+
+        let view = console.report_view("a-report").unwrap();
+
+        assert_eq!(view["header"]["title"], "");
+        assert_eq!(view["header"]["notes"], "");
     }
 }
