@@ -332,6 +332,7 @@ fn attend(mut stream: TcpStream, gate: &Gate, build: &Build, console: &Console) 
                 request.parameter("scope").filter(|scope| !scope.is_empty()),
             )),
         ),
+        ("GET", "/api/catalogue") => answer(&mut stream, Ok::<_, String>(console.catalogue_sets())),
         ("GET", "/api/references") => answer(&mut stream, console.references()),
         ("GET", "/api/compare") => answer(
             &mut stream,

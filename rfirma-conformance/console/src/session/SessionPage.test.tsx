@@ -229,11 +229,78 @@ describe("the session", () => {
     ]);
   });
 
+  it("marks the tree from what is typed in the scope field, and rewrites the field from the tree", async () => {
+    const { user } = renderConsoleAt("/", aSnapshot({ report_name: null, report: null }));
+
+    await user.click(await screen.findByRole("button", { name: "Informe nuevo…" }));
+    const dialog = await screen.findByRole("dialog");
+    const field = within(dialog).getByLabelText("Alcance");
+    await user.type(field, "errores");
+
+    await waitFor(() =>
+      expect(within(dialog).getByRole("checkbox", { name: "Marcar errores" })).toBeChecked(),
+    );
+    expect(
+      within(dialog).getByRole("checkbox", { name: "Marcar empty_uri_rejected" }),
+    ).toBeChecked();
+    expect(within(dialog).getByRole("checkbox", { name: "Marcar saludo" })).not.toBeChecked();
+
+    await user.click(within(dialog).getByRole("checkbox", { name: "Marcar errores" }));
+    await waitFor(() => expect(field).toHaveValue(""));
+    await user.click(within(dialog).getByRole("checkbox", { name: "Marcar greeting_echoes" }));
+    await waitFor(() => expect(field).toHaveValue("greeting_echoes"));
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("checkbox", { name: "Marcar greeting_echoes" }),
+      ).toBeChecked(),
+    );
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: "Marcar greeting_opens_the_channel" }),
+    );
+    await waitFor(() => expect(field).toHaveValue("saludo"));
+  });
+
+  it("previews what the scope resolves and refuses to create while a name does not match", async () => {
+    const { server, user } = renderConsoleAt("/", aSnapshot({ report_name: null, report: null }));
+
+    await user.click(await screen.findByRole("button", { name: "Informe nuevo…" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Alcance"), "greeting_echoes");
+
+    const preview = await within(dialog).findByText(/2 comprobaciones/);
+    expect(preview).toHaveTextContent("greeting_opens_the_channel");
+    expect(within(dialog).getByRole("button", { name: "Crear" })).toBeEnabled();
+
+    await user.type(within(dialog).getByLabelText("Alcance"), " typo");
+    await within(dialog).findByText(/No casan: typo/);
+    expect(within(dialog).getByRole("button", { name: "Crear" })).toBeDisabled();
+    expect(server.posted("/api/reports")).toEqual([]);
+  });
+
+  it("corrects the scope of the open report with the same field", async () => {
+    const view = aReportView();
+    view.header.scope = "saludo";
+    const { server, user } = renderConsoleAt("/", aSnapshot({ report: view }));
+
+    await user.click(await screen.findByRole("button", { name: "Editar cabecera" }));
+    const dialog = await screen.findByRole("dialog");
+    const field = within(dialog).getByLabelText("Alcance");
+    expect(field).toHaveValue("saludo");
+    await waitFor(() =>
+      expect(within(dialog).getByRole("checkbox", { name: "Marcar saludo" })).toBeChecked(),
+    );
+    await user.click(within(dialog).getByRole("checkbox", { name: "Marcar errores" }));
+    await waitFor(() => expect(field).toHaveValue("saludo errores"));
+    await user.click(within(dialog).getByRole("button", { name: "Guardar" }));
+
+    expect(server.posted("/api/report/header")).toMatchObject([{ scope: "saludo errores" }]);
+  });
+
   it("corrects the header of the open report from the same fields", async () => {
     const view = aReportView();
     view.header.title = "Antes";
     view.header.notes = "Una nota";
-    view.header.scope = "canal";
+    view.header.scope = "saludo";
     const { server, user } = renderConsoleAt("/", aSnapshot({ report: view }));
 
     await user.click(await screen.findByRole("button", { name: "Editar cabecera" }));
@@ -251,7 +318,7 @@ describe("the session", () => {
         client_version: "1.9.3",
         os: "Linux",
         os_version: "6.8.0",
-        scope: "canal",
+        scope: "saludo",
       },
     ]);
   });
