@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Assistance } from "../contract/Assistance";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PendingByTranches } from "../contract/PendingByTranches";
 import type { ReportView } from "../contract/ReportView";
 import type { Tranches } from "../contract/Tranches";
 import { LogDock } from "../log/LogDock";
@@ -11,21 +11,22 @@ import { ValidateModal } from "../report/ValidateModal";
 import { useLive } from "../suite/live";
 import { PlayIcon } from "../ui/icons";
 import { askToNotify } from "../ui/notify";
+import { isBoolean, useStoredState } from "../ui/preferences";
 import { focusedCheck, useShortcuts } from "../ui/shortcuts";
 import { BatchBar } from "./BatchBar";
 import { ClientStep } from "./ClientStep";
-import { useBatch, useProgress } from "./progress";
+import { useProgress } from "./progress";
 import { ReportStep } from "./ReportStep";
 import { Step } from "./Step";
 
 export function SessionPage() {
   const { snapshot, suite, complain } = useLive();
   const [selected, setSelected] = useState<string | null>(null);
-  const [follow, setFollow] = useState(true);
+  const [following, setFollowing] = useStoredState("follow", true, isBoolean);
+  const [suspended, setSuspended] = useState(false);
   const [transcript, setTranscript] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
   const progress = useProgress(snapshot, true);
-  const batch = useBatch(snapshot);
   const head = snapshot?.running?.ids[0] ?? null;
   const view = snapshot?.report ?? null;
 
@@ -33,34 +34,63 @@ export function SessionPage() {
     document.title = "Sesión · Suite de conformidad";
   }, []);
 
+  const batchOn = snapshot?.batch != null;
+  const wasBatchOn = useRef(false);
   useEffect(() => {
-    if (follow && head) setSelected(head);
-  }, [follow, head]);
+    if (batchOn && !wasBatchOn.current) {
+      setFollowing(true);
+      setSuspended(false);
+    }
+    wasBatchOn.current = batchOn;
+  }, [batchOn, setFollowing]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: la siguiente comprobación en curso retoma el seguimiento
+  useEffect(() => setSuspended(false), [head]);
+
+  useEffect(() => {
+    if (following && !suspended && head) setSelected(head);
+  }, [following, suspended, head]);
+
+  const setFollow = useCallback(
+    (on: boolean) => {
+      setFollowing(on);
+      setSuspended(false);
+    },
+    [setFollowing],
+  );
 
   const onSelect = useCallback((id: string) => {
     setSelected(id);
-    setFollow(false);
+    setSuspended(true);
   }, []);
 
   const controls = useMemo<Controls>(
     () => ({
-      runCheck: (check) => void suite.run({ check }).catch(complain("No se pudo poner en cola")),
+      run: (selection, mode) =>
+        void suite.run({ selection, mode }).catch(complain("No se pudo poner en cola")),
+      reset: (selection) => void suite.reset(selection).catch(complain("No se pudo resetear")),
+      runCheck: (check) =>
+        void suite
+          .run({ selection: check, mode: isPending(view, check) ? "reuse" : "relaunch" })
+          .catch(complain("No se pudo poner en cola")),
       resetCheck: (check) => void suite.reset(check).catch(complain("No se pudo resetear")),
       runSet: (set, pendingOnly) =>
         void suite
-          .run(pendingOnly ? { set, pending: true } : { set })
+          .run({ selection: set, mode: pendingOnly ? "pending" : "relaunch" })
           .catch(complain("No se pudo poner en cola")),
     }),
-    [suite, complain],
+    [suite, complain, view],
   );
 
   const runTranches = (tranches: Tranches) => {
     if (tranches === "all") askToNotify();
-    void suite.run({ tranches }).catch(complain("No se pudo poner en cola"));
+    void suite
+      .run({ selection: "", mode: "pending", tranches })
+      .catch(complain("No se pudo poner en cola"));
   };
 
   useShortcuts({
-    p: view && view.summary.pending > 0 ? () => runTranches("all") : undefined,
+    p: (snapshot?.pending_by_tranches?.all ?? 0) > 0 ? () => runTranches("all") : undefined,
     r: view
       ? () => {
           const check = focusedCheck();
@@ -73,6 +103,7 @@ export function SessionPage() {
 
   const busy = snapshot.running !== null || snapshot.queued.length > 0 || snapshot.resolving_client;
   const ready = snapshot.client !== null && view !== null;
+  const current = head ?? snapshot.queued[0] ?? "";
 
   return (
     <>
@@ -103,8 +134,8 @@ export function SessionPage() {
           actions={
             view && (
               <>
-                {TRANCHE_BUTTONS.map(([tranches, label, takes]) => {
-                  const count = pendingIn(view, takes);
+                {TRANCHE_BUTTONS.map(([tranches, label]) => {
+                  const count = snapshot.pending_by_tranches?.[tranches] ?? 0;
                   const all = tranches === "all";
                   return (
                     <button
@@ -128,7 +159,14 @@ export function SessionPage() {
           }
         />
       </div>
-      {batch && <BatchBar batch={batch} instructions={warningOf(view, head)} />}
+      {snapshot.batch && (
+        <BatchBar
+          batch={snapshot.batch}
+          set={setOf(view, current)}
+          current={current}
+          instructions={warningOf(view, head)}
+        />
+      )}
       {view ? (
         <ReportBody
           view={view}
@@ -146,7 +184,7 @@ export function SessionPage() {
       <LogDock
         check={selected}
         runningIds={snapshot.running?.ids ?? []}
-        follow={{ on: follow, set: setFollow }}
+        follow={{ on: following, set: setFollow }}
       />
       {transcript && <TranscriptModal check={transcript} onClose={() => setTranscript(null)} />}
       {validating && view && snapshot.report_name && (
@@ -160,16 +198,19 @@ export function SessionPage() {
   );
 }
 
-const TRANCHE_BUTTONS: [Tranches, string, (assistance: Assistance) => boolean][] = [
-  ["unattended", "Solo las automáticas", (assistance) => assistance === "none"],
-  ["attended", "Las que te necesitan", (assistance) => assistance !== "none"],
-  ["all", "Ejecutar todas", () => true],
+const TRANCHE_BUTTONS: [Tranches & keyof PendingByTranches, string][] = [
+  ["unattended", "Solo las automáticas"],
+  ["attended", "Las que te necesitan"],
+  ["all", "Ejecutar todas"],
 ];
 
-function pendingIn(view: ReportView, takes: (assistance: Assistance) => boolean): number {
-  return view.sets
-    .flatMap((set) => set.checks)
-    .filter((check) => check.state === "PENDIENTE" && takes(check.assistance ?? "none")).length;
+function setOf(view: ReportView | null, id: string): string | null {
+  return view?.sets.find((set) => set.checks.some((check) => check.id === id))?.name ?? null;
+}
+
+function isPending(view: ReportView | null, id: string): boolean {
+  const check = view?.sets.flatMap((set) => set.checks).find((check) => check.id === id);
+  return check?.state === "PENDIENTE";
 }
 
 function warningOf(view: ReportView | null, id: string | null): string | null {

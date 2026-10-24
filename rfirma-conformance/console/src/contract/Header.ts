@@ -3,4 +3,8 @@
 /**
  * Las coordenadas de un informe, tomadas una sola vez al crearlo.
  */
-export type Header = { os: string, os_version: string, client_version: string, date: string, };
+export type Header = { os: string, os_version: string, client_version: string, date: string, title: string, notes: string, 
+/**
+ * La selección que mide, tal como se nombró; `None` es el catálogo entero.
+ */
+scope: string | null, };

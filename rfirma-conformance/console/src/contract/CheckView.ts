@@ -4,4 +4,4 @@ import type { LabelView } from "./LabelView";
 import type { ResultName } from "./ResultName";
 import type { Store } from "./Store";
 
-export type CheckView = { id: string, chapter: string, statement: string, citation: string, warning: string | null, assistance: Assistance | null, store: Store, labels: Array<LabelView>, state: ResultName, observation: string | null, date: string | null, duration_ms: number | null, };
+export type CheckView = { id: string, chapter: string, statement: string, citation: string, warning: string | null, assistance: Assistance | null, store: Store, labels: Array<LabelView>, explained: boolean, state: ResultName, observation: string | null, date: string | null, duration_ms: number | null, };

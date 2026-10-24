@@ -9,9 +9,10 @@ use std::time::{Duration, SystemTime};
 use serde::{Deserialize, Serialize};
 
 use crate::catalogue::Check;
-use crate::client::ClientKind;
+use crate::client::{ClientKind, Origin};
 use crate::errand::{ErrandKey, ObservedErrand};
 use crate::outcome::{CheckState, Outcome};
+use crate::selection::resolve;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckRecord {
@@ -42,6 +43,25 @@ pub struct Header {
     pub os_version: String,
     pub client_version: String,
     pub date: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub notes: String,
+    /// La selección que mide, tal como se nombró; `None` es el catálogo entero.
+    #[serde(default)]
+    pub scope: Option<String>,
+}
+
+/// Lo que se puede corregir de la cabecera de un informe ya creado; la fecha no.
+#[derive(Debug, Clone, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct HeaderCorrection {
+    pub title: String,
+    pub notes: String,
+    pub client_version: String,
+    pub os: String,
+    pub os_version: String,
+    pub scope: Option<String>,
 }
 
 /// Las coordenadas que da quien crea el informe, sin la fecha: esa la pone el informe.
@@ -49,12 +69,15 @@ pub struct HeaderCoordinates {
     pub os: String,
     pub os_version: String,
     pub client_version: String,
+    pub scope: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Contents {
     client: String,
     kind: ClientKind,
+    #[serde(default)]
+    origin: Option<Origin>,
     header: Header,
     checks: BTreeMap<String, CheckRecord>,
     #[serde(default)]
@@ -64,13 +87,14 @@ struct Contents {
 /// El nombre del fichero del informe dentro de su directorio.
 pub const THE_REPORT_FILE: &str = "dossier.json";
 
-/// El informe: un JSON en la ruta que se le indique, que solo continúa el cliente
-/// con que se creó.
+/// El informe: un JSON en la ruta que se le indique, que continúa un cliente de su clase y su versión.
 #[derive(Debug)]
 pub struct Report {
     path: PathBuf,
     contents: Contents,
     orphans: BTreeMap<String, CheckRecord>,
+    /// Lo que resuelve el alcance contra el catálogo con que se abrió; `None` es todo.
+    in_scope: Option<BTreeSet<String>>,
 }
 
 impl Report {
@@ -79,6 +103,7 @@ impl Report {
         path: &Path,
         client: &str,
         kind: ClientKind,
+        origin: Origin,
         catalogue: &[Check],
         coordinates: HeaderCoordinates,
     ) -> Result<Self, String> {
@@ -87,16 +112,21 @@ impl Report {
             contents: Contents {
                 client: client.to_owned(),
                 kind,
+                origin: Some(origin),
                 header: Header {
                     os: coordinates.os,
                     os_version: coordinates.os_version,
                     client_version: coordinates.client_version,
                     date: today(),
+                    title: String::new(),
+                    notes: String::new(),
+                    scope: coordinates.scope,
                 },
                 checks: BTreeMap::new(),
                 errands: BTreeMap::new(),
             },
             orphans: BTreeMap::new(),
+            in_scope: None,
         };
         report.cover(catalogue);
         report.save()?;
@@ -128,38 +158,57 @@ impl Report {
             .map(|(id, record)| (id.as_str(), record.state))
     }
 
+    /// Si `id` es de lo que mide el informe; lo de fuera ni cuenta ni se encola.
+    pub fn covers(&self, id: &str) -> bool {
+        self.in_scope
+            .as_ref()
+            .is_none_or(|in_scope| in_scope.contains(id))
+    }
+
+    /// Resuelve el alcance contra `catalogue` y da por pendiente lo que mide y aún no tiene.
     fn cover(&mut self, catalogue: &[Check]) {
-        for check in catalogue {
+        self.in_scope = self
+            .contents
+            .header
+            .scope
+            .as_deref()
+            .map(|scope| resolve(scope, catalogue, None).ids.into_iter().collect());
+        let measured: Vec<String> = catalogue
+            .iter()
+            .filter(|check| self.covers(&check.id))
+            .map(|check| check.id.clone())
+            .collect();
+        for id in measured {
             self.contents
                 .checks
-                .entry(check.id.clone())
+                .entry(id)
                 .or_insert_with(CheckRecord::pending);
         }
     }
 
-    /// Por qué el cliente `client` de clase `kind` no puede añadir resultados a este
-    /// informe; `None` si es el mismo con que se creó.
-    pub fn refuses_to_continue_with(&self, client: &str, kind: ClientKind) -> Option<String> {
-        let mut mismatches = Vec::new();
+    /// Por qué un cliente de clase `kind` que dice ser la versión `version` no puede añadir
+    /// resultados a este informe; `None` si es de su clase y de su versión, sea cual sea su ruta.
+    pub fn refuses_to_continue_with(
+        &self,
+        kind: ClientKind,
+        version: Option<&str>,
+    ) -> Option<String> {
         if self.contents.kind != kind {
-            mismatches.push(format!(
-                "se creó para {} y el cliente activo es {}",
+            return Some(format!(
+                "el informe se creó para {} y el cliente activo es {}",
                 self.contents.kind.name(),
                 kind.name()
             ));
         }
-        if self.contents.client != client {
-            mismatches.push(format!(
-                "se creó con {} y el cliente activo es {client}",
-                self.contents.client
-            ));
-        }
-        (!mismatches.is_empty()).then(|| {
-            format!(
-                "el informe {}: se puede ver, pero no continuar",
-                mismatches.join(", y ")
-            )
-        })
+        let made_with = &self.contents.header.client_version;
+        version
+            .filter(|version| version != made_with)
+            .map(|version| {
+                format!(
+                    "el informe se creó con la versión {made_with} y el cliente activo es la \
+                     {version}"
+                )
+            })
     }
 
     pub fn client(&self) -> &str {
@@ -168,6 +217,11 @@ impl Report {
 
     pub fn kind(&self) -> ClientKind {
         self.contents.kind
+    }
+
+    /// De dónde salía el binario con que se creó; `None` en un informe de antes de guardarlo.
+    pub fn origin(&self) -> Option<Origin> {
+        self.contents.origin
     }
 
     /// Lee un informe ya escrito, sin catálogo ni cliente con el que cuadrarlo: lo que necesita
@@ -181,6 +235,7 @@ impl Report {
             path: path.to_owned(),
             contents,
             orphans: BTreeMap::new(),
+            in_scope: None,
         })
     }
 
@@ -234,14 +289,35 @@ impl Report {
         self.save()
     }
 
-    /// Deja `id` pendiente y olvida el trámite de `key`, para que la próxima vez se lance de nuevo.
-    pub fn forget(&mut self, id: &str, key: Option<&ErrandKey>) -> Result<(), String> {
-        if let Some(record) = self.contents.checks.get_mut(id) {
-            *record = CheckRecord::pending();
+    /// Deja `ids` pendientes y olvida los trámites de `keys`, para que la próxima vez se lancen de
+    /// nuevo, con un solo guardado.
+    pub fn forget(&mut self, ids: &[String], keys: &[ErrandKey]) -> Result<(), String> {
+        for id in ids {
+            if let Some(record) = self.contents.checks.get_mut(id) {
+                *record = CheckRecord::pending();
+            }
         }
-        if let Some(key) = key {
+        for key in keys {
             self.contents.errands.remove(key);
         }
+        self.save()
+    }
+
+    /// Corrige la cabecera, con el alcance resuelto contra `catalogue`, y la deja escrita antes de
+    /// devolver el control; lo que queda fuera se conserva sin contar.
+    pub fn correct_header(
+        &mut self,
+        correction: HeaderCorrection,
+        catalogue: &[Check],
+    ) -> Result<(), String> {
+        let header = &mut self.contents.header;
+        header.title = correction.title;
+        header.notes = correction.notes;
+        header.client_version = correction.client_version;
+        header.os = correction.os;
+        header.os_version = correction.os_version;
+        header.scope = correction.scope;
+        self.cover(catalogue);
         self.save()
     }
 
@@ -309,6 +385,7 @@ mod tests {
             os: "linux".to_owned(),
             os_version: "6.0".to_owned(),
             client_version: "1.9.2".to_owned(),
+            scope: None,
         }
     }
 
@@ -320,6 +397,7 @@ mod tests {
             &path,
             "autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )
@@ -353,6 +431,7 @@ mod tests {
             &path,
             "autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )
@@ -388,6 +467,7 @@ mod tests {
             &path,
             "autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )
@@ -409,6 +489,7 @@ mod tests {
             &path,
             "/usr/bin/autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )
@@ -416,28 +497,53 @@ mod tests {
 
         let seen = Report::open(&path, &catalogue).unwrap();
         let complaint = seen
-            .refuses_to_continue_with("/usr/bin/rfirma", ClientKind::Rfirma)
+            .refuses_to_continue_with(ClientKind::Rfirma, Some("1.9.2"))
             .unwrap();
 
         assert!(complaint.contains("para autofirma y el cliente activo es rfirma"));
-        assert!(complaint.contains("/usr/bin/autofirma y el cliente activo es /usr/bin/rfirma"));
     }
 
     #[test]
-    fn the_client_that_created_a_report_continues_it() {
+    fn a_report_continues_with_a_binary_elsewhere_of_its_class_and_version() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
         let report = Report::create(
             &path,
-            "un-binario",
+            "/usr/bin/rfirma",
             ClientKind::Rfirma,
-            &catalogue,
+            Origin::Installed,
+            &a_catalogue_of(&["v4_echo_greeting"]),
             some_coordinates(),
         )
         .unwrap();
 
         assert_eq!(
-            report.refuses_to_continue_with("un-binario", ClientKind::Rfirma),
+            report.refuses_to_continue_with(ClientKind::Rfirma, Some("1.9.2")),
+            None
+        );
+        let complaint = report
+            .refuses_to_continue_with(ClientKind::Rfirma, Some("2.0.0"))
+            .unwrap();
+        assert!(
+            complaint.contains("con la versión 1.9.2 y el cliente activo es la 2.0.0"),
+            "{complaint}"
+        );
+    }
+
+    #[test]
+    fn a_client_that_does_not_say_its_version_continues_a_report_of_its_class() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let report = Report::create(
+            &path,
+            "/usr/bin/autofirma",
+            ClientKind::Autofirma,
+            Origin::Installed,
+            &a_catalogue_of(&["v4_echo_greeting"]),
+            some_coordinates(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            report.refuses_to_continue_with(ClientKind::Autofirma, None),
             None
         );
     }
@@ -449,6 +555,7 @@ mod tests {
             &path,
             "un-binario",
             ClientKind::Rfirma,
+            Origin::Installed,
             &a_catalogue_of(&["v4_echo_greeting", "a_renamed_one"]),
             some_coordinates(),
         )
@@ -476,6 +583,7 @@ mod tests {
             &path,
             "un-binario",
             ClientKind::Rfirma,
+            Origin::Installed,
             &a_catalogue_of(&["v4_echo_greeting"]),
             some_coordinates(),
         )
@@ -496,6 +604,7 @@ mod tests {
             &path,
             "un-binario",
             ClientKind::Rfirma,
+            Origin::Installed,
             &a_catalogue_of(&["v4_echo_greeting"]),
             some_coordinates(),
         )
@@ -518,12 +627,56 @@ mod tests {
             &path,
             "un-binario",
             ClientKind::Rfirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )
         .unwrap();
 
         assert_eq!(Report::read(&path).unwrap().kind(), ClientKind::Rfirma);
+    }
+
+    #[test]
+    fn a_new_report_keeps_the_identity_of_its_client() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        Report::create(
+            &path,
+            "/src/rfirma/target/release/rfirma",
+            ClientKind::Rfirma,
+            Origin::LocalBuild,
+            &a_catalogue_of(&["v4_echo_greeting"]),
+            some_coordinates(),
+        )
+        .unwrap();
+
+        let seen = Report::read(&path).unwrap();
+
+        assert_eq!(seen.kind(), ClientKind::Rfirma);
+        assert_eq!(seen.origin(), Some(Origin::LocalBuild));
+        assert_eq!(seen.header().client_version, "1.9.2");
+    }
+
+    #[test]
+    fn a_report_written_before_the_origin_is_still_read() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        Report::create(
+            &path,
+            "/usr/bin/rfirma",
+            ClientKind::Rfirma,
+            Origin::Installed,
+            &a_catalogue_of(&["v4_echo_greeting"]),
+            some_coordinates(),
+        )
+        .unwrap();
+        let mut written: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        written.as_object_mut().unwrap().remove("origin");
+        std::fs::write(&path, written.to_string()).unwrap();
+
+        let seen = Report::read(&path).unwrap();
+
+        assert_eq!(seen.origin(), None);
+        assert_eq!(seen.client(), "/usr/bin/rfirma");
     }
 
     #[test]
@@ -544,6 +697,7 @@ mod tests {
             &path,
             "un-binario",
             ClientKind::Rfirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )

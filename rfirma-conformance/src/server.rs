@@ -14,6 +14,7 @@ use ts_rs::TS;
 
 use crate::client::ClientKind;
 use crate::console::{Console, NewReport, Request};
+use crate::report::HeaderCorrection;
 
 /// Los puertos en que la consola intenta escuchar: por debajo de 49152, donde el cliente publicado
 /// sortea los del canal, y lejos del 63117 del protocolo de la versión 3.
@@ -306,7 +307,7 @@ fn attend(mut stream: TcpStream, gate: &Gate, build: &Build, console: &Console) 
         }
         ("GET", "/api/events") => stream_events(stream, console),
         ("GET", "/api/defaults") => answer(&mut stream, console.the_deduced_coordinates()),
-        ("GET", "/api/log") => answer_text(
+        ("GET", "/api/log") => answer(
             &mut stream,
             console.log_of(
                 request.parameter("report"),
@@ -324,6 +325,14 @@ fn attend(mut stream: TcpStream, gate: &Gate, build: &Build, console: &Console) 
             &mut stream,
             console.report_view(request.parameter("report").unwrap_or_default()),
         ),
+        ("GET", "/api/selection") => answer(
+            &mut stream,
+            Ok::<_, String>(console.resolve_selection(
+                request.parameter("text").unwrap_or_default(),
+                request.parameter("scope").filter(|scope| !scope.is_empty()),
+            )),
+        ),
+        ("GET", "/api/catalogue") => answer(&mut stream, Ok::<_, String>(console.catalogue_sets())),
         ("GET", "/api/references") => answer(&mut stream, console.references()),
         ("GET", "/api/compare") => answer(
             &mut stream,
@@ -365,13 +374,17 @@ fn attend(mut stream: TcpStream, gate: &Gate, build: &Build, console: &Console) 
             &mut stream,
             body_of::<ReportChoice>(&request).and_then(|choice| console.open_report(choice.name)),
         ),
+        ("POST", "/api/report/header") => answer(
+            &mut stream,
+            body_of::<HeaderCorrection>(&request).and_then(|fix| console.correct_header(fix)),
+        ),
         ("POST", "/api/run") => answer(
             &mut stream,
             body_of::<Request>(&request).and_then(|wanted| console.enqueue(wanted)),
         ),
         ("POST", "/api/reset") => answer(
             &mut stream,
-            body_of::<Reset>(&request).and_then(|reset| console.reset(&reset.check)),
+            body_of::<Reset>(&request).and_then(|reset| console.reset(&reset.selection)),
         ),
         ("POST", "/api/stop") => {
             console.stop();
@@ -407,10 +420,11 @@ struct ReportChoice {
     name: String,
 }
 
+/// Lo que se pide reiniciar: una Selección, en blanco todo el alcance del informe.
 #[derive(Deserialize, TS)]
 #[ts(export)]
 struct Reset {
-    check: String,
+    selection: String,
 }
 
 fn body_of<'a, T: Deserialize<'a>>(request: &'a HttpRequest) -> Result<T, String> {

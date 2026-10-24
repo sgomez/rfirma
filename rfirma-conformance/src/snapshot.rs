@@ -1,5 +1,5 @@
 //! El estado de la sesión activa para la página: la vista de su informe más lo que es solo de la
-//! sesión —cliente, cola y comprobación en curso—.
+//! sesión —candidatos, cliente, cola y comprobación en curso—.
 
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -8,7 +8,7 @@ use serde::Serialize;
 use ts_rs::TS;
 
 use crate::catalogue::Check;
-use crate::client::{Client, ClientKind};
+use crate::client::{Candidate, Client, ClientKind};
 use crate::outcome::CheckState;
 use crate::report::Report;
 use crate::report_view::{report_view, ReportView};
@@ -17,12 +17,36 @@ use crate::report_view::{report_view, ReportView};
 #[derive(Default)]
 pub(crate) struct Activity<'a> {
     pub(crate) client: Option<&'a Client>,
+    pub(crate) candidates: &'a [Candidate],
     pub(crate) client_complaints: &'a [String],
     pub(crate) resolving_client: bool,
     pub(crate) running: &'a [String],
     pub(crate) running_for: Duration,
     pub(crate) queued: Vec<&'a str>,
     pub(crate) reasons: Option<&'a BTreeMap<String, String>>,
+    pub(crate) batch: Option<BatchView>,
+    pub(crate) pending_by_tranches: Option<PendingByTranches>,
+}
+
+/// La tanda en curso, contada por la sesión: cuántas se le han pedido, cuántas ya terminaron y
+/// cuántas corren ahora.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct BatchView {
+    pub(crate) total: usize,
+    pub(crate) done: usize,
+    pub(crate) running: usize,
+    #[ts(type = "number")]
+    pub(crate) elapsed_ms: u128,
+}
+
+/// Las pendientes del informe que tomaría cada petición de tramos.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct PendingByTranches {
+    pub(crate) unattended: usize,
+    pub(crate) attended: usize,
+    pub(crate) all: usize,
 }
 
 /// Un informe del directorio de informes, tal y como se ofrece para elegirlo o compararlo.
@@ -34,7 +58,10 @@ pub(crate) struct ReportEntry {
     pub(crate) kind: Option<&'static str>,
     pub(crate) client: Option<String>,
     pub(crate) client_version: Option<String>,
+    pub(crate) title: Option<String>,
     pub(crate) date: Option<String>,
+    pub(crate) continuable: bool,
+    pub(crate) why_not: Option<String>,
     pub(crate) complaint: Option<String>,
 }
 
@@ -42,6 +69,7 @@ pub(crate) struct ReportEntry {
 #[ts(export)]
 pub(crate) struct Snapshot<'a> {
     client: Option<&'a Client>,
+    candidates: &'a [Candidate],
     client_complaints: &'a [String],
     resolving_client: bool,
     report_name: Option<&'a str>,
@@ -50,6 +78,8 @@ pub(crate) struct Snapshot<'a> {
     running: Option<RunningView<'a>>,
     queued: &'a [&'a str],
     why_pending: BTreeMap<&'a str, &'a str>,
+    batch: Option<BatchView>,
+    pending_by_tranches: Option<PendingByTranches>,
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -70,6 +100,7 @@ pub(crate) fn snapshot_of<'a>(
     let report = open.map(|(_, report)| report);
     Snapshot {
         client: activity.client,
+        candidates: activity.candidates,
         client_complaints: activity.client_complaints,
         resolving_client: activity.resolving_client,
         report_name: open.map(|(name, _)| name),
@@ -81,6 +112,8 @@ pub(crate) fn snapshot_of<'a>(
         }),
         queued: &activity.queued,
         why_pending: the_reasons_still_pending(report, activity),
+        batch: activity.batch.clone(),
+        pending_by_tranches: activity.pending_by_tranches.clone(),
     }
 }
 
@@ -108,7 +141,7 @@ mod tests {
 
     use super::*;
     use crate::catalogue::the_catalogue_in;
-    use crate::client::ClientKind;
+    use crate::client::{ClientKind, Origin};
     use crate::outcome::Outcome;
     use crate::report::HeaderCoordinates;
 
@@ -144,11 +177,13 @@ expects.completes = {}
             &dir.path().join("dossier.json"),
             "/usr/bin/autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             catalogue,
             HeaderCoordinates {
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.9.2".to_owned(),
+                scope: None,
             },
         )
         .unwrap();

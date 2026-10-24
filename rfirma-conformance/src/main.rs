@@ -30,6 +30,11 @@ fn main() {
     });
     let console = console::Console::new(catalogue, the_reports_dir(), THE_PATIENCE);
     console.start_the_runner();
+    let discovering = console.clone();
+    std::thread::spawn(move || {
+        discovering.discover_the_candidates();
+        discovering.reopen_the_last_report();
+    });
     let url = server.url();
     println!("consola de conformidad en {url}");
     if std::process::Command::new("xdg-open")

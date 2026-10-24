@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from "react";
 import type { ClientKind } from "../contract/ClientKind";
 import type { Snapshot } from "../contract/Snapshot";
 import { useLive } from "../suite/live";
-import { clientName } from "../words";
+import { clientName, identityText, originName } from "../words";
 import { Step } from "./Step";
 
 interface Draft {
@@ -15,12 +15,13 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
   const { suite, complain } = useLive();
   const client = snapshot.client;
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Draft>({ kind: "autofirma", binary: "", trustRoot: "" });
+  const [draft, setDraft] = useState<Draft>({ kind: "rfirma", binary: "", trustRoot: "" });
   const kindId = useId();
   const binaryId = useId();
+  const candidatesId = useId();
   const rootId = useId();
 
-  const trustRoot = client?.profiles[0]?.trust_root ?? "";
+  const trustRoot = client?.trust_root ?? "";
   const resolved = client ? [client.kind, client.binary, trustRoot].join("\n") : "";
   useEffect(() => {
     if (!resolved) return;
@@ -42,14 +43,19 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
     (draft.kind !== client.kind ||
       (draft.binary !== "" && draft.binary !== client.binary) ||
       (draft.trustRoot !== "" && draft.trustRoot !== trustRoot));
-  const resolve = () =>
+  const resolve = (binary = draft.binary) =>
     suite
       .chooseClient({
         kind: draft.kind,
-        binary: draft.binary.trim() || null,
+        binary: binary.trim() || null,
         trust_root: draft.trustRoot.trim() || null,
       })
       .catch(complain("No se pudo preparar el cliente"));
+  const offered = snapshot.candidates.filter((candidate) => candidate.kind === draft.kind);
+  const pick = (binary: string) => {
+    setDraft({ ...draft, binary });
+    void resolve(binary);
+  };
 
   return (
     <Step
@@ -59,19 +65,17 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
       marked={unsettled ? "cambios sin aplicar" : null}
       summary={
         snapshot.resolving_client ? (
-          <span className="working">
-            Preparando el cliente y su almacén de certificados aislado…
-          </span>
+          <span className="working">Preparando el cliente…</span>
         ) : client ? (
           <span className="facts">
             <strong>{clientName(client.kind)}</strong>
+            {identityText(client.identity) && (
+              <span title="Versión">{identityText(client.identity)}</span>
+            )}
+            <span className="fact-label">{originName[client.origin]}</span>
             <code title="Binario">{client.binary}</code>
             <span className="fact-label">raíz</span>
-            <code title="Raíz de confianza">{trustRoot}</code>
-            <span className="fact-label">almacenes</span>
-            <code title="Almacenes">
-              {client.profiles.map((profile) => profile.store).join(", ")}
-            </code>
+            <code title="Raíz de confianza">{trustRoot || "la de cada almacén"}</code>
           </span>
         ) : snapshot.client_complaints.length > 0 ? (
           <span className="complaint">{snapshot.client_complaints.join(" · ")}</span>
@@ -120,6 +124,33 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
               ))}
             </div>
           </div>
+          {offered.length > 0 && (
+            <div className="field-group grow">
+              <span className="field-label" id={candidatesId}>
+                Candidatos
+              </span>
+              <div className="candidates" role="radiogroup" aria-labelledby={candidatesId}>
+                {offered.map((candidate) => (
+                  <label key={candidate.binary} className="candidate">
+                    <input
+                      type="radio"
+                      name="client-candidate"
+                      checked={client?.binary === candidate.binary && !unsettled}
+                      disabled={busy || snapshot.resolving_client}
+                      onChange={() => pick(candidate.binary)}
+                    />
+                    <span className="facts">
+                      <span>{originName[candidate.origin]}</span>
+                      {identityText(candidate.identity) && (
+                        <span>{identityText(candidate.identity)}</span>
+                      )}
+                      <code>{candidate.binary}</code>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="field-group grow">
             <label className="field-label" htmlFor={binaryId}>
               Binario

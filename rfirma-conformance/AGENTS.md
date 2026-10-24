@@ -1,6 +1,6 @@
 # Mapa de la suite de conformidad
 
-La suite mide un binario instalado de AutoFirma o rFirma con el `autoscript.js` de la sede como
+La suite mide AutoFirma o rFirma, con el binario que se le indique, con el `autoscript.js` de la sede como
 instrumento. Es un crate aparte y fuera del CI (ADR-0013), y no es una grada ni una puerta
 (ADR-0014). Su única cara es la consola web que levanta `just conformance`: no hay órdenes de
 consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las de la consola, con
@@ -21,8 +21,11 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/console.rs` | La sesión: cliente e informe elegidos, la cola en tramos, el único hilo que corre las comprobaciones y el testigo de verdad, que cuenta lo que pasa en la página. |
 | `src/witness.rs` | El testigo, el seam entre quien corre las comprobaciones y la persona, que le cuenta lo que pasa; con su falso para las pruebas. |
 | `src/report_view.rs` | La vista de un informe, igual lo corra la sesión o no: conjuntos en el orden del catálogo con sus recuentos; no sabe de la sesión. |
+| `src/selection.rs` | La Selección: un texto de ids y conjuntos, que valen también como prefijo por segmentos, resuelto contra el catálogo y el alcance, con los saludos que añade y lo de fuera que comparte trámite. |
 | `src/snapshot.rs` | El estado de la sesión activa que recibe la página: la vista de su informe más cliente, cola, y comprobación en curso. |
-| `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`, `token_apart`, `ed25519`, `several`, `expired`, `dnie`, `rsa_without_sha1`), cada uno con su envoltorio y su raíz de confianza. |
+| `src/client.rs` | El cliente a prueba y qué cliente es, los almacenes y el perfil aislado de cada uno, que se prepara la primera vez que lo pide una tanda: el almacén lo monta `scripts/isolated-store.sh` y lo completa la receta. |
+| `src/recipe.rs` | La receta de cada clase de cliente, rFirma y AutoFirma: sus binarios candidatos, su identidad, el entorno con el que se lanza contra un perfil, sus preferencias y su raíz de confianza. |
+| `src/candidates.rs` | Los candidatos de rFirma —instalado, build local y build del árbol compartido de los worktrees—, cada uno con la biblioteca nativa de su checkout; descarta un build sin `custom-protocol` si el servidor de desarrollo no está levantado, y lee la identidad de `--version`. `just conformance-candidate` compila el build local. |
 | `src/catalogue.rs` | La comprobación como tipo —exigencia, cómo se provoca, qué hace la persona y una sola expectativa— y la lectura del catálogo con lo que el tipo no puede decir: ids repetidos, dos comprobaciones que miden lo mismo y lo que no casa con el manifiesto de la sede. |
 | `src/saf_table.rs` | La lectura de la tabla SAF y su cruce con el catálogo: ids que no miden su fila, comprobaciones de un SAF sin fila y dos que observan el mismo rechazo. |
 | `src/manifest.rs` | El vocabulario de la sede que publica `driver.mjs --manifest`: modos y guiones con su sede, su familia y sus condiciones. |
@@ -40,7 +43,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/errand.rs` | El trámite: su clave, lo observado que se guarda con sus peticiones, el seam `ErrandRunner` con su adaptador de Node y su falso de tramas grabadas, y lo que se extrae de cada evento. |
 | `src/report.rs` | El informe en disco, `reports/conformance/<nombre>/dossier.json`, con el estado de cada comprobación y los trámites observados por clave: lo ve cualquiera, lo continúa solo su cliente. |
 | `src/transcript.rs` | Las tramas y el registro de cada comprobación, en `transcripts/` dentro del informe. |
-| `src/livelog.rs` | La línea de registro marcada por procedencia (`sede`, `cliente`, `suite`), en fichero y en vivo. |
+| `src/livelog.rs` | La línea de registro marcada por procedencia (`sede`, `cliente`, `suite`), en fichero y en vivo, y su descomposición en reloj, procedencia y texto. |
 | `src/comparison.rs` | La comparación de dos informes, comprobación a comprobación en el orden del catálogo y con su conjunto, con si sus peticiones coinciden. |
 | `../testdata/site-driver/driver.mjs` | La sede bajo Node: corre un guion en un modo, o publica el manifiesto con `--manifest`; la comparte con los `conformance_*.rs` de la aplicación, que le ponen `RFIRMA_BENCH_CLOCK_DIVISOR=10` para acortar las esperas del cliente publicado; la consola no la fija y corre con el reloj real. |
 | `../testdata/site-driver/manifest.mjs` | El manifiesto: los modos y todos los guiones, cada uno con su sede, su familia, sus modos, sus condiciones y si es solo del banco. |
@@ -58,11 +61,11 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `console/src/suite/suite.ts` | El contrato HTTP tipado sobre un `Wire`, el seam cuyos adaptadores son el navegador y el servidor falso de las pruebas. |
 | `console/src/suite/live.tsx` | El estado vivo que comparten las vistas: el último estado de la sesión, las líneas del registro y los avisos de error. |
 | `console/src/shell/Shell.tsx` | El marco común: barra superior, conexión, ayuda de atajos y avisos. |
-| `console/src/session/` | La sesión activa en `/`: los pasos cliente, informe y ejecutar, y la barra de la tanda en curso con lo que le toca a la persona. |
+| `console/src/session/` | La sesión activa en `/`: los pasos cliente, informe (con el campo de alcance y su árbol, `ScopeField.tsx`) y ejecutar, y la barra de la tanda en curso con lo que le toca a la persona. |
 | `console/src/report/` | Un informe, con o sin controles de ejecución: conjuntos plegables, filtro por resultado, la ficha de cada comprobación, la validación y las tramas. |
 | `console/src/log/LogDock.tsx` | El registro al pie, con filtro por procedencia, pausa y altura ajustable. |
 | `console/src/compare/ComparePage.tsx` | La comparación de dos informes: solo lo que difiere, en el resultado o en las peticiones, por conjunto. |
-| `console/src/ui/` | Piezas sin dominio: iconos de resultado, tema, atajos de teclado, diálogo, reloj y notificaciones del escritorio. |
+| `console/src/ui/` | Piezas sin dominio: iconos de resultado, tema, preferencias guardadas en el navegador, atajos de teclado, diálogo, reloj y notificaciones del escritorio. |
 | `console/src/words.ts` | Los nombres en pantalla de resultados y clientes, y el formato de fechas y duraciones. |
 | `console/src/styles.css` | La hoja de estilos única, con el tema claro y el oscuro en variables CSS. |
 | `console/src/test/` | El servidor falso que cumple el contrato, los datos de prueba y el montaje de la consola para vitest. |

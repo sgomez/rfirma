@@ -1,6 +1,7 @@
-//! El cliente a prueba resuelto según qué cliente es: el binario y un perfil aislado por almacén,
-//! con su envoltorio y la raíz con la que sirve el canal; no lo arranca.
+//! El cliente a prueba resuelto según qué cliente es, y el perfil aislado de cada almacén, que se
+//! prepara al pedirlo; no lo arranca.
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -8,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::errand::the_published_client;
+use crate::recipe::the_recipe_of;
+use crate::report::today;
 
 /// Qué cliente es, que solo decide cómo se lanza.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -88,64 +91,93 @@ impl Store {
     }
 }
 
-/// Donde deja la raíz de confianza la instalación de AutoFirma, en el orden en que se busca.
-const THE_AUTOFIRMA_ROOTS: &[&str] = &[
-    "/usr/lib/Autofirma/Autofirma_ROOT.cer",
-    "/etc/ssl/certs/Autofirma_ROOT.pem",
-    "/usr/share/ca-certificates/Autofirma/Autofirma_ROOT.crt",
-];
-
+/// El cliente elegido: su clase, de dónde sale su binario, su biblioteca nativa, lo que dice de sí
+/// mismo y la raíz dada a mano, si la hay; sus perfiles se preparan al pedirlos.
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export)]
 pub(crate) struct Client {
     pub(crate) kind: ClientKind,
+    pub(crate) origin: Origin,
     pub(crate) binary: PathBuf,
-    pub(crate) profiles: Vec<Profile>,
+    pub(crate) library_dir: Option<PathBuf>,
+    pub(crate) identity: Identity,
+    pub(crate) trust_root: Option<PathBuf>,
 }
 
-/// El perfil aislado de un almacén: el envoltorio que lanza al cliente contra él y la raíz con la
-/// que sirve el canal.
+/// De dónde sale el binario de un cliente.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub(crate) enum Origin {
+    Installed,
+    LocalBuild,
+    Worktree,
+    Given,
+}
+
+/// Un binario que la suite ofrece para medir, con la biblioteca nativa con que se lanza.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[ts(export)]
+pub(crate) struct Candidate {
+    pub(crate) kind: ClientKind,
+    pub(crate) origin: Origin,
+    pub(crate) binary: PathBuf,
+    pub(crate) library_dir: Option<PathBuf>,
+    pub(crate) identity: Identity,
+}
+
+/// Lo que un cliente dice de sí mismo: su versión y su canal; de AutoFirma, nada.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct Identity {
+    pub(crate) version: Option<String>,
+    pub(crate) channel: Option<String>,
+}
+
+/// El perfil aislado de un almacén: el HOME del cliente, el entorno con el que se lanza contra él y
+/// la raíz con la que sirve el canal.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Profile {
     pub(crate) store: Store,
-    pub(crate) launcher: PathBuf,
+    pub(crate) home: PathBuf,
+    pub(crate) environment: Vec<(&'static str, OsString)>,
     pub(crate) trust_root: PathBuf,
 }
 
-impl Client {
-    pub(crate) fn profile(&self, store: Store) -> &Profile {
-        self.profiles
-            .iter()
-            .find(|profile| profile.store == store)
-            .expect("resolve monta un perfil por almacén")
-    }
-}
-
-/// Lo que imprime `scripts/isolated-store.sh`: el envoltorio, la raíz que sirve si depende del
-/// cliente y el almacén que ha montado.
+/// Lo que imprime `scripts/isolated-store.sh`: el perfil, la configuración de SoftHSM que monta y
+/// el almacén montado.
 #[derive(Debug, PartialEq, Eq)]
-struct IsolatedStore {
-    launcher: PathBuf,
-    served_root: Option<PathBuf>,
-    store: Store,
+pub(crate) struct IsolatedStore {
+    pub(crate) home: PathBuf,
+    pub(crate) softhsm_conf: PathBuf,
+    pub(crate) store: Store,
 }
 
-/// Las coordenadas que se deducen solas al crear un informe; la versión del cliente, no.
+/// Lo que se propone solo al crear un informe: su nombre, su título, el sistema y, si el cliente la dice, su
+/// versión.
 #[derive(Debug, Serialize, TS)]
 #[ts(export)]
 pub(crate) struct DeducedCoordinates {
+    name: String,
+    title: String,
     os: String,
     os_version: String,
+    client_version: String,
 }
 
-/// Resuelve el cliente de clase `kind`, con el binario y la raíz dados a mano si los hay; cada queja
-/// dice qué falta.
+/// Resuelve el cliente de clase `kind`, con el binario y la raíz dados a mano si los hay; un binario
+/// que está entre los `candidates` se lanza como se ofreció. Cada queja dice qué falta.
 pub(crate) fn resolve(
     kind: ClientKind,
     binary: Option<PathBuf>,
     trust_root: Option<PathBuf>,
+    candidates: &[Candidate],
 ) -> Result<Client, Vec<String>> {
+    let origin = if binary.is_some() {
+        Origin::Given
+    } else {
+        Origin::Installed
+    };
     let binary = match binary {
         Some(binary) => binary,
         None => the_binary_on_the_path(kind.name()).ok_or_else(|| {
@@ -169,25 +201,61 @@ pub(crate) fn resolve(
             )]);
         }
     }
-    let profiles = Store::ALL
-        .into_iter()
-        .map(|store| the_profile_of(&binary, kind, store, trust_root.clone()))
-        .collect::<Result<Vec<_>, _>>()?;
+    let offered = candidates
+        .iter()
+        .find(|candidate| candidate.kind == kind && candidate.binary == binary);
+    let candidate = match offered {
+        Some(candidate) => candidate.clone(),
+        None => Candidate {
+            identity: the_recipe_of(kind)
+                .the_identity_of(&binary, None)
+                .map_err(|complaint| vec![complaint])?,
+            kind,
+            origin,
+            binary,
+            library_dir: None,
+        },
+    };
     preflight()?;
     Ok(Client {
         kind,
-        binary,
-        profiles,
+        origin: candidate.origin,
+        binary: candidate.binary,
+        library_dir: candidate.library_dir,
+        identity: candidate.identity,
+        trust_root,
     })
 }
 
-fn the_profile_of(
-    binary: &Path,
+/// El binario con que se restaura el cliente de un informe: de los candidatos que lo continúan, el
+/// suyo o, si no, el de su origen; si ninguno lo continúa, el suyo si aún se puede ejecutar.
+pub(crate) fn the_binary_to_restore(
     kind: ClientKind,
-    store: Store,
-    trust_root: Option<PathBuf>,
-) -> Result<Profile, Vec<String>> {
-    let isolated = the_isolated_store_of(binary, kind, store)?;
+    origin: Option<Origin>,
+    binary: &Path,
+    version: &str,
+    candidates: &[Candidate],
+) -> Option<PathBuf> {
+    let continuing = || {
+        candidates.iter().filter(move |offered| {
+            offered.kind == kind
+                && offered
+                    .identity
+                    .version
+                    .as_deref()
+                    .is_none_or(|said| said == version)
+        })
+    };
+    continuing()
+        .find(|offered| offered.binary == binary)
+        .or_else(|| continuing().find(|offered| Some(offered.origin) == origin))
+        .map(|offered| offered.binary.clone())
+        .or_else(|| is_executable(binary).then(|| binary.to_owned()))
+}
+
+/// Monta el almacén `store` en un perfil nuevo y lo completa con la receta del cliente.
+pub(crate) fn prepare(client: &Client, store: Store) -> Result<Profile, Vec<String>> {
+    let isolated = the_isolated_store_of(store)?;
     if isolated.store != store {
         return Err(vec![format!(
             "isolated-store.sh ha montado el almacén {} en vez de {}",
@@ -195,21 +263,55 @@ fn the_profile_of(
             store.name()
         )]);
     }
-    let trust_root = trust_root
-        .or_else(|| the_served_root(kind, isolated.served_root, Path::is_file))
-        .ok_or_else(|| vec![the_missing_root_complaint(kind, binary)])?;
-    Ok(Profile {
-        store,
-        launcher: isolated.launcher,
-        trust_root,
-    })
+    the_recipe_of(client.kind)
+        .the_profile_of(isolated, client.trust_root.clone())
+        .map(|profile| with_the_library_of(client, profile))
+        .map_err(|complaint| vec![complaint])
 }
 
-pub(crate) fn the_deduced_coordinates() -> DeducedCoordinates {
+fn with_the_library_of(client: &Client, mut profile: Profile) -> Profile {
+    if let Some(dir) = &client.library_dir {
+        profile
+            .environment
+            .push(("RFIRMA_LIB_DIR", dir.as_os_str().to_owned()));
+    }
+    profile
+}
+
+pub(crate) fn the_deduced_coordinates(client: &Client) -> DeducedCoordinates {
+    let client_version = client.identity.version.clone().unwrap_or_default();
     DeducedCoordinates {
+        name: the_proposed_name(client.kind, &client_version),
+        title: [client.kind.name(), client_version.as_str()]
+            .iter()
+            .filter(|part| !part.is_empty())
+            .copied()
+            .collect::<Vec<_>>()
+            .join(" "),
         os: uname("-s"),
         os_version: uname("-r"),
+        client_version,
     }
+}
+
+fn the_proposed_name(kind: ClientKind, version: &str) -> String {
+    let version: String = version
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '.' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    let parts = [kind.name(), version.trim_matches('-'), &today()];
+    parts
+        .iter()
+        .filter(|part| !part.is_empty())
+        .copied()
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
 fn uname(flag: &str) -> String {
@@ -222,7 +324,7 @@ fn uname(flag: &str) -> String {
         .unwrap_or_default()
 }
 
-fn the_binary_on_the_path(name: &str) -> Option<PathBuf> {
+pub(crate) fn the_binary_on_the_path(name: &str) -> Option<PathBuf> {
     std::env::var_os("PATH")?
         .to_str()?
         .split(':')
@@ -230,15 +332,9 @@ fn the_binary_on_the_path(name: &str) -> Option<PathBuf> {
         .find(|candidate| is_executable(candidate))
 }
 
-fn the_isolated_store_of(
-    binary: &Path,
-    kind: ClientKind,
-    store: Store,
-) -> Result<IsolatedStore, Vec<String>> {
+fn the_isolated_store_of(store: Store) -> Result<IsolatedStore, Vec<String>> {
     let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/isolated-store.sh");
     let output = Command::new(&script)
-        .arg(binary)
-        .arg(kind.name())
         .arg(store.name())
         .output()
         .map_err(|error| vec![format!("{} no arrancó: {error}", script.display())])?;
@@ -254,49 +350,19 @@ fn the_isolated_store_of(
 
 fn the_isolated_store_in(printed: &str) -> Result<IsolatedStore, String> {
     let lines: Vec<&str> = printed.lines().collect();
-    let [_kind, launcher, served_root, store] = lines[..] else {
+    let [home, softhsm_conf, store] = lines[..] else {
         return Err(format!(
-            "isolated-store.sh debía imprimir cuatro líneas y ha impreso {}",
+            "isolated-store.sh debía imprimir tres líneas y ha impreso {}",
             lines.len()
         ));
     };
     let store = Store::named(store)
         .ok_or_else(|| format!("isolated-store.sh ha montado un almacén desconocido: «{store}»"))?;
     Ok(IsolatedStore {
-        launcher: PathBuf::from(launcher),
-        served_root: (!served_root.is_empty()).then(|| PathBuf::from(served_root)),
+        home: PathBuf::from(home),
+        softhsm_conf: PathBuf::from(softhsm_conf),
         store,
     })
-}
-
-/// La raíz con la que sirve el canal: la CA que rFirma crea en su perfil aislado, o la que la
-/// instalación de AutoFirma deja en el sistema.
-fn the_served_root(
-    kind: ClientKind,
-    served_root: Option<PathBuf>,
-    exists: impl Fn(&Path) -> bool,
-) -> Option<PathBuf> {
-    match kind {
-        ClientKind::Rfirma => served_root,
-        ClientKind::Autofirma => THE_AUTOFIRMA_ROOTS
-            .iter()
-            .map(PathBuf::from)
-            .find(|candidate| exists(candidate)),
-    }
-}
-
-fn the_missing_root_complaint(kind: ClientKind, binary: &Path) -> String {
-    match kind {
-        ClientKind::Rfirma => format!(
-            "{} no ha dejado su CA local en el perfil aislado: da la raíz a mano",
-            binary.display()
-        ),
-        ClientKind::Autofirma => format!(
-            "no hay raíz de confianza con la que hablarle a {}: no está en {}; da la raíz a mano",
-            binary.display(),
-            THE_AUTOFIRMA_ROOTS.join(", ")
-        ),
-    }
 }
 
 /// Lo que hace falta además del cliente para sondearlo: Node y el cliente publicado.
@@ -319,11 +385,22 @@ fn preflight() -> Result<(), Vec<String>> {
     }
 }
 
-fn is_executable(path: &Path) -> bool {
+pub(crate) fn is_executable(path: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
     std::fs::metadata(path)
         .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
         .unwrap_or(false)
+}
+
+/// Un perfil de pruebas del almacén `rsa` en `home`, sin entorno y con una raíz que no existe.
+#[cfg(test)]
+pub(crate) fn a_profile_in(home: &Path) -> Profile {
+    Profile {
+        store: Store::Rsa,
+        home: home.to_owned(),
+        environment: Vec::new(),
+        trust_root: home.join("root.pem"),
+    }
 }
 
 #[cfg(test)]
@@ -331,15 +408,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn reads_the_four_lines_of_the_isolated_store() {
-        let store =
-            the_isolated_store_in("rfirma\n/p/launch-subject\n/p/local-ca.crt.pem\nec\n").unwrap();
+    fn reads_the_three_lines_of_the_isolated_store() {
+        let store = the_isolated_store_in("/p\n/p/softhsm/softhsm2.conf\nec\n").unwrap();
 
         assert_eq!(
             store,
             IsolatedStore {
-                launcher: PathBuf::from("/p/launch-subject"),
-                served_root: Some(PathBuf::from("/p/local-ca.crt.pem")),
+                home: PathBuf::from("/p"),
+                softhsm_conf: PathBuf::from("/p/softhsm/softhsm2.conf"),
                 store: Store::Ec,
             }
         );
@@ -348,7 +424,7 @@ mod tests {
     #[test]
     fn an_unknown_mounted_store_is_refused() {
         let complaint =
-            the_isolated_store_in("rfirma\n/p/launch-subject\n\nsofthsm2:/m.so\n").unwrap_err();
+            the_isolated_store_in("/p\n/p/softhsm/softhsm2.conf\nsofthsm2:/m.so\n").unwrap_err();
 
         assert!(complaint.contains("softhsm2:/m.so"));
     }
@@ -367,51 +443,125 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_served_root_is_no_root() {
-        let store = the_isolated_store_in("autofirma\n/p/launch-subject\n\ntoken\n").unwrap();
+    fn a_build_is_launched_with_the_native_library_of_its_checkout() {
+        let client = Client {
+            kind: ClientKind::Rfirma,
+            origin: Origin::LocalBuild,
+            binary: PathBuf::from("/src/rfirma/rfirma-app/src-tauri/target/release/rfirma"),
+            library_dir: Some(PathBuf::from(
+                "/src/rfirma/rfirma-native-bridge/target/lib/rfirma",
+            )),
+            identity: Identity::default(),
+            trust_root: None,
+        };
 
-        assert_eq!(store.served_root, None);
+        let profile = with_the_library_of(&client, a_profile_in(Path::new("/p")));
+
+        assert!(profile.environment.contains(&(
+            "RFIRMA_LIB_DIR",
+            OsString::from("/src/rfirma/rfirma-native-bridge/target/lib/rfirma")
+        )));
+    }
+
+    fn a_candidate(origin: Origin, binary: &str, version: Option<&str>) -> Candidate {
+        Candidate {
+            kind: ClientKind::Rfirma,
+            origin,
+            binary: PathBuf::from(binary),
+            library_dir: None,
+            identity: Identity {
+                version: version.map(str::to_owned),
+                channel: None,
+            },
+        }
+    }
+
+    #[test]
+    fn a_report_client_still_offered_is_restored_with_its_own_binary() {
+        let candidates = [
+            a_candidate(Origin::LocalBuild, "/a/rfirma", Some("1.0")),
+            a_candidate(Origin::LocalBuild, "/b/rfirma", Some("1.0")),
+        ];
+
+        let restored = the_binary_to_restore(
+            ClientKind::Rfirma,
+            Some(Origin::LocalBuild),
+            Path::new("/b/rfirma"),
+            "1.0",
+            &candidates,
+        );
+
+        assert_eq!(restored, Some(PathBuf::from("/b/rfirma")));
+    }
+
+    #[test]
+    fn a_report_client_whose_binary_moved_is_restored_from_its_origin_and_version() {
+        let candidates = [
+            a_candidate(Origin::Installed, "/usr/bin/rfirma", Some("1.0")),
+            a_candidate(Origin::Worktree, "/w/old/rfirma", Some("0.9")),
+            a_candidate(Origin::Worktree, "/w/new/rfirma", Some("1.0")),
+        ];
+
+        let restored = the_binary_to_restore(
+            ClientKind::Rfirma,
+            Some(Origin::Worktree),
+            Path::new("/w/gone/rfirma"),
+            "1.0",
+            &candidates,
+        );
+
+        assert_eq!(restored, Some(PathBuf::from("/w/new/rfirma")));
+    }
+
+    #[test]
+    fn a_report_client_rebuilt_to_another_version_is_restored_from_a_candidate_that_continues_it() {
+        let candidates = [
+            a_candidate(
+                Origin::LocalBuild,
+                "/src/target/debug/rfirma",
+                Some("0.17.0"),
+            ),
+            a_candidate(
+                Origin::LocalBuild,
+                "/src/target/release/rfirma",
+                Some("0.16.0"),
+            ),
+        ];
+
+        let restored = the_binary_to_restore(
+            ClientKind::Rfirma,
+            Some(Origin::LocalBuild),
+            Path::new("/src/target/debug/rfirma"),
+            "0.16.0",
+            &candidates,
+        );
+
+        assert_eq!(restored, Some(PathBuf::from("/src/target/release/rfirma")));
+    }
+
+    #[test]
+    fn a_report_client_that_is_nowhere_is_not_restored() {
+        let candidates = [a_candidate(
+            Origin::Installed,
+            "/usr/bin/rfirma",
+            Some("2.0"),
+        )];
+
+        let restored = the_binary_to_restore(
+            ClientKind::Rfirma,
+            Some(Origin::Installed),
+            Path::new("/nowhere/rfirma"),
+            "1.0",
+            &candidates,
+        );
+
+        assert_eq!(restored, None);
     }
 
     #[test]
     fn a_short_isolated_store_output_is_refused() {
-        let complaint = the_isolated_store_in("autofirma\n").unwrap_err();
+        let complaint = the_isolated_store_in("/p\n").unwrap_err();
 
-        assert!(complaint.contains("cuatro líneas"));
-    }
-
-    #[test]
-    fn rfirma_serves_with_the_root_born_in_its_profile() {
-        let root = the_served_root(
-            ClientKind::Rfirma,
-            Some(PathBuf::from("/p/local-ca.crt.pem")),
-            |_| true,
-        );
-
-        assert_eq!(root, Some(PathBuf::from("/p/local-ca.crt.pem")));
-    }
-
-    #[test]
-    fn autofirma_serves_with_the_first_root_its_installation_left() {
-        let root = the_served_root(ClientKind::Autofirma, None, |candidate| {
-            candidate.ends_with("Autofirma_ROOT.pem")
-        });
-
-        assert_eq!(
-            root,
-            Some(PathBuf::from("/etc/ssl/certs/Autofirma_ROOT.pem"))
-        );
-    }
-
-    #[test]
-    fn autofirma_without_an_installed_root_names_where_it_looked() {
-        assert_eq!(
-            the_served_root(ClientKind::Autofirma, None, |_| false),
-            None
-        );
-        let complaint =
-            the_missing_root_complaint(ClientKind::Autofirma, Path::new("/bin/autofirma"));
-
-        assert!(complaint.contains("/usr/lib/Autofirma/Autofirma_ROOT.cer"));
+        assert!(complaint.contains("tres líneas"));
     }
 }

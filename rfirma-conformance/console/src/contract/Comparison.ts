@@ -2,4 +2,8 @@
 import type { Row } from "./Row";
 import type { Side } from "./Side";
 
-export type Comparison = { a: Side, b: Side, rows: Array<Row>, differing: number, requests_differing: number, };
+export type Comparison = { a: Side, b: Side, rows: Array<Row>, differing: number, requests_differing: number, 
+/**
+ * Cuántas comprobaciones quedan fuera del alcance de alguno de los dos y no salen en `rows`.
+ */
+out_of_scope: number, };

@@ -55,14 +55,11 @@ describe("a report page", () => {
       aSnapshot({ report_name: "otro" }),
       (server) => {
         server.reportViews.set("af-linux-prueba", aReportView());
-        server.logs.set(
-          "greeting_echoes",
-          [
-            "00:00.10 sede    abre el canal",
-            "00:00.20 cliente responde",
-            "00:00.30 suite   CONFORME",
-          ].join("\n"),
-        );
+        server.logs.set("greeting_echoes", [
+          { clock: "00:00.10", provenance: "sede", text: "abre el canal" },
+          { clock: "00:00.20", provenance: "cliente", text: "responde" },
+          { clock: "00:00.30", provenance: "suite", text: "CONFORME" },
+        ]);
       },
     );
 
@@ -83,7 +80,14 @@ describe("a report page", () => {
     await screen.findByText("Esperando la primera línea…");
 
     await user.keyboard("l");
-    act(() => server.say({ check: "greeting_echoes", line: "00:00.10 sede    abre el canal" }));
+    act(() =>
+      server.say({
+        check: "greeting_echoes",
+        provenance: "sede",
+        clock: "00:00.10",
+        text: "abre el canal",
+      }),
+    );
     expect(screen.queryByText("abre el canal")).not.toBeInTheDocument();
 
     await user.click(await screen.findByRole("button", { name: /Reanudar \(1\)/ }));

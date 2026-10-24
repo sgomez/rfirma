@@ -20,6 +20,8 @@ pub(crate) struct Comparison {
     rows: Vec<Row>,
     differing: usize,
     requests_differing: usize,
+    /// Cuántas comprobaciones quedan fuera del alcance de alguno de los dos y no salen en `rows`.
+    out_of_scope: usize,
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -196,8 +198,10 @@ fn an_option(value: &Option<String>) -> &str {
 }
 
 pub(crate) fn compare(left: &Report, right: &Report, catalogue: &[Check]) -> Comparison {
+    let in_both = |check: &&Check| left.covers(&check.id) && right.covers(&check.id);
     let rows: Vec<Row> = catalogue
         .iter()
+        .filter(in_both)
         .map(|check| {
             let a = result_name(left.state_of(&check.id));
             let b = result_name(right.state_of(&check.id));
@@ -232,6 +236,7 @@ pub(crate) fn compare(left: &Report, right: &Report, catalogue: &[Check]) -> Com
             .iter()
             .filter(|row| row.requests == RequestsComparison::Differ)
             .count(),
+        out_of_scope: catalogue.iter().filter(|check| !in_both(check)).count(),
         rows,
     }
 }
@@ -253,7 +258,7 @@ mod tests {
     use super::*;
     use crate::catalogue::the_catalogue_in;
     use crate::checks::Settlement;
-    use crate::client::ClientKind;
+    use crate::client::{ClientKind, Origin};
     use crate::errand::fake::RecordedRunner;
     use crate::errand::{
         the_recorded, ErrandOutcome, ErrandRunner, ObservedErrand, RemoteService, RequestHeaders,
@@ -336,11 +341,13 @@ expects.completes = {}
             &path,
             kind.name(),
             kind,
+            Origin::Installed,
             catalogue,
             HeaderCoordinates {
                 os: "linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.9.2".to_owned(),
+                scope: None,
             },
         )
         .unwrap()
@@ -416,6 +423,49 @@ expects.completes = {}
         assert!(missing.differ);
     }
 
+    #[test]
+    fn what_is_outside_the_scope_of_either_report_is_hidden_and_counted() {
+        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+        let left = a_report_scoped_to(ClientKind::Autofirma, &catalogue, "z_one a_two");
+        let right = a_report_scoped_to(ClientKind::Rfirma, &catalogue, "a_two m_three");
+
+        let comparison = compare(&left, &right, &catalogue);
+
+        let ids: Vec<_> = comparison.rows.iter().map(|row| row.id.as_str()).collect();
+        assert_eq!(ids, ["a_two"]);
+        assert_eq!(comparison.out_of_scope, 2);
+    }
+
+    #[test]
+    fn two_reports_without_scope_hide_nothing() {
+        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+        let left = a_blank_report(ClientKind::Autofirma, &catalogue);
+        let right = a_blank_report(ClientKind::Rfirma, &catalogue);
+
+        let comparison = compare(&left, &right, &catalogue);
+
+        assert_eq!(comparison.rows.len(), 3);
+        assert_eq!(comparison.out_of_scope, 0);
+    }
+
+    fn a_report_scoped_to(kind: ClientKind, catalogue: &[Check], scope: &str) -> Report {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        Report::create(
+            &path,
+            kind.name(),
+            kind,
+            Origin::Installed,
+            catalogue,
+            HeaderCoordinates {
+                os: "linux".to_owned(),
+                os_version: "6.0".to_owned(),
+                client_version: "1.9.2".to_owned(),
+                scope: Some(scope.to_owned()),
+            },
+        )
+        .unwrap()
+    }
+
     fn a_report_replaying(kind: ClientKind, catalogue: &[Check], recorded: &str) -> Report {
         a_report_replaying_the_script(kind, catalogue, "batch", recorded)
     }
@@ -429,9 +479,9 @@ expects.completes = {}
         let mut report = a_blank_report(kind, catalogue);
         let runner = RecordedRunner::replaying(&[(script, the_recorded(recorded))]);
         let probe = Probe {
-            client: PathBuf::from("/nowhere/launch-subject"),
+            client: PathBuf::from("/nowhere/autofirma"),
             kind: ClientKind::Autofirma,
-            trust_root: PathBuf::from("/nowhere/root.pem"),
+            profile: crate::client::a_profile_in(std::path::Path::new("/nowhere")),
             report: tempfile::tempdir().unwrap().keep(),
             patience: Duration::from_secs(1),
             witness: Arc::new(FakeWitness::default()) as Arc<dyn Witness>,

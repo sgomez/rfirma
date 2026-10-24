@@ -1,4 +1,5 @@
 import type { CheckView } from "../contract/CheckView";
+import type { ClientKind } from "../contract/ClientKind";
 import type { LabelView } from "../contract/LabelView";
 import type { ReportView } from "../contract/ReportView";
 import type { ResultName } from "../contract/ResultName";
@@ -16,6 +17,7 @@ export function aCheck(id: string, state: ResultName = "PENDIENTE"): CheckView {
     assistance: "none",
     store: "rsa",
     labels: [],
+    explained: false,
     state,
     observation: state === "PENDIENTE" ? null : "el trámite se completó",
     date: state === "PENDIENTE" ? null : "2026-09-21",
@@ -33,11 +35,24 @@ export const A_BUG_LABEL: LabelView = {
   reason: "BUG-15: Ausencia de validación de cop en signandsave (sigue en master)",
 };
 
-export function withLabels(view: ReportView, id: string, labels: LabelView[]): ReportView {
+function explainsFor(kind: ClientKind, label: LabelView): boolean {
+  return label.name.startsWith(`${kind}:`) || label.name === "manual:deprecated";
+}
+
+export function withLabels(
+  view: ReportView,
+  id: string,
+  labels: LabelView[],
+  kind: ClientKind = view.kind,
+): ReportView {
+  const explained = (check: CheckView) =>
+    check.state === "NO CONFORME" && labels.some((label) => explainsFor(kind, label));
   const sets = view.sets.map((set) =>
     aSet(
       set.name,
-      set.checks.map((check) => (check.id === id ? { ...check, labels } : check)),
+      set.checks.map((check) =>
+        check.id === id ? { ...check, labels, explained: explained(check) } : check,
+      ),
     ),
   );
   return { ...view, sets, summary: summaryOf(sets.flatMap((set) => set.checks)) };
@@ -49,8 +64,7 @@ function summaryOf(checks: CheckView[]): Summary {
     total: checks.length,
     compliant: count("CONFORME"),
     noncompliant: count("NO CONFORME"),
-    explained: checks.filter((check) => check.state === "NO CONFORME" && check.labels.length > 0)
-      .length,
+    explained: checks.filter((check) => check.explained).length,
     not_observable: count("NO OBSERVABLE"),
     pending: count("PENDIENTE"),
   };
@@ -77,6 +91,9 @@ export function aReportView(): ReportView {
       os_version: "6.8.0",
       client_version: "1.9.2",
       date: "2026-09-21",
+      title: "",
+      notes: "",
+      scope: null,
     },
     summary: summaryOf(sets.flatMap((set) => set.checks)),
     sets,
@@ -88,13 +105,13 @@ export function aSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
   return {
     client: {
       kind: "autofirma",
+      origin: "installed",
       binary: "/usr/bin/autofirma",
-      profiles: (["rsa", "ec", "token"] as const).map((store) => ({
-        store,
-        launcher: `/tmp/aislado-${store}/launch-subject`,
-        trust_root: "/usr/lib/Autofirma/Autofirma_ROOT.cer",
-      })),
+      library_dir: null,
+      identity: { version: null, channel: null },
+      trust_root: null,
     },
+    candidates: [],
     client_complaints: [],
     resolving_client: false,
     report_name: "af-linux-prueba",
@@ -105,13 +122,18 @@ export function aSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
         kind: "autofirma",
         client: "/usr/bin/autofirma",
         client_version: "1.9.2",
+        title: "",
         date: "2026-09-21",
+        continuable: true,
+        why_not: null,
         complaint: null,
       },
     ],
     running: null,
     queued: [],
     why_pending: {},
+    batch: null,
+    pending_by_tranches: null,
     ...overrides,
   };
 }

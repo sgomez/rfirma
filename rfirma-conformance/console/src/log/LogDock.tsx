@@ -5,36 +5,19 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import type { LogLine as Line } from "../contract/LogLine";
+import type { Provenance } from "../contract/Provenance";
 import { useLive } from "../suite/live";
+import { isBoolean, isListOf, isNumber, useStoredState } from "../ui/preferences";
 import { useShortcuts } from "../ui/shortcuts";
 
-export type Provenance = "sede" | "cliente" | "suite";
-
 const PROVENANCES: readonly Provenance[] = ["sede", "cliente", "suite"];
-const FORMER: Record<string, Provenance> = { conductor: "sede", sujeto: "cliente", arnés: "suite" };
 const CHUNK = 200;
 const COLLAPSED = 38;
-
-interface Line {
-  clock: string;
-  provenance: Provenance | null;
-  text: string;
-}
-
-export function parseLine(raw: string): Line {
-  const match = /^(\d\d:\d\d\.\d\d) (\S+)\s?(.*)$/.exec(raw);
-  if (!match) return { clock: "", provenance: null, text: raw };
-  const tag = match[2] ?? "";
-  const provenance = (FORMER[tag] ?? tag) as Provenance;
-  return {
-    clock: match[1] ?? "",
-    provenance: PROVENANCES.includes(provenance) ? provenance : null,
-    text: (match[3] ?? "").trimStart(),
-  };
-}
 
 interface LogDockProps {
   check: string | null;
@@ -48,11 +31,20 @@ export function LogDock({ check, report, runningIds, follow }: LogDockProps) {
   const lines = useRef<Line[]>([]);
   const held = useRef<Line[]>([]);
   const [, setVersion] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [shown, setShown] = useState<ReadonlySet<Provenance>>(new Set(PROVENANCES));
+  const [paused, setPaused] = useStoredState("log.paused", false, isBoolean);
+  const [shownList, setShownList] = useStoredState<readonly Provenance[]>(
+    "log.provenances",
+    PROVENANCES,
+    isListOf(PROVENANCES),
+  );
+  const shown = useMemo<ReadonlySet<Provenance>>(() => new Set(shownList), [shownList]);
   const [complaint, setComplaint] = useState<string | null>(null);
-  const [height, setHeight] = useState(() => Math.round(Math.min(260, window.innerHeight * 0.28)));
-  const [collapsed, setCollapsed] = useState(false);
+  const [height, setHeight] = useStoredState(
+    "log.height",
+    Math.round(Math.min(260, window.innerHeight * 0.28)),
+    isNumber,
+  );
+  const [collapsed, setCollapsed] = useStoredState("log.collapsed", false, isBoolean);
   const scroller = useRef<HTMLDivElement>(null);
   const stuck = useRef(true);
   const frame = useRef(0);
@@ -66,7 +58,7 @@ export function LogDock({ check, report, runningIds, follow }: LogDockProps) {
   }, []);
 
   const runsThisOne = check !== null && runningIds.includes(check);
-  const head = runsThisOne ? (runningIds[0] ?? null) : null;
+  const head = runsThisOne ? check : null;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: una pasada nueva de la comprobación reescribe su registro
   useEffect(() => {
@@ -81,8 +73,7 @@ export function LogDock({ check, report, runningIds, follow }: LogDockProps) {
       .log(check, report)
       .then((text) => {
         if (!current) return;
-        const earlier = text.split("\n").filter(Boolean).map(parseLine);
-        lines.current = [...earlier, ...lines.current];
+        lines.current = [...text, ...lines.current];
         redraw();
       })
       .catch((error: unknown) => {
@@ -99,7 +90,7 @@ export function LogDock({ check, report, runningIds, follow }: LogDockProps) {
     if (!head) return;
     return onLine((line) => {
       if (line.check !== head) return;
-      const parsed = parseLine(line.line);
+      const parsed = { clock: line.clock, provenance: line.provenance, text: line.text };
       if (pausedRef.current) held.current.push(parsed);
       else lines.current.push(parsed);
       redraw();
@@ -116,7 +107,7 @@ export function LogDock({ check, report, runningIds, follow }: LogDockProps) {
       }
       return !was;
     });
-  }, [redraw]);
+  }, [redraw, setPaused]);
 
   useShortcuts({
     l: togglePause,
@@ -175,12 +166,11 @@ export function LogDock({ check, report, runningIds, follow }: LogDockProps) {
               className={`chip provenance-${provenance}`}
               aria-pressed={shown.has(provenance)}
               onClick={() =>
-                setShown((was) => {
-                  const next = new Set(was);
-                  if (next.has(provenance)) next.delete(provenance);
-                  else next.add(provenance);
-                  return next;
-                })
+                setShownList((was) =>
+                  was.includes(provenance)
+                    ? was.filter((each) => each !== provenance)
+                    : [...was, provenance],
+                )
               }
             >
               <span className="swatch" aria-hidden="true" />
@@ -263,11 +253,11 @@ const LogChunk = memo(
     const rows = [];
     for (let at = from; at < from + count; at++) {
       const line = lines[at];
-      if (!line || (line.provenance && !shown.has(line.provenance))) continue;
+      if (!line || !shown.has(line.provenance)) continue;
       rows.push(
-        <div key={at} className={`line provenance-${line.provenance ?? "none"}`}>
+        <div key={at} className={`line provenance-${line.provenance}`}>
           <span className="line-clock">{line.clock}</span>
-          <span className="line-tag">{line.provenance ?? ""}</span>
+          <span className="line-tag">{line.provenance}</span>
           <span className="line-text">{line.text}</span>
         </div>,
       );

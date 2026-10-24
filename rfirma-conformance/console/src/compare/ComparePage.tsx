@@ -191,6 +191,13 @@ function ComparisonTable({
           <span>{comparison.requests_differing === 1 ? "envío difiere" : "envíos difieren"}</span>
         </div>
       </div>
+      {comparison.out_of_scope > 0 && (
+        <p className="muted">
+          {comparison.out_of_scope}{" "}
+          {comparison.out_of_scope === 1 ? "comprobación fuera" : "comprobaciones fuera"} del
+          alcance de alguno de los dos
+        </p>
+      )}
       <label className="field-group checkbox">
         <input
           type="checkbox"

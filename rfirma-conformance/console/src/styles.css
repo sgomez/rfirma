@@ -1016,6 +1016,20 @@ select.input {
   background: var(--accent-soft);
 }
 
+.report-name,
+.report-client {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.report-name > *,
+.report-client > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .report-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1376,6 +1390,14 @@ select.input {
 
 .sets-toolbar .filter {
   flex: 1 1 auto;
+}
+
+.selection-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 1 280px;
+  font-family: var(--font-mono);
 }
 
 .toolbar-actions {
@@ -2398,4 +2420,29 @@ select.input {
     opacity: 0;
     transform: translateY(4px) scale(0.985);
   }
+}
+
+.candidates {
+  display: grid;
+  gap: 4px;
+}
+
+.candidate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.scope-tree {
+  max-height: 14rem;
+  overflow: auto;
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.scope-tree ul {
+  list-style: none;
+  padding-left: 1.5rem;
 }

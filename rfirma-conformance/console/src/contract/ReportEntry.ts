@@ -4,4 +4,4 @@ import type { ClientKind } from "./ClientKind";
 /**
  * Un informe del directorio de informes, tal y como se ofrece para elegirlo o compararlo.
  */
-export type ReportEntry = { name: string, kind: ClientKind | null, client: string | null, client_version: string | null, date: string | null, complaint: string | null, };
+export type ReportEntry = { name: string, kind: ClientKind | null, client: string | null, client_version: string | null, title: string | null, date: string | null, continuable: boolean, why_not: string | null, complaint: string | null, };

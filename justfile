@@ -751,6 +751,13 @@ sede port="8443": autoscript
 conformance: autoscript conformance-console
     cd {{ conformance_suite }} && cargo run -q
 
+# Compila el build local de rFirma que la suite ofrece como candidato, con custom-protocol y las
+# features que se pidan (`just conformance-candidate rades`), y apunta junto a el su checkout.
+[group('dev')]
+conformance-candidate features="": vcpkg-libs build-ts
+    cd {{ tauri }} && cargo build --release --bin rfirma --features "custom-protocol{{ if features == "" { "" } else { "," + features } }}"
+    printf '%s\n' "{{ root }}" > "$CARGO_TARGET_DIR/release/rfirma.checkout"
+
 # Compila la consola web de la suite en rfirma-conformance/console/dist, que el servidor lee al
 # arrancar: regenera antes los tipos del contrato que ts-rs deriva de Rust.
 [group('dev')]

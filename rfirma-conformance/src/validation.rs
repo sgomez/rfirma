@@ -156,7 +156,7 @@ mod tests {
 
     use super::*;
     use crate::catalogue::the_catalogue_in;
-    use crate::client::ClientKind;
+    use crate::client::{ClientKind, Origin};
     use crate::report::HeaderCoordinates;
 
     const THREE_CHECKS: &str = r#"
@@ -207,11 +207,13 @@ note = "Guarda mal."
             &dir.path().join("dossier.json"),
             "/usr/bin/autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             catalogue,
             HeaderCoordinates {
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.9.2".to_owned(),
+                scope: None,
             },
         )
         .unwrap();
