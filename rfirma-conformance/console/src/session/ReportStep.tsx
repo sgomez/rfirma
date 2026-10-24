@@ -142,6 +142,14 @@ const FIELDS: [keyof Draft, string, string?][] = [
 
 const OPTIONAL: (keyof Draft)[] = ["title"];
 
+const SPAN: Partial<Record<keyof Draft, number>> = {
+  name: 3,
+  title: 3,
+  client_version: 2,
+  os: 2,
+  os_version: 2,
+};
+
 function HeaderFields({
   draft,
   resolution,
@@ -156,7 +164,10 @@ function HeaderFields({
   return (
     <>
       {FIELDS.filter(([key]) => withName || key !== "name").map(([key, label, hint]) => (
-        <label key={key} className="form-row">
+        <label
+          key={key}
+          className={`field-group span-${key === "title" && !withName ? 6 : SPAN[key]}`}
+        >
           <span className="field-label">{label}</span>
           <input
             className="input"
@@ -169,7 +180,7 @@ function HeaderFields({
           />
         </label>
       ))}
-      <label className="form-row">
+      <label className="field-group span-6">
         <span className="field-label">Notas</span>
         <textarea
           className="input"
@@ -225,6 +236,7 @@ function HeaderModal({
 
   return (
     <Modal
+      wide
       title={title}
       onClose={onClose}
       actions={
@@ -240,7 +252,7 @@ function HeaderModal({
     >
       <form
         id={formId}
-        className="form-grid"
+        className="header-form"
         onSubmit={(event) => {
           event.preventDefault();
           void send();

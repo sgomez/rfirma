@@ -251,6 +251,8 @@ describe("the session", () => {
     await waitFor(() =>
       expect(within(dialog).getByRole("checkbox", { name: "Marcar errores" })).toBeChecked(),
     );
+    await user.click(within(dialog).getByRole("button", { name: "Desplegar errores" }));
+    await user.click(within(dialog).getByRole("button", { name: "Desplegar saludo" }));
     expect(
       within(dialog).getByRole("checkbox", { name: "Marcar empty_uri_rejected" }),
     ).toBeChecked();

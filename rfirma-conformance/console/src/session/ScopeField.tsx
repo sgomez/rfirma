@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import type { CatalogueSet } from "../contract/CatalogueSet";
 import type { SelectionResolution } from "../contract/SelectionResolution";
 import { useLive } from "../suite/live";
+import { Chevron } from "../ui/icons";
 
 const NOTHING_NAMED: SelectionResolution = {
   ids: [],
@@ -72,6 +73,8 @@ export function ScopeField({
 }) {
   const { suite, complain } = useLive();
   const [sets, setSets] = useState<CatalogueSet[]>([]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const fieldId = useId();
   const previewId = useId();
 
   useEffect(() => {
@@ -91,30 +94,39 @@ export function ScopeField({
     onChange(rewritten(sets, next, resolution, value ?? ""));
   };
 
+  const expand = (name: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(name)) next.add(name);
+      return next;
+    });
+
   return (
-    <div className="form-row scope-field">
-      <label className="form-row">
-        <span className="field-label">Alcance</span>
-        <input
-          className="input"
-          value={value ?? ""}
-          placeholder="ids o conjuntos; vacío mide el catálogo entero"
-          aria-describedby={previewId}
-          onChange={(event) =>
-            onChange(event.target.value.trim() === "" ? null : event.target.value)
-          }
-          spellCheck={false}
-        />
-      </label>
-      <p id={previewId} className="muted" role="status">
-        <ScopePreview resolution={resolution} whole={value === null} />
-      </p>
-      <ul className="scope-tree" aria-label="Conjuntos y comprobaciones">
+    <div className="scope-field">
+      <div className="scope-head">
+        <label className="field-label" htmlFor={fieldId}>
+          Alcance
+        </label>
+        <p id={previewId} className="scope-preview muted" role="status">
+          <ScopePreview resolution={resolution} whole={value === null} />
+        </p>
+      </div>
+      <input
+        id={fieldId}
+        className="input mono"
+        value={value ?? ""}
+        placeholder="ids o conjuntos; vacío mide el catálogo entero"
+        aria-describedby={previewId}
+        onChange={(event) => onChange(event.target.value.trim() === "" ? null : event.target.value)}
+        spellCheck={false}
+      />
+      <ul className="scope-sets" aria-label="Conjuntos y comprobaciones">
         {sets.map((set) => {
           const count = set.checks.filter((id) => marked.has(id)).length;
+          const open = expanded.has(set.name);
           return (
-            <li key={set.name}>
-              <label>
+            <li key={set.name} className={`scope-set${count > 0 ? " is-marked" : ""}`}>
+              <div className="scope-set-head">
                 <input
                   type="checkbox"
                   aria-label={`Marcar ${set.name}`}
@@ -125,24 +137,38 @@ export function ScopeField({
                   }}
                   onChange={() => toggle(set.checks)}
                 />
-                <strong>{set.name}</strong>
-              </label>
-              <ul>
-                {set.checks.map((id) => (
-                  <li key={id}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        aria-label={`Marcar ${id}`}
-                        checked={marked.has(id)}
-                        disabled={resolution === null}
-                        onChange={() => toggle([id])}
-                      />
-                      <span className="mono">{id}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
+                <button
+                  type="button"
+                  className="scope-set-toggle"
+                  aria-expanded={open}
+                  aria-label={`${open ? "Plegar" : "Desplegar"} ${set.name}`}
+                  onClick={() => expand(set.name)}
+                >
+                  <Chevron open={open} />
+                  <span className="mono">{set.name}</span>
+                </button>
+                <span className="scope-count">
+                  {count} / {set.checks.length}
+                </span>
+              </div>
+              {open && (
+                <ul className="scope-checks">
+                  {set.checks.map((id) => (
+                    <li key={id}>
+                      <label className="scope-check" title={id}>
+                        <input
+                          type="checkbox"
+                          aria-label={`Marcar ${id}`}
+                          checked={marked.has(id)}
+                          disabled={resolution === null}
+                          onChange={() => toggle([id])}
+                        />
+                        <span className="mono">{id}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           );
         })}
