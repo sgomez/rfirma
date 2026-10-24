@@ -65,6 +65,7 @@ comparten la numeración: el siguiente ADR, esté donde esté, toma el número l
 | 0027 | Dos sedes: la publicada para lo de punta a punta, la escrita a mano para la gramática |
 | 0028 | Un clic por trámite: la suite quita el PIN, pero no esconde la elección del certificado |
 | 0031 | La sede verifica las firmas sin dependencias externas, con su propia C14N inclusiva |
+| 0052 | La suite se optimiza para rFirma al encontrar, lanzar y conducir el cliente, y nunca al juzgarlo; matiza ADR-0028 |
 
 ## `research/` — mediciones (por qué algo es como es)
 
