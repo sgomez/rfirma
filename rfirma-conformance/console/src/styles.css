@@ -2399,3 +2399,15 @@ select.input {
     transform: translateY(4px) scale(0.985);
   }
 }
+
+.candidates {
+  display: grid;
+  gap: 4px;
+}
+
+.candidate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}

@@ -220,7 +220,7 @@ describe("the session", () => {
         name: "Cambiar",
       }),
     );
-    const binary = screen.getByRole("combobox", { name: "Binario" });
+    const binary = screen.getByRole("textbox", { name: "Binario" });
     const root = screen.getByRole("textbox", { name: "Raíz de confianza" });
     const resolved = [(binary as HTMLInputElement).value, (root as HTMLInputElement).value];
     await user.click(screen.getByRole("radio", { name: "rFirma" }));
@@ -231,5 +231,42 @@ describe("the session", () => {
     await user.click(screen.getByRole("radio", { name: "AutoFirma" }));
 
     expect([binary, root].map((field) => (field as HTMLInputElement).value)).toEqual(resolved);
+  });
+
+  it("offers rFirma first, lists its candidates and makes one the client without typing a path", async () => {
+    const { server, user } = renderConsoleAt(
+      "/",
+      aSnapshot({
+        client: null,
+        report_name: null,
+        report: null,
+        candidates: [
+          {
+            kind: "rfirma",
+            origin: "local_build",
+            binary: "/work/target/release/rfirma",
+            library_dir: "/work/lib",
+            identity: { version: "0.9.0", channel: "dev" },
+          },
+          {
+            kind: "autofirma",
+            origin: "installed",
+            binary: "/usr/bin/autofirma",
+            library_dir: null,
+            identity: { version: null, channel: null },
+          },
+        ],
+      }),
+    );
+
+    expect(await screen.findByRole("radio", { name: "rFirma" })).toBeChecked();
+    expect(screen.queryByRole("radio", { name: /\/usr\/bin\/autofirma/ })).toBeNull();
+    await user.click(
+      screen.getByRole("radio", { name: /build local.*0\.9\.0.*\/work\/target\/release\/rfirma/ }),
+    );
+
+    expect(server.posted("/api/client")).toEqual([
+      { kind: "rfirma", binary: "/work/target/release/rfirma", trust_root: null },
+    ]);
   });
 });
