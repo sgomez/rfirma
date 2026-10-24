@@ -253,7 +253,7 @@ mod tests {
     use super::*;
     use crate::catalogue::the_catalogue_in;
     use crate::checks::Settlement;
-    use crate::client::ClientKind;
+    use crate::client::{ClientKind, Origin};
     use crate::errand::fake::RecordedRunner;
     use crate::errand::{
         the_recorded, ErrandOutcome, ErrandRunner, ObservedErrand, RemoteService, RequestHeaders,
@@ -336,6 +336,7 @@ expects.completes = {}
             &path,
             kind.name(),
             kind,
+            Origin::Installed,
             catalogue,
             HeaderCoordinates {
                 os: "linux".to_owned(),

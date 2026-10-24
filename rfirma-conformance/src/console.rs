@@ -18,8 +18,8 @@ use crate::checks::{
     the_reason_behind_a_failed_greeting, Settled, Settlement,
 };
 use crate::client::{
-    prepare, resolve, the_deduced_coordinates, Candidate, Client, ClientKind, DeducedCoordinates,
-    Profile, Store,
+    prepare, resolve, the_binary_to_restore as the_binary_to_restore_of, the_deduced_coordinates,
+    Candidate, Client, ClientKind, DeducedCoordinates, Profile, Store,
 };
 use crate::comparison::{compare, Comparison};
 use crate::errand::{ErrandKey, ErrandRunner, NodeRunner, ObservedErrand};
@@ -277,6 +277,7 @@ impl Console {
             &dir.join(THE_REPORT_FILE),
             &client.binary.display().to_string(),
             client.kind,
+            client.origin,
             &self.shared.catalogue,
             coordinates,
         )
@@ -297,8 +298,34 @@ impl Console {
             return Err(NO_SWITCHING_REPORTS.to_owned());
         }
         let report = Report::open(&dir.join(THE_REPORT_FILE), &self.shared.catalogue)?;
+        let kind = report.kind();
+        let restoring = the_client_to_restore(&session, &report);
         self.shared.install(&mut session, name, dir, report);
-        Ok(())
+        match restoring {
+            None => Ok(()),
+            Some(Ok(binary)) => {
+                drop(session);
+                self.choose_client(kind, Some(binary), None)
+            }
+            Some(Err(complaint)) => {
+                if session.client.is_none() {
+                    session.client_complaints = vec![complaint];
+                    self.shared.publish(&session);
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// Abre el último informe que se abrió en el directorio, y con él su cliente.
+    pub fn reopen_the_last_report(&self) {
+        let Ok(name) = std::fs::read_to_string(self.shared.reports_dir.join(THE_LAST_REPORT))
+        else {
+            return;
+        };
+        if let Err(complaint) = self.open_report(name.trim().to_owned()) {
+            eprintln!("el último informe no se pudo reabrir: {complaint}");
+        }
     }
 
     pub(crate) fn enqueue(&self, request: Request) -> Result<(), String> {
@@ -311,7 +338,7 @@ impl Console {
         let kind = client.kind;
         if let Some(complaint) = open
             .report
-            .refuses_to_continue_with(&client.binary.display().to_string(), client.kind)
+            .refuses_to_continue_with(client.kind, client.identity.version.as_deref())
         {
             return Err(complaint);
         }
@@ -480,6 +507,8 @@ impl Console {
 }
 
 const NO_CLIENT: &str = "elige un cliente primero";
+/// El fichero del directorio de informes que nombra el último abierto, que no es un informe.
+const THE_LAST_REPORT: &str = ".last-report";
 const NO_SWITCHING_REPORTS: &str = "no se cambia de informe con otro en marcha";
 
 impl Shared {
@@ -501,13 +530,20 @@ impl Shared {
     }
 
     fn install(&self, session: &mut Session, name: String, dir: PathBuf, report: Report) {
+        if let Err(error) = std::fs::write(self.reports_dir.join(THE_LAST_REPORT), &name) {
+            eprintln!("no se pudo apuntar «{name}» como el último informe: {error}");
+        }
         session.report = Some(OpenReport { name, dir, report });
         session.reasons.clear();
         self.publish(session);
     }
 
     fn state_of(&self, session: &Session) -> serde_json::Value {
-        let reports = reports_in(&self.reports_dir);
+        let reports = reports_in(
+            &self.reports_dir,
+            session.client.as_ref(),
+            &session.candidates,
+        );
         let activity = Activity {
             client: session.client.as_ref(),
             candidates: &session.candidates,
@@ -881,8 +917,9 @@ fn settle(
     }
 }
 
-/// Los informes del directorio, cada uno con su cliente y su clase, o la queja si no se lee.
-fn reports_in(dir: &Path) -> Vec<ReportEntry> {
+/// Los informes del directorio, cada uno con su cliente, su clase y si `client` lo continúa —o, sin
+/// cliente activo, si el suyo se restaura de entre los `candidates`—, o la queja si no se lee.
+fn reports_in(dir: &Path, client: Option<&Client>, candidates: &[Candidate]) -> Vec<ReportEntry> {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return Vec::new();
     };
@@ -893,19 +930,26 @@ fn reports_in(dir: &Path) -> Vec<ReportEntry> {
         .filter(|name| is_a_report_name(name))
         .map(
             |name| match Report::read(&dir.join(&name).join(THE_REPORT_FILE)) {
-                Ok(report) => ReportEntry {
-                    kind: Some(report.kind().name()),
-                    client: Some(report.client().to_owned()),
-                    client_version: Some(report.header().client_version.clone()),
-                    date: Some(report.header().date.clone()),
-                    complaint: None,
-                    name,
-                },
+                Ok(report) => {
+                    let why_not = why_not_continue(&report, client, candidates);
+                    ReportEntry {
+                        kind: Some(report.kind().name()),
+                        client: Some(report.client().to_owned()),
+                        client_version: Some(report.header().client_version.clone()),
+                        date: Some(report.header().date.clone()),
+                        continuable: why_not.is_none(),
+                        why_not,
+                        complaint: None,
+                        name,
+                    }
+                }
                 Err(complaint) => ReportEntry {
                     kind: None,
                     client: None,
                     client_version: None,
                     date: None,
+                    continuable: false,
+                    why_not: None,
                     complaint: Some(complaint),
                     name,
                 },
@@ -914,6 +958,54 @@ fn reports_in(dir: &Path) -> Vec<ReportEntry> {
         .collect();
     reports.sort_by(|a, b| a.name.cmp(&b.name));
     reports
+}
+
+fn why_not_continue(
+    report: &Report,
+    client: Option<&Client>,
+    candidates: &[Candidate],
+) -> Option<String> {
+    match client {
+        Some(client) => {
+            report.refuses_to_continue_with(client.kind, client.identity.version.as_deref())
+        }
+        None => the_binary_to_restore(report, candidates)
+            .is_none()
+            .then(|| the_missing_client_of(report)),
+    }
+}
+
+/// El binario con que se restaura el cliente de `report`, o por qué no se encuentra; `None` si el
+/// cliente activo ya lo continúa.
+fn the_client_to_restore(session: &Session, report: &Report) -> Option<Result<PathBuf, String>> {
+    let continues = session.client.as_ref().is_some_and(|client| {
+        report
+            .refuses_to_continue_with(client.kind, client.identity.version.as_deref())
+            .is_none()
+    });
+    (!continues).then(|| {
+        the_binary_to_restore(report, &session.candidates)
+            .ok_or_else(|| the_missing_client_of(report))
+    })
+}
+
+fn the_binary_to_restore(report: &Report, candidates: &[Candidate]) -> Option<PathBuf> {
+    the_binary_to_restore_of(
+        report.kind(),
+        report.origin(),
+        Path::new(report.client()),
+        &report.header().client_version,
+        candidates,
+    )
+}
+
+fn the_missing_client_of(report: &Report) -> String {
+    format!(
+        "su cliente, {} {}, no está entre los candidatos ni en {}",
+        report.kind().name(),
+        report.header().client_version,
+        report.client()
+    )
 }
 
 /// Un nombre que es un solo directorio bajo el de informes, y nunca una ruta que salga de él.
@@ -948,6 +1040,7 @@ fn kill(pid: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::client::Origin;
     use crate::errand::fake::RecordedRunner;
 
     #[test]
@@ -968,7 +1061,7 @@ mod tests {
         std::fs::write(dir.path().join("b-informe").join(THE_REPORT_FILE), "{").unwrap();
         std::fs::create_dir(dir.path().join("sin-dossier")).unwrap();
 
-        let reports = reports_in(dir.path());
+        let reports = reports_in(dir.path(), None, &[]);
 
         assert_eq!(reports.len(), 1);
         assert_eq!(reports[0].name, "b-informe");
@@ -1100,8 +1193,9 @@ expects.completes = {}
         std::fs::create_dir(dir.join(name)).unwrap();
         Report::create(
             &dir.join(name).join(THE_REPORT_FILE),
-            &format!("/usr/bin/{}", kind.name()),
+            &format!("/nowhere/{}", kind.name()),
             kind,
+            Origin::Installed,
             catalogue,
             HeaderCoordinates {
                 os: "Linux".to_owned(),
@@ -1144,6 +1238,63 @@ expects.completes = {}
         );
         let state = console.subscribe().recv().unwrap();
         assert!(state.contains("\"report_name\":\"c\""));
+    }
+
+    fn an_rfirma_at(binary: &str, version: &str) -> Client {
+        Client {
+            kind: ClientKind::Rfirma,
+            origin: Origin::Given,
+            binary: PathBuf::from(binary),
+            library_dir: None,
+            identity: crate::client::Identity {
+                version: Some(version.to_owned()),
+                channel: None,
+            },
+            trust_root: None,
+        }
+    }
+
+    #[test]
+    fn each_report_listed_says_whether_the_active_client_continues_it_and_why_not() {
+        let dir = tempfile::tempdir().unwrap();
+        let catalogue = a_catalogue();
+        a_report_in(
+            dir.path(),
+            "of-autofirma",
+            ClientKind::Autofirma,
+            &catalogue,
+        );
+        a_report_in(dir.path(), "of-rfirma", ClientKind::Rfirma, &catalogue);
+        let console = Console::new(catalogue, dir.path().to_owned(), Duration::ZERO);
+        console.shared.lock().client = Some(an_rfirma_at("/elsewhere/rfirma", "1.0"));
+
+        let state = console.shared.state_of(&console.shared.lock());
+
+        let reports = &state["reports"];
+        assert_eq!(reports[0]["name"], "of-autofirma");
+        assert_eq!(reports[0]["continuable"], false);
+        assert!(reports[0]["why_not"]
+            .as_str()
+            .unwrap()
+            .contains("para autofirma y el cliente activo es rfirma"));
+        assert_eq!(reports[1]["continuable"], true);
+        assert_eq!(reports[1]["why_not"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn the_last_report_opened_is_open_again_when_the_session_starts_anew() {
+        let dir = tempfile::tempdir().unwrap();
+        let catalogue = a_catalogue();
+        a_report_in(dir.path(), "a", ClientKind::Rfirma, &catalogue);
+        a_report_in(dir.path(), "b", ClientKind::Rfirma, &catalogue);
+        let before = Console::new(catalogue.clone(), dir.path().to_owned(), Duration::ZERO);
+        before.open_report("b".to_owned()).unwrap();
+
+        let after = Console::new(catalogue, dir.path().to_owned(), Duration::ZERO);
+        after.reopen_the_last_report();
+
+        let state = after.subscribe().recv().unwrap();
+        assert!(state.contains("\"report_name\":\"b\""), "{state}");
     }
 
     #[test]
@@ -1470,6 +1621,35 @@ expects.code = "SAF_03"
                 "v4/signwithoutaformat",
                 "v4/protocol-v4"
             ]
+        );
+    }
+
+    #[test]
+    fn a_report_is_continued_by_its_class_and_version_and_not_by_the_path_of_the_binary() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console.shared.lock().client = Some(an_rfirma_at("/elsewhere/rfirma", "1.0"));
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+        assert_eq!(
+            the_state_of(&console, "a_rejection"),
+            Some(CheckState::Resolved(crate::outcome::Outcome::Compliant))
+        );
+
+        console.shared.lock().client = Some(an_rfirma_at("/usr/bin/rfirma", "2.0"));
+        let refused = console
+            .enqueue(Request::Check {
+                check: "its_twin".to_owned(),
+            })
+            .unwrap_err();
+
+        assert!(
+            refused.contains("con la versión 1.0 y el cliente activo es la 2.0"),
+            "{refused}"
         );
     }
 
