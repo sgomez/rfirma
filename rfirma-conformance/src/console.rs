@@ -99,6 +99,10 @@ pub(crate) struct LiveLine {
 #[ts(export)]
 pub(crate) struct NewReport {
     name: String,
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    notes: String,
     client_version: String,
     os: String,
     os_version: String,
@@ -284,6 +288,21 @@ impl Console {
         .inspect_err(|_| {
             let _ = std::fs::remove_dir_all(&dir);
         })?;
+        let mut report = report;
+        if !new.title.is_empty() || !new.notes.is_empty() {
+            let header = report.header();
+            report
+                .correct_header(HeaderCorrection {
+                    title: new.title,
+                    notes: new.notes,
+                    client_version: header.client_version.clone(),
+                    os: header.os.clone(),
+                    os_version: header.os_version.clone(),
+                })
+                .inspect_err(|_| {
+                    let _ = std::fs::remove_dir_all(&dir);
+                })?;
+        }
         self.shared.install(&mut session, new.name, dir, report);
         Ok(())
     }
@@ -950,6 +969,7 @@ fn reports_in(dir: &Path, client: Option<&Client>, candidates: &[Candidate]) -> 
                         kind: Some(report.kind().name()),
                         client: Some(report.client().to_owned()),
                         client_version: Some(report.header().client_version.clone()),
+                        title: Some(report.header().title.clone()),
                         date: Some(report.header().date.clone()),
                         continuable: why_not.is_none(),
                         why_not,
@@ -961,6 +981,7 @@ fn reports_in(dir: &Path, client: Option<&Client>, candidates: &[Candidate]) -> 
                     kind: None,
                     client: None,
                     client_version: None,
+                    title: None,
                     date: None,
                     continuable: false,
                     why_not: None,
@@ -1795,6 +1816,39 @@ expects.code = "SAF_03"
             .unwrap_err();
 
         assert!(refused.contains("falta la versión"), "{refused}");
+    }
+
+    #[test]
+    fn a_new_report_keeps_the_title_and_notes_it_was_created_with() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console.shared.lock().client = Some(an_rfirma_at("/usr/bin/rfirma", "0.10.0"));
+
+        console
+            .create_report(NewReport {
+                name: "fresh".to_owned(),
+                title: "Prueba de rades".to_owned(),
+                notes: "Con el build local".to_owned(),
+                client_version: "0.10.0".to_owned(),
+                os: "Linux".to_owned(),
+                os_version: "6.0".to_owned(),
+            })
+            .unwrap();
+
+        let view = console.report_view("fresh").unwrap();
+        assert_eq!(view["header"]["title"], "Prueba de rades");
+        assert_eq!(view["header"]["notes"], "Con el build local");
+    }
+
+    #[test]
+    fn a_new_report_is_proposed_a_title_from_its_client() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console.shared.lock().client = Some(an_rfirma_at("/usr/bin/rfirma", "0.10.0"));
+
+        let proposed = serde_json::to_value(console.the_deduced_coordinates().unwrap()).unwrap();
+
+        assert_eq!(proposed["title"], "rfirma 0.10.0");
     }
 
     #[test]

@@ -1016,6 +1016,20 @@ select.input {
   background: var(--accent-soft);
 }
 
+.report-name,
+.report-client {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.report-name > *,
+.report-client > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .report-name {
   overflow: hidden;
   text-overflow: ellipsis;
