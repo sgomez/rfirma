@@ -21,7 +21,7 @@ use crate::client::{resolve, the_deduced_coordinates, Client, ClientKind, Deduce
 use crate::comparison::{compare, Comparison};
 use crate::errand::{ErrandKey, ErrandRunner, NodeRunner, ObservedErrand};
 use crate::hand::the_assistance_of;
-use crate::livelog::{CheckLog, LiveLogSink};
+use crate::livelog::{CheckLog, LiveLogSink, Provenance};
 use crate::outcome::CheckState;
 use crate::report::{HeaderCoordinates, Report, THE_REPORT_FILE};
 use crate::report_view::report_view;
@@ -85,7 +85,8 @@ pub(crate) struct SuiteFailure {
 #[derive(Debug, Serialize, TS)]
 #[ts(export)]
 pub(crate) struct LiveLine {
-    check: Option<String>,
+    check: String,
+    provenance: Provenance,
     line: String,
 }
 
@@ -538,21 +539,24 @@ impl Witness for ConsoleWitness {
     }
 
     fn log_sink(&self) -> LiveLogSink {
-        let (log, check) = {
+        let (log, group) = {
             let session = self.shared.lock();
-            (session.log.clone(), session.running.first().cloned())
+            (session.log.clone(), session.running.clone())
         };
         let shared = Arc::clone(&self.shared);
-        LiveLogSink::new(move |line| {
+        LiveLogSink::new(move |provenance, line| {
             if let Some(log) = &log {
                 log.write(&line);
             }
-            let payload = serde_json::to_value(LiveLine {
-                check: check.clone(),
-                line,
-            })
-            .expect("la línea se serializa");
-            shared.broadcast(&event_frame("log", &payload));
+            for check in &group {
+                let payload = serde_json::to_value(LiveLine {
+                    check: check.clone(),
+                    provenance,
+                    line: line.clone(),
+                })
+                .expect("la línea se serializa");
+                shared.broadcast(&event_frame("log", &payload));
+            }
         })
     }
 
@@ -1082,6 +1086,41 @@ expects.completes = {}
 
         assert_eq!(resolution.ids, ["a_greeting"]);
         assert_eq!(resolution.unknown, ["nadie"]);
+    }
+
+    #[test]
+    fn the_live_log_reaches_every_member_of_a_group_with_its_provenance() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = Console::new(a_catalogue(), dir.path().to_owned(), Duration::ZERO);
+        console.shared.lock().running = vec!["first".to_owned(), "second".to_owned()];
+        let frames = console.subscribe();
+        frames.recv().unwrap();
+
+        ConsoleWitness {
+            shared: Arc::clone(&console.shared),
+        }
+        .harness("aviso");
+
+        let lines: Vec<serde_json::Value> = frames
+            .try_iter()
+            .map(|frame| {
+                let data = frame
+                    .lines()
+                    .find_map(|l| l.strip_prefix("data: "))
+                    .unwrap();
+                serde_json::from_str(data).unwrap()
+            })
+            .collect();
+        let seen: Vec<_> = lines
+            .iter()
+            .map(|line| {
+                (
+                    line["check"].as_str().unwrap(),
+                    line["provenance"].as_str().unwrap(),
+                )
+            })
+            .collect();
+        assert_eq!(seen, [("first", "suite"), ("second", "suite")]);
     }
 
     #[test]

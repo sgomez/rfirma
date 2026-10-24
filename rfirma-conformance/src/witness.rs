@@ -62,7 +62,7 @@ pub(crate) mod fake {
         }
 
         fn log_sink(&self) -> LiveLogSink {
-            LiveLogSink::new(|_| {})
+            LiveLogSink::new(|_, _| {})
         }
 
         fn suite_failure(&self, check: &str, _why: &str) {

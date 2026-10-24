@@ -13,13 +13,16 @@ El catálogo de exigencias del protocolo `afirma://` y lo que las mide contra el
 le configure. Produce un **informe**, no una puerta: no bloquea ningún PR ni ninguna etiqueta
 (ADR-0014) y se ejecuta en local, fuera del CI. **El protocolo es lo que pretende el código de
 AutoFirma 1.9.2**: cada exigencia dice lo que ese código quiere responder, también donde un bug
-suyo se lo impide (ADR-0026). **La suite no sabe qué cliente mide**: ni corre comprobaciones
-distintas ni dice cosas distintas según quién responda.
+suyo se lo impide (ADR-0026). **La suite se optimiza para rFirma en cómo encuentra, lanza y
+conduce al cliente, y nunca en cómo lo juzga**: el resultado de una comprobación no depende de quién
+responda (ADR-0052).
 _Avoid_: banco de conformidad, sondeo, arnés
 
 **Cliente**:
-La aplicación a prueba, AutoFirma o rFirma: un binario instalado. Cada **almacén** le da un perfil
-aislado con su raíz de confianza. Saber cuál es sirve solo para lanzarlo, nunca para juzgarlo.
+La aplicación a prueba, AutoFirma o rFirma: un binario candidato —el instalado o, con rFirma, un
+build local o de un worktree—. Cada **almacén** le da un perfil aislado con su raíz de confianza. Su
+identidad es la clase, el origen y la versión, leídas del propio cliente. Saber cuál es sirve para
+encontrarlo, lanzarlo y conducirlo, nunca para juzgarlo.
 _Avoid_: sujeto, perfil, aplicación a prueba
 
 **Sede**:
@@ -91,8 +94,8 @@ silencio—.
 _Avoid_: pregunta, respuesta de la persona
 
 **Asistencia**:
-Qué necesita una comprobación de la persona que está delante, deducido de su acción. Es una lista
-cerrada:
+Qué necesita una comprobación de la persona que está delante, deducido de su acción y, con rFirma,
+de lo que la **mano** pulsa por ella. Es una lista cerrada:
 - **ninguna**: no aparece ninguna ventana.
 - **clic**: aparece el selector de certificado, el consentimiento o un error que hay que cerrar,
   solo como medio para llegar a lo que se mide.
@@ -149,8 +152,9 @@ Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrad
 - **rsa_without_sha1**: el de **rsa**, con rFirma sin SHA-1 permitido en sus preferencias, para
   medir el permiso de una sola operación; AutoFirma no tiene esa preferencia y lo ve igual que
   **rsa**.
-Es condición de lanzamiento: la suite prepara un perfil aislado por almacén, igual para cualquier
-cliente.
+Es condición de lanzamiento: la suite prepara un perfil aislado por almacén, la primera vez que una
+tanda lo necesita. Lo que decide qué certificados ve el cliente es igual para cualquiera; las
+preferencias propias de cada clase de cliente las escribe la suite en un solo sitio (ADR-0052).
 _Avoid_: keystore, perfil (para el almacén)
 
 **Conjunto**:
@@ -192,9 +196,21 @@ _Avoid_: veredicto, estado, SORPRESA, coincide, sin medida, verde
 
 **Informe**:
 Lo que deja una tanda de comprobaciones contra un cliente: sus resultados, qué pasó y el registro
-de cada una. Se ve igual lo esté corriendo o no, y desde cualquier ventana; solo se continúa con el
-mismo cliente y la misma versión con que se creó.
+de cada una. Guarda la identidad del cliente con que se creó y una cabecera que se corrige después:
+título, notas, versión, sistema operativo y **alcance**; su nombre no cambia nunca. Se ve igual lo
+esté corriendo o no, y desde cualquier ventana; solo se continúa con un cliente de su misma clase y
+su misma versión, aunque el binario haya cambiado de ruta.
 _Avoid_: expediente, tanda (para el informe), dossier
+
+**Selección**:
+Un texto de ids de comprobación y nombres de **conjunto**, separados por espacios o comas, que la
+suite resuelve contra el catálogo y, si lo hay, el **alcance** del informe. Un nombre de conjunto
+vale también como prefijo por segmentos completos (`canal` incluye `canal.servicio`; `can` no
+incluye nada). Filtra la vista del informe y elige lo que se ejecuta, se relanza o se reinicia; los
+nombres que no casan o que se salen del alcance se rechazan. Al ejecutar se añaden los **saludos**
+que hagan falta, y se avisa de las comprobaciones de fuera que comparten **trámite** con las
+resueltas.
+_Avoid_: filtro (para lo que elige qué correr), consulta
 
 **Alcance**:
 Las comprobaciones que mide un **informe**, nombradas al crearlo por su id o por su **conjunto**
@@ -211,6 +227,12 @@ renombró. Se ve aparte, no cuenta en ningún recuento y se poda la próxima vez
 informe.
 _Avoid_: obsoleta, retirada, fantasma
 
+**Mano**:
+Con rFirma, el proceso que pulsa por AT-SPI, solo en el cliente del perfil aislado, lo que la
+persona ya no tiene que hacer durante un **trámite**. Sigue el plan de cada comprobación, que cambia
+según el cliente; no juzga ni dice qué vio. Con AutoFirma no hay mano.
+_Avoid_: robot, automatizador
+
 **Registro**:
 Las líneas que deja una comprobación al correr, marcadas por quién las emite: la **sede**, el
 **cliente** o la **suite**.
@@ -219,18 +241,17 @@ _Avoid_: conductor, sujeto, arnés
 ### Validación de la suite
 
 **Etiqueta**:
-Lo que puede explicar el NO CONFORME de una comprobación, declarado en ella y enseñado igual en
-cualquier informe, sea del cliente que sea. Es una lista cerrada, y cada una tiene un origen que se
+Lo que puede explicar el NO CONFORME de una comprobación, declarado en ella y enseñado en cualquier
+informe, sea del cliente que sea. Es una lista cerrada, y cada una tiene un origen que se
 comprueba:
 - **autofirma:bug:1.9.2**: un **bug conocido** de AutoFirma 1.9.2, con su ficha `BUG-NN`.
 - **autofirma:bug:master**: ese bug sigue en `master`; se deduce del registro, no se escribe.
 - **rfirma:adr-NNNN**: una **desviación deliberada**, con el ADR que la decide y cita la comprobación.
 - **manual:deprecated**: un **formato deprecado**.
-No cambia el resultado. Un NO CONFORME con cualquier etiqueta cuenta como **explicado**, y sin
-ninguna, **sin explicar**: esa es la cifra que mira quien ejecuta. El límite se acepta a sabiendas:
-la suite no sabe qué cliente mide, así que no dice para cuál vale cada etiqueta, y con AutoFirma
-una `rfirma:` da por explicado un fallo que para ese cliente no lo está. Quien ejecuta sabe qué ha
-lanzado y lee la que le toca; lo que sí es por cliente es la **validación**.
+No cambia el resultado. Un NO CONFORME cuenta como **explicado** si lleva una etiqueta que vale para
+la clase de cliente del informe, y **sin explicar** si no: esa es la cifra que mira quien ejecuta.
+`autofirma:` y `manual:deprecated` explican los fallos de AutoFirma; `rfirma:` y `manual:deprecated`,
+los de rFirma.
 _Avoid_: marca, fallo esperado, causa (fuera de la referencia)
 
 **Bug conocido**:
