@@ -459,6 +459,24 @@ siguiente. Es estado, no preferencia, y no responde por sí solo a una sede
 (ADR-0010).
 _Avoid_: certificado por defecto, certificado fijo, sticky
 
+### Informe de problemas
+
+**Diario del trámite** (`ErrandJournal`):
+Lo que rFirma guarda en el equipo de cada trámite de sede: sus pasos, tiempos y
+fallos en campos cerrados, sin texto libre ni dato personal alguno.
+_Avoid_: log, registro, traza
+
+**Desenlace** (`Outcome`):
+Cómo acabó un trámite de sede: con éxito, con fallo, cancelado por la persona,
+abandonado —se cerró la ventana o el canal caducó sin respuesta— o interrumpido,
+cuando el proceso murió antes de cerrar su diario.
+_Avoid_: resultado, estado del trámite
+
+**Informe de problema** (`ProblemReport`):
+Lo que la persona envía, tras verlo entero, sobre un trámite que no acabó con
+éxito: su diario, el entorno anonimizado y, si quiere, su propia descripción.
+_Avoid_: informe de fallo, bug report, ticket
+
 ### Distribución
 
 **Canal de distribución** (Rust `desktop::domain::channel::Channel`):
