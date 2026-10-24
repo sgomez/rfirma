@@ -51,6 +51,7 @@ struct CheckView<'a> {
     assistance: Option<Assistance>,
     store: Store,
     labels: Vec<LabelView>,
+    explained: bool,
     #[ts(as = "ResultName")]
     state: &'static str,
     observation: Option<&'a str>,
@@ -81,21 +82,21 @@ pub(crate) struct Summary {
     pub total: usize,
     pub compliant: usize,
     pub noncompliant: usize,
-    /// Los NO CONFORME con alguna etiqueta, sea del cliente que sea.
+    /// Los NO CONFORME con alguna etiqueta que vale para la clase de cliente del informe.
     pub explained: usize,
     pub not_observable: usize,
     pub pending: usize,
 }
 
 impl Summary {
-    fn count(&mut self, check: &Check, state: Option<CheckState>) {
+    fn count(&mut self, check: &Check, state: Option<CheckState>, kind: ClientKind) {
         self.total += 1;
         match state {
             None | Some(CheckState::Pending) => self.pending += 1,
             Some(CheckState::Resolved(Outcome::Compliant)) => self.compliant += 1,
             Some(CheckState::Resolved(Outcome::Noncompliant)) => {
                 self.noncompliant += 1;
-                if !check.labels.is_empty() {
+                if explains(check, kind) {
                     self.explained += 1;
                 }
             }
@@ -104,22 +105,26 @@ impl Summary {
     }
 }
 
+fn explains(check: &Check, kind: ClientKind) -> bool {
+    check.labels.iter().any(|label| label.explains(kind))
+}
+
 pub(crate) fn report_view<'a>(report: &'a Report, catalogue: &'a [Check]) -> ReportView<'a> {
     let mut summary = Summary::default();
     let mut sets: Vec<SetView> = Vec::new();
     for check in catalogue {
         let record = report.record_of(&check.id);
         let state = record.map(|record| record.state);
-        summary.count(check, state);
+        summary.count(check, state, report.kind());
         let view = check_view(check, record, report.kind());
         match sets.last_mut() {
             Some(set) if set.name == check.requirement.set => {
-                set.summary.count(check, state);
+                set.summary.count(check, state, report.kind());
                 set.checks.push(view);
             }
             _ => {
                 let mut set_summary = Summary::default();
-                set_summary.count(check, state);
+                set_summary.count(check, state, report.kind());
                 sets.push(SetView {
                     name: &check.requirement.set,
                     summary: set_summary,
@@ -158,6 +163,9 @@ fn check_view<'a>(
         assistance: check.trial().map(|_| the_assistance_of(check, kind)),
         store: check.store(),
         labels: check.labels.iter().map(LabelView::from).collect(),
+        explained: explains(check, kind)
+            && record
+                .is_some_and(|record| record.state == CheckState::Resolved(Outcome::Noncompliant)),
         state: result_name(record.map(|record| record.state)),
         observation: record.and_then(|record| record.observation.as_deref()),
         date: record.and_then(|record| record.date.as_deref()),
@@ -317,23 +325,44 @@ expects.completes = {}
     }
 
     #[test]
-    fn a_noncompliance_with_any_label_counts_as_explained_whatever_the_client() {
-        let deviation = THREE_CHECKS.replace(
+    fn a_label_explains_only_the_failures_of_the_client_class_it_is_valid_for() {
+        let autofirma_bug = THREE_CHECKS.to_owned();
+        let rfirma_deviation = THREE_CHECKS.replace(
             "explained_by.autofirma = \"BUG-18\"",
-            "explained_by = { rfirma = \"ADR-0010\", manual = \"deprecated\" }",
+            "explained_by.rfirma = \"ADR-0010\"",
         );
-        let catalogue = the_catalogue_in(&deviation).unwrap();
+        let deprecated = THREE_CHECKS.replace(
+            "explained_by.autofirma = \"BUG-18\"",
+            "explained_by.manual = \"deprecated\"",
+        );
 
-        for (kind, binary) in [
-            (ClientKind::Autofirma, "/usr/bin/autofirma"),
-            (ClientKind::Rfirma, "/usr/bin/rfirma"),
+        for (catalogue, kind, binary, explained) in [
+            (
+                &autofirma_bug,
+                ClientKind::Autofirma,
+                "/usr/bin/autofirma",
+                1,
+            ),
+            (&autofirma_bug, ClientKind::Rfirma, "/usr/bin/rfirma", 0),
+            (
+                &rfirma_deviation,
+                ClientKind::Autofirma,
+                "/usr/bin/autofirma",
+                0,
+            ),
+            (&rfirma_deviation, ClientKind::Rfirma, "/usr/bin/rfirma", 1),
+            (&deprecated, ClientKind::Autofirma, "/usr/bin/autofirma", 1),
+            (&deprecated, ClientKind::Rfirma, "/usr/bin/rfirma", 1),
         ] {
+            let catalogue = the_catalogue_in(catalogue).unwrap();
             let (_dir, report) = a_report_of(kind, binary, &catalogue, Outcome::Noncompliant);
             let json = the_json_of(&report_view(&report, &catalogue));
 
             assert_eq!(json["summary"]["noncompliant"], 1);
-            assert_eq!(json["summary"]["explained"], 1);
+            assert_eq!(json["summary"]["explained"], explained);
+            assert_eq!(the_check(&json, "a_save")["explained"], explained == 1);
             assert_eq!(the_check(&json, "a_save")["state"], "NO CONFORME");
+            assert_ne!(the_check(&json, "a_save")["labels"], json!([]));
         }
     }
 

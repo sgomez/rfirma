@@ -2,6 +2,6 @@
 
 export type Summary = { total: number, compliant: number, noncompliant: number, 
 /**
- * Los NO CONFORME con alguna etiqueta, sea del cliente que sea.
+ * Los NO CONFORME con alguna etiqueta que vale para la clase de cliente del informe.
  */
 explained: number, not_observable: number, pending: number, };
