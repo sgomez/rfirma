@@ -44,19 +44,22 @@ export function SessionPage() {
 
   const controls = useMemo<Controls>(
     () => ({
-      runCheck: (check) => void suite.run({ check }).catch(complain("No se pudo poner en cola")),
+      runCheck: (check) =>
+        void suite
+          .run({ selection: check, mode: isPending(view, check) ? "reuse" : "relaunch" })
+          .catch(complain("No se pudo poner en cola")),
       resetCheck: (check) => void suite.reset(check).catch(complain("No se pudo resetear")),
       runSet: (set, pendingOnly) =>
         void suite
-          .run(pendingOnly ? { set, pending: true } : { set })
+          .run({ selection: set, mode: pendingOnly ? "reuse" : "relaunch" })
           .catch(complain("No se pudo poner en cola")),
     }),
-    [suite, complain],
+    [suite, complain, view],
   );
 
   const runTranches = (tranches: Tranches) => {
     if (tranches === "all") askToNotify();
-    void suite.run({ tranches }).catch(complain("No se pudo poner en cola"));
+    void suite.run({ selection: "", tranches }).catch(complain("No se pudo poner en cola"));
   };
 
   useShortcuts({
@@ -170,6 +173,11 @@ function pendingIn(view: ReportView, takes: (assistance: Assistance) => boolean)
   return view.sets
     .flatMap((set) => set.checks)
     .filter((check) => check.state === "PENDIENTE" && takes(check.assistance ?? "none")).length;
+}
+
+function isPending(view: ReportView | null, id: string): boolean {
+  const check = view?.sets.flatMap((set) => set.checks).find((check) => check.id === id);
+  return check?.state === "PENDIENTE";
 }
 
 function warningOf(view: ReportView | null, id: string | null): string | null {

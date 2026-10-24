@@ -26,8 +26,8 @@ describe("the session", () => {
     );
 
     expect(server.posted("/api/run")).toEqual([
-      { set: "errores", pending: true },
-      { set: "saludo" },
+      { selection: "errores", mode: "reuse" },
+      { selection: "saludo", mode: "relaunch" },
     ]);
   });
 
@@ -36,7 +36,7 @@ describe("the session", () => {
 
     await user.click(await screen.findByRole("button", { name: "Ejecutar empty_uri_rejected" }));
 
-    expect(server.posted("/api/run")).toEqual([{ check: "empty_uri_rejected" }]);
+    expect(server.posted("/api/run")).toEqual([{ selection: "empty_uri_rejected", mode: "reuse" }]);
   });
 
   it("resets a settled check from its own button, and not one that is still pending", async () => {
@@ -46,7 +46,9 @@ describe("the session", () => {
       await screen.findByRole("button", { name: "Resetear unsupported_protocol_uri_rejected" }),
     );
 
-    expect(server.posted("/api/reset")).toEqual([{ check: "unsupported_protocol_uri_rejected" }]);
+    expect(server.posted("/api/reset")).toEqual([
+      { selection: "unsupported_protocol_uri_rejected" },
+    ]);
     expect(screen.getByRole("button", { name: "Resetear empty_uri_rejected" })).toBeDisabled();
   });
 
@@ -62,10 +64,10 @@ describe("the session", () => {
     await user.keyboard("p");
 
     expect(server.posted("/api/run")).toEqual([
-      { tranches: "unattended" },
-      { tranches: "attended" },
-      { tranches: "all" },
-      { tranches: "all" },
+      { selection: "", tranches: "unattended" },
+      { selection: "", tranches: "attended" },
+      { selection: "", tranches: "all" },
+      { selection: "", tranches: "all" },
     ]);
   });
 
