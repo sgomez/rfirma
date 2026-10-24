@@ -17,6 +17,7 @@ mod livelog;
 mod manifest;
 mod matrix;
 mod outcome;
+mod recipe;
 mod report;
 mod report_view;
 pub mod saf_table;
@@ -31,12 +32,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-/// Lo que necesita una pasada para medir: el cliente aislado, la raíz con la que sirve, el informe
-/// donde se transcribe y quien corre los trámites.
+/// Lo que necesita una pasada para medir: el cliente y su perfil aislado, el informe donde se
+/// transcribe y quien corre los trámites.
 struct Probe {
     client: PathBuf,
     kind: client::ClientKind,
-    trust_root: PathBuf,
+    profile: client::Profile,
     report: PathBuf,
     patience: Duration,
     witness: Arc<dyn witness::Witness>,

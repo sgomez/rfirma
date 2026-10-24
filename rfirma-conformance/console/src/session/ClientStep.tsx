@@ -20,7 +20,7 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
   const binaryId = useId();
   const rootId = useId();
 
-  const trustRoot = client?.profiles[0]?.trust_root ?? "";
+  const trustRoot = client?.trust_root ?? "";
   const resolved = client ? [client.kind, client.binary, trustRoot].join("\n") : "";
   useEffect(() => {
     if (!resolved) return;
@@ -59,19 +59,13 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
       marked={unsettled ? "cambios sin aplicar" : null}
       summary={
         snapshot.resolving_client ? (
-          <span className="working">
-            Preparando el cliente y su almacén de certificados aislado…
-          </span>
+          <span className="working">Preparando el cliente…</span>
         ) : client ? (
           <span className="facts">
             <strong>{clientName(client.kind)}</strong>
             <code title="Binario">{client.binary}</code>
             <span className="fact-label">raíz</span>
-            <code title="Raíz de confianza">{trustRoot}</code>
-            <span className="fact-label">almacenes</span>
-            <code title="Almacenes">
-              {client.profiles.map((profile) => profile.store).join(", ")}
-            </code>
+            <code title="Raíz de confianza">{trustRoot || "la de cada almacén"}</code>
           </span>
         ) : snapshot.client_complaints.length > 0 ? (
           <span className="complaint">{snapshot.client_complaints.join(" · ")}</span>

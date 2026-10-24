@@ -14,10 +14,13 @@ use ts_rs::TS;
 
 use crate::catalogue::{Assistance, Check};
 use crate::checks::{
-    the_greeting_that_stops, the_greetings_already_failed, the_group_of,
+    all_pending, the_greeting_that_stops, the_greetings_already_failed, the_group_of,
     the_reason_behind_a_failed_greeting, Settled, Settlement,
 };
-use crate::client::{resolve, the_deduced_coordinates, Client, ClientKind, DeducedCoordinates};
+use crate::client::{
+    prepare, resolve, the_deduced_coordinates, Client, ClientKind, DeducedCoordinates, Profile,
+    Store,
+};
 use crate::comparison::{compare, Comparison};
 use crate::errand::{ErrandKey, ErrandRunner, NodeRunner, ObservedErrand};
 use crate::hand::the_assistance_of;
@@ -123,6 +126,7 @@ struct Shared {
 #[derive(Default)]
 struct Session {
     client: Option<Client>,
+    profiles: Vec<Profile>,
     client_complaints: Vec<String>,
     resolving_client: bool,
     report: Option<OpenReport>,
@@ -216,6 +220,7 @@ impl Console {
         let resolved = resolve(kind, binary, trust_root);
         let mut session = self.shared.lock();
         session.resolving_client = false;
+        session.profiles.clear();
         match resolved {
             Ok(client) => {
                 session.client = Some(client);
@@ -595,7 +600,10 @@ impl Witness for ConsoleWitness {
 fn run_the_next_group(shared: &Arc<Shared>) {
     let Next {
         group,
-        probe,
+        client,
+        store,
+        prepared,
+        report,
         already,
     } = {
         let mut session = shared.lock();
@@ -615,34 +623,87 @@ fn run_the_next_group(shared: &Arc<Shared>) {
         .iter()
         .filter_map(|id| shared.catalogue.iter().find(|check| &check.id == id))
         .collect();
-    let settled = catch_unwind(AssertUnwindSafe(|| {
-        probe.run_group(&checks, already.as_ref())
-    }))
-    .unwrap_or_else(|panic| {
-        let why = panic
-            .downcast_ref::<String>()
-            .cloned()
-            .or_else(|| panic.downcast_ref::<&str>().map(|text| (*text).to_owned()))
-            .unwrap_or_default();
-        probe.witness.harness(&format!("el arnés reventó: {why}"));
-        checks
-            .iter()
-            .map(|check| Settlement::Pending {
-                id: check.id.clone(),
-                why: format!("el arnés reventó: {why}"),
-            })
-            .collect::<Vec<_>>()
-            .into()
+    let witness: Arc<dyn Witness> = Arc::new(ConsoleWitness {
+        shared: Arc::clone(shared),
     });
+    let profile = match prepared {
+        Some(profile) => Ok(profile),
+        None => the_profile_prepared_for(shared, &client, store, witness.as_ref()),
+    };
+    let settled = match profile {
+        Ok(profile) => {
+            let probe = Probe {
+                client: client.binary.clone(),
+                kind: client.kind,
+                profile,
+                report,
+                patience: shared.patience,
+                witness: Arc::clone(&witness),
+                runner: Arc::clone(&shared.runner),
+            };
+            run_the_group_catching_panics(&probe, &checks, already.as_ref())
+        }
+        Err(why) => {
+            for check in &checks {
+                witness.suite_failure(&check.id, &why);
+            }
+            all_pending(&checks, &why).into()
+        }
+    };
     let mut session = shared.lock();
     let key = checks.first().and_then(|head| ErrandKey::of(head));
-    settle(&mut session, &group, key, already, settled, &probe);
+    settle(
+        &mut session,
+        &group,
+        key,
+        already,
+        settled,
+        witness.as_ref(),
+    );
     session.running.clear();
     session.started = None;
     session.log = None;
     session.driver = None;
     session.aborting = false;
     shared.publish(&session);
+}
+
+/// El perfil de `store` para `client`, preparado ahora y guardado para el resto de la sesión.
+fn the_profile_prepared_for(
+    shared: &Shared,
+    client: &Client,
+    store: Store,
+    witness: &dyn Witness,
+) -> Result<Profile, String> {
+    witness.harness(&format!(
+        "preparo el perfil aislado del almacén {}",
+        store.name()
+    ));
+    let profile = prepare(client, store).map_err(|complaints| {
+        format!(
+            "el perfil aislado del almacén {} no se pudo preparar: {}",
+            store.name(),
+            complaints.join(" · ")
+        )
+    })?;
+    shared.lock().profiles.push(profile.clone());
+    Ok(profile)
+}
+
+fn run_the_group_catching_panics(
+    probe: &Probe,
+    checks: &[&Check],
+    already: Option<&ObservedErrand>,
+) -> Settled {
+    catch_unwind(AssertUnwindSafe(|| probe.run_group(checks, already))).unwrap_or_else(|panic| {
+        let why = panic
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| panic.downcast_ref::<&str>().map(|text| (*text).to_owned()))
+            .unwrap_or_default();
+        probe.witness.harness(&format!("el arnés reventó: {why}"));
+        all_pending(checks, &format!("el arnés reventó: {why}")).into()
+    })
 }
 
 /// Ordena la cola en tramos —ninguna, clic, persona— con los saludos delante de cada uno.
@@ -684,10 +745,14 @@ fn stop_what_failed_greetings_stop(shared: &Shared, session: &mut Session) {
     session.reasons.extend(stopped);
 }
 
-/// Lo siguiente que corre: el grupo, con qué y el trámite ya observado que lo juzga.
+/// Lo siguiente que corre: el grupo, con qué cliente y almacén, el perfil si ya está preparado, el
+/// informe y el trámite ya observado que lo juzga.
 struct Next {
     group: Vec<String>,
-    probe: Probe,
+    client: Client,
+    store: Store,
+    prepared: Option<Profile>,
+    report: PathBuf,
     already: Option<ObservedErrand>,
 }
 
@@ -724,18 +789,12 @@ fn take_the_next_group(shared: &Arc<Shared>, session: &mut Session) -> Option<Ne
         let already = ErrandKey::of(head)
             .filter(|_| !queued.rerun)
             .and_then(|key| open.report.observed(&key).cloned());
-        let profile = client.profile(head.store());
-        let probe = Probe {
-            client: profile.launcher.clone(),
-            kind: client.kind,
-            trust_root: profile.trust_root.clone(),
-            report: dir.clone(),
-            patience: shared.patience,
-            witness: Arc::new(ConsoleWitness {
-                shared: Arc::clone(shared),
-            }),
-            runner: Arc::clone(&shared.runner),
-        };
+        let store = head.store();
+        let prepared = session
+            .profiles
+            .iter()
+            .find(|profile| profile.store == store)
+            .cloned();
         session.log = already
             .is_none()
             .then(|| CheckLog::open(&log_path_of(&dir, &group[0])).ok())
@@ -745,7 +804,10 @@ fn take_the_next_group(shared: &Arc<Shared>, session: &mut Session) -> Option<Ne
         shared.publish(session);
         return Some(Next {
             group,
-            probe,
+            client,
+            store,
+            prepared,
+            report: dir,
             already,
         });
     }
@@ -760,14 +822,14 @@ fn settle(
     key: Option<ErrandKey>,
     already: Option<ObservedErrand>,
     settled: Settled,
-    probe: &Probe,
+    witness: &dyn Witness,
 ) {
     let Some(open) = session.report.as_mut() else {
         return;
     };
     if let (Some(key), Some(observed)) = (key, settled.observed) {
         if let Err(complaint) = open.report.observe(key, observed) {
-            probe.witness.harness(&complaint);
+            witness.harness(&complaint);
         }
     }
     for settlement in settled.settlements {
@@ -779,7 +841,7 @@ fn settle(
                 duration,
             } => {
                 if let Err(complaint) = open.report.resolve(&id, outcome, observation, duration) {
-                    probe.witness.harness(&complaint);
+                    witness.harness(&complaint);
                 }
                 session.reasons.remove(&id);
             }
@@ -1205,18 +1267,21 @@ expects.code = "SAF_03"
             Duration::from_secs(1),
             Arc::clone(runner) as Arc<dyn ErrandRunner>,
         );
-        console.shared.lock().client = Some(Client {
-            kind: ClientKind::Rfirma,
-            binary: PathBuf::from("/usr/bin/rfirma"),
-            profiles: crate::client::Store::ALL
+        {
+            let mut session = console.shared.lock();
+            session.client = Some(Client {
+                kind: ClientKind::Rfirma,
+                binary: PathBuf::from("/usr/bin/rfirma"),
+                trust_root: None,
+            });
+            session.profiles = Store::ALL
                 .into_iter()
-                .map(|store| crate::client::Profile {
+                .map(|store| Profile {
                     store,
-                    launcher: dir.path().join(store.name()).join("launch-subject"),
-                    trust_root: dir.path().join("root.pem"),
+                    ..crate::client::a_profile_in(&dir.path().join(store.name()))
                 })
-                .collect(),
-        });
+                .collect();
+        }
         console.open_report("a-report".to_owned()).unwrap();
         (console, dir)
     }

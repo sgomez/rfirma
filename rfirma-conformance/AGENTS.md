@@ -23,7 +23,8 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/report_view.rs` | La vista de un informe, igual lo corra la sesión o no: conjuntos en el orden del catálogo con sus recuentos; no sabe de la sesión. |
 | `src/selection.rs` | La Selección: un texto de ids y conjuntos, que valen también como prefijo por segmentos, resuelto contra el catálogo y el alcance, con los saludos que añade y lo de fuera que comparte trámite. |
 | `src/snapshot.rs` | El estado de la sesión activa que recibe la página: la vista de su informe más cliente, cola, y comprobación en curso. |
-| `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`, `token_apart`, `ed25519`, `several`, `expired`, `dnie`, `rsa_without_sha1`), cada uno con su envoltorio y su raíz de confianza. |
+| `src/client.rs` | El cliente a prueba y qué cliente es, los almacenes y el perfil aislado de cada uno, que se prepara la primera vez que lo pide una tanda: el almacén lo monta `scripts/isolated-store.sh` y lo completa la receta. |
+| `src/recipe.rs` | La receta de cada clase de cliente, rFirma y AutoFirma: el entorno con el que se lanza contra un perfil, sus preferencias y su raíz de confianza. |
 | `src/catalogue.rs` | La comprobación como tipo —exigencia, cómo se provoca, qué hace la persona y una sola expectativa— y la lectura del catálogo con lo que el tipo no puede decir: ids repetidos, dos comprobaciones que miden lo mismo y lo que no casa con el manifiesto de la sede. |
 | `src/saf_table.rs` | La lectura de la tabla SAF y su cruce con el catálogo: ids que no miden su fila, comprobaciones de un SAF sin fila y dos que observan el mismo rechazo. |
 | `src/manifest.rs` | El vocabulario de la sede que publica `driver.mjs --manifest`: modos y guiones con su sede, su familia y sus condiciones. |
