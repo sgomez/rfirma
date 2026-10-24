@@ -1,4 +1,5 @@
 import type { Comparison } from "../contract/Comparison";
+import type { DeducedCoordinates } from "../contract/DeducedCoordinates";
 import type { LiveLine } from "../contract/LiveLine";
 import type { ReportView } from "../contract/ReportView";
 import type { Snapshot } from "../contract/Snapshot";
@@ -41,6 +42,13 @@ export class FakeServer implements Wire {
   reportViews = new Map<string, ReportView>();
   logs = new Map<string, string>();
   comparison: Comparison | null = null;
+  deduced: DeducedCoordinates = {
+    name: "autofirma-1.9.2-2026-10-24",
+    title: "autofirma 1.9.2",
+    os: "Linux",
+    os_version: "6.8.0",
+    client_version: "1.9.2",
+  };
 
   constructor(snapshot: Snapshot) {
     this.snapshot = snapshot;
@@ -93,6 +101,8 @@ export class FakeServer implements Wire {
           ? reply(200, { ok: view })
           : reply(409, { error: `no existe el informe «${params.report}»` });
       }
+      case "/api/defaults":
+        return reply(200, { ok: this.deduced });
       case "/api/log":
         return new Response(this.logs.get(params.check ?? "") ?? "", { status: 200 });
       case "/api/transcript":

@@ -201,6 +201,82 @@ describe("the session", () => {
     );
   });
 
+  it("creates a report from the form filled with what the session proposes, with the title changed", async () => {
+    const { server, user } = renderConsoleAt("/", aSnapshot({ report_name: null, report: null }));
+
+    await user.click(await screen.findByRole("button", { name: "Informe nuevo…" }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() =>
+      expect(within(dialog).getByLabelText("Nombre")).toHaveValue("autofirma-1.9.2-2026-10-24"),
+    );
+    expect(within(dialog).getByLabelText("Título")).toHaveValue("autofirma 1.9.2");
+    expect(within(dialog).getByLabelText("Versión del cliente")).toHaveValue("1.9.2");
+    expect(within(dialog).getByLabelText("Sistema")).toHaveValue("Linux");
+    await user.clear(within(dialog).getByLabelText("Título"));
+    await user.type(within(dialog).getByLabelText("Título"), "Prueba de rades");
+    await user.click(within(dialog).getByRole("button", { name: "Crear" }));
+
+    expect(server.posted("/api/reports")).toEqual([
+      {
+        name: "autofirma-1.9.2-2026-10-24",
+        title: "Prueba de rades",
+        notes: "",
+        client_version: "1.9.2",
+        os: "Linux",
+        os_version: "6.8.0",
+      },
+    ]);
+  });
+
+  it("corrects the header of the open report from the same fields", async () => {
+    const view = aReportView();
+    view.header.title = "Antes";
+    view.header.notes = "Una nota";
+    const { server, user } = renderConsoleAt("/", aSnapshot({ report: view }));
+
+    await user.click(await screen.findByRole("button", { name: "Editar cabecera" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText("Título")).toHaveValue("Antes");
+    expect(within(dialog).getByLabelText("Notas")).toHaveValue("Una nota");
+    await user.clear(within(dialog).getByLabelText("Versión del cliente"));
+    await user.type(within(dialog).getByLabelText("Versión del cliente"), "1.9.3");
+    await user.click(within(dialog).getByRole("button", { name: "Guardar" }));
+
+    expect(server.posted("/api/report/header")).toEqual([
+      {
+        title: "Antes",
+        notes: "Una nota",
+        client_version: "1.9.3",
+        os: "Linux",
+        os_version: "6.8.0",
+      },
+    ]);
+  });
+
+  it("lists the reports that can be continued apart from those that are read-only, with the reason and the title", async () => {
+    const snapshot = aSnapshot({ report_name: null, report: null });
+    const [first] = snapshot.reports;
+    if (!first) throw new Error("fixture without reports");
+    snapshot.reports = [
+      { ...first, name: "can", title: "Mi prueba" },
+      {
+        ...first,
+        name: "cannot",
+        client_version: "1.8.0",
+        continuable: false,
+        why_not: "es de la versión 1.8.0",
+      },
+    ];
+    renderConsoleAt("/", snapshot);
+
+    const continuable = await screen.findByRole("list", { name: "Se pueden continuar" });
+    const readOnly = screen.getByRole("list", { name: "Solo lectura" });
+    expect(within(continuable).getByText("can")).toBeInTheDocument();
+    expect(within(continuable).getByText("Mi prueba")).toBeInTheDocument();
+    expect(within(readOnly).getByText("cannot")).toBeInTheDocument();
+    expect(within(readOnly).getByText("es de la versión 1.8.0")).toBeInTheDocument();
+  });
+
   it("marks the client step while its changes are not resolved", async () => {
     const { user } = renderConsoleAt("/");
 

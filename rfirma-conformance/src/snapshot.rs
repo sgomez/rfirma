@@ -35,6 +35,7 @@ pub(crate) struct ReportEntry {
     pub(crate) kind: Option<&'static str>,
     pub(crate) client: Option<String>,
     pub(crate) client_version: Option<String>,
+    pub(crate) title: Option<String>,
     pub(crate) date: Option<String>,
     pub(crate) continuable: bool,
     pub(crate) why_not: Option<String>,
