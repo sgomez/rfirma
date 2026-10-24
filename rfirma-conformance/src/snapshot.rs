@@ -1,5 +1,5 @@
 //! El estado de la sesión activa para la página: la vista de su informe más lo que es solo de la
-//! sesión —cliente, cola y comprobación en curso—.
+//! sesión —candidatos, cliente, cola y comprobación en curso—.
 
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -8,7 +8,7 @@ use serde::Serialize;
 use ts_rs::TS;
 
 use crate::catalogue::Check;
-use crate::client::{Client, ClientKind};
+use crate::client::{Candidate, Client, ClientKind};
 use crate::outcome::CheckState;
 use crate::report::Report;
 use crate::report_view::{report_view, ReportView};
@@ -17,6 +17,7 @@ use crate::report_view::{report_view, ReportView};
 #[derive(Default)]
 pub(crate) struct Activity<'a> {
     pub(crate) client: Option<&'a Client>,
+    pub(crate) candidates: &'a [Candidate],
     pub(crate) client_complaints: &'a [String],
     pub(crate) resolving_client: bool,
     pub(crate) running: &'a [String],
@@ -42,6 +43,7 @@ pub(crate) struct ReportEntry {
 #[ts(export)]
 pub(crate) struct Snapshot<'a> {
     client: Option<&'a Client>,
+    candidates: &'a [Candidate],
     client_complaints: &'a [String],
     resolving_client: bool,
     report_name: Option<&'a str>,
@@ -70,6 +72,7 @@ pub(crate) fn snapshot_of<'a>(
     let report = open.map(|(_, report)| report);
     Snapshot {
         client: activity.client,
+        candidates: activity.candidates,
         client_complaints: activity.client_complaints,
         resolving_client: activity.resolving_client,
         report_name: open.map(|(name, _)| name),

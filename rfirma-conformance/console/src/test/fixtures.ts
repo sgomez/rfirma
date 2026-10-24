@@ -102,9 +102,13 @@ export function aSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
   return {
     client: {
       kind: "autofirma",
+      origin: "installed",
       binary: "/usr/bin/autofirma",
+      library_dir: null,
+      identity: { version: null, channel: null },
       trust_root: null,
     },
+    candidates: [],
     client_complaints: [],
     resolving_client: false,
     report_name: "af-linux-prueba",

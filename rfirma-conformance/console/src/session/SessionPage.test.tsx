@@ -220,7 +220,7 @@ describe("the session", () => {
         name: "Cambiar",
       }),
     );
-    const binary = screen.getByRole("textbox", { name: "Binario" });
+    const binary = screen.getByRole("combobox", { name: "Binario" });
     const root = screen.getByRole("textbox", { name: "Raíz de confianza" });
     const resolved = [(binary as HTMLInputElement).value, (root as HTMLInputElement).value];
     await user.click(screen.getByRole("radio", { name: "rFirma" }));

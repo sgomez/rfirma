@@ -90,14 +90,47 @@ impl Store {
     }
 }
 
-/// El cliente elegido: su clase, su binario y la raíz dada a mano, si la hay; sus perfiles se
-/// preparan al pedirlos.
+/// El cliente elegido: su clase, de dónde sale su binario, su biblioteca nativa, lo que dice de sí
+/// mismo y la raíz dada a mano, si la hay; sus perfiles se preparan al pedirlos.
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export)]
 pub(crate) struct Client {
     pub(crate) kind: ClientKind,
+    pub(crate) origin: Origin,
     pub(crate) binary: PathBuf,
+    pub(crate) library_dir: Option<PathBuf>,
+    pub(crate) identity: Identity,
     pub(crate) trust_root: Option<PathBuf>,
+}
+
+/// De dónde sale el binario de un cliente.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub(crate) enum Origin {
+    Installed,
+    LocalBuild,
+    Worktree,
+    Given,
+}
+
+/// Un binario que la suite ofrece para medir, con la biblioteca nativa con que se lanza.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct Candidate {
+    pub(crate) kind: ClientKind,
+    pub(crate) origin: Origin,
+    pub(crate) binary: PathBuf,
+    pub(crate) library_dir: Option<PathBuf>,
+    pub(crate) identity: Identity,
+}
+
+/// Lo que un cliente dice de sí mismo: su versión y su canal; de AutoFirma, nada.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct Identity {
+    pub(crate) version: Option<String>,
+    pub(crate) channel: Option<String>,
 }
 
 /// El perfil aislado de un almacén: el HOME del cliente, el entorno con el que se lanza contra él y
@@ -119,21 +152,29 @@ pub(crate) struct IsolatedStore {
     pub(crate) store: Store,
 }
 
-/// Las coordenadas que se deducen solas al crear un informe; la versión del cliente, no.
+/// Las coordenadas que se deducen solas al crear un informe: el sistema y, si el cliente la dice, su
+/// versión.
 #[derive(Debug, Serialize, TS)]
 #[ts(export)]
 pub(crate) struct DeducedCoordinates {
     os: String,
     os_version: String,
+    client_version: String,
 }
 
-/// Resuelve el cliente de clase `kind`, con el binario y la raíz dados a mano si los hay; cada queja
-/// dice qué falta.
+/// Resuelve el cliente de clase `kind`, con el binario y la raíz dados a mano si los hay; un binario
+/// que está entre los `candidates` se lanza como se ofreció. Cada queja dice qué falta.
 pub(crate) fn resolve(
     kind: ClientKind,
     binary: Option<PathBuf>,
     trust_root: Option<PathBuf>,
+    candidates: &[Candidate],
 ) -> Result<Client, Vec<String>> {
+    let origin = if binary.is_some() {
+        Origin::Given
+    } else {
+        Origin::Installed
+    };
     let binary = match binary {
         Some(binary) => binary,
         None => the_binary_on_the_path(kind.name()).ok_or_else(|| {
@@ -157,10 +198,28 @@ pub(crate) fn resolve(
             )]);
         }
     }
+    let offered = candidates
+        .iter()
+        .find(|candidate| candidate.kind == kind && candidate.binary == binary);
+    let candidate = match offered {
+        Some(candidate) => candidate.clone(),
+        None => Candidate {
+            identity: the_recipe_of(kind)
+                .the_identity_of(&binary, None)
+                .map_err(|complaint| vec![complaint])?,
+            kind,
+            origin,
+            binary,
+            library_dir: None,
+        },
+    };
     preflight()?;
     Ok(Client {
         kind,
-        binary,
+        origin: candidate.origin,
+        binary: candidate.binary,
+        library_dir: candidate.library_dir,
+        identity: candidate.identity,
         trust_root,
     })
 }
@@ -177,13 +236,24 @@ pub(crate) fn prepare(client: &Client, store: Store) -> Result<Profile, Vec<Stri
     }
     the_recipe_of(client.kind)
         .the_profile_of(isolated, client.trust_root.clone())
+        .map(|profile| with_the_library_of(client, profile))
         .map_err(|complaint| vec![complaint])
 }
 
-pub(crate) fn the_deduced_coordinates() -> DeducedCoordinates {
+fn with_the_library_of(client: &Client, mut profile: Profile) -> Profile {
+    if let Some(dir) = &client.library_dir {
+        profile
+            .environment
+            .push(("RFIRMA_LIB_DIR", dir.as_os_str().to_owned()));
+    }
+    profile
+}
+
+pub(crate) fn the_deduced_coordinates(client: &Client) -> DeducedCoordinates {
     DeducedCoordinates {
         os: uname("-s"),
         os_version: uname("-r"),
+        client_version: client.identity.version.clone().unwrap_or_default(),
     }
 }
 
@@ -197,7 +267,7 @@ fn uname(flag: &str) -> String {
         .unwrap_or_default()
 }
 
-fn the_binary_on_the_path(name: &str) -> Option<PathBuf> {
+pub(crate) fn the_binary_on_the_path(name: &str) -> Option<PathBuf> {
     std::env::var_os("PATH")?
         .to_str()?
         .split(':')
@@ -258,7 +328,7 @@ fn preflight() -> Result<(), Vec<String>> {
     }
 }
 
-fn is_executable(path: &Path) -> bool {
+pub(crate) fn is_executable(path: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
     std::fs::metadata(path)
         .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
@@ -313,6 +383,27 @@ mod tests {
         for store in Store::ALL {
             assert_eq!(Store::named(store.name()), Some(store));
         }
+    }
+
+    #[test]
+    fn a_build_is_launched_with_the_native_library_of_its_checkout() {
+        let client = Client {
+            kind: ClientKind::Rfirma,
+            origin: Origin::LocalBuild,
+            binary: PathBuf::from("/src/rfirma/rfirma-app/src-tauri/target/release/rfirma"),
+            library_dir: Some(PathBuf::from(
+                "/src/rfirma/rfirma-native-bridge/target/lib/rfirma",
+            )),
+            identity: Identity::default(),
+            trust_root: None,
+        };
+
+        let profile = with_the_library_of(&client, a_profile_in(Path::new("/p")));
+
+        assert!(profile.environment.contains(&(
+            "RFIRMA_LIB_DIR",
+            OsString::from("/src/rfirma/rfirma-native-bridge/target/lib/rfirma")
+        )));
     }
 
     #[test]
