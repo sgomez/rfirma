@@ -76,7 +76,7 @@ ficheros más grandes del repositorio (hasta 32 KB).
 `contrato-protocolo-afirma` · `coordenadas-recuadro-pades` · `dnie-en-flatpak` · `dnie-en-linux` · `dnie-en-macos` · `dnie-en-windows` ·
 `exclusion-afirma-ui-utils` · `filtros-sede-unmeasured` · `firma-visible-trifasica` ·
 `flathub-libreria-nativa` · `flatpak-canal-unico` · `glibc-libreria-nativa` ·
-`graalvm-libawt-shared` · `i18next-y-el-po` · `native-image-postfirma` ·
+`graalvm-libawt-shared` · `i18next-y-el-po` · `invocacion-desde-un-portafirmas` · `native-image-postfirma` ·
 `native-image-postfirma-ce25` · `native-image-shared-pades` ·
 `native-image-xades` ·
 `opensc-del-sistema` · `p12-en-almacen-nss` · `pades-triphase-contract` ·
