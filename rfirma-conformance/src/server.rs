@@ -324,6 +324,13 @@ fn attend(mut stream: TcpStream, gate: &Gate, build: &Build, console: &Console) 
             &mut stream,
             console.report_view(request.parameter("report").unwrap_or_default()),
         ),
+        ("GET", "/api/selection") => answer(
+            &mut stream,
+            Ok::<_, String>(console.resolve_selection(
+                request.parameter("text").unwrap_or_default(),
+                request.parameter("scope").filter(|scope| !scope.is_empty()),
+            )),
+        ),
         ("GET", "/api/references") => answer(&mut stream, console.references()),
         ("GET", "/api/compare") => answer(
             &mut stream,

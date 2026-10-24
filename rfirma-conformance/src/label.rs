@@ -1,8 +1,9 @@
-//! Las etiquetas de una comprobación, lo que puede explicar su NO CONFORME igual en cualquier
-//! informe, cada una con un origen que se comprueba; no cambian el resultado.
+//! Las etiquetas de una comprobación, lo que puede explicar su NO CONFORME según la clase de cliente
+//! del informe, cada una con un origen que se comprueba; no cambian el resultado.
 
 use serde::{Deserialize, Deserializer};
 
+use crate::client::ClientKind;
 use crate::known_bug::{the_known_bug, InMaster, KnownBug};
 
 /// Una etiqueta de la lista cerrada, con su nombre en pantalla y el porqué que la sostiene.
@@ -36,6 +37,14 @@ impl Label {
             Self::ManualDeprecated => "El manual de AutoFirma lo desaconseja (MCF, §8, pág. 97): \
                                        AutoFirma lo soporta y rFirma no."
                 .to_owned(),
+        }
+    }
+
+    pub fn explains(&self, kind: ClientKind) -> bool {
+        match self {
+            Self::AutofirmaBug(_) | Self::AutofirmaBugInMaster(_) => kind == ClientKind::Autofirma,
+            Self::RfirmaAdr(_) => kind == ClientKind::Rfirma,
+            Self::ManualDeprecated => true,
         }
     }
 

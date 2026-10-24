@@ -1,4 +1,5 @@
 import type { CheckView } from "../contract/CheckView";
+import type { ClientKind } from "../contract/ClientKind";
 import type { LabelView } from "../contract/LabelView";
 import type { ReportView } from "../contract/ReportView";
 import type { ResultName } from "../contract/ResultName";
@@ -16,6 +17,7 @@ export function aCheck(id: string, state: ResultName = "PENDIENTE"): CheckView {
     assistance: "none",
     store: "rsa",
     labels: [],
+    explained: false,
     state,
     observation: state === "PENDIENTE" ? null : "el trámite se completó",
     date: state === "PENDIENTE" ? null : "2026-09-21",
@@ -33,11 +35,24 @@ export const A_BUG_LABEL: LabelView = {
   reason: "BUG-15: Ausencia de validación de cop en signandsave (sigue en master)",
 };
 
-export function withLabels(view: ReportView, id: string, labels: LabelView[]): ReportView {
+function explainsFor(kind: ClientKind, label: LabelView): boolean {
+  return label.name.startsWith(`${kind}:`) || label.name === "manual:deprecated";
+}
+
+export function withLabels(
+  view: ReportView,
+  id: string,
+  labels: LabelView[],
+  kind: ClientKind = view.kind,
+): ReportView {
+  const explained = (check: CheckView) =>
+    check.state === "NO CONFORME" && labels.some((label) => explainsFor(kind, label));
   const sets = view.sets.map((set) =>
     aSet(
       set.name,
-      set.checks.map((check) => (check.id === id ? { ...check, labels } : check)),
+      set.checks.map((check) =>
+        check.id === id ? { ...check, labels, explained: explained(check) } : check,
+      ),
     ),
   );
   return { ...view, sets, summary: summaryOf(sets.flatMap((set) => set.checks)) };
@@ -49,8 +64,7 @@ function summaryOf(checks: CheckView[]): Summary {
     total: checks.length,
     compliant: count("CONFORME"),
     noncompliant: count("NO CONFORME"),
-    explained: checks.filter((check) => check.state === "NO CONFORME" && check.labels.length > 0)
-      .length,
+    explained: checks.filter((check) => check.explained).length,
     not_observable: count("NO OBSERVABLE"),
     pending: count("PENDIENTE"),
   };

@@ -10,7 +10,7 @@ const A_FAILED_CHECK = "unsupported_protocol_uri_rejected";
 const A_COMPLIANT_CHECK = "greeting_opens_the_channel";
 
 function aReportOf(kind: ClientKind, id: string, labels: LabelView[]) {
-  return aSnapshot({ report: { ...withLabels(aReportView(), id, labels), kind } });
+  return aSnapshot({ report: { ...withLabels(aReportView(), id, labels, kind), kind } });
 }
 
 function theItemOf(row: HTMLElement) {
@@ -97,10 +97,13 @@ describe("a check row", () => {
     expect(detail).toHaveTextContent(`autofirma:bug:1.9.2 ${A_BUG_LABEL.reason}`);
   });
 
-  it.each(["autofirma", "rfirma"] as const)(
-    "marks as explained a labelled noncompliance in a report of %s",
-    async (kind) => {
-      const { user } = renderConsoleAt("/", aReportOf(kind, A_FAILED_CHECK, [AN_ADR_LABEL]));
+  it.each([
+    ["autofirma", A_BUG_LABEL],
+    ["rfirma", AN_ADR_LABEL],
+  ] as const)(
+    "marks as explained a noncompliance with a label of its own class in a report of %s",
+    async (kind, label) => {
+      const { user } = renderConsoleAt("/", aReportOf(kind, A_FAILED_CHECK, [label]));
       const row = await theRowOf(A_FAILED_CHECK);
 
       await user.click(row);
@@ -128,6 +131,23 @@ describe("a check row", () => {
 
     expect(screen.getAllByTitle(/^0 sin explicar · 1 explicado\./).length).toBeGreaterThan(0);
   });
+
+  it.each([
+    ["autofirma", AN_ADR_LABEL],
+    ["rfirma", A_BUG_LABEL],
+  ] as const)(
+    "counts as unexplained a noncompliance with only the label of the other class in a report of %s",
+    async (kind, label) => {
+      const { user } = renderConsoleAt("/", aReportOf(kind, A_FAILED_CHECK, [label]));
+      const row = await theRowOf(A_FAILED_CHECK);
+
+      await user.click(row);
+
+      expect(theItemOf(row)).not.toHaveAttribute("data-explained");
+      expect(screen.getAllByTitle(/^1 sin explicar · 0 explicados\./).length).toBeGreaterThan(0);
+      expect(screen.getByText("Etiquetas", { selector: "dt" })).toBeVisible();
+    },
+  );
 
   it("counts as unexplained a noncompliance without labels", async () => {
     renderConsoleAt("/", aReportOf("autofirma", THE_CHECK, [A_BUG_LABEL]));

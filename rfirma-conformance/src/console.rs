@@ -24,10 +24,11 @@ use crate::client::{
 use crate::comparison::{compare, Comparison};
 use crate::errand::{ErrandKey, ErrandRunner, NodeRunner, ObservedErrand};
 use crate::hand::the_assistance_of;
-use crate::livelog::{CheckLog, LiveLogSink};
+use crate::livelog::{CheckLog, LiveLogSink, Provenance};
 use crate::outcome::CheckState;
 use crate::report::{HeaderCoordinates, Report, THE_REPORT_FILE};
 use crate::report_view::report_view;
+use crate::selection::{resolve as resolve_the_selection, SelectionResolution};
 use crate::snapshot::{snapshot_of, Activity, ReportEntry};
 use crate::transcript::{log_path_of, transcript_path_of};
 use crate::validation::{
@@ -87,7 +88,8 @@ pub(crate) struct SuiteFailure {
 #[derive(Debug, Serialize, TS)]
 #[ts(export)]
 pub(crate) struct LiveLine {
-    check: Option<String>,
+    check: String,
+    provenance: Provenance,
     line: String,
 }
 
@@ -443,6 +445,11 @@ impl Console {
         ))
     }
 
+    /// Lo que resuelve `text` contra el catálogo y el alcance `scope`, sin tocar la sesión.
+    pub(crate) fn resolve_selection(&self, text: &str, scope: Option<&str>) -> SelectionResolution {
+        resolve_the_selection(text, &self.shared.catalogue, scope)
+    }
+
     fn open_to_see(&self, name: &str) -> Result<Report, String> {
         let path = self.shared.the_report_dir(name)?.join(THE_REPORT_FILE);
         if !path.is_file() {
@@ -537,21 +544,24 @@ impl Witness for ConsoleWitness {
     }
 
     fn log_sink(&self) -> LiveLogSink {
-        let (log, check) = {
+        let (log, group) = {
             let session = self.shared.lock();
-            (session.log.clone(), session.running.first().cloned())
+            (session.log.clone(), session.running.clone())
         };
         let shared = Arc::clone(&self.shared);
-        LiveLogSink::new(move |line| {
+        LiveLogSink::new(move |provenance, line| {
             if let Some(log) = &log {
                 log.write(&line);
             }
-            let payload = serde_json::to_value(LiveLine {
-                check: check.clone(),
-                line,
-            })
-            .expect("la línea se serializa");
-            shared.broadcast(&event_frame("log", &payload));
+            for check in &group {
+                let payload = serde_json::to_value(LiveLine {
+                    check: check.clone(),
+                    provenance,
+                    line: line.clone(),
+                })
+                .expect("la línea se serializa");
+                shared.broadcast(&event_frame("log", &payload));
+            }
         })
     }
 
@@ -1127,6 +1137,52 @@ expects.completes = {}
             console.report_view("nadie").unwrap_err(),
             "no hay informe llamado «nadie»"
         );
+    }
+
+    #[test]
+    fn a_selection_is_resolved_without_a_report_or_a_client() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = Console::new(a_catalogue(), dir.path().to_owned(), Duration::ZERO);
+
+        let resolution = console.resolve_selection("saludo, nadie", None);
+
+        assert_eq!(resolution.ids, ["a_greeting"]);
+        assert_eq!(resolution.unknown, ["nadie"]);
+    }
+
+    #[test]
+    fn the_live_log_reaches_every_member_of_a_group_with_its_provenance() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = Console::new(a_catalogue(), dir.path().to_owned(), Duration::ZERO);
+        console.shared.lock().running = vec!["first".to_owned(), "second".to_owned()];
+        let frames = console.subscribe();
+        frames.recv().unwrap();
+
+        ConsoleWitness {
+            shared: Arc::clone(&console.shared),
+        }
+        .harness("aviso");
+
+        let lines: Vec<serde_json::Value> = frames
+            .try_iter()
+            .map(|frame| {
+                let data = frame
+                    .lines()
+                    .find_map(|l| l.strip_prefix("data: "))
+                    .unwrap();
+                serde_json::from_str(data).unwrap()
+            })
+            .collect();
+        let seen: Vec<_> = lines
+            .iter()
+            .map(|line| {
+                (
+                    line["check"].as_str().unwrap(),
+                    line["provenance"].as_str().unwrap(),
+                )
+            })
+            .collect();
+        assert_eq!(seen, [("first", "suite"), ("second", "suite")]);
     }
 
     #[test]

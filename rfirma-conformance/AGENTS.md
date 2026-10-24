@@ -1,6 +1,6 @@
 # Mapa de la suite de conformidad
 
-La suite mide un binario instalado de AutoFirma o rFirma con el `autoscript.js` de la sede como
+La suite mide AutoFirma o rFirma, con el binario que se le indique, con el `autoscript.js` de la sede como
 instrumento. Es un crate aparte y fuera del CI (ADR-0013), y no es una grada ni una puerta
 (ADR-0014). Su única cara es la consola web que levanta `just conformance`: no hay órdenes de
 consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las de la consola, con
@@ -21,6 +21,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/console.rs` | La sesión: cliente e informe elegidos, la cola en tramos, el único hilo que corre las comprobaciones y el testigo de verdad, que cuenta lo que pasa en la página. |
 | `src/witness.rs` | El testigo, el seam entre quien corre las comprobaciones y la persona, que le cuenta lo que pasa; con su falso para las pruebas. |
 | `src/report_view.rs` | La vista de un informe, igual lo corra la sesión o no: conjuntos en el orden del catálogo con sus recuentos; no sabe de la sesión. |
+| `src/selection.rs` | La Selección: un texto de ids y conjuntos, que valen también como prefijo por segmentos, resuelto contra el catálogo y el alcance, con los saludos que añade y lo de fuera que comparte trámite. |
 | `src/snapshot.rs` | El estado de la sesión activa que recibe la página: la vista de su informe más cliente, cola, y comprobación en curso. |
 | `src/client.rs` | El cliente a prueba y qué cliente es, los almacenes y el perfil aislado de cada uno, que se prepara la primera vez que lo pide una tanda: el almacén lo monta `scripts/isolated-store.sh` y lo completa la receta. |
 | `src/recipe.rs` | La receta de cada clase de cliente, rFirma y AutoFirma: el entorno con el que se lanza contra un perfil, sus preferencias y su raíz de confianza. |
