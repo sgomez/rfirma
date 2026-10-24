@@ -83,7 +83,13 @@ describe("a report page", () => {
     await screen.findByText("Esperando la primera línea…");
 
     await user.keyboard("l");
-    act(() => server.say({ check: "greeting_echoes", line: "00:00.10 sede    abre el canal" }));
+    act(() =>
+      server.say({
+        check: "greeting_echoes",
+        provenance: "sede",
+        line: "00:00.10 sede    abre el canal",
+      }),
+    );
     expect(screen.queryByText("abre el canal")).not.toBeInTheDocument();
 
     await user.click(await screen.findByRole("button", { name: /Reanudar \(1\)/ }));

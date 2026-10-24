@@ -585,7 +585,7 @@ mod tests {
     fn drain_stream_delivers_lines_as_the_client() {
         let delivered = Arc::new(Mutex::new(Vec::new()));
         let into = Arc::clone(&delivered);
-        let log_sink = LiveLogSink::new(move |line| into.lock().unwrap().push(line));
+        let log_sink = LiveLogSink::new(move |_, line| into.lock().unwrap().push(line));
         let input = std::io::Cursor::new(b"linea 1\nlinea 2\nlinea 3\n");
 
         drain_stream(input, log_sink, Instant::now());

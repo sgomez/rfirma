@@ -8,10 +8,9 @@ import {
   useRef,
   useState,
 } from "react";
+import type { Provenance } from "../contract/Provenance";
 import { useLive } from "../suite/live";
 import { useShortcuts } from "../ui/shortcuts";
-
-export type Provenance = "sede" | "cliente" | "suite";
 
 const PROVENANCES: readonly Provenance[] = ["sede", "cliente", "suite"];
 const FORMER: Record<string, Provenance> = { conductor: "sede", sujeto: "cliente", arnés: "suite" };
@@ -66,7 +65,7 @@ export function LogDock({ check, report, runningIds, follow }: LogDockProps) {
   }, []);
 
   const runsThisOne = check !== null && runningIds.includes(check);
-  const head = runsThisOne ? (runningIds[0] ?? null) : null;
+  const head = runsThisOne ? check : null;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: una pasada nueva de la comprobación reescribe su registro
   useEffect(() => {
@@ -99,7 +98,7 @@ export function LogDock({ check, report, runningIds, follow }: LogDockProps) {
     if (!head) return;
     return onLine((line) => {
       if (line.check !== head) return;
-      const parsed = parseLine(line.line);
+      const parsed = { ...parseLine(line.line), provenance: line.provenance };
       if (pausedRef.current) held.current.push(parsed);
       else lines.current.push(parsed);
       redraw();

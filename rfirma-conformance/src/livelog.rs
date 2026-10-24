@@ -6,11 +6,21 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use serde::Serialize;
+use ts_rs::TS;
+
 /// Quién habló: la sede que conduce el cliente publicado, el cliente a prueba o la propia suite.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 pub(crate) enum Provenance {
+    #[serde(rename = "sede")]
+    #[ts(rename = "sede")]
     Site,
+    #[serde(rename = "cliente")]
+    #[ts(rename = "cliente")]
     Client,
+    #[serde(rename = "suite")]
+    #[ts(rename = "suite")]
     Suite,
 }
 
@@ -71,18 +81,18 @@ impl CheckLog {
 /// El extremo por el que la sede, el cliente y la suite entregan sus líneas, desde sus hilos.
 #[derive(Clone)]
 pub(crate) struct LiveLogSink {
-    deliver: Arc<dyn Fn(String) + Send + Sync>,
+    deliver: Arc<dyn Fn(Provenance, String) + Send + Sync>,
 }
 
 impl LiveLogSink {
-    pub(crate) fn new(deliver: impl Fn(String) + Send + Sync + 'static) -> Self {
+    pub(crate) fn new(deliver: impl Fn(Provenance, String) + Send + Sync + 'static) -> Self {
         Self {
             deliver: Arc::new(deliver),
         }
     }
 
     pub(crate) fn push(&self, provenance: Provenance, elapsed: Duration, text: &str) {
-        (self.deliver)(format_log_line(elapsed, provenance, text));
+        (self.deliver)(provenance, format_log_line(elapsed, provenance, text));
     }
 }
 
@@ -114,7 +124,7 @@ mod tests {
     fn live_log_sink_delivers_the_line_formatted_like_the_file() {
         let delivered = Arc::new(Mutex::new(Vec::new()));
         let into = Arc::clone(&delivered);
-        let sink = LiveLogSink::new(move |line| into.lock().unwrap().push(line));
+        let sink = LiveLogSink::new(move |_, line| into.lock().unwrap().push(line));
 
         sink.push(Provenance::Suite, Duration::from_millis(310), "aviso");
 
