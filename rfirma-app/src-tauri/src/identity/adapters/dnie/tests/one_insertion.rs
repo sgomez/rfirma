@@ -84,7 +84,10 @@ struct Swappable {
     inserted: Arc<Mutex<Arc<Mutex<EmulatedDnie>>>>,
     openings: Arc<AtomicUsize>,
     swaps: Option<Arc<AtomicUsize>>,
+    elsewhere: Arc<AtomicUsize>,
 }
+
+const DNIE_READER: &str = "Lector del DNIe";
 
 impl Swappable {
     fn with(card: EmulatedDnie) -> Self {
@@ -92,6 +95,7 @@ impl Swappable {
             inserted: Arc::new(Mutex::new(Arc::new(Mutex::new(card)))),
             openings: Arc::new(AtomicUsize::new(0)),
             swaps: Some(Arc::new(AtomicUsize::new(0))),
+            elsewhere: Arc::new(AtomicUsize::new(0)),
         }
     }
 
@@ -113,6 +117,10 @@ impl Swappable {
         if let Some(swaps) = &self.swaps {
             swaps.fetch_add(1, Ordering::SeqCst);
         }
+    }
+
+    fn another_card_goes_into_another_reader(&self) {
+        self.elsewhere.fetch_add(1, Ordering::SeqCst);
     }
 
     fn openings(&self) -> usize {
@@ -159,9 +167,16 @@ impl CardOpener for Swappable {
         Session::open_trusting(Contact(card), root)
     }
 
-    fn insertion(&self) -> Option<u64> {
-        let swaps = self.swaps.as_ref()?.load(Ordering::SeqCst);
-        Some(u64::try_from(swaps).expect("cabe"))
+    fn open_in_its_reader(&self) -> Result<(Session<Contact>, Option<String>), rdnie::Error> {
+        Ok((self.open()?, Some(DNIE_READER.to_owned())))
+    }
+
+    fn insertion(&self, reader: Option<&str>) -> Option<u64> {
+        let mut events = self.swaps.as_ref()?.load(Ordering::SeqCst);
+        if reader != Some(DNIE_READER) {
+            events += self.elsewhere.load(Ordering::SeqCst);
+        }
+        Some(u64::try_from(events).expect("cabe"))
     }
 }
 
@@ -226,4 +241,18 @@ fn a_listing_that_needs_the_card_after_an_unheard_swap_reads_the_card_now_in_the
     assert!(every
         .iter()
         .any(|certificate| certificate.der() == second_der.as_slice()));
+}
+
+#[test]
+fn a_card_going_into_another_reader_leaves_the_session_of_the_dnie_open() {
+    let (card, _) = a_card_of("ADA LOVELACE");
+    let reader = Swappable::with(card);
+    let dnie = DnieToken::new(reader.clone());
+    dnie.list(&dnie_store()).expect("el DNIe deberia listarse");
+
+    reader.another_card_goes_into_another_reader();
+    let signed = signed_by(&dnie);
+
+    assert!(signed.is_ok(), "{signed:?}");
+    assert_eq!(reader.openings(), 1);
 }

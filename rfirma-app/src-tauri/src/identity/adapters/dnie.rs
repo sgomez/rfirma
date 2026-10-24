@@ -43,8 +43,13 @@ pub trait CardOpener: Send + Sync {
         None
     }
 
-    /// Un número que cambia cada vez que se mete o se saca una tarjeta; ninguno si no lo sabe.
-    fn insertion(&self) -> Option<u64> {
+    /// Una sesión nueva con el DNIe y el lector donde se ha abierto, si se sabe.
+    fn open_in_its_reader(&self) -> Result<(Session<Self::Card>, Option<String>), rdnie::Error> {
+        Ok((self.open()?, None))
+    }
+
+    /// Un número que cambia cada vez que se mete o se saca una tarjeta de `reader`, o de cualquiera si no se sabe cuál; ninguno si no lo sabe.
+    fn insertion(&self, _reader: Option<&str>) -> Option<u64> {
         None
     }
 }
@@ -58,6 +63,12 @@ impl CardOpener for PcscCard {
 
     fn open(&self) -> Result<Session<PcscTransport>, rdnie::Error> {
         Session::open(PcscTransport::connect_first_dnie()?)
+    }
+
+    fn open_in_its_reader(&self) -> Result<(Session<PcscTransport>, Option<String>), rdnie::Error> {
+        let card = PcscTransport::connect_first_dnie()?;
+        let reader = card.reader();
+        Ok((Session::open(card)?, Some(reader)))
     }
 
     fn claimed_reader(&self) -> Option<String> {
@@ -76,8 +87,8 @@ impl CardOpener for PcscCard {
         )
     }
 
-    fn insertion(&self) -> Option<u64> {
-        super::pcsc::card_events()
+    fn insertion(&self, reader: Option<&str>) -> Option<u64> {
+        super::pcsc::card_events(reader)
     }
 }
 
@@ -103,9 +114,10 @@ pub struct DnieToken<O: CardOpener> {
     login: Mutex<Login>,
 }
 
-/// La sesión de la tarjeta que sigue en el lector, con la inserción en que se abrió.
+/// La sesión de la tarjeta que sigue en el lector, con el lector y la inserción en que se abrió.
 struct Inserted<T: Transport> {
     session: Session<T>,
+    reader: Option<String>,
     insertion: Option<u64>,
 }
 
@@ -256,6 +268,12 @@ impl<O: CardOpener> DnieToken<O> {
             .collect())
     }
 
+    fn holders(&self) -> Result<usize, TokenError> {
+        Ok(self
+            .listing(|session| session.certificates().map(|found| found.len()))?
+            .unwrap_or(0))
+    }
+
     fn every_certificate_of(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         Ok(self
             .listing(every_der)?
@@ -271,14 +289,18 @@ fn opened<'a, O: CardOpener>(
     inserted: &'a mut Option<Inserted<O::Card>>,
     opener: &O,
 ) -> Result<&'a mut Session<O::Card>, rdnie::Error> {
-    let insertion = opener.insertion();
     let held = match inserted.take() {
-        Some(held) if held.insertion == insertion => held,
+        Some(held) if held.insertion == opener.insertion(held.reader.as_deref()) => held,
         Some(_) => return Err(rdnie::Error::CardRemoved),
-        None => Inserted {
-            session: opener.open()?,
-            insertion,
-        },
+        None => {
+            let (session, reader) = opener.open_in_its_reader()?;
+            let insertion = opener.insertion(reader.as_deref());
+            Inserted {
+                session,
+                reader,
+                insertion,
+            }
+        }
     };
     Ok(&mut inserted.insert(held).session)
 }
@@ -413,6 +435,10 @@ impl<O: CardOpener> Token for DnieToken<O> {
 
     fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         self.every_certificate_of(store)
+    }
+
+    fn holders_without_reading(&self, _store: &Store) -> Option<Result<usize, TokenError>> {
+        Some(self.holders())
     }
 
     fn list_authenticated(

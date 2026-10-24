@@ -149,6 +149,13 @@ impl<T: Token> Token for WithTheDnie<T> {
         self.platform.every_certificate_skipping(store, &skipped)
     }
 
+    fn holders_without_reading(&self, store: &Store) -> Option<Result<usize, TokenError>> {
+        store
+            .is_the_dnie()
+            .then(|| self.dnie.holders_without_reading(store))
+            .flatten()
+    }
+
     fn list_authenticated(
         &self,
         store: &Store,

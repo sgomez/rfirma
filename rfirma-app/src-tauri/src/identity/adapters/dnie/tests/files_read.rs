@@ -1,8 +1,11 @@
+use std::path::Path;
+
 use rdnie_emulator::{EmulatedDnie, DNIE_4_ATR};
 
 use super::super::{dnie_store, seen_dnie};
 use super::in_the_reader::{the_pin, the_signing_certificate, InTheReader};
 use super::OfThePolice;
+use crate::identity::application::certificates::certificates_by_class;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::seen_dnie::DnieInTheReader;
 use crate::identity::ports::Token;
@@ -56,6 +59,23 @@ fn a_listing_reads_the_signing_certificate_file_and_no_other() {
         .expect("el DNIe deberia listarse");
 
     assert_eq!(certificate_files_read(&reader), vec![SIGNING_FILE]);
+}
+
+#[test]
+fn the_status_count_gives_both_holders_and_reads_no_certificate_file() {
+    let reader = in_the_reader();
+
+    let counted: usize = certificates_by_class(
+        &reader.token(),
+        &[dnie_store()],
+        Path::new("/sin/instalados"),
+    )
+    .iter()
+    .map(|(_, certificates)| certificates)
+    .sum();
+
+    assert_eq!(counted, 2);
+    assert_eq!(certificate_files_read(&reader), Vec::<u8>::new());
 }
 
 #[test]

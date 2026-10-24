@@ -158,18 +158,28 @@ pub fn survey_readers() -> Option<Vec<Reader>> {
     Some(readers_in(&observed))
 }
 
-/// Un número que cambia cada vez que se mete o se saca una tarjeta de cualquier lector; `None`, si PC/SC no responde.
-pub fn card_events() -> Option<u64> {
+/// Un número que cambia cada vez que se mete o se saca una tarjeta de `reader`, o de cualquier lector si no se sabe cuál; `None`, si PC/SC no responde.
+pub fn card_events(reader: Option<&str>) -> Option<u64> {
+    let observed: Vec<(String, bool, u32)> = surveyed()?
+        .iter()
+        .map(|state| {
+            (
+                state.name().to_string_lossy().into_owned(),
+                state.event_state().contains(State::PRESENT),
+                state.event_count(),
+            )
+        })
+        .collect();
+    Some(events_in(&observed, reader))
+}
+
+fn events_in(observed: &[(String, bool, u32)], reader: Option<&str>) -> u64 {
     let mut hasher = DefaultHasher::new();
-    for state in surveyed()? {
-        state.name().hash(&mut hasher);
-        state
-            .event_state()
-            .contains(State::PRESENT)
-            .hash(&mut hasher);
-        state.event_count().hash(&mut hasher);
-    }
-    Some(hasher.finish())
+    observed
+        .iter()
+        .filter(|(name, ..)| reader.is_none_or(|reader| name == reader))
+        .for_each(|state| state.hash(&mut hasher));
+    hasher.finish()
 }
 
 fn surveyed() -> Option<Vec<ReaderState>> {

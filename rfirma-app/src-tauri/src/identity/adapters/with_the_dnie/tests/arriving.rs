@@ -97,7 +97,7 @@ fn the_status_count_begun_while_the_dnie_is_read_takes_that_reading() {
                 .map(|(_, certificates)| certificates)
                 .sum()
         },
-        2,
+        3,
     );
 
     assert_eq!(openings, 1);

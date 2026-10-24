@@ -100,7 +100,7 @@ impl CardOpener for InTheReader {
         Session::open_trusting(Connection(self.clone()), root)
     }
 
-    fn insertion(&self) -> Option<u64> {
+    fn insertion(&self, _reader: Option<&str>) -> Option<u64> {
         Some(u64::from(self.taken_out.load(Ordering::SeqCst)))
     }
 }

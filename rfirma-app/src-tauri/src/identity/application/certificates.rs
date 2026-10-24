@@ -131,27 +131,6 @@ fn holders_only(found: Vec<TokenCertificate>) -> Vec<TokenCertificate> {
         .collect()
 }
 
-/// Cuántos certificados firmables propios tiene cada clase de almacén que tenga alguno.
-pub fn certificates_by_class(
-    token: &dyn Token,
-    stores: &[Store],
-    installed_dir: &Path,
-) -> Vec<(StoreClass, usize)> {
-    let mut counted: Vec<(StoreClass, usize)> = Vec::new();
-    let found = token.list_each(stores).certificates().unwrap_or_default();
-    for certificate in found
-        .iter()
-        .filter(|certificate| !certificate.is_a_macos_token_identity())
-    {
-        let class = certificate.reference().store().class_under(installed_dir);
-        match counted.iter_mut().find(|(seen, _)| *seen == class) {
-            Some((_, certificates)) => *certificates += 1,
-            None => counted.push((class, 1)),
-        }
-    }
-    counted
-}
-
 /// Filas de un listado, una por certificado aunque esté en varios almacenes, con asas acuñadas.
 pub fn rows_of(
     found: Vec<TokenCertificate>,
@@ -524,6 +503,9 @@ pub fn usable_certificate<'a>(
     }
     Ok(chosen)
 }
+
+mod counted;
+pub use counted::certificates_by_class;
 
 #[cfg(test)]
 mod tests;

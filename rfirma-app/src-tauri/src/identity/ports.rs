@@ -43,6 +43,11 @@ pub trait Token {
         self.every_certificate(store)
     }
 
+    /// Cuántos certificados propios tiene un almacén, si sabe contarlos sin leer ninguno; por defecto, no sabe.
+    fn holders_without_reading(&self, _store: &Store) -> Option<Result<usize, TokenError>> {
+        None
+    }
+
     /// Los certificados firmables de un almacén, autenticándose con `pin` (ADR-0034).
     fn list_authenticated(
         &self,

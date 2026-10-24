@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use pcsc::State;
 
-use super::{readers_in, ReaderStates, StatusSource, StatusWatch};
+use super::{events_in, readers_in, ReaderStates, StatusSource, StatusWatch};
 use crate::identity::domain::readers::Reader;
 use crate::identity::ports::ReaderWatch;
 
@@ -95,4 +95,38 @@ fn losing_pcsc_after_having_readers_tells_there_are_none() {
     assert_eq!(watch.next_change(), Some(vec![reader("Lector A", false)]));
     assert_eq!(watch.next_change(), Some(vec![]));
     assert_eq!(watch.next_change(), Some(vec![reader("Lector A", false)]));
+}
+
+fn observed(name: &str, present: bool, count: u32) -> (String, bool, u32) {
+    (name.into(), present, count)
+}
+
+#[test]
+fn a_card_in_another_reader_does_not_change_the_insertion_of_the_dnie_reader() {
+    let before = [observed("DNIe", true, 1), observed("Otro", false, 0)];
+    let after = [observed("DNIe", true, 1), observed("Otro", true, 1)];
+
+    assert_eq!(
+        events_in(&before, Some("DNIe")),
+        events_in(&after, Some("DNIe"))
+    );
+}
+
+#[test]
+fn taking_the_card_out_of_its_reader_changes_its_insertion() {
+    let before = [observed("DNIe", true, 1), observed("Otro", false, 0)];
+    let after = [observed("DNIe", false, 2), observed("Otro", false, 0)];
+
+    assert_ne!(
+        events_in(&before, Some("DNIe")),
+        events_in(&after, Some("DNIe"))
+    );
+}
+
+#[test]
+fn without_a_known_reader_a_card_in_any_reader_changes_the_insertion() {
+    let before = [observed("DNIe", true, 1), observed("Otro", false, 0)];
+    let after = [observed("DNIe", true, 1), observed("Otro", true, 1)];
+
+    assert_ne!(events_in(&before, None), events_in(&after, None));
 }
