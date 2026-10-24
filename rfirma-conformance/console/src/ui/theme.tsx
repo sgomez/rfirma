@@ -6,8 +6,12 @@ export type Theme = "light" | "dark";
 export const THEME_KEY = "rfirma-conformance-theme";
 
 function chosen(): Theme | null {
-  const stored = window.localStorage.getItem(THEME_KEY);
-  return stored === "light" || stored === "dark" ? stored : null;
+  try {
+    const stored = window.localStorage.getItem(THEME_KEY);
+    return stored === "light" || stored === "dark" ? stored : null;
+  } catch {
+    return null;
+  }
 }
 
 function preferred(): Theme {
@@ -35,7 +39,11 @@ export function ThemeToggle() {
 
   const other: Theme = theme === "dark" ? "light" : "dark";
   const toggle = () => {
-    window.localStorage.setItem(THEME_KEY, other);
+    try {
+      window.localStorage.setItem(THEME_KEY, other);
+    } catch {
+      // sin almacenamiento, el tema vale hasta recargar
+    }
     setTheme(applyTheme(other));
   };
 

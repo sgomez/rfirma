@@ -43,7 +43,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/errand.rs` | El trámite: su clave, lo observado que se guarda con sus peticiones, el seam `ErrandRunner` con su adaptador de Node y su falso de tramas grabadas, y lo que se extrae de cada evento. |
 | `src/report.rs` | El informe en disco, `reports/conformance/<nombre>/dossier.json`, con el estado de cada comprobación y los trámites observados por clave: lo ve cualquiera, lo continúa solo su cliente. |
 | `src/transcript.rs` | Las tramas y el registro de cada comprobación, en `transcripts/` dentro del informe. |
-| `src/livelog.rs` | La línea de registro marcada por procedencia (`sede`, `cliente`, `suite`), en fichero y en vivo. |
+| `src/livelog.rs` | La línea de registro marcada por procedencia (`sede`, `cliente`, `suite`), en fichero y en vivo, y su descomposición en reloj, procedencia y texto. |
 | `src/comparison.rs` | La comparación de dos informes, comprobación a comprobación en el orden del catálogo y con su conjunto, con si sus peticiones coinciden. |
 | `../testdata/site-driver/driver.mjs` | La sede bajo Node: corre un guion en un modo, o publica el manifiesto con `--manifest`; la comparte con los `conformance_*.rs` de la aplicación, que le ponen `RFIRMA_BENCH_CLOCK_DIVISOR=10` para acortar las esperas del cliente publicado; la consola no la fija y corre con el reloj real. |
 | `../testdata/site-driver/manifest.mjs` | El manifiesto: los modos y todos los guiones, cada uno con su sede, su familia, sus modos, sus condiciones y si es solo del banco. |
@@ -65,7 +65,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `console/src/report/` | Un informe, con o sin controles de ejecución: conjuntos plegables, filtro por resultado, la ficha de cada comprobación, la validación y las tramas. |
 | `console/src/log/LogDock.tsx` | El registro al pie, con filtro por procedencia, pausa y altura ajustable. |
 | `console/src/compare/ComparePage.tsx` | La comparación de dos informes: solo lo que difiere, en el resultado o en las peticiones, por conjunto. |
-| `console/src/ui/` | Piezas sin dominio: iconos de resultado, tema, atajos de teclado, diálogo, reloj y notificaciones del escritorio. |
+| `console/src/ui/` | Piezas sin dominio: iconos de resultado, tema, preferencias guardadas en el navegador, atajos de teclado, diálogo, reloj y notificaciones del escritorio. |
 | `console/src/words.ts` | Los nombres en pantalla de resultados y clientes, y el formato de fechas y duraciones. |
 | `console/src/styles.css` | La hoja de estilos única, con el tema claro y el oscuro en variables CSS. |
 | `console/src/test/` | El servidor falso que cumple el contrato, los datos de prueba y el montaje de la consola para vitest. |

@@ -50,6 +50,40 @@ pub(crate) fn format_log_line(elapsed: Duration, provenance: Provenance, text: &
     )
 }
 
+/// Una línea del registro ya descompuesta, para que quien la muestra no analice texto.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct LogLine {
+    pub(crate) clock: String,
+    pub(crate) provenance: Provenance,
+    pub(crate) text: String,
+}
+
+/// Descompone una línea del fichero; la que no tiene el formato de `format_log_line` es de la suite.
+pub(crate) fn parse_log_line(raw: &str) -> LogLine {
+    let mut parts = raw.splitn(3, ' ');
+    let clock = parts.next().unwrap_or_default();
+    let tag = parts.next().unwrap_or_default();
+    let provenance = match tag {
+        "sede" | "conductor" => Some(Provenance::Site),
+        "cliente" | "sujeto" => Some(Provenance::Client),
+        "suite" | "arnés" => Some(Provenance::Suite),
+        _ => None,
+    };
+    match provenance {
+        Some(provenance) if clock.len() == 8 && clock.as_bytes()[2] == b':' => LogLine {
+            clock: clock.to_owned(),
+            provenance,
+            text: parts.next().unwrap_or_default().trim_start().to_owned(),
+        },
+        _ => LogLine {
+            clock: String::new(),
+            provenance: Provenance::Suite,
+            text: raw.to_owned(),
+        },
+    }
+}
+
 /// El fichero de una comprobación, junto a su transcripción: lo que se lee cuando ya terminó.
 #[derive(Clone)]
 pub(crate) struct CheckLog {
@@ -111,6 +145,30 @@ mod tests {
             format_elapsed_clock(Duration::from_millis(61_000)),
             "01:01.00"
         );
+    }
+
+    #[test]
+    fn a_file_line_is_split_into_clock_provenance_and_text() {
+        let line = parse_log_line(&format_log_line(
+            Duration::from_millis(310),
+            Provenance::Client,
+            "abre el canal",
+        ));
+        assert_eq!(
+            line,
+            LogLine {
+                clock: "00:00.31".into(),
+                provenance: Provenance::Client,
+                text: "abre el canal".into()
+            }
+        );
+    }
+
+    #[test]
+    fn a_line_without_the_format_is_the_suites_whole() {
+        let line = parse_log_line("sin formato");
+        assert_eq!(line.provenance, Provenance::Suite);
+        assert_eq!(line.text, "sin formato");
     }
 
     #[test]

@@ -307,7 +307,7 @@ fn attend(mut stream: TcpStream, gate: &Gate, build: &Build, console: &Console) 
         }
         ("GET", "/api/events") => stream_events(stream, console),
         ("GET", "/api/defaults") => answer(&mut stream, console.the_deduced_coordinates()),
-        ("GET", "/api/log") => answer_text(
+        ("GET", "/api/log") => answer(
             &mut stream,
             console.log_of(
                 request.parameter("report"),

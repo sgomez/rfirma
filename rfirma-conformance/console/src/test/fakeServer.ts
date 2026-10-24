@@ -2,6 +2,7 @@ import type { CatalogueSet } from "../contract/CatalogueSet";
 import type { Comparison } from "../contract/Comparison";
 import type { DeducedCoordinates } from "../contract/DeducedCoordinates";
 import type { LiveLine } from "../contract/LiveLine";
+import type { LogLine } from "../contract/LogLine";
 import type { ReportView } from "../contract/ReportView";
 import type { SelectionResolution } from "../contract/SelectionResolution";
 import type { Snapshot } from "../contract/Snapshot";
@@ -42,7 +43,7 @@ export class FakeServer implements Wire {
   readonly streams: FakeStream[] = [];
   snapshot: Snapshot;
   reportViews = new Map<string, ReportView>();
-  logs = new Map<string, string>();
+  logs = new Map<string, LogLine[]>();
   comparison: Comparison | null = null;
   sharingAnErrand: string[] = [];
   deduced: DeducedCoordinates = {
@@ -148,7 +149,7 @@ export class FakeServer implements Wire {
       case "/api/defaults":
         return reply(200, { ok: this.deduced });
       case "/api/log":
-        return new Response(this.logs.get(params.check ?? "") ?? "", { status: 200 });
+        return reply(200, { ok: this.logs.get(params.check ?? "") ?? [] });
       case "/api/transcript":
         return new Response("", { status: 200 });
       case "/api/references":

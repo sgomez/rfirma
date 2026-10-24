@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PendingByTranches } from "../contract/PendingByTranches";
 import type { ReportView } from "../contract/ReportView";
 import type { Tranches } from "../contract/Tranches";
@@ -11,6 +11,7 @@ import { ValidateModal } from "../report/ValidateModal";
 import { useLive } from "../suite/live";
 import { PlayIcon } from "../ui/icons";
 import { askToNotify } from "../ui/notify";
+import { isBoolean, useStoredState } from "../ui/preferences";
 import { focusedCheck, useShortcuts } from "../ui/shortcuts";
 import { BatchBar } from "./BatchBar";
 import { ClientStep } from "./ClientStep";
@@ -21,7 +22,8 @@ import { Step } from "./Step";
 export function SessionPage() {
   const { snapshot, suite, complain } = useLive();
   const [selected, setSelected] = useState<string | null>(null);
-  const [follow, setFollow] = useState(true);
+  const [following, setFollowing] = useStoredState("follow", true, isBoolean);
+  const [suspended, setSuspended] = useState(false);
   const [transcript, setTranscript] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
   const progress = useProgress(snapshot, true);
@@ -32,13 +34,34 @@ export function SessionPage() {
     document.title = "Sesión · Suite de conformidad";
   }, []);
 
+  const batchOn = snapshot?.batch != null;
+  const wasBatchOn = useRef(false);
   useEffect(() => {
-    if (follow && head) setSelected(head);
-  }, [follow, head]);
+    if (batchOn && !wasBatchOn.current) {
+      setFollowing(true);
+      setSuspended(false);
+    }
+    wasBatchOn.current = batchOn;
+  }, [batchOn, setFollowing]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: la siguiente comprobación en curso retoma el seguimiento
+  useEffect(() => setSuspended(false), [head]);
+
+  useEffect(() => {
+    if (following && !suspended && head) setSelected(head);
+  }, [following, suspended, head]);
+
+  const setFollow = useCallback(
+    (on: boolean) => {
+      setFollowing(on);
+      setSuspended(false);
+    },
+    [setFollowing],
+  );
 
   const onSelect = useCallback((id: string) => {
     setSelected(id);
-    setFollow(false);
+    setSuspended(true);
   }, []);
 
   const controls = useMemo<Controls>(
@@ -159,7 +182,7 @@ export function SessionPage() {
       <LogDock
         check={selected}
         runningIds={snapshot.running?.ids ?? []}
-        follow={{ on: follow, set: setFollow }}
+        follow={{ on: following, set: setFollow }}
       />
       {transcript && <TranscriptModal check={transcript} onClose={() => setTranscript(null)} />}
       {validating && view && snapshot.report_name && (

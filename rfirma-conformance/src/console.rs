@@ -24,7 +24,7 @@ use crate::client::{
 use crate::comparison::{compare, Comparison};
 use crate::errand::{ErrandKey, ErrandRunner, NodeRunner, ObservedErrand};
 use crate::hand::the_assistance_of;
-use crate::livelog::{CheckLog, LiveLogSink, Provenance};
+use crate::livelog::{parse_log_line, CheckLog, LiveLogSink, LogLine, Provenance};
 use crate::outcome::CheckState;
 use crate::recipe::the_recipe_of;
 use crate::report::{HeaderCoordinates, HeaderCorrection, Report, THE_REPORT_FILE};
@@ -98,7 +98,8 @@ pub(crate) struct SuiteFailure {
 pub(crate) struct LiveLine {
     check: String,
     provenance: Provenance,
-    line: String,
+    clock: String,
+    text: String,
 }
 
 /// Las coordenadas con las que se crea un informe, tal y como llegan de la página.
@@ -589,8 +590,13 @@ impl Console {
     }
 
     /// El registro de `check` en el informe `report`, o en el abierto si no se nombra ninguno.
-    pub(crate) fn log_of(&self, report: Option<&str>, check: &str) -> Result<String, String> {
-        self.read_in_the_report(report, |dir| log_path_of(dir, check))
+    pub(crate) fn log_of(&self, report: Option<&str>, check: &str) -> Result<Vec<LogLine>, String> {
+        let text = self.read_in_the_report(report, |dir| log_path_of(dir, check))?;
+        Ok(text
+            .lines()
+            .filter(|line| !line.is_empty())
+            .map(parse_log_line)
+            .collect())
     }
 
     /// Las tramas de `check` en el informe `report`, o en el abierto si no se nombra ninguno.
@@ -798,10 +804,12 @@ impl Witness for ConsoleWitness {
                 log.write(&line);
             }
             for check in &group {
+                let split = parse_log_line(&line);
                 let payload = serde_json::to_value(LiveLine {
                     check: check.clone(),
                     provenance,
-                    line: line.clone(),
+                    clock: split.clock,
+                    text: split.text,
                 })
                 .expect("la línea se serializa");
                 shared.broadcast(&event_frame("log", &payload));
