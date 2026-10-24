@@ -224,6 +224,7 @@ describe("the session", () => {
         client_version: "1.9.2",
         os: "Linux",
         os_version: "6.8.0",
+        scope: null,
       },
     ]);
   });
@@ -232,6 +233,7 @@ describe("the session", () => {
     const view = aReportView();
     view.header.title = "Antes";
     view.header.notes = "Una nota";
+    view.header.scope = "canal";
     const { server, user } = renderConsoleAt("/", aSnapshot({ report: view }));
 
     await user.click(await screen.findByRole("button", { name: "Editar cabecera" }));
@@ -249,6 +251,7 @@ describe("the session", () => {
         client_version: "1.9.3",
         os: "Linux",
         os_version: "6.8.0",
+        scope: "canal",
       },
     ]);
   });

@@ -3,4 +3,4 @@
 /**
  * Lo que se puede corregir de la cabecera de un informe ya creado; la fecha no.
  */
-export type HeaderCorrection = { title: string, notes: string, client_version: string, os: string, os_version: string, };
+export type HeaderCorrection = { title: string, notes: string, client_version: string, os: string, os_version: string, scope: string | null, };

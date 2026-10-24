@@ -106,6 +106,7 @@ pub(crate) struct NewReport {
     client_version: String,
     os: String,
     os_version: String,
+    scope: Option<String>,
 }
 
 #[derive(Clone)]
@@ -269,6 +270,7 @@ impl Console {
             os: new.os,
             os_version: new.os_version,
             client_version: new.client_version,
+            scope: self.a_scope_named_in_the_catalogue(new.scope)?,
         };
         let mut session = self.shared.lock();
         if session.busy() {
@@ -292,13 +294,17 @@ impl Console {
         if !new.title.is_empty() || !new.notes.is_empty() {
             let header = report.header();
             report
-                .correct_header(HeaderCorrection {
-                    title: new.title,
-                    notes: new.notes,
-                    client_version: header.client_version.clone(),
-                    os: header.os.clone(),
-                    os_version: header.os_version.clone(),
-                })
+                .correct_header(
+                    HeaderCorrection {
+                        title: new.title,
+                        notes: new.notes,
+                        client_version: header.client_version.clone(),
+                        os: header.os.clone(),
+                        os_version: header.os_version.clone(),
+                        scope: header.scope.clone(),
+                    },
+                    &self.shared.catalogue,
+                )
                 .inspect_err(|_| {
                     let _ = std::fs::remove_dir_all(&dir);
                 })?;
@@ -307,18 +313,38 @@ impl Console {
         Ok(())
     }
 
-    pub(crate) fn correct_header(&self, correction: HeaderCorrection) -> Result<(), String> {
+    pub(crate) fn correct_header(&self, mut correction: HeaderCorrection) -> Result<(), String> {
         if correction.client_version.trim().is_empty() {
             return Err("falta la versión del cliente".to_owned());
         }
+        correction.scope = self.a_scope_named_in_the_catalogue(correction.scope)?;
         let mut session = self.shared.lock();
         let open = session
             .report
             .as_mut()
             .ok_or("elige o abre un informe antes de corregir su cabecera")?;
-        open.report.correct_header(correction)?;
+        open.report
+            .correct_header(correction, &self.shared.catalogue)?;
         self.shared.publish(&session);
         Ok(())
+    }
+
+    /// El alcance `scope`, sin nada que el catálogo no tenga; uno en blanco es ninguno.
+    fn a_scope_named_in_the_catalogue(
+        &self,
+        scope: Option<String>,
+    ) -> Result<Option<String>, String> {
+        let Some(scope) = scope.filter(|scope| !scope.trim().is_empty()) else {
+            return Ok(None);
+        };
+        let unknown = resolve_the_selection(&scope, &self.shared.catalogue, None).unknown;
+        if !unknown.is_empty() {
+            return Err(format!(
+                "el catálogo no tiene «{}»: corrige el alcance",
+                unknown.join("», «")
+            ));
+        }
+        Ok(Some(scope))
     }
 
     pub(crate) fn open_report(&self, name: String) -> Result<(), String> {
@@ -377,6 +403,7 @@ impl Console {
         }
         let is_pending =
             |check: &&Check| open.report.state_of(&check.id) == Some(CheckState::Pending);
+        let in_scope = |check: &&Check| open.report.covers(&check.id);
         let (wanted, in_batch): (Vec<&Check>, bool) = match &request {
             Request::Check { check: id } => (
                 vec![self
@@ -384,13 +411,19 @@ impl Console {
                     .catalogue
                     .iter()
                     .find(|check| &check.id == id)
-                    .ok_or_else(|| format!("no conozco la comprobación «{id}»"))?],
+                    .ok_or_else(|| format!("no conozco la comprobación «{id}»"))
+                    .and_then(|check| {
+                        in_scope(&check)
+                            .then_some(check)
+                            .ok_or_else(|| format!("«{id}» está fuera del alcance del informe"))
+                    })?],
                 false,
             ),
             Request::Set { set, pending } => (
                 self.shared
                     .catalogue
                     .iter()
+                    .filter(in_scope)
                     .filter(|check| &check.requirement.set == set)
                     .filter(|check| !pending.unwrap_or(false) || is_pending(check))
                     .collect(),
@@ -400,6 +433,7 @@ impl Console {
                 self.shared
                     .catalogue
                     .iter()
+                    .filter(in_scope)
                     .filter(is_pending)
                     .filter(|check| tranches.take(the_assistance_of(check, kind)))
                     .collect(),
@@ -1236,6 +1270,7 @@ expects.completes = {}
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.0".to_owned(),
+                scope: None,
             },
         )
         .unwrap();
@@ -1788,6 +1823,7 @@ expects.code = "SAF_03"
                 client_version: "0.11.0".to_owned(),
                 os: "Fedora".to_owned(),
                 os_version: "44".to_owned(),
+                scope: None,
             })
             .unwrap();
 
@@ -1812,6 +1848,7 @@ expects.code = "SAF_03"
                 client_version: " ".to_owned(),
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
+                scope: None,
             })
             .unwrap_err();
 
@@ -1832,6 +1869,7 @@ expects.code = "SAF_03"
                 client_version: "0.10.0".to_owned(),
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
+                scope: None,
             })
             .unwrap();
 
@@ -1867,5 +1905,261 @@ expects.code = "SAF_03"
 
         assert_eq!(view["header"]["title"], "");
         assert_eq!(view["header"]["notes"], "");
+    }
+
+    fn a_scoped_entry(id: &str, set: &str, script: &str, extra: &str) -> String {
+        format!(
+            "[[check]]\nid = \"{id}\"\nset = \"{set}\"\nchapter = \"15\"\ncitation = \"A.java:1\"\n\
+             statement = \"Algo.\"\n\n[check.drive]\nmode = \"v4\"\nscript = \"{script}\"\n{extra}\n"
+        )
+    }
+
+    fn a_catalogue_to_scope(more: &[String]) -> Vec<Check> {
+        let entries = [
+            a_scoped_entry(
+                "ws_greeting",
+                "saludo",
+                "protocol-v4",
+                "greeting = true\nexpects.completes = {}",
+            ),
+            a_scoped_entry(
+                "ws_echo",
+                "canal.websocket",
+                "protocol-v4",
+                "expects.completes = {}",
+            ),
+            a_scoped_entry(
+                "a_rejection",
+                "errores",
+                "signwithoutaformat",
+                "expects.code = \"SAF_03\"",
+            ),
+            a_scoped_entry(
+                "its_twin",
+                "parametros",
+                "signwithoutaformat",
+                "expects.code = \"SAF_03\"",
+            ),
+        ];
+        let mut catalogue =
+            crate::catalogue::the_catalogue_in(&[&entries[..], more].concat().concat()).unwrap();
+        for check in &mut catalogue {
+            check.family = Some(
+                match check
+                    .provocation()
+                    .map_or("", |provocation| provocation.script.as_str())
+                {
+                    "protocol-v4" => crate::manifest::Family::V4Echo,
+                    _ => crate::manifest::Family::EndToEnd,
+                },
+            );
+        }
+        catalogue
+    }
+
+    fn a_console_to_scope(dir: &Path, catalogue: Vec<Check>) -> Console {
+        let console = Console::running_errands_with(
+            catalogue,
+            dir.to_owned(),
+            Duration::from_secs(1),
+            a_rejecting_runner() as Arc<dyn ErrandRunner>,
+        );
+        {
+            let mut session = console.shared.lock();
+            session.client = Some(an_rfirma_at("/usr/bin/rfirma", "1.0"));
+            session.profiles = Store::ALL
+                .into_iter()
+                .map(|store| Profile {
+                    store,
+                    ..crate::client::a_profile_in(&dir.join(store.name()))
+                })
+                .collect();
+        }
+        console
+    }
+
+    fn a_report_scoped_to(scope: Option<&str>) -> NewReport {
+        NewReport {
+            name: "scoped".to_owned(),
+            title: "Con alcance".to_owned(),
+            notes: String::new(),
+            client_version: "1.0".to_owned(),
+            os: "Linux".to_owned(),
+            os_version: "6.0".to_owned(),
+            scope: scope.map(str::to_owned),
+        }
+    }
+
+    fn a_correction_to(scope: Option<&str>) -> HeaderCorrection {
+        HeaderCorrection {
+            title: String::new(),
+            notes: String::new(),
+            client_version: "1.0".to_owned(),
+            os: "Linux".to_owned(),
+            os_version: "6.0".to_owned(),
+            scope: scope.map(str::to_owned),
+        }
+    }
+
+    fn the_ids_in(view: &serde_json::Value) -> Vec<&str> {
+        view["sets"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|set| set["checks"].as_array().unwrap())
+            .map(|check| check["id"].as_str().unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn a_new_report_with_a_name_the_catalogue_lacks_is_refused_naming_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = a_console_to_scope(dir.path(), a_catalogue_to_scope(&[]));
+
+        let refused = console
+            .create_report(a_report_scoped_to(Some("canal, no_such_check")))
+            .unwrap_err();
+
+        assert!(refused.contains("no_such_check"), "{refused}");
+        assert!(!refused.contains("canal"), "{refused}");
+        assert!(!dir.path().join("scoped").exists());
+    }
+
+    #[test]
+    fn a_new_report_counts_and_shows_only_its_scope_with_the_greetings_it_adds() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = a_console_to_scope(dir.path(), a_catalogue_to_scope(&[]));
+
+        console
+            .create_report(a_report_scoped_to(Some("canal")))
+            .unwrap();
+
+        let view = console.report_view("scoped").unwrap();
+        assert_eq!(the_ids_in(&view), ["ws_greeting", "ws_echo"]);
+        assert_eq!(view["summary"]["total"], 2);
+        assert_eq!(view["summary"]["pending"], 2);
+        assert_eq!(view["header"]["scope"], "canal");
+    }
+
+    #[test]
+    fn a_check_outside_the_scope_cannot_be_queued() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = a_console_to_scope(dir.path(), a_catalogue_to_scope(&[]));
+        console
+            .create_report(a_report_scoped_to(Some("errores")))
+            .unwrap();
+
+        let refused = console
+            .enqueue(Request::Check {
+                check: "its_twin".to_owned(),
+            })
+            .unwrap_err();
+        console
+            .enqueue(Request::Tranches {
+                tranches: Tranches::All,
+            })
+            .unwrap();
+
+        assert!(refused.contains("fuera del alcance"), "{refused}");
+        let queued: Vec<String> = console
+            .shared
+            .lock()
+            .queue
+            .iter()
+            .map(|queued| queued.id.clone())
+            .collect();
+        assert_eq!(queued, ["a_rejection"]);
+    }
+
+    #[test]
+    fn a_set_in_the_scope_takes_in_the_checks_the_catalogue_gains_later() {
+        let dir = tempfile::tempdir().unwrap();
+        a_console_to_scope(dir.path(), a_catalogue_to_scope(&[]))
+            .create_report(a_report_scoped_to(Some("canal")))
+            .unwrap();
+        let grown = a_catalogue_to_scope(&[a_scoped_entry(
+            "ws_later",
+            "canal.websocket.later",
+            "protocol-v4-echo",
+            "expects.completes = {}",
+        )]);
+
+        let view = a_console_to_scope(dir.path(), grown)
+            .report_view("scoped")
+            .unwrap();
+
+        assert_eq!(the_ids_in(&view), ["ws_greeting", "ws_echo", "ws_later"]);
+    }
+
+    #[test]
+    fn narrowing_the_scope_keeps_the_results_outside_uncounted_and_widening_brings_them_back() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = a_console_to_scope(dir.path(), a_catalogue_to_scope(&[]));
+        console
+            .create_report(a_report_scoped_to(Some("errores parametros")))
+            .unwrap();
+        console
+            .enqueue(Request::Tranches {
+                tranches: Tranches::All,
+            })
+            .unwrap();
+        run_the_queue(&console);
+        let before = console.report_view("scoped").unwrap();
+
+        console
+            .correct_header(a_correction_to(Some("errores")))
+            .unwrap();
+        let narrowed = console.report_view("scoped").unwrap();
+        console.correct_header(a_correction_to(None)).unwrap();
+        let widened = console.report_view("scoped").unwrap();
+
+        assert_eq!(the_ids_in(&narrowed), ["a_rejection"]);
+        assert_eq!(narrowed["summary"]["total"], 1);
+        assert_eq!(narrowed["orphans"], serde_json::json!([]));
+        assert_eq!(widened["header"]["scope"], serde_json::Value::Null);
+        assert_eq!(widened["summary"]["total"], 4);
+        let twin_in = |view: &serde_json::Value| {
+            view["sets"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|set| set["checks"].as_array().unwrap())
+                .find(|check| check["id"] == "its_twin")
+                .map(|check| check["state"].clone())
+        };
+        assert_ne!(twin_in(&before), Some("PENDIENTE".into()));
+        assert_eq!(twin_in(&widened), twin_in(&before));
+    }
+
+    #[test]
+    fn a_correction_naming_what_the_catalogue_lacks_is_refused_naming_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = a_console_to_scope(dir.path(), a_catalogue_to_scope(&[]));
+        console.create_report(a_report_scoped_to(None)).unwrap();
+
+        let refused = console
+            .correct_header(a_correction_to(Some("errores nowhere")))
+            .unwrap_err();
+
+        assert!(refused.contains("nowhere"), "{refused}");
+        let view = console.report_view("scoped").unwrap();
+        assert_eq!(view["header"]["scope"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn a_report_written_before_scopes_is_read_as_one_without_a_scope() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = a_console_to_scope(dir.path(), a_catalogue_to_scope(&[]));
+        console.create_report(a_report_scoped_to(None)).unwrap();
+        let path = dir.path().join("scoped").join(THE_REPORT_FILE);
+        let mut json: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        json["header"].as_object_mut().unwrap().remove("scope");
+        std::fs::write(&path, json.to_string()).unwrap();
+
+        let view = console.report_view("scoped").unwrap();
+
+        assert_eq!(view["header"]["scope"], serde_json::Value::Null);
+        assert_eq!(view["summary"]["total"], 4);
     }
 }

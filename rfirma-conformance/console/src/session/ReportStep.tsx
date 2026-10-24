@@ -157,7 +157,7 @@ function HeaderFields({
           <input
             className="input"
             required={!OPTIONAL.includes(key)}
-            value={draft[key]}
+            value={draft[key] ?? ""}
             placeholder={hint}
             pattern={key === "name" ? "[A-Za-z0-9_\\-][A-Za-z0-9._\\-]*" : undefined}
             onChange={(event) => onChange({ ...draft, [key]: event.target.value })}
@@ -192,7 +192,7 @@ function HeaderModal({
   initial: Draft;
   withName: boolean;
   notice?: string | null;
-  onSubmit: (draft: Draft) => Promise<void>;
+  onSubmit: (draft: Draft) => Promise<unknown>;
   onClose: () => void;
 }) {
   const formId = useId();
@@ -249,6 +249,7 @@ const BLANK: Draft = {
   client_version: "",
   os: "",
   os_version: "",
+  scope: null,
 };
 
 function NewReportModal({ onClose }: { onClose: () => void }) {
@@ -294,6 +295,7 @@ function CorrectHeaderModal({ header, onClose }: { header: Header; onClose: () =
           client_version: draft.client_version,
           os: draft.os,
           os_version: draft.os_version,
+          scope: header.scope,
         })
       }
       onClose={onClose}
@@ -312,7 +314,7 @@ function ReportList({
   entries: ReportEntry[];
   current: string | null;
   busy: boolean;
-  open: (name: string) => Promise<void>;
+  open: (name: string) => Promise<unknown>;
 }) {
   const { suite } = useLive();
   if (entries.length === 0) return null;

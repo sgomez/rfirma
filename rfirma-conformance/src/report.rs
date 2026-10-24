@@ -12,6 +12,7 @@ use crate::catalogue::Check;
 use crate::client::{ClientKind, Origin};
 use crate::errand::{ErrandKey, ObservedErrand};
 use crate::outcome::{CheckState, Outcome};
+use crate::selection::resolve;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckRecord {
@@ -46,6 +47,9 @@ pub struct Header {
     pub title: String,
     #[serde(default)]
     pub notes: String,
+    /// La selección que mide, tal como se nombró; `None` es el catálogo entero.
+    #[serde(default)]
+    pub scope: Option<String>,
 }
 
 /// Lo que se puede corregir de la cabecera de un informe ya creado; la fecha no.
@@ -57,6 +61,7 @@ pub struct HeaderCorrection {
     pub client_version: String,
     pub os: String,
     pub os_version: String,
+    pub scope: Option<String>,
 }
 
 /// Las coordenadas que da quien crea el informe, sin la fecha: esa la pone el informe.
@@ -64,6 +69,7 @@ pub struct HeaderCoordinates {
     pub os: String,
     pub os_version: String,
     pub client_version: String,
+    pub scope: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -87,6 +93,8 @@ pub struct Report {
     path: PathBuf,
     contents: Contents,
     orphans: BTreeMap<String, CheckRecord>,
+    /// Lo que resuelve el alcance contra el catálogo con que se abrió; `None` es todo.
+    in_scope: Option<BTreeSet<String>>,
 }
 
 impl Report {
@@ -112,11 +120,13 @@ impl Report {
                     date: today(),
                     title: String::new(),
                     notes: String::new(),
+                    scope: coordinates.scope,
                 },
                 checks: BTreeMap::new(),
                 errands: BTreeMap::new(),
             },
             orphans: BTreeMap::new(),
+            in_scope: None,
         };
         report.cover(catalogue);
         report.save()?;
@@ -148,11 +158,30 @@ impl Report {
             .map(|(id, record)| (id.as_str(), record.state))
     }
 
+    /// Si `id` es de lo que mide el informe; lo de fuera ni cuenta ni se encola.
+    pub fn covers(&self, id: &str) -> bool {
+        self.in_scope
+            .as_ref()
+            .is_none_or(|in_scope| in_scope.contains(id))
+    }
+
+    /// Resuelve el alcance contra `catalogue` y da por pendiente lo que mide y aún no tiene.
     fn cover(&mut self, catalogue: &[Check]) {
-        for check in catalogue {
+        self.in_scope = self
+            .contents
+            .header
+            .scope
+            .as_deref()
+            .map(|scope| resolve(scope, catalogue, None).ids.into_iter().collect());
+        let measured: Vec<String> = catalogue
+            .iter()
+            .filter(|check| self.covers(&check.id))
+            .map(|check| check.id.clone())
+            .collect();
+        for id in measured {
             self.contents
                 .checks
-                .entry(check.id.clone())
+                .entry(id)
                 .or_insert_with(CheckRecord::pending);
         }
     }
@@ -206,6 +235,7 @@ impl Report {
             path: path.to_owned(),
             contents,
             orphans: BTreeMap::new(),
+            in_scope: None,
         })
     }
 
@@ -270,14 +300,21 @@ impl Report {
         self.save()
     }
 
-    /// Corrige la cabecera y la deja escrita antes de devolver el control.
-    pub fn correct_header(&mut self, correction: HeaderCorrection) -> Result<(), String> {
+    /// Corrige la cabecera, con el alcance resuelto contra `catalogue`, y la deja escrita antes de
+    /// devolver el control; lo que queda fuera se conserva sin contar.
+    pub fn correct_header(
+        &mut self,
+        correction: HeaderCorrection,
+        catalogue: &[Check],
+    ) -> Result<(), String> {
         let header = &mut self.contents.header;
         header.title = correction.title;
         header.notes = correction.notes;
         header.client_version = correction.client_version;
         header.os = correction.os;
         header.os_version = correction.os_version;
+        header.scope = correction.scope;
+        self.cover(catalogue);
         self.save()
     }
 
@@ -345,6 +382,7 @@ mod tests {
             os: "linux".to_owned(),
             os_version: "6.0".to_owned(),
             client_version: "1.9.2".to_owned(),
+            scope: None,
         }
     }
 

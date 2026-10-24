@@ -112,7 +112,7 @@ fn explains(check: &Check, kind: ClientKind) -> bool {
 pub(crate) fn report_view<'a>(report: &'a Report, catalogue: &'a [Check]) -> ReportView<'a> {
     let mut summary = Summary::default();
     let mut sets: Vec<SetView> = Vec::new();
-    for check in catalogue {
+    for check in catalogue.iter().filter(|check| report.covers(&check.id)) {
         let record = report.record_of(&check.id);
         let state = record.map(|record| record.state);
         summary.count(check, state, report.kind());
@@ -240,6 +240,7 @@ expects.completes = {}
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.9.2".to_owned(),
+                scope: None,
             },
         )
         .unwrap();
