@@ -1,3 +1,4 @@
+import type { CatalogueSet } from "../contract/CatalogueSet";
 import type { ClientChoice } from "../contract/ClientChoice";
 import type { Comparison } from "../contract/Comparison";
 import type { DeducedCoordinates } from "../contract/DeducedCoordinates";
@@ -7,6 +8,7 @@ import type { ReportChoice } from "../contract/ReportChoice";
 import type { ReportView } from "../contract/ReportView";
 import type { Request } from "../contract/Request";
 import type { Reset } from "../contract/Reset";
+import type { SelectionResolution } from "../contract/SelectionResolution";
 import type { Validation } from "../contract/Validation";
 
 export interface EventStream {
@@ -68,6 +70,9 @@ export function suiteOver(wire: Wire, token: string) {
     log: (check: string, report?: string) => text("/api/log", { check, report }),
     transcript: (check: string, report?: string) => text("/api/transcript", { check, report }),
     reportView: (report: string) => get<ReportView>("/api/report-view", { report }),
+    catalogue: () => get<CatalogueSet[]>("/api/catalogue"),
+    selection: (text: string, scope?: string) =>
+      get<SelectionResolution>("/api/selection", { text, scope }),
     references: () => get<string[]>("/api/references"),
     compare: (a: string, b: string) => get<Comparison>("/api/compare", { a, b }),
     validate: (report: string, reference: string) =>

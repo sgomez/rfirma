@@ -61,7 +61,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `console/src/suite/suite.ts` | El contrato HTTP tipado sobre un `Wire`, el seam cuyos adaptadores son el navegador y el servidor falso de las pruebas. |
 | `console/src/suite/live.tsx` | El estado vivo que comparten las vistas: el último estado de la sesión, las líneas del registro y los avisos de error. |
 | `console/src/shell/Shell.tsx` | El marco común: barra superior, conexión, ayuda de atajos y avisos. |
-| `console/src/session/` | La sesión activa en `/`: los pasos cliente, informe y ejecutar, y la barra de la tanda en curso con lo que le toca a la persona. |
+| `console/src/session/` | La sesión activa en `/`: los pasos cliente, informe (con el campo de alcance y su árbol, `ScopeField.tsx`) y ejecutar, y la barra de la tanda en curso con lo que le toca a la persona. |
 | `console/src/report/` | Un informe, con o sin controles de ejecución: conjuntos plegables, filtro por resultado, la ficha de cada comprobación, la validación y las tramas. |
 | `console/src/log/LogDock.tsx` | El registro al pie, con filtro por procedencia, pausa y altura ajustable. |
 | `console/src/compare/ComparePage.tsx` | La comparación de dos informes: solo lo que difiere, en el resultado o en las peticiones, por conjunto. |

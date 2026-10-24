@@ -22,6 +22,29 @@ pub(crate) struct SelectionResolution {
     pub sharing_an_errand: Vec<String>,
 }
 
+/// Un conjunto del catálogo con los ids de sus comprobaciones, para el árbol de la consola.
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct CatalogueSet<'a> {
+    pub name: &'a str,
+    pub checks: Vec<&'a str>,
+}
+
+/// Los conjuntos del catálogo en su orden, cada uno con sus comprobaciones.
+pub(crate) fn the_sets_of(catalogue: &[Check]) -> Vec<CatalogueSet<'_>> {
+    let mut sets: Vec<CatalogueSet> = Vec::new();
+    for check in catalogue {
+        match sets.last_mut() {
+            Some(set) if set.name == check.requirement.set => set.checks.push(&check.id),
+            _ => sets.push(CatalogueSet {
+                name: &check.requirement.set,
+                checks: vec![&check.id],
+            }),
+        }
+    }
+    sets
+}
+
 /// Resuelve `text` contra el catálogo; con `scope`, solo dentro de lo que resuelve el alcance.
 pub(crate) fn resolve(text: &str, catalogue: &[Check], scope: Option<&str>) -> SelectionResolution {
     let reachable: Vec<&Check> = match scope {
@@ -161,6 +184,24 @@ mod tests {
 
     fn within(scope: &str, text: &str) -> SelectionResolution {
         resolve(text, &a_small_catalogue(), Some(scope))
+    }
+
+    #[test]
+    fn the_sets_of_the_catalogue_keep_its_order_with_their_check_ids() {
+        let catalogue = a_small_catalogue();
+        let sets = the_sets_of(&catalogue);
+        let names: Vec<&str> = sets.iter().map(|set| set.name).collect();
+        assert_eq!(
+            names,
+            [
+                "canal.websocket",
+                "canal.servicio",
+                "canal.intermedio",
+                "firma",
+                "firma-y-guarda"
+            ]
+        );
+        assert_eq!(sets[0].checks, ["ws_greeting", "ws_echo"]);
     }
 
     #[test]

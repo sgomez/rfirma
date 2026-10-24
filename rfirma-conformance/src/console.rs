@@ -29,7 +29,9 @@ use crate::outcome::CheckState;
 use crate::recipe::the_recipe_of;
 use crate::report::{HeaderCoordinates, HeaderCorrection, Report, THE_REPORT_FILE};
 use crate::report_view::report_view;
-use crate::selection::{resolve as resolve_the_selection, SelectionResolution};
+use crate::selection::{
+    resolve as resolve_the_selection, the_sets_of, CatalogueSet, SelectionResolution,
+};
 use crate::snapshot::{snapshot_of, Activity, BatchView, PendingByTranches, ReportEntry};
 use crate::transcript::{log_path_of, transcript_path_of};
 use crate::validation::{
@@ -641,6 +643,10 @@ impl Console {
         resolve_the_selection(text, &self.shared.catalogue, scope)
     }
 
+    pub(crate) fn catalogue_sets(&self) -> Vec<CatalogueSet<'_>> {
+        the_sets_of(&self.shared.catalogue)
+    }
+
     fn open_to_see(&self, name: &str) -> Result<Report, String> {
         let path = self.shared.the_report_dir(name)?.join(THE_REPORT_FILE);
         if !path.is_file() {
@@ -655,6 +661,12 @@ impl Console {
 
     pub(crate) fn validate(&self, report: &str, reference: &str) -> Result<Validation, String> {
         let report = self.open_to_see(report)?;
+        if report.header().scope.is_some() {
+            return Err(
+                "un informe con alcance no se valida: «validado» habla de la suite entera"
+                    .to_owned(),
+            );
+        }
         let reference = read_the_reference(&the_reference_dir(), reference)?;
         Ok(validate(&report, &self.shared.catalogue, &reference))
     }
@@ -2254,6 +2266,20 @@ expects.code = "SAF_03"
         assert_eq!(view["summary"]["total"], 2);
         assert_eq!(view["summary"]["pending"], 2);
         assert_eq!(view["header"]["scope"], "canal");
+    }
+
+    #[test]
+    fn a_report_with_a_scope_is_not_validated_against_the_reference() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = a_console_to_scope(dir.path(), a_catalogue_to_scope(&[]));
+        console
+            .create_report(a_report_scoped_to(Some("canal")))
+            .unwrap();
+        let reference = the_references_in(&the_reference_dir()).unwrap().remove(0);
+
+        let refused = console.validate("scoped", &reference).unwrap_err();
+
+        assert!(refused.contains("alcance"), "{refused}");
     }
 
     #[test]

@@ -2425,3 +2425,16 @@ select.input {
   gap: 8px;
   cursor: pointer;
 }
+
+.scope-tree {
+  max-height: 14rem;
+  overflow: auto;
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.scope-tree ul {
+  list-style: none;
+  padding-left: 1.5rem;
+}

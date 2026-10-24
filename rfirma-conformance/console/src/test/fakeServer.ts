@@ -1,7 +1,9 @@
+import type { CatalogueSet } from "../contract/CatalogueSet";
 import type { Comparison } from "../contract/Comparison";
 import type { DeducedCoordinates } from "../contract/DeducedCoordinates";
 import type { LiveLine } from "../contract/LiveLine";
 import type { ReportView } from "../contract/ReportView";
+import type { SelectionResolution } from "../contract/SelectionResolution";
 import type { Snapshot } from "../contract/Snapshot";
 import type { SuiteFailure } from "../contract/SuiteFailure";
 import type { EventStream, Wire } from "../suite/suite";
@@ -50,6 +52,18 @@ export class FakeServer implements Wire {
     client_version: "1.9.2",
   };
 
+  catalogue: CatalogueSet[] = [
+    { name: "saludo", checks: ["greeting_opens_the_channel", "greeting_echoes"] },
+    {
+      name: "errores",
+      checks: [
+        "unsupported_protocol_uri_rejected",
+        "unknown_operation_rejected",
+        "empty_uri_rejected",
+      ],
+    },
+  ];
+
   constructor(snapshot: Snapshot) {
     this.snapshot = snapshot;
   }
@@ -92,6 +106,31 @@ export class FakeServer implements Wire {
       .map((call) => call.body);
   }
 
+  private resolve(text: string): SelectionResolution {
+    const resolution: SelectionResolution = {
+      ids: [],
+      greetings_added: [],
+      unknown: [],
+      out_of_scope: [],
+      sharing_an_errand: [],
+    };
+    for (const name of text.split(/[\s,]+/).filter(Boolean)) {
+      const hit = this.catalogue.flatMap((set) =>
+        set.name === name ? set.checks : set.checks.filter((id) => id === name),
+      );
+      if (hit.length === 0) resolution.unknown.push(name);
+      for (const id of hit) if (!resolution.ids.includes(id)) resolution.ids.push(id);
+    }
+    if (
+      resolution.ids.some((id) => id === "greeting_echoes") &&
+      !resolution.ids.includes("greeting_opens_the_channel")
+    ) {
+      resolution.ids.unshift("greeting_opens_the_channel");
+      resolution.greetings_added.push("greeting_opens_the_channel");
+    }
+    return resolution;
+  }
+
   private route(method: string, path: string, params: Record<string, string>): Response {
     if (method === "POST") return reply(200, { ok: null });
     switch (path) {
@@ -101,6 +140,10 @@ export class FakeServer implements Wire {
           ? reply(200, { ok: view })
           : reply(409, { error: `no existe el informe «${params.report}»` });
       }
+      case "/api/catalogue":
+        return reply(200, { ok: this.catalogue });
+      case "/api/selection":
+        return reply(200, { ok: this.resolve(params.text ?? "") });
       case "/api/defaults":
         return reply(200, { ok: this.deduced });
       case "/api/log":
