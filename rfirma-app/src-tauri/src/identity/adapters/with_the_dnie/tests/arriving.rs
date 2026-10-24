@@ -82,7 +82,7 @@ fn openings_with(listing: fn(&dyn Token, &[Store]) -> usize, expected: usize) ->
 fn a_listing_begun_while_the_dnie_is_read_takes_that_reading_though_it_reaches_the_dnie_later() {
     let openings = openings_with(
         |token, stores| token.list_each(stores).certificates().expect("lista").len(),
-        3,
+        2,
     );
 
     assert_eq!(openings, 1);
@@ -97,7 +97,7 @@ fn the_status_count_begun_while_the_dnie_is_read_takes_that_reading() {
                 .map(|(_, certificates)| certificates)
                 .sum()
         },
-        3,
+        2,
     );
 
     assert_eq!(openings, 1);
