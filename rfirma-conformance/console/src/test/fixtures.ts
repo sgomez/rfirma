@@ -93,6 +93,7 @@ export function aReportView(): ReportView {
       date: "2026-09-21",
       title: "",
       notes: "",
+      scope: null,
     },
     summary: summaryOf(sets.flatMap((set) => set.checks)),
     sets,

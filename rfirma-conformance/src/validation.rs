@@ -213,6 +213,7 @@ note = "Guarda mal."
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.9.2".to_owned(),
+                scope: None,
             },
         )
         .unwrap();
