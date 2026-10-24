@@ -6,6 +6,7 @@ import type { HeaderCorrection } from "../contract/HeaderCorrection";
 import type { LogLine } from "../contract/LogLine";
 import type { NewReport } from "../contract/NewReport";
 import type { ReportChoice } from "../contract/ReportChoice";
+import type { ReportClone } from "../contract/ReportClone";
 import type { ReportView } from "../contract/ReportView";
 import type { Request } from "../contract/Request";
 import type { Reset } from "../contract/Reset";
@@ -80,6 +81,8 @@ export function suiteOver(wire: Wire, token: string) {
       get<Validation>("/api/validate", { report, reference }),
     chooseClient: (choice: ClientChoice) => post("/api/client", choice),
     createReport: (report: NewReport) => post("/api/reports", report),
+    cloneReport: (clone: ReportClone) => post("/api/reports/clone", clone),
+    archiveReport: (name: string) => post("/api/report/archive", { name } satisfies ReportChoice),
     correctHeader: (correction: HeaderCorrection) => post("/api/report/header", correction),
     openReport: (name: string) => post("/api/report", { name } satisfies ReportChoice),
     run: (request: Request) => post("/api/run", request),

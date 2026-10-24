@@ -251,6 +251,8 @@ describe("the session", () => {
     await waitFor(() =>
       expect(within(dialog).getByRole("checkbox", { name: "Marcar errores" })).toBeChecked(),
     );
+    await user.click(within(dialog).getByRole("button", { name: "Desplegar errores" }));
+    await user.click(within(dialog).getByRole("button", { name: "Desplegar saludo" }));
     expect(
       within(dialog).getByRole("checkbox", { name: "Marcar empty_uri_rejected" }),
     ).toBeChecked();
@@ -391,6 +393,62 @@ describe("the session", () => {
     expect(within(continuable).getByText("Mi prueba")).toBeInTheDocument();
     expect(within(readOnly).getByText("cannot")).toBeInTheDocument();
     expect(within(readOnly).getByText("es de la versión 1.8.0")).toBeInTheDocument();
+  });
+
+  it("archives a report from its row, and not the one that is open", async () => {
+    const snapshot = aSnapshot();
+    const [open] = snapshot.reports;
+    if (!open) throw new Error("fixture without reports");
+    snapshot.reports = [open, { ...open, name: "old" }];
+    const { server, user } = renderConsoleAt("/", snapshot);
+    await user.click((await screen.findAllByRole("button", { name: "Cambiar" }))[1] as HTMLElement);
+
+    expect(screen.getByRole("button", { name: "Archivar af-linux-prueba" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Archivar old" }));
+
+    expect(server.posted("/api/report/archive")).toEqual([{ name: "old" }]);
+  });
+
+  it("clones a report under the active client, with the scope and notes of its source", async () => {
+    const source = aReportView();
+    source.header = { ...source.header, notes: "Con rades", scope: "errores" };
+    const { server, user } = renderConsoleAt(
+      "/",
+      aSnapshot({ report_name: null, report: null }),
+      (server) => server.reportViews.set("af-linux-prueba", source),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Clonar af-linux-prueba" }));
+    const dialog = await screen.findByRole("dialog", { name: "Clonar af-linux-prueba" });
+    await waitFor(() => expect(within(dialog).getByLabelText("Alcance")).toHaveValue("errores"));
+    expect(within(dialog).getByLabelText("Nombre")).toHaveValue("autofirma-1.9.2-2026-10-24");
+    expect(within(dialog).getByLabelText("Notas")).toHaveValue("Con rades");
+    await user.click(within(dialog).getByRole("button", { name: "Clonar" }));
+
+    expect(server.posted("/api/reports/clone")).toEqual([
+      {
+        from: "af-linux-prueba",
+        report: {
+          name: "autofirma-1.9.2-2026-10-24",
+          title: "autofirma 1.9.2",
+          notes: "Con rades",
+          client_version: "1.9.2",
+          os: "Linux",
+          os_version: "6.8.0",
+          scope: "errores",
+        },
+      },
+    ]);
+  });
+
+  it("does not offer to clone a report of another client kind", async () => {
+    const snapshot = aSnapshot({ report_name: null, report: null });
+    const [first] = snapshot.reports;
+    if (!first) throw new Error("fixture without reports");
+    snapshot.reports = [{ ...first, name: "of-rfirma", kind: "rfirma", continuable: false }];
+    renderConsoleAt("/", snapshot);
+
+    expect(await screen.findByRole("button", { name: "Clonar of-rfirma" })).toBeDisabled();
   });
 
   it("marks the client step while its changes are not resolved", async () => {

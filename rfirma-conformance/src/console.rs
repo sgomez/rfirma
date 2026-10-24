@@ -33,7 +33,7 @@ use crate::selection::{
     resolve as resolve_the_selection, the_sets_of, CatalogueSet, SelectionResolution,
 };
 use crate::snapshot::{snapshot_of, Activity, BatchView, PendingByTranches, ReportEntry};
-use crate::transcript::{log_path_of, transcript_path_of};
+use crate::transcript::{log_path_of, transcript_path_of, transcripts_directory_of};
 use crate::validation::{
     read_the_reference, the_reference_dir, the_references_in, validate, Validation,
 };
@@ -118,6 +118,14 @@ pub(crate) struct NewReport {
     os: String,
     os_version: String,
     scope: Option<String>,
+}
+
+/// Un informe nuevo que parte de los resultados y los trámites del informe `from`.
+#[derive(Debug, Deserialize, TS)]
+#[ts(export)]
+pub(crate) struct ReportClone {
+    from: String,
+    report: NewReport,
 }
 
 #[derive(Clone)]
@@ -299,6 +307,14 @@ impl Console {
     }
 
     pub(crate) fn create_report(&self, new: NewReport) -> Result<(), String> {
+        self.create(new, None)
+    }
+
+    pub(crate) fn clone_report(&self, clone: ReportClone) -> Result<(), String> {
+        self.create(clone.report, Some(&clone.from))
+    }
+
+    fn create(&self, new: NewReport, from: Option<&str>) -> Result<(), String> {
         let dir = self.shared.the_report_dir(&new.name)?;
         if dir.exists() {
             return Err(format!("ya hay un informe llamado «{}»", new.name));
@@ -317,16 +333,35 @@ impl Console {
             return Err(NO_SWITCHING_REPORTS.to_owned());
         }
         let client = session.client.as_ref().ok_or(NO_CLIENT)?;
+        let source = from
+            .map(|name| self.a_source_for(name, client.kind))
+            .transpose()?;
         std::fs::create_dir_all(&dir)
             .map_err(|error| format!("{} no se pudo crear: {error}", dir.display()))?;
-        let report = Report::create(
-            &dir.join(THE_REPORT_FILE),
-            &client.binary.display().to_string(),
-            client.kind,
-            client.origin,
-            &self.shared.catalogue,
-            coordinates,
-        )
+        let path = dir.join(THE_REPORT_FILE);
+        let binary = client.binary.display().to_string();
+        let catalogue = &self.shared.catalogue;
+        let report = match &source {
+            Some((source, source_dir)) => copy_the_transcripts(source_dir, &dir).and_then(|()| {
+                Report::create_from(
+                    source,
+                    &path,
+                    &binary,
+                    client.kind,
+                    client.origin,
+                    catalogue,
+                    coordinates,
+                )
+            }),
+            None => Report::create(
+                &path,
+                &binary,
+                client.kind,
+                client.origin,
+                catalogue,
+                coordinates,
+            ),
+        }
         .inspect_err(|_| {
             let _ = std::fs::remove_dir_all(&dir);
         })?;
@@ -350,6 +385,35 @@ impl Console {
                 })?;
         }
         self.shared.install(&mut session, new.name, dir, report);
+        Ok(())
+    }
+
+    /// El informe `name` y su directorio, si un cliente de clase `kind` puede partir de él.
+    fn a_source_for(&self, name: &str, kind: ClientKind) -> Result<(Report, PathBuf), String> {
+        let source = self.open_to_see(name)?;
+        if source.kind() != kind {
+            return Err(format!(
+                "«{name}» es de {} y el cliente activo es {}",
+                source.kind().name(),
+                kind.name()
+            ));
+        }
+        Ok((source, self.shared.the_report_dir(name)?))
+    }
+
+    pub(crate) fn archive_report(&self, name: String) -> Result<(), String> {
+        let mut session = self.shared.lock();
+        if session
+            .report
+            .as_ref()
+            .is_some_and(|open| open.name == name)
+        {
+            return Err("el informe abierto no se archiva: abre otro antes".to_owned());
+        }
+        let path = self.shared.the_report_dir(&name)?.join(THE_REPORT_FILE);
+        Report::read(&path)?.archive()?;
+        self.shared.list_the_reports(&mut session);
+        self.shared.publish(&session);
         Ok(())
     }
 
@@ -1150,11 +1214,12 @@ fn reports_in(dir: &Path, client: Option<&Client>, candidates: &[Candidate]) -> 
         .filter(|entry| entry.path().join(THE_REPORT_FILE).is_file())
         .filter_map(|entry| entry.file_name().into_string().ok())
         .filter(|name| is_a_report_name(name))
-        .map(
+        .filter_map(
             |name| match Report::read(&dir.join(&name).join(THE_REPORT_FILE)) {
+                Ok(report) if report.is_archived() => None,
                 Ok(report) => {
                     let why_not = why_not_continue(&report, client, candidates);
-                    ReportEntry {
+                    Some(ReportEntry {
                         kind: Some(report.kind().name()),
                         client: Some(report.client().to_owned()),
                         client_version: Some(report.header().client_version.clone()),
@@ -1164,9 +1229,9 @@ fn reports_in(dir: &Path, client: Option<&Client>, candidates: &[Candidate]) -> 
                         why_not,
                         complaint: None,
                         name,
-                    }
+                    })
                 }
-                Err(complaint) => ReportEntry {
+                Err(complaint) => Some(ReportEntry {
                     kind: None,
                     client: None,
                     client_version: None,
@@ -1176,12 +1241,27 @@ fn reports_in(dir: &Path, client: Option<&Client>, candidates: &[Candidate]) -> 
                     why_not: None,
                     complaint: Some(complaint),
                     name,
-                },
+                }),
             },
         )
         .collect();
     reports.sort_by(|a, b| a.name.cmp(&b.name));
     reports
+}
+
+/// Copia las tramas y los registros del informe `from` al directorio `to`, si los tiene.
+fn copy_the_transcripts(from: &Path, to: &Path) -> Result<(), String> {
+    let (source, target) = (transcripts_directory_of(from), transcripts_directory_of(to));
+    let Ok(entries) = std::fs::read_dir(&source) else {
+        return Ok(());
+    };
+    let unwritable =
+        |error: std::io::Error| format!("{} no se pudo copiar: {error}", source.display());
+    std::fs::create_dir_all(&target).map_err(unwritable)?;
+    for entry in entries.filter_map(Result::ok) {
+        std::fs::copy(entry.path(), target.join(entry.file_name())).map_err(unwritable)?;
+    }
+    Ok(())
 }
 
 fn why_not_continue(
@@ -2513,5 +2593,123 @@ expects.code = "SAF_03"
 
         assert_eq!(view["header"]["scope"], serde_json::Value::Null);
         assert_eq!(view["summary"]["total"], 4);
+    }
+
+    fn the_listed_names(console: &Console) -> Vec<String> {
+        let mut session = console.shared.lock();
+        console.shared.list_the_reports(&mut session);
+        session
+            .reports
+            .iter()
+            .map(|entry| entry.name.clone())
+            .collect()
+    }
+
+    #[test]
+    fn an_archived_report_is_no_longer_listed_but_keeps_its_dossier() {
+        let dir = tempfile::tempdir().unwrap();
+        let catalogue = a_catalogue();
+        a_report_in(dir.path(), "a", ClientKind::Rfirma, &catalogue);
+        a_report_in(dir.path(), "b", ClientKind::Rfirma, &catalogue);
+        let console = Console::new(catalogue, dir.path().to_owned(), Duration::ZERO);
+
+        console.archive_report("a".to_owned()).unwrap();
+
+        assert_eq!(the_listed_names(&console), ["b"]);
+        assert!(console.report_view("a").is_ok());
+    }
+
+    #[test]
+    fn a_report_is_archived_or_brought_back_by_its_key_in_the_dossier() {
+        let dir = tempfile::tempdir().unwrap();
+        let catalogue = a_catalogue();
+        a_report_in(dir.path(), "a", ClientKind::Rfirma, &catalogue);
+        let console = Console::new(catalogue, dir.path().to_owned(), Duration::ZERO);
+        let path = dir.path().join("a").join(THE_REPORT_FILE);
+        let rewrite = |archived: Option<bool>| {
+            let mut json: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+            let contents = json.as_object_mut().unwrap();
+            match archived {
+                Some(archived) => contents.insert("archived".to_owned(), archived.into()),
+                None => contents.remove("archived"),
+            };
+            std::fs::write(&path, json.to_string()).unwrap();
+        };
+
+        rewrite(Some(true));
+        assert!(the_listed_names(&console).is_empty());
+        rewrite(None);
+        assert_eq!(the_listed_names(&console), ["a"]);
+    }
+
+    #[test]
+    fn the_open_report_is_not_archived() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+
+        let refused = console.archive_report("a-report".to_owned()).unwrap_err();
+
+        assert!(refused.contains("abierto"), "{refused}");
+    }
+
+    fn a_clone_of(from: &str, name: &str, client_version: &str) -> ReportClone {
+        ReportClone {
+            from: from.to_owned(),
+            report: NewReport {
+                name: name.to_owned(),
+                title: String::new(),
+                notes: String::new(),
+                client_version: client_version.to_owned(),
+                os: "Linux".to_owned(),
+                os_version: "6.0".to_owned(),
+                scope: None,
+            },
+        }
+    }
+
+    #[test]
+    fn a_clone_opens_with_the_results_and_errands_of_its_source_under_the_new_version() {
+        let runner = a_rejecting_runner();
+        let (console, dir) = a_console_replaying(&runner);
+        console.enqueue(reusing("a_rejection")).unwrap();
+        run_the_queue(&console);
+        let resolved = the_state_of(&console, "a_rejection");
+
+        console
+            .clone_report(a_clone_of("a-report", "copy", "0.2.0"))
+            .unwrap();
+
+        assert_eq!(the_state_of(&console, "a_rejection"), resolved);
+        let view = console.report_view("copy").unwrap();
+        assert_eq!(view["header"]["client_version"], "0.2.0");
+        assert!(dir
+            .path()
+            .join("copy")
+            .join("transcripts")
+            .join("a_rejection.log")
+            .is_file());
+        console.enqueue(reusing("a_rejection")).unwrap();
+        run_the_queue(&console);
+        assert_eq!(runner.runs().len(), 1);
+    }
+
+    #[test]
+    fn a_report_of_another_client_kind_is_not_cloned() {
+        let runner = a_rejecting_runner();
+        let (console, dir) = a_console_replaying(&runner);
+        a_report_in(
+            dir.path(),
+            "of-autofirma",
+            ClientKind::Autofirma,
+            &console.shared.catalogue,
+        );
+
+        let refused = console
+            .clone_report(a_clone_of("of-autofirma", "copy", "0.2.0"))
+            .unwrap_err();
+
+        assert!(refused.contains("autofirma"), "{refused}");
+        assert!(!dir.path().join("copy").exists());
     }
 }

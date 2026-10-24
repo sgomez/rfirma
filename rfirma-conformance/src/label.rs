@@ -40,7 +40,7 @@ impl Label {
         }
     }
 
-    pub fn explains(&self, kind: ClientKind) -> bool {
+    pub(crate) fn explains(&self, kind: ClientKind) -> bool {
         match self {
             Self::AutofirmaBug(_) | Self::AutofirmaBugInMaster(_) => kind == ClientKind::Autofirma,
             Self::RfirmaAdr(_) => kind == ClientKind::Rfirma,
