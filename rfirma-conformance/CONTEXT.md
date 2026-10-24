@@ -146,6 +146,9 @@ Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrad
   clave, y el OpenSC del sistema registrado en Linux; no se copia nada de la tarjeta y el PIN lo
   teclea la persona. Sus comprobaciones son del camino
   feliz, con asistencia de persona, y quedan PENDIENTE con su motivo si no hay tarjeta.
+- **rsa_without_sha1**: el de **rsa**, con rFirma sin SHA-1 permitido en sus preferencias, para
+  medir el permiso de una sola operación; AutoFirma no tiene esa preferencia y lo ve igual que
+  **rsa**.
 Es condición de lanzamiento: la suite prepara un perfil aislado por almacén, igual para cualquier
 cliente.
 _Avoid_: keystore, perfil (para el almacén)

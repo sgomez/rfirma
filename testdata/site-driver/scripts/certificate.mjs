@@ -79,6 +79,8 @@ const THE_BATCH_SIGNED_WITH_THE_FILTERED = "the-batch-signed-with-the-filtered-c
 const THE_PINNED_WITHOUT_ASKING = "the-pinned-certificate-without-asking";
 const THE_PINNED_DESPITE_THE_FILTERS = "the-pinned-certificate-despite-the-filters";
 const SIGNED_WITH_THE_PINNED = "signed-with-the-pinned-certificate";
+const THE_SIGNATURE_PINNED_FOR_THE_NEXT = "the-signature-pinned-the-certificate-for-the-next";
+const THE_SERIES_SIGNED_WITH_THE_IDENTIFIED = "the-series-signed-with-the-identified-certificate";
 const A_NEW_SELECTION_AFTER_THE_RELEASE = "a-new-selection-after-the-release";
 const A_CERTIFICATE_OF_THE_NAMED_TOKEN = "a-certificate-of-the-named-token";
 const THE_ONLY_CANDIDATE_WITHOUT_ASKING = "the-only-candidate-without-asking";
@@ -266,6 +268,76 @@ function pinningThePseudonymAnd(condition, then) {
     );
     settlingThe(answer);
   };
+}
+
+/** Una firma del reto con el formato, la huella y los parámetros que se le digan. */
+function aSignatureAs(format, algorithm, extraParams) {
+  return new Promise((resolve) => {
+    AutoScript.sign(
+      Buffer.from(String(Math.floor(Math.random() * 1e9))).toString("base64"),
+      algorithm,
+      format,
+      extraParams,
+      (_signature, certificate) => resolve({ certificate: String(certificate) }),
+      (type, message) => resolve({ error: `${type}: ${message}` }),
+    );
+  });
+}
+
+/** El filtro `qualified` del número de serie del certificado que volvió, en hexadecimal. */
+function theQualifiedFilterOf(answer) {
+  if (answer.error) return "";
+  const { serialNumber } = new X509Certificate(bytesOf(answer.certificate));
+  return `filter=qualified:${serialNumber}`;
+}
+
+/** La serie del Portafirmas de la AGE 7.10: una XAdES SHA-1 que identifica el certificado y dos firmas filtradas por su serie, todo con `sticky`. */
+async function thePortafirmasSeriesScript() {
+  AutoScript.setStickySignatory(true);
+  const identified = await aSignatureAs("XAdES", "SHA1withRSA", "");
+  unansweredMeansAsked(THE_SERIES_SIGNED_WITH_THE_IDENTIFIED);
+  const filter = theQualifiedFilterOf(identified);
+  await theChannelClosing();
+  const first = await aSignatureAs(
+    "CAdES",
+    "SHA256withRSA",
+    [filter, "expPolicy=FirmaAGE", "CSVStorage.properties"].join("\n"),
+  );
+  await theChannelClosing();
+  const second = await aSignatureAs(
+    "XAdES",
+    "SHA256withRSA",
+    ["nullheadless=true", filter, "CSVStorage.properties"].join("\n"),
+  );
+  const name = whichOfTheKit(identified.certificate ?? "");
+  const held =
+    !identified.error && name !== null && isTheKit(first, name) && isTheKit(second, name);
+  emit(
+    aConditionEvent(
+      THE_SERIES_SIGNED_WITH_THE_IDENTIFIED,
+      held,
+      `al identificar ${described(identified)}; la primera firma ${described(first)}; la segunda ${described(second)}`,
+    ),
+  );
+  settlingThe(second);
+}
+
+/** Dos firmas con `sticky`: la primera elige el de seudónimo y lo fija; la segunda, sin filtros, lo reutiliza. */
+async function theSignaturePinningScript() {
+  unansweredMeansAsked(THE_SIGNATURE_PINNED_FOR_THE_NEXT);
+  AutoScript.setStickySignatory(true);
+  const first = await aSignature(PINNING_THE_PSEUDONYM.join("\n"));
+  await theChannelClosing();
+  const second = await aSignature();
+  const held = isTheKit(first, "pseudonym-rsa") && isTheKit(second, "pseudonym-rsa");
+  emit(
+    aConditionEvent(
+      THE_SIGNATURE_PINNED_FOR_THE_NEXT,
+      held,
+      `la primera firma ${described(first)}; la segunda ${described(second)}`,
+    ),
+  );
+  settlingThe(second);
 }
 
 /** Fija el de seudónimo, lo suelta con una operación sin `sticky` y vuelve a fijar sin `resetsticky`. */
@@ -466,6 +538,12 @@ export const CERTIFICATE_SCRIPTS = {
   ),
   stickysigns: aPublishedScript(pinningThePseudonymAnd(SIGNED_WITH_THE_PINNED, aSignature), {
     conditions: [SIGNED_WITH_THE_PINNED],
+  }),
+  portafirmasseries: aPublishedScript(thePortafirmasSeriesScript, {
+    conditions: [THE_SERIES_SIGNED_WITH_THE_IDENTIFIED],
+  }),
+  stickysignpins: aPublishedScript(theSignaturePinningScript, {
+    conditions: [THE_SIGNATURE_PINNED_FOR_THE_NEXT],
   }),
   stickyreset: aPublishedScript(theResetScript, {
     conditions: [A_NEW_SELECTION_AFTER_THE_RESET],

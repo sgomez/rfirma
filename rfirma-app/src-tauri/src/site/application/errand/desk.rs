@@ -439,6 +439,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine>(
         filter: ask.filter.clone(),
         unregistered_signatures,
         headless: ask.headless,
+        sticky: ask.sticky.is_sticky(),
         saving,
         already_chosen: preselected.row,
         without_asking: preselected.without_asking && !sha1_to_allow,

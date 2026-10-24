@@ -42,6 +42,10 @@ pub fn consent_for<E: FilterEngine>(
     let not_accepted = accepted.not_accepted;
     let accepted = accepted.certificates;
 
+    if let Some(stuck) = the_usable_stuck_among(&accepted, request.sticky(), live) {
+        return answering(live, SiteOutcome::Certificate(stuck.der().to_vec()));
+    }
+
     if request.waives_the_choice() && certificates.automatic_selection_honoured() {
         if let Some(only) = the_only_one_among(&accepted) {
             if request.sticky().is_sticky() {
@@ -250,7 +254,7 @@ pub(super) struct Preselected {
 }
 
 impl Preselected {
-    /// La fijada en la sesión o el único vigente; sin preguntar, solo si es la única fila y con la preferencia (`AOKeyStoreDialog.show`, 1.9.2).
+    /// La fijada en la sesión o el único vigente; sin preguntar con la fijada (ADR-0010), o con el único si es la única fila y con la preferencia (`AOKeyStoreDialog.show`, 1.9.2).
     pub fn among(
         rows: &[ListedCertificate],
         stuck: Option<String>,
@@ -258,8 +262,8 @@ impl Preselected {
         certificates: &dyn Neighbours,
     ) -> Self {
         let only = choice_waived.then(|| the_only_row_among(rows)).flatten();
-        let without_asking =
-            only.is_some() && rows.len() == 1 && certificates.automatic_selection_honoured();
+        let without_asking = stuck.is_some()
+            || (only.is_some() && rows.len() == 1 && certificates.automatic_selection_honoured());
         Self {
             row: stuck.or(only),
             without_asking,

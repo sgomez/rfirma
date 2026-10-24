@@ -1,11 +1,11 @@
-//! Selección con `sticky`: preselecciona el certificado, pero nunca contesta sin volver a preguntar (ADR-0010).
+//! Selección con `sticky`: la segunda contesta con el certificado fijado sin volver a preguntar (ADR-0010).
 
 #[allow(dead_code, unused_imports)]
 mod support;
 
 use support::*;
 
-/// Tres selecciones seguidas del cliente publicado, y las tres preguntan: `sticky` preselecciona, no contesta (ADR-0010).
+/// Tres selecciones seguidas del cliente publicado: la fijada no pregunta y la que sigue a `resetsticky` sí (ADR-0010).
 async fn the_sticky_selections_of(mode: BenchMode) {
     if !the_bench_can_be_mounted() {
         return;
@@ -34,12 +34,12 @@ async fn the_sticky_selections_of(mode: BenchMode) {
     assert_eq!(
         the_certificate_of(&again, "stuck-again"),
         first,
-        "la persona vuelve a entregar el mismo certificado"
+        "el fijado vuelve sin que la persona lo entregue"
     );
     assert_eq!(
         consents.load(Ordering::SeqCst),
-        2,
-        "con sticky la segunda seleccion tambien pregunta: sin ventana no hay certificado"
+        1,
+        "con sticky la segunda seleccion no pregunta"
     );
 
     let released = client.next_event();
@@ -50,7 +50,7 @@ async fn the_sticky_selections_of(mode: BenchMode) {
     );
     assert_eq!(
         consents.load(Ordering::SeqCst),
-        3,
+        2,
         "tras resetsticky la seleccion vuelve a preguntar"
     );
 
@@ -61,12 +61,12 @@ async fn the_sticky_selections_of(mode: BenchMode) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
-async fn sticky_does_not_spare_the_second_selection_of_the_published_client_from_asking() {
+async fn sticky_spares_the_second_selection_of_the_published_client_from_asking() {
     the_sticky_selections_of(BenchMode::Fourth).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
-async fn sticky_does_not_spare_the_second_selection_over_the_third_protocol_either() {
+async fn sticky_spares_the_second_selection_over_the_third_protocol_too() {
     the_sticky_selections_of(BenchMode::Third).await;
 }

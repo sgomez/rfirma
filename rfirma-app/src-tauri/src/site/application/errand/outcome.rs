@@ -195,6 +195,8 @@ pub struct SigningConsent {
     pub unregistered_signatures: bool,
     /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
     pub headless: bool,
+    /// Si la sede pidió `sticky`: el certificado consentido queda fijado en la sesión.
+    pub sticky: bool,
     /// Pistas de guardado, si esta firma viene de `signandsave`.
     pub saving: Option<Box<SavingHints>>,
     /// Asa del certificado que ya está resuelto y el desplegable elige solo.

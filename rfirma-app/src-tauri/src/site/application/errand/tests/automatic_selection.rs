@@ -230,7 +230,7 @@ fn a_signature_that_skips_the_consent_goes_on_with_its_only_certificate() {
 }
 
 #[test]
-fn a_certificate_stuck_among_two_candidates_is_preselected_but_still_asked() {
+fn a_certificate_stuck_among_two_candidates_signs_without_asking() {
     let ours = two();
     let live = a_live();
     live.stick(ours[1].reference());
@@ -245,10 +245,7 @@ fn a_certificate_stuck_among_two_candidates_is_preselected_but_still_asked() {
     let ErrandStep::AskingToSign(consent) = step else {
         panic!("hay algo que firmar: {step:?}");
     };
-    assert!(
-        !consent.without_asking,
-        "el fijado preselecciona, no contesta"
-    );
+    assert!(consent.without_asking, "el fijado firma sin preguntar");
     assert_eq!(
         consent.already_chosen.as_deref(),
         Some(consent.certificates[1].id.as_str())

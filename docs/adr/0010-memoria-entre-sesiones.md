@@ -302,3 +302,35 @@ explicado.
   la petición lo admite. Se descarta: contestar con un certificado que
   incumple el filtro que la propia petición declara es contradecirse, una de
   las excepciones del ADR-0023 al «se sigue al original».
+
+## Enmienda: el certificado fijado contesta sin preguntar, como en el original
+
+Esta enmienda deroga la regla 1 de las dos anteriores: con `sticky=true`, el
+certificado que la sesión fijó **contesta sin preguntar**. `selectcert` lo
+devuelve sin abrir la ventana, y `sign`, `signandsave` y el lote firman con
+él sin esperar a la persona, como `AutoFirma`
+(`ProtocolInvocationLauncherSign.java:518-521`,
+`ProtocolInvocationLauncherSelectCert.java:139-142`, 1.9.2). Lo fija
+cualquier operación con `sticky` que la persona consienta, también una
+firma (`ProtocolInvocationLauncherSign.java:643`), no solo `selectcert`.
+
+La regla derogada nació contra un recuerdo que vivía en disco, sin clave de
+sede ni de sesión, y que cualquier sede leía. La regla 2 de la primera
+enmienda ya lo ató a la sesión que lo fijó, que con el ADR-0024 muere con su
+proceso: es la condición en que esa enmienda daba por defendible copiar al
+original. Preguntar otra vez solo añadía una ventana que la gente que llega
+de `AutoFirma` no espera y que un portafirmas repite en cada petición.
+
+Se mantienen el resto de reglas: el fijado es de la sesión y no del
+escritorio, `resetsticky` lo suelta, y solo se usa si el filtro de la
+petición nueva lo acepta; si no, se pregunta con los que ese filtro admite.
+Por esta última, `a_pinned_certificate_ignores_the_filters_of_the_next_request`
+sigue con la etiqueta `rfirma:adr-0010`;
+`selectcert_answers_the_pinned_certificate_without_asking` y
+`a_certificate_pinned_by_selectcert_signs_without_asking` la pierden.
+
+### Considered Options
+
+- **Firmar sin preguntar solo si la persona lo permite en Preferencias**, como
+  `headless` (ADR-0032). Se descarta: la persona ya eligió el certificado con
+  `sticky` en esa misma sesión, y el original no lo condiciona a nada.
