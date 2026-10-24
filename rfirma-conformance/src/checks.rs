@@ -135,7 +135,7 @@ impl Probe {
         ));
         Hand::spawn(
             plan,
-            the_isolated_home_of(&self.client),
+            &self.profile.home,
             self.witness.log_sink(),
             self.witness.started_at(),
         )
@@ -179,7 +179,7 @@ impl Probe {
     /// Escribe, en el perfil aislado donde el cliente abre sus diálogos, los ficheros que necesita
     /// la comprobación, tras borrar los que dejó cualquier otra; `None` si no necesita ninguno.
     fn prepare_the_fixtures_of(&self, check: &Check) -> Result<Option<String>, String> {
-        let directory = the_isolated_home_of(&self.client);
+        let directory = &self.profile.home;
         for (name, _) in THE_HARNESSES.iter().flat_map(|harness| harness.fixtures) {
             let _ = std::fs::remove_file(directory.join(name));
         }
@@ -239,7 +239,7 @@ fn worth_keeping(head: &Check, outcome: &ErrandOutcome) -> bool {
         && outcome.error_type.as_deref() != Some(THE_DRIVER_CRASH)
 }
 
-fn all_pending(group: &[&Check], why: &str) -> Vec<Settlement> {
+pub(crate) fn all_pending(group: &[&Check], why: &str) -> Vec<Settlement> {
     group
         .iter()
         .map(|check| Settlement::pending(check, why))
@@ -345,12 +345,6 @@ fn the_briefing_of(group: &[&Check], fixtures: Option<&str>) -> String {
     briefing.join("\n\n")
 }
 
-/// El perfil aislado, que es el HOME con el que el envoltorio lanza al cliente y donde abre sus
-/// diálogos.
-pub(crate) fn the_isolated_home_of(launcher: &std::path::Path) -> &std::path::Path {
-    launcher.parent().unwrap_or(launcher)
-}
-
 /// Cuánto va a tardar una comprobación que tarda por diseño; `None` si no declara
 /// `patience_secs`.
 fn the_wait_announcement_of(check: &Check) -> Option<String> {
@@ -427,16 +421,6 @@ expects.code = "CANCEL"
         assert_eq!(
             briefing,
             "Se va a pedir dónde guardar.\n\nFicheros preparados en /tmp/x: ya-existe.txt."
-        );
-    }
-
-    #[test]
-    fn the_fixtures_live_in_the_isolated_home_the_client_opens_its_dialogues_in() {
-        assert_eq!(
-            the_isolated_home_of(std::path::Path::new(
-                "/home/x/.cache/rfirma/probe-profile/launch-subject"
-            )),
-            std::path::Path::new("/home/x/.cache/rfirma/probe-profile")
         );
     }
 
@@ -750,9 +734,9 @@ expects.completes.conditions = ["a-candidate-port-bound"]
 
     fn a_probe(witness: &Arc<FakeWitness>, runner: &Arc<RecordedRunner>) -> Probe {
         Probe {
-            client: PathBuf::from("/nowhere/launch-subject"),
+            client: PathBuf::from("/nowhere/autofirma"),
             kind: ClientKind::Autofirma,
-            trust_root: PathBuf::from("/nowhere/root.pem"),
+            profile: crate::client::a_profile_in(std::path::Path::new("/nowhere")),
             report: tempfile::tempdir().unwrap().keep(),
             patience: Duration::from_secs(1),
             witness: Arc::clone(witness) as Arc<dyn Witness>,

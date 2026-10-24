@@ -429,9 +429,9 @@ expects.completes = {}
         let mut report = a_blank_report(kind, catalogue);
         let runner = RecordedRunner::replaying(&[(script, the_recorded(recorded))]);
         let probe = Probe {
-            client: PathBuf::from("/nowhere/launch-subject"),
+            client: PathBuf::from("/nowhere/autofirma"),
             kind: ClientKind::Autofirma,
-            trust_root: PathBuf::from("/nowhere/root.pem"),
+            profile: crate::client::a_profile_in(std::path::Path::new("/nowhere")),
             report: tempfile::tempdir().unwrap().keep(),
             patience: Duration::from_secs(1),
             witness: Arc::new(FakeWitness::default()) as Arc<dyn Witness>,

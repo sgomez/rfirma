@@ -159,7 +159,7 @@ impl ErrandRunner for NodeRunner {
                 None
             }
         };
-        let trust_root = the_trust_root_as_pem(&probe.trust_root);
+        let trust_root = the_trust_root_as_pem(&probe.profile.trust_root);
         let mut driver = the_published_client_running(trust_root.path(), patience, script, mode);
         witness.driver_spawned(driver.id());
         let events = driver.stdout.take().expect("el conductor escribe eventos");
@@ -180,6 +180,7 @@ impl ErrandRunner for NodeRunner {
                     );
                     clients.push(ClientProcess::spawn(
                         &probe.client,
+                        &probe.profile.environment,
                         &url,
                         log_sink.clone(),
                         start,
@@ -286,8 +287,15 @@ pub(crate) struct ClientProcess {
 }
 
 impl ClientProcess {
-    pub(crate) fn spawn(client: &Path, url: &str, log_sink: LiveLogSink, start: Instant) -> Self {
+    pub(crate) fn spawn(
+        client: &Path,
+        environment: &[(&str, std::ffi::OsString)],
+        url: &str,
+        log_sink: LiveLogSink,
+        start: Instant,
+    ) -> Self {
         let mut child = Command::new(client)
+            .envs(environment.iter().map(|(name, value)| (name, value)))
             .arg(url)
             .process_group(0)
             .stdout(Stdio::piped())

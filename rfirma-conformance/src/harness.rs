@@ -9,7 +9,6 @@ use std::thread::{sleep, spawn, JoinHandle};
 use std::time::Duration;
 
 use crate::catalogue::{Check, Provocation};
-use crate::checks::the_isolated_home_of;
 use crate::errand::{ErrandOutcome, ProtocolConditionResult};
 use crate::judge::decoded;
 use crate::outcome::Outcome;
@@ -97,7 +96,7 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
         mode: READ_AND_WRITE,
         measure: |probe, check, drive| {
             let mut outcome = probe.drive(check, drive);
-            let saved = the_isolated_home_of(&probe.client).join(THE_SAVED_NAME);
+            let saved = probe.profile.home.as_path().join(THE_SAVED_NAME);
             outcome.protocol_conditions.push(the_saved_bytes_against(
                 std::fs::read(saved).ok().as_deref(),
                 &the_data_the_site_saves(),
@@ -110,7 +109,7 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
         fixtures: &[],
         mode: READ_AND_WRITE,
         measure: |probe, check, drive| {
-            let home = the_isolated_home_of(&probe.client);
+            let home = probe.profile.home.as_path();
             let (declared, name) = the_destination_proposed_by(drive);
             let saved = declared
                 .map_or_else(|| home.to_path_buf(), PathBuf::from)

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# Monta el perfil de usar y tirar de la suite de conformidad para un cliente y
-# un almacen, e imprime cuatro lineas: la clase de cliente, el envoltorio que lo
-# lanza contra ese perfil, la raiz con la que sirve el canal (vacia si no
-# depende del perfil) y el almacen montado.
+# Monta el almacen de un perfil de usar y tirar de la suite de conformidad, igual
+# para cualquier cliente, e imprime tres lineas: el perfil, el SOFTHSM2_CONF que
+# ha montado en el y el almacen. Las preferencias, el entorno de lanzamiento y la
+# raiz de confianza de cada cliente los pone su receta, en
+# rfirma-conformance/src/recipe.rs.
 #
 # Almacenes:
 #
@@ -21,19 +22,11 @@
 #   1234.
 # * dnie: la NSS vacia con el OpenSC del sistema registrado; del DNIe no se
 #   copia nada: la tarjeta esta en el lector y la persona teclea el PIN.
-# * rsa_without_sha1: el de rsa, con rFirma sin SHA-1 permitido en sus
-#   preferencias; AutoFirma no tiene esa preferencia y lo ve igual que rsa.
+# * rsa_without_sha1: la NSS de rsa; lo que cambia es la preferencia que le
+#   pone la receta de rFirma.
 #
-# Ningun envoltorio apunta nunca al SOFTHSM2_CONF de quien corre la suite:
-# cada perfil monta el suyo, este lo use o no.
-#
-# El certificado personal del titular no llega al perfil: AutoFirma recibe
-# HOME y -Duser.home, rFirma HOME y XDG_*. La CA local de rFirma la crea este
-# script dentro del perfil, sin lanzar el cliente; la raiz de AutoFirma es la de
-# su instalacion. rFirma arranca en castellano, con el tema claro, sin la
-# cuenta atras de consentir, sin el asistente del primer arranque y con SHA-1
-# permitido salvo en rsa_without_sha1, como si la persona lo hubiera elegido en
-# sus preferencias.
+# Cada perfil monta su SOFTHSM2_CONF, lo use o no, para que el cliente nunca
+# vea el de quien corre la suite.
 #
 # El perfil se rehace entero en cada llamada.
 
@@ -44,18 +37,7 @@ fnmt="$here/../testdata/fnmt"
 site_driver="$here/../testdata/site-driver"
 source "$here/../testdata/softhsm/platform.sh"
 
-subject="${1:-}"
-store="${3:-rsa}"
-if [ ! -x "$subject" ]; then
-    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token|token_apart|ed25519|several|expired|dnie|rsa_without_sha1]" >&2
-    exit 2
-fi
-
-case "${2:-$(basename "$subject")}" in
-    autofirma) kind=autofirma ;;
-    rfirma) kind=rfirma ;;
-    *) kind=desconocido ;;
-esac
+store="${1:-rsa}"
 
 case "$store" in
     rsa | rsa_without_sha1) p12s="active-rsa.p12" ;;
@@ -187,64 +169,6 @@ for p12 in $p12s; do
     pk12util -i "$fnmt/$p12" -d "sql:$nssdb" -W "$password" -K "" >/dev/null
 done
 
-wrapper="$profile/launch-subject"
-if [ "$kind" = rfirma ]; then
-    cat > "$wrapper" <<WRAPPER
-#!/usr/bin/env bash
-export HOME="$profile"
-export XDG_CONFIG_HOME="$profile/.config"
-export XDG_STATE_HOME="$profile/.local/state"
-export XDG_DATA_HOME="$profile/.local/share"
-export XDG_CACHE_HOME="$profile/.cache"
-export SOFTHSM2_CONF="$softhsm_conf"
-exec "$subject" "\$@"
-WRAPPER
-else
-    cat > "$wrapper" <<WRAPPER
-#!/usr/bin/env bash
-export HOME="$profile"
-export JDK_JAVA_OPTIONS="-Duser.home=$profile"
-export SOFTHSM2_CONF="$softhsm_conf"
-exec "$subject" "\$@"
-WRAPPER
-fi
-chmod +x "$wrapper"
-
-# La CA local con la forma de la que genera rFirma (ADR-0005): un arranque en
-# seco ya no la crea, y lanzarlo abriria su ventana principal.
-the_local_ca_of_rfirma() {
-    local dir="$profile/.local/share/rfirma"
-    mkdir -p "$dir"
-    chmod 700 "$dir"
-    openssl req -x509 -new -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes \
-        -keyout "$dir/local-ca.key.pem" -out "$dir/local-ca.crt.pem" -days 900 -sha256 \
-        -subj "/CN=rFirma CA local" \
-        -addext "basicConstraints=critical,CA:TRUE,pathlen:0" \
-        -addext "keyUsage=critical,keyCertSign,cRLSign" \
-        -addext "nameConstraints=critical,permitted;DNS:localhost,permitted;IP:127.0.0.1/255.255.255.255,permitted;IP:::1/ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff" \
-        -addext "subjectKeyIdentifier=hash" 2>/dev/null
-    chmod 600 "$dir/local-ca.key.pem"
-    echo "$dir/local-ca.crt.pem"
-}
-
-the_configuration_of_rfirma() {
-    local dir="$profile/.config/rfirma"
-    local allow_sha1=true
-    [ "$store" = rsa_without_sha1 ] && allow_sha1=false
-    mkdir -p "$dir"
-    printf '{"version": 1, "consent_countdown": false, "honour_automatic_selection": true, "setup_wizard_seen": true, "allow_sha1": %s, "language": "es", "theme": "light"}\n' \
-        "$allow_sha1" > "$dir/config.json"
-}
-
-trust_root=""
-if [ "$kind" = rfirma ]; then
-    the_configuration_of_rfirma
-    command -v openssl >/dev/null || {
-        echo "falta: openssl" >&2
-        exit 1
-    }
-    trust_root="$(the_local_ca_of_rfirma)"
-fi
 echo "almacen $store aislado en $profile" >&2
 
-printf '%s\n%s\n%s\n%s\n' "$kind" "$wrapper" "$trust_root" "$store"
+printf '%s\n%s\n%s\n' "$profile" "$softhsm_conf" "$store"

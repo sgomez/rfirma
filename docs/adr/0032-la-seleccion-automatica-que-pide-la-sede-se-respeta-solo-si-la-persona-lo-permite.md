@@ -45,7 +45,7 @@ ADR-0023 al «se sigue al original».
 4. **`sticky` no cambia con la preferencia** (ADR-0010): el fijado en la sesión
    se preselecciona entre varios candidatos, pero no contesta.
 5. **La suite de conformidad mide rFirma con la preferencia encendida**: el
-   perfil de usar y tirar que monta `scripts/isolated-store.sh` la activa, y
+   perfil de usar y tirar que le prepara la suite la activa, y
    el informe compara el comportamiento que el original tiene de fábrica.
 
 ## Considered Options
