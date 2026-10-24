@@ -36,6 +36,8 @@ pub(crate) struct ReportEntry {
     pub(crate) client: Option<String>,
     pub(crate) client_version: Option<String>,
     pub(crate) date: Option<String>,
+    pub(crate) continuable: bool,
+    pub(crate) why_not: Option<String>,
     pub(crate) complaint: Option<String>,
 }
 
@@ -111,7 +113,7 @@ mod tests {
 
     use super::*;
     use crate::catalogue::the_catalogue_in;
-    use crate::client::ClientKind;
+    use crate::client::{ClientKind, Origin};
     use crate::outcome::Outcome;
     use crate::report::HeaderCoordinates;
 
@@ -147,6 +149,7 @@ expects.completes = {}
             &dir.path().join("dossier.json"),
             "/usr/bin/autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             catalogue,
             HeaderCoordinates {
                 os: "Linux".to_owned(),

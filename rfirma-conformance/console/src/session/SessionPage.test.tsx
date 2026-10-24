@@ -188,11 +188,13 @@ describe("the session", () => {
     expect(within(bar).getByText("Cancela el diálogo de guardar.")).toBeInTheDocument();
   });
 
-  it("keeps the report and run steps disabled until the client is resolved", async () => {
+  it("offers the reports to open without a client and keeps the run step disabled", async () => {
     renderConsoleAt("/", aSnapshot({ client: null, report_name: null, report: null }));
 
     const report = await screen.findByRole("region", { name: "2. Informe" });
-    expect(report).toHaveAttribute("aria-disabled", "true");
+    expect(report).not.toHaveAttribute("aria-disabled", "true");
+    expect(within(report).getByRole("button", { name: "Abrir" })).toBeEnabled();
+    expect(within(report).getByRole("button", { name: "Informe nuevo…" })).toBeDisabled();
     expect(screen.getByRole("region", { name: "3. Ejecutar" })).toHaveAttribute(
       "aria-disabled",
       "true",

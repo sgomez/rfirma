@@ -181,7 +181,7 @@ mod tests {
 
     use super::*;
     use crate::catalogue::the_catalogue_in;
-    use crate::client::ClientKind;
+    use crate::client::{ClientKind, Origin};
     use crate::report::HeaderCoordinates;
 
     const THREE_CHECKS: &str = r#"
@@ -234,6 +234,7 @@ expects.completes = {}
             &dir.path().join("dossier.json"),
             binary,
             kind,
+            Origin::Installed,
             catalogue,
             HeaderCoordinates {
                 os: "Linux".to_owned(),

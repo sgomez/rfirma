@@ -28,7 +28,6 @@ export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
       number={2}
       label="Informe"
       done={name !== null}
-      disabled={client === null}
       summary={
         name && view ? (
           <span className="facts">
@@ -70,12 +69,11 @@ export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
         )
       }
     >
-      {open && client && (
+      {open && (
         <div className="step-form column">
           {snapshot.reports.length > 0 ? (
             <ul className="report-list" aria-label="Informes">
               {snapshot.reports.map((entry) => {
-                const continuable = !entry.complaint && entry.kind === client.kind;
                 return (
                   <li key={entry.name} className={entry.name === name ? "is-current" : undefined}>
                     <span className="mono report-name">{entry.name}</span>
@@ -87,7 +85,7 @@ export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
                       )}
                     </span>
                     <span className="muted report-date">{calendarDate(entry.date)}</span>
-                    {continuable ? (
+                    {entry.continuable ? (
                       <button
                         type="button"
                         className="button small"
@@ -102,7 +100,11 @@ export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
                         href={suite.page(`/informe/${encodeURIComponent(entry.name)}`)}
                         target="_blank"
                         rel="noopener"
-                        title="No se puede continuar con el cliente activo; se ve en solo lectura"
+                        title={
+                          entry.why_not
+                            ? `No se puede continuar: ${entry.why_not}. Se ve en solo lectura`
+                            : "Se ve en solo lectura"
+                        }
                       >
                         Ver en otra ventana <ExternalIcon />
                       </a>
@@ -124,7 +126,7 @@ export function ReportStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
               type="button"
               className="button primary"
               onClick={() => setCreating(true)}
-              disabled={busy}
+              disabled={busy || client === null}
             >
               Informe nuevo…
             </button>

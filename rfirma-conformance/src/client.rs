@@ -104,7 +104,7 @@ pub(crate) struct Client {
 }
 
 /// De dónde sale el binario de un cliente.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
 pub(crate) enum Origin {
@@ -222,6 +222,36 @@ pub(crate) fn resolve(
         identity: candidate.identity,
         trust_root,
     })
+}
+
+/// El binario con que se restaura el cliente de un informe: el suyo si aún se ofrece; si no, el
+/// candidato de su clase, su origen y su versión; si no, el suyo si aún se puede ejecutar.
+pub(crate) fn the_binary_to_restore(
+    kind: ClientKind,
+    origin: Option<Origin>,
+    binary: &Path,
+    version: &str,
+    candidates: &[Candidate],
+) -> Option<PathBuf> {
+    let of_its_kind = || {
+        candidates
+            .iter()
+            .filter(move |offered| offered.kind == kind)
+    };
+    of_its_kind()
+        .find(|offered| offered.binary == binary)
+        .or_else(|| {
+            of_its_kind().find(|offered| {
+                Some(offered.origin) == origin
+                    && offered
+                        .identity
+                        .version
+                        .as_deref()
+                        .is_none_or(|said| said == version)
+            })
+        })
+        .map(|offered| offered.binary.clone())
+        .or_else(|| is_executable(binary).then(|| binary.to_owned()))
 }
 
 /// Monta el almacén `store` en un perfil nuevo y lo completa con la receta del cliente.
@@ -404,6 +434,75 @@ mod tests {
             "RFIRMA_LIB_DIR",
             OsString::from("/src/rfirma/rfirma-native-bridge/target/lib/rfirma")
         )));
+    }
+
+    fn a_candidate(origin: Origin, binary: &str, version: Option<&str>) -> Candidate {
+        Candidate {
+            kind: ClientKind::Rfirma,
+            origin,
+            binary: PathBuf::from(binary),
+            library_dir: None,
+            identity: Identity {
+                version: version.map(str::to_owned),
+                channel: None,
+            },
+        }
+    }
+
+    #[test]
+    fn a_report_client_still_offered_is_restored_with_its_own_binary() {
+        let candidates = [
+            a_candidate(Origin::LocalBuild, "/a/rfirma", Some("1.0")),
+            a_candidate(Origin::LocalBuild, "/b/rfirma", Some("1.0")),
+        ];
+
+        let restored = the_binary_to_restore(
+            ClientKind::Rfirma,
+            Some(Origin::LocalBuild),
+            Path::new("/b/rfirma"),
+            "1.0",
+            &candidates,
+        );
+
+        assert_eq!(restored, Some(PathBuf::from("/b/rfirma")));
+    }
+
+    #[test]
+    fn a_report_client_whose_binary_moved_is_restored_from_its_origin_and_version() {
+        let candidates = [
+            a_candidate(Origin::Installed, "/usr/bin/rfirma", Some("1.0")),
+            a_candidate(Origin::Worktree, "/w/old/rfirma", Some("0.9")),
+            a_candidate(Origin::Worktree, "/w/new/rfirma", Some("1.0")),
+        ];
+
+        let restored = the_binary_to_restore(
+            ClientKind::Rfirma,
+            Some(Origin::Worktree),
+            Path::new("/w/gone/rfirma"),
+            "1.0",
+            &candidates,
+        );
+
+        assert_eq!(restored, Some(PathBuf::from("/w/new/rfirma")));
+    }
+
+    #[test]
+    fn a_report_client_that_is_nowhere_is_not_restored() {
+        let candidates = [a_candidate(
+            Origin::Installed,
+            "/usr/bin/rfirma",
+            Some("2.0"),
+        )];
+
+        let restored = the_binary_to_restore(
+            ClientKind::Rfirma,
+            Some(Origin::Installed),
+            Path::new("/nowhere/rfirma"),
+            "1.0",
+            &candidates,
+        );
+
+        assert_eq!(restored, None);
     }
 
     #[test]

@@ -9,7 +9,7 @@ use std::time::{Duration, SystemTime};
 use serde::{Deserialize, Serialize};
 
 use crate::catalogue::Check;
-use crate::client::ClientKind;
+use crate::client::{ClientKind, Origin};
 use crate::errand::{ErrandKey, ObservedErrand};
 use crate::outcome::{CheckState, Outcome};
 
@@ -55,6 +55,8 @@ pub struct HeaderCoordinates {
 struct Contents {
     client: String,
     kind: ClientKind,
+    #[serde(default)]
+    origin: Option<Origin>,
     header: Header,
     checks: BTreeMap<String, CheckRecord>,
     #[serde(default)]
@@ -64,8 +66,7 @@ struct Contents {
 /// El nombre del fichero del informe dentro de su directorio.
 pub const THE_REPORT_FILE: &str = "dossier.json";
 
-/// El informe: un JSON en la ruta que se le indique, que solo continúa el cliente
-/// con que se creó.
+/// El informe: un JSON en la ruta que se le indique, que continúa un cliente de su clase y su versión.
 #[derive(Debug)]
 pub struct Report {
     path: PathBuf,
@@ -79,6 +80,7 @@ impl Report {
         path: &Path,
         client: &str,
         kind: ClientKind,
+        origin: Origin,
         catalogue: &[Check],
         coordinates: HeaderCoordinates,
     ) -> Result<Self, String> {
@@ -87,6 +89,7 @@ impl Report {
             contents: Contents {
                 client: client.to_owned(),
                 kind,
+                origin: Some(origin),
                 header: Header {
                     os: coordinates.os,
                     os_version: coordinates.os_version,
@@ -137,29 +140,29 @@ impl Report {
         }
     }
 
-    /// Por qué el cliente `client` de clase `kind` no puede añadir resultados a este
-    /// informe; `None` si es el mismo con que se creó.
-    pub fn refuses_to_continue_with(&self, client: &str, kind: ClientKind) -> Option<String> {
-        let mut mismatches = Vec::new();
+    /// Por qué un cliente de clase `kind` que dice ser la versión `version` no puede añadir
+    /// resultados a este informe; `None` si es de su clase y de su versión, sea cual sea su ruta.
+    pub fn refuses_to_continue_with(
+        &self,
+        kind: ClientKind,
+        version: Option<&str>,
+    ) -> Option<String> {
         if self.contents.kind != kind {
-            mismatches.push(format!(
-                "se creó para {} y el cliente activo es {}",
+            return Some(format!(
+                "el informe se creó para {} y el cliente activo es {}",
                 self.contents.kind.name(),
                 kind.name()
             ));
         }
-        if self.contents.client != client {
-            mismatches.push(format!(
-                "se creó con {} y el cliente activo es {client}",
-                self.contents.client
-            ));
-        }
-        (!mismatches.is_empty()).then(|| {
-            format!(
-                "el informe {}: se puede ver, pero no continuar",
-                mismatches.join(", y ")
-            )
-        })
+        let made_with = &self.contents.header.client_version;
+        version
+            .filter(|version| version != made_with)
+            .map(|version| {
+                format!(
+                    "el informe se creó con la versión {made_with} y el cliente activo es la \
+                     {version}"
+                )
+            })
     }
 
     pub fn client(&self) -> &str {
@@ -168,6 +171,11 @@ impl Report {
 
     pub fn kind(&self) -> ClientKind {
         self.contents.kind
+    }
+
+    /// De dónde salía el binario con que se creó; `None` en un informe de antes de guardarlo.
+    pub fn origin(&self) -> Option<Origin> {
+        self.contents.origin
     }
 
     /// Lee un informe ya escrito, sin catálogo ni cliente con el que cuadrarlo: lo que necesita
@@ -320,6 +328,7 @@ mod tests {
             &path,
             "autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )
@@ -353,6 +362,7 @@ mod tests {
             &path,
             "autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )
@@ -388,6 +398,7 @@ mod tests {
             &path,
             "autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )
@@ -409,6 +420,7 @@ mod tests {
             &path,
             "/usr/bin/autofirma",
             ClientKind::Autofirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )
@@ -416,28 +428,53 @@ mod tests {
 
         let seen = Report::open(&path, &catalogue).unwrap();
         let complaint = seen
-            .refuses_to_continue_with("/usr/bin/rfirma", ClientKind::Rfirma)
+            .refuses_to_continue_with(ClientKind::Rfirma, Some("1.9.2"))
             .unwrap();
 
         assert!(complaint.contains("para autofirma y el cliente activo es rfirma"));
-        assert!(complaint.contains("/usr/bin/autofirma y el cliente activo es /usr/bin/rfirma"));
     }
 
     #[test]
-    fn the_client_that_created_a_report_continues_it() {
+    fn a_report_continues_with_a_binary_elsewhere_of_its_class_and_version() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
         let report = Report::create(
             &path,
-            "un-binario",
+            "/usr/bin/rfirma",
             ClientKind::Rfirma,
-            &catalogue,
+            Origin::Installed,
+            &a_catalogue_of(&["v4_echo_greeting"]),
             some_coordinates(),
         )
         .unwrap();
 
         assert_eq!(
-            report.refuses_to_continue_with("un-binario", ClientKind::Rfirma),
+            report.refuses_to_continue_with(ClientKind::Rfirma, Some("1.9.2")),
+            None
+        );
+        let complaint = report
+            .refuses_to_continue_with(ClientKind::Rfirma, Some("2.0.0"))
+            .unwrap();
+        assert!(
+            complaint.contains("con la versión 1.9.2 y el cliente activo es la 2.0.0"),
+            "{complaint}"
+        );
+    }
+
+    #[test]
+    fn a_client_that_does_not_say_its_version_continues_a_report_of_its_class() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let report = Report::create(
+            &path,
+            "/usr/bin/autofirma",
+            ClientKind::Autofirma,
+            Origin::Installed,
+            &a_catalogue_of(&["v4_echo_greeting"]),
+            some_coordinates(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            report.refuses_to_continue_with(ClientKind::Autofirma, None),
             None
         );
     }
@@ -449,6 +486,7 @@ mod tests {
             &path,
             "un-binario",
             ClientKind::Rfirma,
+            Origin::Installed,
             &a_catalogue_of(&["v4_echo_greeting", "a_renamed_one"]),
             some_coordinates(),
         )
@@ -476,6 +514,7 @@ mod tests {
             &path,
             "un-binario",
             ClientKind::Rfirma,
+            Origin::Installed,
             &a_catalogue_of(&["v4_echo_greeting"]),
             some_coordinates(),
         )
@@ -496,6 +535,7 @@ mod tests {
             &path,
             "un-binario",
             ClientKind::Rfirma,
+            Origin::Installed,
             &a_catalogue_of(&["v4_echo_greeting"]),
             some_coordinates(),
         )
@@ -518,12 +558,56 @@ mod tests {
             &path,
             "un-binario",
             ClientKind::Rfirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )
         .unwrap();
 
         assert_eq!(Report::read(&path).unwrap().kind(), ClientKind::Rfirma);
+    }
+
+    #[test]
+    fn a_new_report_keeps_the_identity_of_its_client() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        Report::create(
+            &path,
+            "/src/rfirma/target/release/rfirma",
+            ClientKind::Rfirma,
+            Origin::LocalBuild,
+            &a_catalogue_of(&["v4_echo_greeting"]),
+            some_coordinates(),
+        )
+        .unwrap();
+
+        let seen = Report::read(&path).unwrap();
+
+        assert_eq!(seen.kind(), ClientKind::Rfirma);
+        assert_eq!(seen.origin(), Some(Origin::LocalBuild));
+        assert_eq!(seen.header().client_version, "1.9.2");
+    }
+
+    #[test]
+    fn a_report_written_before_the_origin_is_still_read() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        Report::create(
+            &path,
+            "/usr/bin/rfirma",
+            ClientKind::Rfirma,
+            Origin::Installed,
+            &a_catalogue_of(&["v4_echo_greeting"]),
+            some_coordinates(),
+        )
+        .unwrap();
+        let mut written: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        written.as_object_mut().unwrap().remove("origin");
+        std::fs::write(&path, written.to_string()).unwrap();
+
+        let seen = Report::read(&path).unwrap();
+
+        assert_eq!(seen.origin(), None);
+        assert_eq!(seen.client(), "/usr/bin/rfirma");
     }
 
     #[test]
@@ -544,6 +628,7 @@ mod tests {
             &path,
             "un-binario",
             ClientKind::Rfirma,
+            Origin::Installed,
             &catalogue,
             some_coordinates(),
         )

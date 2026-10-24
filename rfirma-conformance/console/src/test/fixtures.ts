@@ -120,6 +120,8 @@ export function aSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
         client: "/usr/bin/autofirma",
         client_version: "1.9.2",
         date: "2026-09-21",
+        continuable: true,
+        why_not: null,
         complaint: null,
       },
     ],
