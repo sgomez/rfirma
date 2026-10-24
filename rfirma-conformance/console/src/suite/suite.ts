@@ -1,6 +1,7 @@
 import type { ClientChoice } from "../contract/ClientChoice";
 import type { Comparison } from "../contract/Comparison";
 import type { DeducedCoordinates } from "../contract/DeducedCoordinates";
+import type { HeaderCorrection } from "../contract/HeaderCorrection";
 import type { NewReport } from "../contract/NewReport";
 import type { ReportChoice } from "../contract/ReportChoice";
 import type { ReportView } from "../contract/ReportView";
@@ -73,6 +74,7 @@ export function suiteOver(wire: Wire, token: string) {
       get<Validation>("/api/validate", { report, reference }),
     chooseClient: (choice: ClientChoice) => post("/api/client", choice),
     createReport: (report: NewReport) => post("/api/reports", report),
+    correctHeader: (correction: HeaderCorrection) => post("/api/report/header", correction),
     openReport: (name: string) => post("/api/report", { name } satisfies ReportChoice),
     run: (request: Request) => post("/api/run", request),
     reset: (check: string) => post("/api/reset", { check } satisfies Reset),

@@ -14,6 +14,7 @@ use ts_rs::TS;
 
 use crate::client::ClientKind;
 use crate::console::{Console, NewReport, Request};
+use crate::report::HeaderCorrection;
 
 /// Los puertos en que la consola intenta escuchar: por debajo de 49152, donde el cliente publicado
 /// sortea los del canal, y lejos del 63117 del protocolo de la versión 3.
@@ -371,6 +372,10 @@ fn attend(mut stream: TcpStream, gate: &Gate, build: &Build, console: &Console) 
         ("POST", "/api/report") => answer(
             &mut stream,
             body_of::<ReportChoice>(&request).and_then(|choice| console.open_report(choice.name)),
+        ),
+        ("POST", "/api/report/header") => answer(
+            &mut stream,
+            body_of::<HeaderCorrection>(&request).and_then(|fix| console.correct_header(fix)),
         ),
         ("POST", "/api/run") => answer(
             &mut stream,
