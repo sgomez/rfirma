@@ -117,6 +117,7 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
             from_the_site: asked.from_the_site.clone(),
             unregistered_signatures: asked.unregistered_signatures,
             headless: asked.headless,
+            sticky: asked.sticky,
             saving: asked.saving.clone(),
             through_the_server: asked.for_the_site_server.clone().map(|server| {
                 state::ServerSignature {
@@ -222,7 +223,10 @@ pub fn consent<E: FilterEngine, P: PolicyEngine>(
     }
 
     match pdf_password::begun_with_the_pdf_password(desk, &pending, certificate) {
-        Ok(secret) => Ok(Consented::SigningWith(secret)),
+        Ok(secret) => {
+            stuck_if_the_site_asked(desk, &pending, certificate, live);
+            Ok(Consented::SigningWith(secret))
+        }
         Err(Unopened::Refused(refusal)) => {
             Err(ConsentError::Refused(told_to_the_site(live, refusal)))
         }
@@ -230,6 +234,30 @@ pub fn consent<E: FilterEngine, P: PolicyEngine>(
             declined(live);
             Err(ConsentError::Declined)
         }
+    }
+}
+
+/// Fija en la sesión el certificado de una firma con `sticky`, como `selectcert`.
+fn stuck_if_the_site_asked<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
+    pending: &state::PendingSignature,
+    certificate: &str,
+    live: &LiveErrand,
+) {
+    if !pending.sticky {
+        return;
+    }
+    let Ok(found) = desk.neighbours.listed() else {
+        return;
+    };
+    if let Ok(chosen) = crate::site::application::filtering::usable_certificate_for_the_site(
+        desk.engine,
+        &pending.filter,
+        &found,
+        certificate,
+        desk.neighbours,
+    ) {
+        live.stick(chosen.reference());
     }
 }
 

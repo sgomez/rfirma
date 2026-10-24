@@ -23,7 +23,7 @@ pub(super) fn consented<E: FilterEngine, P: PolicyEngine>(
     let (chosen, secret) = the_chosen_and_its_secret(
         desk,
         &pending.filter,
-        false,
+        pending.sticky,
         certificate,
         live,
         SiteRefusal::Signing,

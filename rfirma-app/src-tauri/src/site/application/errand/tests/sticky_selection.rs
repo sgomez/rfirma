@@ -93,17 +93,13 @@ fn a_sticky_selection_sticks_the_chosen_one_to_its_session_and_not_to_the_desk()
         "la sede no escribe en la memoria del escritorio"
     );
 
-    let ErrandStep::AskingForConsent {
-        certificates: again,
-        ..
-    } = consent_for(&engine, &request, ours.clone(), &neighbours, &live)
-    else {
-        panic!("'sticky' tampoco contesta con el fijado en la sesion");
+    let again = consent_for(&engine, &request, ours.clone(), &neighbours, &live);
+    let ErrandStep::Answering(SiteOutcome::Certificate(der)) = again else {
+        panic!("el fijado en la sesion contesta sin preguntar: {again:?}");
     };
-    let preselected: Vec<bool> = again.iter().map(|row| row.remembered).collect();
     assert_eq!(
-        preselected,
-        vec![false, true],
+        der,
+        ours[1].der(),
         "el fijado en la sesion manda sobre el recordado del escritorio"
     );
 }
@@ -239,8 +235,7 @@ fn without_sticky_the_remembered_certificate_changes_nothing() {
 }
 
 #[test]
-fn a_sticky_sign_after_a_stuck_certificate_opens_the_window_with_it_preselected_and_answers_nothing(
-) {
+fn a_sticky_sign_after_a_stuck_certificate_signs_with_it_without_asking() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA"), a_usable_certificate("OTRO")];
@@ -279,15 +274,16 @@ fn a_sticky_sign_after_a_stuck_certificate_opens_the_window_with_it_preselected_
         consent.already_chosen.as_deref(),
         Some(consent.certificates[0].id.as_str())
     );
+    assert!(consent.without_asking, "el fijado firma sin preguntar");
     assert_eq!(
         what_the_site_received(&mut wire),
         None,
-        "ningun certificado fijado contesta la firma sin consentimiento"
+        "la sede no recibe nada hasta que la firma sale"
     );
 }
 
 #[test]
-fn a_sticky_sign_and_save_after_a_stuck_certificate_opens_the_window_with_it_preselected() {
+fn a_sticky_sign_and_save_after_a_stuck_certificate_signs_with_it_without_asking() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA"), a_usable_certificate("OTRO")];
@@ -319,6 +315,7 @@ fn a_sticky_sign_and_save_after_a_stuck_certificate_opens_the_window_with_it_pre
         consent.certificates[0].remembered,
         "la fila fijada en la sesion llega preseleccionada tambien en 'signandsave'"
     );
+    assert!(consent.without_asking, "el fijado firma sin preguntar");
 }
 
 #[test]
@@ -435,44 +432,48 @@ fn resetsticky_on_a_sign_forgets_the_session_stuck_certificate() {
     );
 }
 
-fn rows_of_a_sticky_selection(ours: Vec<TokenCertificate>, stuck: usize) -> Vec<ListedCertificate> {
+fn rows_of_a_sticky_sign(ours: Vec<TokenCertificate>, stuck: usize) -> Vec<ListedCertificate> {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
     let live = a_live();
     live.stick(ours[stuck].reference());
     let every: Vec<usize> = (0..ours.len()).collect();
     let engine = AnEngine::answering(&[&every]);
-    let request = requested(&an_operation("&sticky=true"));
-    let step = consent_for(
-        &engine,
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let request = signature_requested(&a_signature("sign", "&sticky=true"));
+    let step = consent_to_sign(
+        &a_desk(
+            &engine,
+            &policies,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
+            &scratch,
+        ),
         &request,
         ours.clone(),
-        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
         &live,
     );
-    let ErrandStep::AskingForConsent {
-        certificates: rows, ..
-    } = step
-    else {
-        panic!("'sticky' pregunta siempre: {step:?}");
+    let ErrandStep::AskingToSign(consent) = step else {
+        panic!("hay certificados que la sede acepta: {step:?}");
     };
-    rows
+    consent.certificates
 }
 
 #[test]
-fn a_sticky_selection_stuck_on_the_second_copy_of_a_certificate_preselects_its_only_row() {
+fn a_sticky_sign_stuck_on_the_second_copy_of_a_certificate_preselects_its_only_row() {
     let firma = a_usable_certificate("FIRMA");
     let ours = vec![firma.clone(), a_certificate("FIRMA-TARJETA", firma.der())];
 
-    let rows = rows_of_a_sticky_selection(ours, 1);
+    let rows = rows_of_a_sticky_sign(ours, 1);
 
     let preselected: Vec<bool> = rows.iter().map(|row| row.remembered).collect();
     assert_eq!(preselected, vec![true], "las dos copias son una sola fila");
 }
 
 #[test]
-fn a_sticky_selection_after_a_certificate_with_two_copies_preselects_the_stuck_row() {
+fn a_sticky_sign_after_a_certificate_with_two_copies_preselects_the_stuck_row() {
     let firma = a_usable_certificate("FIRMA");
     let ours = vec![
         firma.clone(),
@@ -481,12 +482,42 @@ fn a_sticky_selection_after_a_certificate_with_two_copies_preselects_the_stuck_r
         a_usable_certificate("TERCERO"),
     ];
 
-    let rows = rows_of_a_sticky_selection(ours, 2);
+    let rows = rows_of_a_sticky_sign(ours, 2);
 
     let preselected: Vec<bool> = rows.iter().map(|row| row.remembered).collect();
     assert_eq!(
         preselected,
         vec![false, true, false],
         "la fila fijada es la de OTRO, no la que ocupa su posicion sin agrupar"
+    );
+}
+
+#[test]
+fn a_sticky_sign_consented_sticks_its_certificate_to_the_session() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0usize] as &[usize]; 4]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours.clone();
+    neighbours.bridge = TheBridge::answering();
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
+
+    let url = a_signature("sign", "&sticky=true");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSign(asked) = remembered(&live, step) else {
+        panic!("hay certificados que la sede acepta");
+    };
+    consent(&desk, &asked.certificates[0].id, &live).expect("el certificado vale");
+
+    assert!(
+        live.the_stuck()
+            .is_some_and(|stuck| stuck.is_the_same_as(ours[0].reference())),
+        "la firma con 'sticky' fija el que firmo, como 'selectcert'"
     );
 }

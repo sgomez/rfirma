@@ -254,7 +254,7 @@ impl LiveErrand {
         self.forget_the_consent();
     }
 
-    /// Permite SHA-1 fuera de XML solo en la operación en curso, sin tocar la preferencia (ADR-0023).
+    /// Permite SHA-1 solo en la operación en curso, sin tocar la preferencia (ADR-0023).
     pub fn allow_sha1_once(&self) {
         self.sha1_once
             .store(true, std::sync::atomic::Ordering::SeqCst);

@@ -20,8 +20,12 @@ fn a_cades_triphase(op: &str) -> AfirmaUrl {
 }
 
 fn a_triphase(format: &str, op: &str, data: &[u8]) -> AfirmaUrl {
+    a_triphase_with(format, op, data, "")
+}
+
+fn a_triphase_with(format: &str, op: &str, data: &[u8], extra: &str) -> AfirmaUrl {
     let text = format!(
-        "afirma://{op}?op={op}&idsession={CREDENTIAL}&format={format}&algorithm=SHA256&dat={}",
+        "afirma://{op}?op={op}&idsession={CREDENTIAL}&format={format}&algorithm=SHA256&dat={}{extra}",
         URL_SAFE.encode(data)
     );
     let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
@@ -472,4 +476,34 @@ fn the_consent_does_not_name_the_site_server_for_a_local_signature_or_without_se
         &a_cades_triphase("sign"),
         ""
     ));
+}
+
+#[test]
+fn a_sticky_triphase_signature_consented_sticks_its_certificate_to_the_session() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering(THE_SERVER);
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        &neighbours,
+        home.path(),
+        Arc::new(InMemoryBatchServices::default()),
+    );
+
+    let url = a_triphase_with("CAdEStri", "sign", b"los datos", "&sticky=true");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let chosen = the_only_row_of(remembered(&live, step));
+    consent(&desk, &chosen, &live).expect("el certificado sirve");
+
+    assert!(
+        live.the_stuck()
+            .is_some_and(|stuck| stuck.is_the_same_as(ours[0].reference())),
+        "la firma trifasica con 'sticky' fija el que firmo"
+    );
 }

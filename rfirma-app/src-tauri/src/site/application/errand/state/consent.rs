@@ -72,6 +72,8 @@ pub(in crate::site::application::errand) struct PendingSignature {
     pub(in crate::site::application::errand) unregistered_signatures: bool,
     /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
     pub(in crate::site::application::errand) headless: bool,
+    /// Si la sede pidió `sticky`: el certificado consentido queda fijado en la sesión.
+    pub(in crate::site::application::errand) sticky: bool,
     /// Pistas de guardado, si esta firma viene de `signandsave`.
     pub(in crate::site::application::errand) saving: Option<Box<SavingHints>>,
     /// La firma que hace el servidor trifásico de la sede, si se hace allí.
