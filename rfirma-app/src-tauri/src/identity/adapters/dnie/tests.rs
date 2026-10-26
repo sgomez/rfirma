@@ -8,7 +8,7 @@ use openssl::pkey::PKey;
 use openssl::rsa::Rsa;
 use openssl::x509::extension::BasicConstraints;
 use openssl::x509::{X509Name, X509};
-use rdnie::{Session, INTERMEDIATE_CA_LABEL, SIGNATURE_LABEL};
+use rdnie::{Atr, Session, INTERMEDIATE_CA_LABEL, SIGNATURE_LABEL};
 use rdnie_emulator::{EmulatedDnie, HolderCertificate, Step, DNIE_3_ATR, DNIE_4_ATR};
 use rsa::traits::PublicKeyParts;
 
@@ -409,21 +409,19 @@ fn burned(atr: &[u8]) -> Vec<u8> {
 
 #[test]
 fn rdnie_opens_a_dnie_3_and_a_dnie_4() {
-    assert!(super::rdnie_opens(&DNIE_3_ATR));
-    assert!(super::rdnie_opens(&DNIE_4_ATR));
+    assert!(super::rdnie_opens(&Atr::new(DNIE_3_ATR)));
+    assert!(super::rdnie_opens(&Atr::new(DNIE_4_ATR)));
 }
 
 #[test]
 fn rdnie_leaves_a_dnie_2_to_pkcs11() {
-    assert!(rdnie::is_dnie(&DNIE_2_ATR));
-    assert!(!super::rdnie_opens(&DNIE_2_ATR));
+    assert!(!super::rdnie_opens(&Atr::new(DNIE_2_ATR)));
 }
 
 #[test]
 fn rdnie_leaves_a_burned_dnie_to_pkcs11() {
     let burned = burned(&DNIE_4_ATR);
-    assert!(rdnie::is_dnie(&burned));
-    assert!(!super::rdnie_opens(&burned));
+    assert!(!super::rdnie_opens(&Atr::new(burned)));
 }
 
 mod at_once;

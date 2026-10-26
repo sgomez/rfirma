@@ -4060,9 +4060,9 @@ checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
 name = "rdnie"
-version = "0.2.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9e02cd4cdbe4aa6ebfc51e3e21c949bd66578d8907f3a9be3f60cae16a83aa4"
+checksum = "60eb048047fbdefe3fd91830ac3daeacb7931dfdf633cfd6fec2346154eb321f"
 dependencies = [
  "cbc 0.2.1",
  "der 0.7.10",
@@ -4081,9 +4081,9 @@ dependencies = [
 
 [[package]]
 name = "rdnie-emulator"
-version = "0.2.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb8866665d22f8fe396d5a0e74bf72efd132ba502a087cf3ed98a1f49c0de82b"
+checksum = "7d2990aac9db64ce91b2ada8d6eb0128c856cc1acd5730aa125b11ee5cbd91da"
 dependencies = [
  "cbc 0.2.1",
  "des",
