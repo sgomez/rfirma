@@ -74,3 +74,16 @@ describe("la vista previa depende de dos opciones de pdf.js", () => {
     expect(loader).toContain("standardFontDataUrl");
   });
 });
+
+describe("pdf.js runs on the window's WebKit", () => {
+  /** El build moderno usa `Map.prototype.getOrInsertComputed` sin polyfill, y el WebKit de la ventana puede no tenerlo. */
+  it("loads pdf.js and its worker from the legacy build", () => {
+    const loader = readFileSync(join(SOURCE_ROOT, "viewer", "pdfjsLoader.ts"), "utf8");
+    const imported = [...loader.matchAll(/from "(pdfjs-dist[^"]*)"/g)].map((match) => match[1]);
+
+    expect(imported).toEqual([
+      "pdfjs-dist/legacy/build/pdf.mjs",
+      "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url",
+    ]);
+  });
+});
