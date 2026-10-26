@@ -1,7 +1,5 @@
 //! Lo que ve el informe de depuración del DNIe en el lector: ATR, versión y juego de claves, sin resetear la tarjeta.
 
-use rdnie::Transport;
-
 use super::{take_the_card_turn, CardOpener};
 use crate::identity::domain::seen_dnie::{DnieInTheReader, SeenDnie};
 
@@ -26,7 +24,7 @@ fn described<O: CardOpener>(opener: &O) -> Result<SeenDnie, rdnie::Error> {
         rdnie::KeyGeneration::First => "primero",
         _ => "segundo",
     };
-    let atr = session.into_transport().atr()?;
+    let atr = session.atr().as_bytes();
     let version = if atr.get(CHIP_TYPE) == Some(&DNIE_4_CHIP[..]) {
         "4.0"
     } else {

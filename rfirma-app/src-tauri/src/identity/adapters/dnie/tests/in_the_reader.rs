@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use rdnie::{Session, Transport, SIGNATURE_LABEL};
+use rdnie::{Atr, Port, Session, Transport, SIGNATURE_LABEL};
 use rdnie_emulator::{EmulatedDnie, DEFAULT_PIN};
 
 use super::super::{dnie_store, CardOpener, DnieToken};
@@ -70,21 +70,13 @@ impl Drop for Connection {
 }
 
 impl Transport for Connection {
-    fn transmit_raw(&mut self, apdu: &[u8]) -> Result<Vec<u8>, rdnie::Error> {
-        self.0.card().transmit_raw(apdu)
-    }
-
-    fn atr(&self) -> Result<Vec<u8>, rdnie::Error> {
+    fn atr(&self) -> Result<Atr, rdnie::Error> {
         self.0.card().atr()
-    }
-
-    fn reset(&mut self) -> Result<Vec<u8>, rdnie::Error> {
-        self.0.card().reset()
     }
 
     fn transaction<R>(
         &mut self,
-        body: impl FnOnce(&mut dyn Transport) -> Result<R, rdnie::Error>,
+        body: impl FnOnce(&mut dyn Port) -> Result<R, rdnie::Error>,
     ) -> Result<R, rdnie::Error> {
         self.0.card().transaction(body)
     }
