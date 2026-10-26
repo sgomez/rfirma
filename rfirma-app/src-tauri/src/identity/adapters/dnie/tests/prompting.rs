@@ -280,3 +280,32 @@ fn a_batch_asks_again_for_a_pin_of_a_length_the_dnie_does_not_admit() {
     assert_eq!(typist.seen().len(), 2);
     assert_eq!(reader.pins_sent(), 1);
 }
+
+#[test]
+fn a_retry_burned_between_two_signatures_of_a_batch_cuts_the_batch_without_sending_the_pin() {
+    for (version, card) in the_two_versions() {
+        let reader = InTheReader::new(card());
+        let dnie = reader.token();
+        let typist = Typist::typing(&reader, vec![the_pin()]);
+
+        dnie.hold_one_login(&the_signing_certificate());
+        let (pin, ()) = accepted_after_the_dialog(&dnie, &typist).expect("PIN aceptado");
+        let first = sign(&dnie, &pin);
+        reader.card().burn_a_retry();
+        let rest: Vec<_> = (0..2).map(|_| sign(&dnie, &pin)).collect();
+        dnie.release_the_login(&the_signing_certificate());
+
+        assert!(first.is_ok(), "{version}: {first:?}");
+        assert!(
+            rest.iter()
+                .all(|done| done.as_ref().is_err_and(|error| !is_incorrect(error))),
+            "{version}: {rest:?}"
+        );
+        assert_eq!(reader.pins_sent(), 2, "{version}");
+        assert_eq!(
+            dnie.pin_warning(&the_signing_certificate()),
+            Ok(PinWarning::AttemptsLeft(2)),
+            "{version}"
+        );
+    }
+}
