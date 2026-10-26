@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
 
 use rdnie::{
-    HashAlgorithm, KeyReference, PcscTransport, Pin, Session, Transport, INTERMEDIATE_CA_LABEL,
+    Atr, DigestAlgorithm, PcscTransport, Pin, Session, Transport, INTERMEDIATE_CA_LABEL,
     SIGNATURE_LABEL,
 };
 
@@ -18,7 +18,6 @@ use crate::identity::domain::store::{Store, DNIE_STORE_PREFIX};
 use crate::identity::ports::Token;
 
 const TOKEN_LABEL: &str = "DNIe";
-const PIN_CHECK: &[u8] = b"rfirma: comprobacion del PIN";
 
 /// El almacén del DNIe: de clase tarjeta, sin módulo PKCS#11 detrás.
 pub fn dnie_store() -> Store {
@@ -93,13 +92,9 @@ impl CardOpener for PcscCard {
 }
 
 /// Si el ATR es de un DNIe que abre rdnie: un 3.0 o 4.0 sin quemar; el 1.0 y el 2.0 siguen por PKCS#11.
-fn rdnie_opens(atr: &[u8]) -> bool {
-    rdnie::is_dnie(atr) && !atr.ends_with(&BURNED_STATUS) && atr.get(OS_VERSION) == Some(&DNIE_3_OS)
+fn rdnie_opens(atr: &Atr) -> bool {
+    atr.check().is_ok()
 }
-
-const BURNED_STATUS: [u8; 2] = [0x65, 0x81];
-const OS_VERSION: usize = 15;
-const DNIE_3_OS: u8 = 0x04;
 
 fn take_the_card_turn() -> MutexGuard<'static, ()> {
     CARD_TURN
@@ -210,27 +205,29 @@ impl<O: CardOpener> DnieToken<O> {
     }
 
     fn attempts_left(&self) -> Result<u8, TokenError> {
-        self.signing(|session| match session.pin_retries() {
+        self.signing(|session| match session.pin_retries_left() {
             Err(rdnie::Error::PinBlocked) => Ok(0),
             read => read,
         })
     }
 
-    /// rdnie no expone un VERIFY suelto: el PIN se comprueba con una firma que nunca sale de aquí (ADR-0047).
-    fn verified_by_a_discarded_signature(
+    fn verified(
         &self,
         reference: &CertificateRef,
         secret: &ProtectedSecret,
         shown: u8,
     ) -> Result<(), TokenError> {
-        self.signed(
-            reference,
-            secret,
-            SignatureAlgorithm::Sha256Rsa,
-            PIN_CHECK,
-            Some(shown),
-        )
-        .map(|_| ())
+        let pin = pin_of(secret)?;
+        self.signing(|session| {
+            if session.private_key(reference.label())?.is_none() {
+                return Ok(Err(key_not_found(reference)));
+            }
+            let left = session.pin_retries_left()?;
+            if let Err(changed) = unchanged_since_shown(left, Some(shown)) {
+                return Ok(Err(changed));
+            }
+            session.verify_pin(pin).map(Ok)
+        })?
     }
 
     fn signed(
@@ -245,13 +242,10 @@ impl<O: CardOpener> DnieToken<O> {
         let digest = ecdsa::digest(algorithm, data)?;
         let pin = pin_of(secret)?;
         self.signing(|session| {
-            let Some(key) = key_of(session, reference.label())? else {
-                return Ok(Err(TokenError::new(
-                    Situation::CertificateNotFound,
-                    format!("el DNIe no tiene la clave de {}", reference.label()),
-                )));
+            let Some(key) = session.private_key(reference.label())? else {
+                return Ok(Err(key_not_found(reference)));
             };
-            let left = session.pin_retries()?;
+            let left = session.pin_retries_left()?;
             if let Err(changed) = unchanged_since_shown(left, shown) {
                 return Ok(Err(changed));
             }
@@ -270,7 +264,7 @@ impl<O: CardOpener> DnieToken<O> {
 
     fn holders(&self) -> Result<usize, TokenError> {
         Ok(self
-            .listing(|session| session.certificates().map(|found| found.len()))?
+            .listing(|session| session.labels().map(|found| found.len()))?
             .unwrap_or(0))
     }
 
@@ -317,15 +311,11 @@ fn forgotten_if_spent<T: Transport>(
     spent
 }
 
-fn key_of<T: Transport>(
-    session: &mut Session<T>,
-    label: &str,
-) -> Result<Option<KeyReference>, rdnie::Error> {
-    Ok(session
-        .certificates()?
-        .into_iter()
-        .find(|certificate| certificate.label == label)
-        .map(|certificate| certificate.key))
+fn key_not_found(reference: &CertificateRef) -> TokenError {
+    TokenError::new(
+        Situation::CertificateNotFound,
+        format!("el DNIe no tiene la clave de {}", reference.label()),
+    )
 }
 
 /// Tras estos errores el transporte ya no sirve y la sesión de la inserción se descarta.
@@ -342,11 +332,7 @@ fn leaves_the_transport_spent(error: &rdnie::Error) -> bool {
 fn every_der<T: Transport>(
     session: &mut Session<T>,
 ) -> Result<Vec<(String, Vec<u8>)>, rdnie::Error> {
-    let mut labels: Vec<String> = session
-        .certificates()?
-        .into_iter()
-        .map(|certificate| certificate.label)
-        .collect();
+    let mut labels = session.labels()?;
     labels.push(INTERMEDIATE_CA_LABEL.to_owned());
     let mut found = Vec::new();
     for label in labels {
@@ -400,11 +386,11 @@ fn pin_of(secret: &ProtectedSecret) -> Result<Pin, TokenError> {
         .map_err(|_| TokenError::new(Situation::IncorrectPin, "el PIN no es texto"))
 }
 
-fn hash_of(algorithm: SignatureAlgorithm) -> Result<HashAlgorithm, TokenError> {
+fn hash_of(algorithm: SignatureAlgorithm) -> Result<DigestAlgorithm, TokenError> {
     match algorithm {
-        SignatureAlgorithm::Sha256Rsa => Ok(HashAlgorithm::Sha256),
-        SignatureAlgorithm::Sha384Rsa => Ok(HashAlgorithm::Sha384),
-        SignatureAlgorithm::Sha512Rsa => Ok(HashAlgorithm::Sha512),
+        SignatureAlgorithm::Sha256Rsa => Ok(DigestAlgorithm::Sha256),
+        SignatureAlgorithm::Sha384Rsa => Ok(DigestAlgorithm::Sha384),
+        SignatureAlgorithm::Sha512Rsa => Ok(DigestAlgorithm::Sha512),
         other => Err(TokenError::new(
             Situation::MechanismNotOffered,
             format!("el DNIe por rdnie no firma con {}", other.name()),
@@ -482,7 +468,7 @@ impl<O: CardOpener> Token for DnieToken<O> {
         let shown = self.login().shown_attempts.take();
         unchanged_since_shown(left, shown)?;
         PinWarning::AttemptsLeft(u32::from(left)).unless_locked()?;
-        self.verified_by_a_discarded_signature(reference, secret, left)
+        self.verified(reference, secret, left)
     }
 
     fn sign_with_secret(

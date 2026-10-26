@@ -239,12 +239,12 @@ tauri-plugin-updater = { version = "2", default-features = false, features = ["n
 
 [target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
 # El DNIe por PC/SC, sin controlador del sistema; versión fija (ADR-0040).
-rdnie = "=0.2.0"
+rdnie = "=0.4.0"
 
 [target.'cfg(any(target_os = "linux", target_os = "macos"))'.dev-dependencies]
 # El DNIe emulado de las pruebas, que activa la feature `emulator` de rdnie; `faults` queda fuera de
 # semver, así que la versión es exacta y se revisa al actualizarla.
-rdnie-emulator = { version = "=0.2.0", features = ["faults"] }
+rdnie-emulator = { version = "=0.4.0", features = ["faults"] }
 
 [target.'cfg(not(windows))'.dev-dependencies]
 # La tarjeta falsa de las pruebas: no se compila en Windows y nunca llega a un paquete (ADR-0004).

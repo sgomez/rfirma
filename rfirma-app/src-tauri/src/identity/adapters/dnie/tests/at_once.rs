@@ -3,7 +3,7 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use rdnie::{Session, Transport};
+use rdnie::{Atr, Port, Session, Transport};
 use rdnie_emulator::EmulatedDnie;
 
 use super::super::{dnie_store, CardOpener, DnieToken};
@@ -38,24 +38,27 @@ impl Drop for Counted {
 }
 
 impl Transport for Counted {
-    fn transmit_raw(&mut self, apdu: &[u8]) -> Result<Vec<u8>, rdnie::Error> {
-        thread::sleep(Duration::from_millis(1));
-        self.card.transmit_raw(apdu)
-    }
-
-    fn atr(&self) -> Result<Vec<u8>, rdnie::Error> {
+    fn atr(&self) -> Result<Atr, rdnie::Error> {
         self.card.atr()
-    }
-
-    fn reset(&mut self) -> Result<Vec<u8>, rdnie::Error> {
-        self.card.reset()
     }
 
     fn transaction<R>(
         &mut self,
-        body: impl FnOnce(&mut dyn Transport) -> Result<R, rdnie::Error>,
+        body: impl FnOnce(&mut dyn Port) -> Result<R, rdnie::Error>,
     ) -> Result<R, rdnie::Error> {
-        body(self)
+        self.card
+            .transaction(|port| body(&mut Slow { inner: port }))
+    }
+}
+
+struct Slow<'a> {
+    inner: &'a mut dyn Port,
+}
+
+impl Port for Slow<'_> {
+    fn transmit(&mut self, apdu: &[u8]) -> Result<Vec<u8>, rdnie::Error> {
+        thread::sleep(Duration::from_millis(1));
+        self.inner.transmit(apdu)
     }
 }
 
