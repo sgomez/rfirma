@@ -69,9 +69,7 @@ pub(super) fn under_the_retries_lock<T: Transport, R>(
     }
 }
 
-pub(super) fn retries_left_or_blocked<T: Transport>(
-    session: &mut Session<T>,
-) -> Result<u8, rdnie::Error> {
+fn retries_left_or_blocked<T: Transport>(session: &mut Session<T>) -> Result<u8, rdnie::Error> {
     match session.pin_retries_left() {
         Err(rdnie::Error::PinBlocked) => Ok(0),
         read => read,

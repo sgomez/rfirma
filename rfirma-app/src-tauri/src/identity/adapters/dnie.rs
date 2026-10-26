@@ -545,8 +545,7 @@ impl<O: CardOpener> Token for DnieToken<O> {
 mod retries;
 mod seen;
 use retries::{
-    has_a_length_the_dnie_admits, on_the_card_shown, retries_left_or_blocked, typed_pin,
-    under_the_retries_lock, Shown,
+    has_a_length_the_dnie_admits, on_the_card_shown, typed_pin, under_the_retries_lock, Shown,
 };
 pub use seen::seen_dnie;
 
