@@ -10,6 +10,7 @@ use super::OfThePolice;
 use crate::identity::application::tests::a_dnie_der;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::secret::PinWarning;
 use crate::identity::ports::Token;
 
 const SIGNING_FILE: [u8; 2] = [0x70, 2];
@@ -125,6 +126,16 @@ impl Swappable {
 
     fn openings(&self) -> usize {
         self.openings.load(Ordering::SeqCst)
+    }
+
+    fn pins_sent_to_the_card_inside(&self) -> usize {
+        self.inserted()
+            .lock()
+            .expect("sin envenenar")
+            .pin_queries()
+            .iter()
+            .filter(|query| query.with_pin)
+            .count()
     }
 }
 
@@ -247,4 +258,38 @@ fn a_card_going_into_another_reader_leaves_the_session_of_the_dnie_open() {
 
     assert!(signed.is_ok(), "{signed:?}");
     assert_eq!(reader.openings(), 1);
+}
+
+#[test]
+fn the_same_card_put_back_after_the_dialog_with_the_same_attempts_signs_without_asking_again() {
+    let (card, _) = a_card_of("ADA LOVELACE");
+    let reader = Swappable::with(card);
+    let dnie = DnieToken::new(reader.clone());
+    let warning = dnie.pin_warning(&the_signing_certificate());
+
+    let (same, _) = a_card_of("ADA LOVELACE");
+    reader.swap_for(same);
+    let signed = signed_by(&dnie);
+
+    assert_eq!(warning, Ok(PinWarning::AttemptsLeft(3)));
+    assert!(signed.is_ok(), "{signed:?}");
+    assert_eq!(reader.openings(), 2);
+    assert_eq!(reader.pins_sent_to_the_card_inside(), 1);
+}
+
+#[test]
+fn a_card_reopened_after_the_dialog_with_other_attempts_cuts_without_sending_the_pin() {
+    let (card, _) = a_card_of("ADA LOVELACE");
+    let reader = Swappable::with(card);
+    let dnie = DnieToken::new(reader.clone());
+    dnie.pin_warning(&the_signing_certificate())
+        .expect("el DNIe deberia dar sus intentos");
+
+    let (same, _) = a_card_of("ADA LOVELACE");
+    reader.swap_for(same.with_pin_retries(2));
+    let failure = signed_by(&dnie).expect_err("los intentos ya no son los mostrados");
+
+    assert_eq!(failure.situation(), Situation::Unknown);
+    assert_eq!(reader.openings(), 2);
+    assert_eq!(reader.pins_sent_to_the_card_inside(), 0);
 }
