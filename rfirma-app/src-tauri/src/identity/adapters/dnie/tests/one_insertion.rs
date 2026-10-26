@@ -184,10 +184,14 @@ impl CardOpener for Swappable {
 }
 
 fn a_card_of(holder: &str) -> (EmulatedDnie, Vec<u8>) {
+    let der = a_dnie_der(holder, true);
+    (a_card_with(der.clone()), der)
+}
+
+fn a_card_with(signing: Vec<u8>) -> EmulatedDnie {
     let mut police = OfThePolice::new();
-    police.signing = a_dnie_der(holder, true);
-    let der = police.signing.clone();
-    (police.on(EmulatedDnie::dnie_3()), der)
+    police.signing = signing;
+    police.on(EmulatedDnie::dnie_3())
 }
 
 #[test]
@@ -262,13 +266,12 @@ fn a_card_going_into_another_reader_leaves_the_session_of_the_dnie_open() {
 
 #[test]
 fn the_same_card_put_back_after_the_dialog_with_the_same_attempts_signs_without_asking_again() {
-    let (card, _) = a_card_of("ADA LOVELACE");
+    let (card, der) = a_card_of("ADA LOVELACE");
     let reader = Swappable::with(card);
     let dnie = DnieToken::new(reader.clone());
     let warning = dnie.pin_warning(&the_signing_certificate());
 
-    let (same, _) = a_card_of("ADA LOVELACE");
-    reader.swap_for(same);
+    reader.swap_for(a_card_with(der));
     let signed = signed_by(&dnie);
 
     assert_eq!(warning, Ok(PinWarning::AttemptsLeft(3)));
@@ -279,17 +282,71 @@ fn the_same_card_put_back_after_the_dialog_with_the_same_attempts_signs_without_
 
 #[test]
 fn a_card_reopened_after_the_dialog_with_other_attempts_cuts_without_sending_the_pin() {
+    let (card, der) = a_card_of("ADA LOVELACE");
+    let reader = Swappable::with(card);
+    let dnie = DnieToken::new(reader.clone());
+    dnie.pin_warning(&the_signing_certificate())
+        .expect("el DNIe deberia dar sus intentos");
+
+    reader.swap_for(a_card_with(der).with_pin_retries(2));
+    let failure = signed_by(&dnie).expect_err("los intentos ya no son los mostrados");
+
+    assert_eq!(failure.situation(), Situation::Unknown);
+    assert_eq!(reader.openings(), 2);
+    assert_eq!(reader.pins_sent_to_the_card_inside(), 0);
+}
+
+#[test]
+fn another_card_with_the_same_attempts_after_the_dialog_fails_without_sending_the_pin() {
     let (card, _) = a_card_of("ADA LOVELACE");
     let reader = Swappable::with(card);
     let dnie = DnieToken::new(reader.clone());
     dnie.pin_warning(&the_signing_certificate())
         .expect("el DNIe deberia dar sus intentos");
 
-    let (same, _) = a_card_of("ADA LOVELACE");
-    reader.swap_for(same.with_pin_retries(2));
-    let failure = signed_by(&dnie).expect_err("los intentos ya no son los mostrados");
+    let (other, _) = a_card_of("GRACE HOPPER");
+    reader.swap_for(other);
+    let failure = signed_by(&dnie).expect_err("la tarjeta no es la del aviso");
 
-    assert_eq!(failure.situation(), Situation::Unknown);
-    assert_eq!(reader.openings(), 2);
+    assert_eq!(failure.situation(), Situation::TokenAbsent);
+    assert_eq!(reader.pins_sent_to_the_card_inside(), 0);
+}
+
+#[test]
+fn another_card_listed_after_the_dialog_fails_without_sending_the_pin() {
+    let (card, _) = a_card_of("ADA LOVELACE");
+    let reader = Swappable::with(card);
+    let dnie = DnieToken::new(reader.clone());
+    dnie.pin_warning(&the_signing_certificate())
+        .expect("el DNIe deberia dar sus intentos");
+
+    let (other, _) = a_card_of("GRACE HOPPER");
+    reader.swap_for(other);
+    dnie.list(&dnie_store())
+        .expect("la otra tarjeta deberia listarse");
+    let failure = signed_by(&dnie).expect_err("la tarjeta no es la del aviso");
+
+    assert_eq!(failure.situation(), Situation::TokenAbsent);
+    assert_eq!(reader.pins_sent_to_the_card_inside(), 0);
+}
+
+#[test]
+fn another_card_after_the_dialog_of_a_batch_fails_without_verifying_the_pin() {
+    let (card, _) = a_card_of("ADA LOVELACE");
+    let reader = Swappable::with(card);
+    let dnie = DnieToken::new(reader.clone());
+    let reference = the_signing_certificate();
+    dnie.hold_one_login(&reference);
+    dnie.pin_warning(&reference)
+        .expect("el DNIe deberia dar sus intentos");
+
+    let (other, _) = a_card_of("GRACE HOPPER");
+    reader.swap_for(other);
+    let refused = dnie
+        .accepts_the_secret(&reference, &the_pin())
+        .expect_err("la tarjeta no es la del aviso");
+    dnie.release_the_login(&reference);
+
+    assert_eq!(refused.situation(), Situation::TokenAbsent);
     assert_eq!(reader.pins_sent_to_the_card_inside(), 0);
 }

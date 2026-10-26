@@ -2,8 +2,47 @@
 
 use rdnie::{Session, Transport};
 
+use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
+
+/// Los intentos que vio la persona y el certificado de la tarjeta que los dio.
+#[derive(Debug)]
+pub(super) struct Shown {
+    pub(super) attempts: u8,
+    certificate: Option<Vec<u8>>,
+}
+
+impl Shown {
+    pub(super) fn read<T: Transport>(
+        session: &mut Session<T>,
+        reference: &CertificateRef,
+    ) -> Result<Self, rdnie::Error> {
+        let certificate = session.certificate(reference.label())?;
+        let attempts = retries_left_or_blocked(session)?;
+        Ok(Self {
+            attempts,
+            certificate,
+        })
+    }
+}
+
+/// Si la tarjeta de `session` es la que dio los intentos de `shown`; sin intentos mostrados, siempre.
+pub(super) fn on_the_card_shown<T: Transport>(
+    session: &mut Session<T>,
+    reference: &CertificateRef,
+    shown: Option<&Shown>,
+) -> Result<Result<(), TokenError>, rdnie::Error> {
+    match shown {
+        Some(shown) if session.certificate(reference.label())? != shown.certificate => {
+            Ok(Err(TokenError::new(
+                Situation::TokenAbsent,
+                "la tarjeta del lector no es la que dio los intentos: el PIN no se envia",
+            )))
+        }
+        _ => Ok(Ok(())),
+    }
+}
 
 /// `pin_operation` bajo el bloqueo de versión de rdnie; en una sesión que no lo conoce, con los intentos de `shown` si la tarjeta aún los tiene.
 pub(super) fn under_the_retries_lock<T: Transport, R>(

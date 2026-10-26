@@ -122,7 +122,7 @@ static CARD_TURN: Mutex<()> = Mutex::new(());
 /// Lo que el adaptador recuerda del ciclo de firma entre llamadas.
 #[derive(Debug, Default)]
 struct Login {
-    shown_attempts: Option<u8>,
+    shown: Option<Shown>,
     depth: usize,
     cut: Option<TokenError>,
 }
@@ -195,39 +195,48 @@ impl<O: CardOpener> DnieToken<O> {
         one_step(&mut self.inserted(), &self.opener, operation)
     }
 
-    fn attempts_left(&self) -> Result<u8, TokenError> {
-        self.signing(retries_left_or_blocked)
+    fn attempts_left(&self, reference: &CertificateRef) -> Result<Shown, TokenError> {
+        self.signing(|session| Shown::read(session, reference))
     }
 
-    /// Un paso con el PIN; tras mostrar `shown`, en la sesión de la tarjeta que haya vuelto al lector.
+    /// Un paso con el PIN; tras mostrar `shown`, en la sesión de la tarjeta que haya vuelto al lector y solo si es la que los dio.
     fn with_the_pin<R>(
         &self,
-        shown: Option<u8>,
-        operation: impl FnOnce(&mut Session<O::Card>) -> Result<R, rdnie::Error>,
+        reference: &CertificateRef,
+        shown: Option<&Shown>,
+        operation: impl FnOnce(&mut Session<O::Card>) -> Result<Result<R, TokenError>, rdnie::Error>,
     ) -> Result<R, TokenError> {
         let _turn = take_the_card_turn();
         let mut inserted = self.inserted();
         if shown.is_some() {
             forgotten_if_reinserted(&mut inserted, &self.opener);
         }
-        one_step(&mut inserted, &self.opener, operation)
+        one_step(
+            &mut inserted,
+            &self.opener,
+            |session| match on_the_card_shown(session, reference, shown)? {
+                Ok(()) => operation(session),
+                Err(another) => Ok(Err(another)),
+            },
+        )?
     }
 
     fn verified(
         &self,
         reference: &CertificateRef,
         secret: &ProtectedSecret,
-        shown: Option<u8>,
+        shown: Option<&Shown>,
     ) -> Result<(), TokenError> {
         let pin = typed_pin(secret)?;
-        self.with_the_pin(shown, |session| {
+        let attempts = shown.map(|shown| shown.attempts);
+        self.with_the_pin(reference, shown, |session| {
             if session.private_key(reference.label())?.is_none() {
                 return Ok(Err(key_not_found(reference)));
             }
-            under_the_retries_lock(session, shown, |session| {
+            under_the_retries_lock(session, attempts, |session| {
                 session.verify_pin(Pin::new(pin.to_owned()))
             })
-        })?
+        })
     }
 
     fn signed(
@@ -236,19 +245,20 @@ impl<O: CardOpener> DnieToken<O> {
         secret: &ProtectedSecret,
         algorithm: SignatureAlgorithm,
         data: &[u8],
-        shown: Option<u8>,
+        shown: Option<&Shown>,
     ) -> Result<Vec<u8>, TokenError> {
         let hash = hash_of(algorithm)?;
         let digest = ecdsa::digest(algorithm, data)?;
         let pin = typed_pin(secret)?;
-        self.with_the_pin(shown, |session| {
+        let attempts = shown.map(|shown| shown.attempts);
+        self.with_the_pin(reference, shown, |session| {
             let Some(key) = session.private_key(reference.label())? else {
                 return Ok(Err(key_not_found(reference)));
             };
-            under_the_retries_lock(session, shown, |session| {
+            under_the_retries_lock(session, attempts, |session| {
                 session.sign(&digest, hash, &key, Pin::new(pin.to_owned()))
             })
-        })?
+        })
     }
 
     fn signing_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
@@ -440,10 +450,11 @@ impl<O: CardOpener> Token for DnieToken<O> {
         Ok(StoreSecret::TypedOnScreen)
     }
 
-    fn pin_warning(&self, _reference: &CertificateRef) -> Result<PinWarning, TokenError> {
-        let left = self.attempts_left()?;
-        self.login().shown_attempts = Some(left);
-        Ok(PinWarning::AttemptsLeft(u32::from(left)))
+    fn pin_warning(&self, reference: &CertificateRef) -> Result<PinWarning, TokenError> {
+        let shown = self.attempts_left(reference)?;
+        let left = u32::from(shown.attempts);
+        self.login().shown = Some(shown);
+        Ok(PinWarning::AttemptsLeft(left))
     }
 
     fn offers(
@@ -465,8 +476,8 @@ impl<O: CardOpener> Token for DnieToken<O> {
         if !has_a_length_the_dnie_admits(secret) {
             return Err(token_error(&rdnie::Error::InvalidPinFormat));
         }
-        let shown = self.login().shown_attempts.take();
-        self.verified(reference, secret, shown)
+        let shown = self.login().shown.take();
+        self.verified(reference, secret, shown.as_ref())
     }
 
     fn sign_with_secret(
@@ -481,9 +492,9 @@ impl<O: CardOpener> Token for DnieToken<O> {
             if let Some(cut) = login.cut.clone() {
                 return Err(cut);
             }
-            login.shown_attempts.take()
+            login.shown.take()
         };
-        let signed = self.signed(reference, secret, algorithm, data, shown);
+        let signed = self.signed(reference, secret, algorithm, data, shown.as_ref());
         if let Err(failure) = &signed {
             let mut login = self.login();
             if login.depth > 0 {
@@ -534,7 +545,8 @@ impl<O: CardOpener> Token for DnieToken<O> {
 mod retries;
 mod seen;
 use retries::{
-    has_a_length_the_dnie_admits, retries_left_or_blocked, typed_pin, under_the_retries_lock,
+    has_a_length_the_dnie_admits, on_the_card_shown, retries_left_or_blocked, typed_pin,
+    under_the_retries_lock, Shown,
 };
 pub use seen::seen_dnie;
 
