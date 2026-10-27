@@ -42,7 +42,7 @@ Las decisiones están en `docs/adr/`; cada zona tiene su mapa con sus trampas. L
 * **Itera con `just test-one-rust <filtro>`.** `just check-rust`, `just coverage` y `just crap` compilan un árbol instrumentado aparte; la primera ya la paga el pre-push.
 * **Un `just test-one-rust` suelto necesita `rfirma-app/dist` y el token.** Desde un árbol limpio: `pnpm install` → `just po-import` → `just build-ts` → `just certs install`.
 * **Filtra la salida:** el reportero más callado de cada cadena; en rojo, vuelve a correr solo el fichero o el nombre que falló.
-* **Si tocas `Cargo.lock`, corre `just flatpak-sources`**, que reescribe el sello de `packaging/flatpak/sources.lock`; sin él, la «Cadena TypeScript» del CI sale en rojo. Si la receta no corre, el sello es el `sha256sum` de `Cargo.lock`.
+* **Si tocas `Cargo.lock`, corre `just flatpak-sources`**, que reescribe el sello de `packaging/flatpak/sources.lock`; sin él, la «Cadena TypeScript» del CI sale en rojo. Escribir el sello a mano no basta: el CI comprueba también `cargo-sources.json`.
 
 ## Rutas
 
