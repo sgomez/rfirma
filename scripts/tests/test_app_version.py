@@ -279,6 +279,48 @@ class Bump(AppVersionTree):
         self.assertEqual(self.read("rfirma-app/src-tauri/Cargo.lock"), CARGO_LOCK)
 
 
+class Retry(AppVersionTree):
+    def deliver(self, version: str) -> None:
+        self.run_verb("bump", version)
+        self.replace(
+            "CHANGELOG.md", f"[{version}] - {TODAY}", f"[{version}] - 2000-01-01"
+        )
+        self.replace(
+            "packaging/flatpak/me.sgomez.rfirma.metainfo.xml",
+            f'date="{TODAY}"',
+            'date="2000-01-01"',
+        )
+        self.git("commit", "--quiet", "-am", f"chore: version {version}")
+        self.git("tag", f"v{version}")
+
+    def test_rewrites_the_section_with_what_merged_after_the_failed_delivery(
+        self,
+    ) -> None:
+        self.merge_pr(10, "feat: firma con rúbrica")
+        self.deliver("0.4.0")
+        self.merge_pr(15, "fix: el flatpak arranca")
+        result = self.run_verb("retry", "0.4.0")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            self.run_verb("changelog", "0.4.0").stdout.strip(),
+            "### Added\n- Firma con rúbrica (#10).\n\n"
+            "### Fixed\n- El flatpak arranca (#15).",
+        )
+        self.assertEqual(self.read("CHANGELOG.md").count("## [0.4.0]"), 1)
+        self.assertIn(f"## [0.4.0] - {TODAY}", self.read("CHANGELOG.md"))
+        self.assertIn(
+            f'<release version="0.4.0" date="{TODAY}">',
+            self.read("packaging/flatpak/me.sgomez.rfirma.metainfo.xml"),
+        )
+        self.assertEqual(self.run_verb("check", "--expected", "0.4.0").returncode, 0)
+
+    def test_refuses_a_version_that_is_not_the_current_one(self) -> None:
+        result = self.run_verb("retry", "0.2.0")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("la versión actual es 0.3.0", result.stderr)
+        self.assertEqual(self.read("CHANGELOG.md"), CHANGELOG)
+
+
 class Changelog(AppVersionTree):
     def test_extracts_the_section_of_a_version(self) -> None:
         result = self.run_verb("changelog", "0.2.0")
