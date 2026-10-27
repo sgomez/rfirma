@@ -818,7 +818,7 @@ release version:
         echo "Para deshacer: git tag -d $tag && git reset --hard origin/main"
     fi
 
-# Repite la entrega de <version> moviendo su etiqueta a main, solo si no llegó a crear su Release.
+# Repite la entrega de <version> con su changelog al día y su etiqueta en main, solo si no llegó a crear su Release.
 [group('release')]
 [script('bash')]
 release-retry version:
@@ -834,10 +834,15 @@ release-retry version:
     [ "$(scripts/app_version.py check)" = "$version" ] || fail "La versión de main no es $version."
     git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null || fail "La etiqueta $tag no existe en origin: usa just release."
     if gh release view "$tag" >/dev/null 2>&1; then fail "$tag ya tiene Release, aunque sea en borrador: publica una versión nueva."; fi
+    scripts/app_version.py retry "$version"
+    git add -A
+    git diff --cached --quiet || git commit --quiet -m "chore: changelog $version"
     before="$(git ls-remote --tags origin "refs/tags/$tag" | cut -c1-8)"
+    echo
+    git show --stat --format='%h %s' HEAD
+    echo
     echo "$tag pasa de $before a $(git rev-parse --short=8 HEAD)."
-    read -r -p "¿Mover $tag y subirla a origin? [s/N] " answer
-    [ "$answer" = s ] || [ "$answer" = S ] || fail "Sin cambios."
-    git push origin ":refs/tags/$tag"
+    read -r -p "¿Subir main y mover $tag en origin? [s/N] " answer
+    [ "$answer" = s ] || [ "$answer" = S ] || fail "Sin subir. Para deshacer: git reset --hard origin/main"
     git tag -f "$tag"
-    git push origin "$tag"
+    git push --atomic origin main "+refs/tags/$tag"

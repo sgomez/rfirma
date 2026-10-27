@@ -11,7 +11,7 @@ Los arneses que llaman las recetas del `justfile` (ADR-0013).
 | `install-tools.sh` | Instala las herramientas en la versión que fija `versions.env`, para `just install-tools`. |
 | `pinned-version.sh` | Imprime una clave de `versions.env` para los arranques que no pasan por `just`. |
 | `check-versions.sh` | La guarda de `versions.env`: ningún valor fijado escrito fuera de él y los pom con la misma AutoFirma. |
-| `app_version.py` | La versión de la aplicación con tres verbos: `bump` la sube en todos sus sitios, `check` comprueba que cuadran y `changelog` imprime la sección de una versión. No es la guarda de las herramientas fijadas. |
+| `app_version.py` | La versión de la aplicación: `bump` la sube en todos sus sitios, `retry` rehace la sección y la fecha de la versión actual, `check` comprueba que cuadran y `changelog` imprime la sección de una versión. No es la guarda de las herramientas fijadas. |
 | `dev-handler.sh` | Registra o quita el binario de desarrollo como manejador de `afirma://`: por `xdg-mime` en Linux y, en macOS, por LaunchServices con un `.app` de desarrollo. |
 | `isolated-store.sh` | Monta el almacén de un perfil de usar y tirar de la suite de conformidad, igual para cualquier cliente: la NSS, SoftHSM y OpenSC. Lo llama la consola web de la suite la primera vez que una tanda pide ese almacén, no una receta. |
 | `check-glibc.sh` | Comprueba el suelo de glibc de la librería nativa. |
@@ -30,6 +30,6 @@ Los arneses que llaman las recetas del `justfile` (ADR-0013).
 | `tests/packages_manifest_test.sh` | Prueba el manifiesto de paquetes (entrega completa, candidata, extensión desconocida, firmable, plataformas). |
 | `tests/preview_comment_test.sh` | Prueba el comentario de la preview: filas por artefacto, avisos del manifiesto, fallo, salida vacía y marcador en la primera línea. |
 | `tests/check_versions_test.sh` | Prueba la guarda de `versions.env` sobre árboles temporales: literales, pom, formato y el fichero viejo de GraalVM. |
-| `tests/test_app_version.py` | Prueba los tres verbos de `app_version.py` sobre un árbol temporal con su propio git. |
+| `tests/test_app_version.py` | Prueba los verbos de `app_version.py` sobre un árbol temporal con su propio git. |
 | `tests/test_design_sync_selection.py` | Prueba la selección sobre árboles de historias temporales: capas publicables, pantallas, errores de título y componentes de `testing/`. |
 | `tests/check_workflows_test.sh` | Prueba la guarda de workflows sobre copias de `.github/`: rompe cada invariante de una forma y espera el mensaje. |

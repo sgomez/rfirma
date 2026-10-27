@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""La versión de la aplicación: `bump`, `check` y `changelog`; no la de las herramientas fijadas."""
+"""La versión de la aplicación: `bump`, `retry`, `check` y `changelog`; no la de las herramientas fijadas."""
 
 from __future__ import annotations
 
@@ -186,9 +186,18 @@ def git(root: Path, *args: str) -> str:
     ).stdout
 
 
-def previous_tag(root: Path) -> str:
+def previous_tag(root: Path, version: str) -> str:
     try:
-        return git(root, "describe", "--tags", "--abbrev=0", "--match", "v*").strip()
+        return git(
+            root,
+            "describe",
+            "--tags",
+            "--abbrev=0",
+            "--match",
+            "v*",
+            "--exclude",
+            f"v{version}",
+        ).strip()
     except subprocess.CalledProcessError as error:
         raise VersionError("no hay ninguna etiqueta v* de la que partir") from error
 
@@ -267,23 +276,40 @@ def bump(root: Path, version: str, today: datetime.date) -> None:
     if not METAINFO_RELEASE.search(metainfo):
         raise VersionError(f"{METAINFO}: no hay <release> que sustituir")
     cargo_toml = with_package_version(read(root, CARGO_TOML), version)
-    since = previous_tag(root)
-    section = f"## [{version}] - {today.isoformat()}\n\n{section_body(root, since)}\n\n"
+    section = new_section(root, version, today)
 
     write(root, CHANGELOG, with_changelog_section(read(root, CHANGELOG), section))
     write(root, CARGO_TOML, cargo_toml)
     write(root, CARGO_LOCK, LOCK_ENTRY.sub(rf"\g<1>{version}\g<3>", lock, count=1))
-    write(
-        root,
-        METAINFO,
-        METAINFO_RELEASE.sub(
-            f'<release version="{version}" date="{today.isoformat()}">',
-            metainfo,
-            count=1,
-        ),
-    )
+    write_metainfo_release(root, metainfo, version, today)
     digest = hashlib.sha256((root / CARGO_LOCK).read_bytes()).hexdigest()
     write(root, SOURCES_LOCK, f"{digest}  {CARGO_LOCK}\n")
+
+
+def new_section(root: Path, version: str, today: datetime.date) -> str:
+    body = section_body(root, previous_tag(root, version))
+    return f"## [{version}] - {today.isoformat()}\n\n{body}\n\n"
+
+
+def write_metainfo_release(
+    root: Path, metainfo: str, version: str, today: datetime.date
+) -> None:
+    release = f'<release version="{version}" date="{today.isoformat()}">'
+    write(root, METAINFO, METAINFO_RELEASE.sub(release, metainfo, count=1))
+
+
+def retry(root: Path, version: str, today: datetime.date) -> None:
+    current = cargo_version(root)
+    if version != current:
+        raise VersionError(f"la versión actual es {current}, no {version}")
+    changelog = read(root, CHANGELOG)
+    headings = list(SECTION_HEADING.finditer(changelog))
+    if not headings or headings[0].group(1) != version:
+        raise VersionError(f"{version} no es la sección más reciente de {CHANGELOG}")
+    end = headings[1].start() if len(headings) > 1 else len(changelog)
+    section = new_section(root, version, today)
+    write(root, CHANGELOG, changelog[: headings[0].start()] + section + changelog[end:])
+    write_metainfo_release(root, read(root, METAINFO), version, today)
 
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
@@ -292,6 +318,10 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     verbs = parser.add_subparsers(dest="verb", required=True)
     bump_verb = verbs.add_parser("bump", help="sube la versión en todos sus sitios")
     bump_verb.add_argument("version")
+    retry_verb = verbs.add_parser(
+        "retry", help="rehace la sección y la fecha de la versión actual"
+    )
+    retry_verb.add_argument("version")
     check_verb = verbs.add_parser("check", help="imprime la versión si todo cuadra")
     check_verb.add_argument(
         "--expected", help="la versión que tiene que tener el árbol"
@@ -308,6 +338,11 @@ def run(arguments: argparse.Namespace) -> int:
     if arguments.verb == "bump":
         bump(root, arguments.version, datetime.datetime.now(datetime.UTC).date())
         print(f"versión {arguments.version} en todos sus sitios", file=sys.stderr)
+        return run(
+            argparse.Namespace(root=root, verb="check", expected=arguments.version)
+        )
+    if arguments.verb == "retry":
+        retry(root, arguments.version, datetime.datetime.now(datetime.UTC).date())
         return run(
             argparse.Namespace(root=root, verb="check", expected=arguments.version)
         )
