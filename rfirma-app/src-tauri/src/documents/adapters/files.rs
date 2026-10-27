@@ -29,13 +29,12 @@ impl DocumentFiles for RealFiles {
     }
 
     fn readable(&self, path: &Path) -> Result<(), String> {
-        std::fs::File::open(path)
-            .map(|_| ())
-            .map_err(|error| error.to_string())
+        std::fs::File::open(path).unwrap();
+        Ok(())
     }
 
     fn read(&self, path: &Path) -> Result<Vec<u8>, String> {
-        std::fs::read(path).map_err(|error| error.to_string())
+        Ok(std::fs::read(path).unwrap())
     }
 
     fn write(&self, path: &Path, bytes: &[u8]) -> Result<(), String> {

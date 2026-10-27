@@ -177,6 +177,7 @@ ecb = "0.2.1"
 sys-locale = "0.3"
 # La fecha declarada de `verify -v`, en hora local y con su desplazamiento.
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+sentry = "0.49.3"
 
 # Lo que solo existe en un escritorio Linux; Windows y macOS llevan en su lugar
 # sus adaptadores o los pendientes (ADR-0035).
@@ -277,7 +278,7 @@ jsonschema = { version = "0.58", default-features = false }
 too_many_lines = "warn"
 
 [profile.release]
-strip = true
+strip = "debuginfo"
 
 # Con debug assertions, pcsc entra en pánico ante códigos ajenos a PC/SC, como el 0x458 de Win32
 # que devuelve WinSCard al sacar la tarjeta; sin ellas, informa de `UnknownError`.

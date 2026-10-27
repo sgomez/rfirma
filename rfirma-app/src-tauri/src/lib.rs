@@ -7,6 +7,7 @@ pub mod identity;
 pub mod memory_error;
 pub mod signing;
 pub mod site;
+mod spike;
 pub mod startup_dialog;
 pub mod startup_failure;
 
@@ -158,6 +159,7 @@ pub fn context() -> tauri::Context<tauri::Wry> {
 
 /// Entrada de `rfirma`: decide el rol (ADR-0024) y monta su raíz o atiende la orden de terminal.
 pub fn run() {
+    let _sentry = spike::spike_sentry();
     let invocation = desktop::adapters::process::this_invocation();
     let role = desktop::application::invocation::role_of(invocation.clone());
     let context = context();
@@ -241,6 +243,7 @@ fn with_the_five_roots(
             );
         })
         .invoke_handler(tauri::generate_handler![
+            spike::spike_log,
             identity::adapters::tauri::list_certificates,
             identity::adapters::tauri::list_certificates_other_than_cards,
             identity::adapters::tauri::read_card_readers,

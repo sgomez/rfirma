@@ -10,6 +10,20 @@ import "./design-system/index.css";
 // modelo de caja, el margen del documento y la colocación del velo. Va detrás
 // del bundle porque son ajustes sobre él (ver `app.css`).
 import "./app.css";
+import * as Sentry from "@sentry/react";
+import { invoke } from "@tauri-apps/api/core";
+
+const spikeDsn = import.meta.env.VITE_GLITCHTIP_DSN as string | undefined;
+if (spikeDsn) {
+  Sentry.init({
+    dsn: spikeDsn,
+    beforeSend(event) {
+      void invoke("spike_log", { event: JSON.stringify(event) });
+      return event;
+    },
+  });
+}
+
 import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App, type AppHandle } from "./App";
@@ -144,7 +158,10 @@ function RootView() {
   );
 }
 
-createRoot(root).render(
+createRoot(root, {
+  onCaughtError: Sentry.reactErrorHandler(),
+  onUncaughtError: Sentry.reactErrorHandler(),
+}).render(
   <StrictMode>
     <LanguageProvider i18n={i18n} preference={preference}>
       <RenderErrorBoundary externalDestinations={externalDestinations}>

@@ -11,7 +11,7 @@
   "app": {
     "windows": [],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; frame-src rfirma-invoice://localhost http://rfirma-invoice.localhost"
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://monitor.sgomez.me ws://localhost:*; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; frame-src rfirma-invoice://localhost http://rfirma-invoice.localhost"
     }
   },
   "bundle": {

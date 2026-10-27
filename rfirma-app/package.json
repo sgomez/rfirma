@@ -13,6 +13,7 @@
     "prepare": "tools/install-git-hooks.sh"
   },
   "dependencies": {
+    "@sentry/react": "^11.9.0",
     "@tauri-apps/api": "2.12.1",
     "gettext-parser": "9.1.1",
     "i18next": "26.4.2",

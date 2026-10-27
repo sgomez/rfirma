@@ -84,7 +84,11 @@ export function DocumentTabs({
                 <span className="document-tab__icon">
                   <Icon name="document" size={14} />
                 </span>
-                <span className="document-tab__name">{tab.name}</span>
+                <span className="document-tab__name">
+                  {tab.name.startsWith("legible")
+                    ? (tab as unknown as { extension: { label: string } }).extension.label
+                    : tab.name}
+                </span>
                 {tab.badge === "Signed" && (
                   <span className="document-tab__signed" role="img" aria-label={t("badges.signed")}>
                     <Icon name="signed" />
