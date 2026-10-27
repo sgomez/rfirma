@@ -8,6 +8,18 @@ Desde la v0.11.2 cada sección la genera `just release <version>` a partir de
 los títulos de las PR fusionadas en `main` desde la etiqueta anterior: los
 `feat`, `fix` y `perf` que no son de ámbito interno.
 
+## [0.17.0] - 2026-10-27
+
+### Added
+- El asa de arrastre solo se ve con el cursor sobre el recuadro (#2107).
+
+### Fixed
+- Pcsc no entra en pánico en desarrollo al sacar el DNIe en Windows (#2066).
+- Todos los paquetes llevan la licencia de rFirma y las de terceros (#2089).
+- El error de la tarjeta que no responde sale en vez de «el certificado ya no está» (#2112).
+- Una sede que encadena firmas con sticky te hace elegir certificado en cada firma (#2169).
+- Error al firmar un PDF en macOS: getOrInsertComputed is not a function (#2212).
+
 ## [0.16.0] - 2026-10-20
 
 ### Added
