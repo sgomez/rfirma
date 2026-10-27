@@ -28,8 +28,8 @@ use x509_cert::Certificate;
 use super::user_store;
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
-use crate::identity::domain::ecdsa;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::{digest, ecdsa};
 
 /// La etiqueta de «token» de los certificados de `CurrentUser\MY`.
 pub const TOKEN_LABEL: &str = "CurrentUser\\MY";
@@ -80,7 +80,7 @@ pub fn sign(
 ) -> Result<Vec<u8>, TokenError> {
     let found = FoundCertificate::of(reference)?;
     let key = PrivateKey::of(&found)?;
-    let digest = ecdsa::digest(algorithm, data)?;
+    let digest = digest::digest(algorithm, data)?;
     let signature = key.sign(algorithm, &digest)?;
     match algorithm.key_kind() {
         KeyKind::Rsa => Ok(signature),

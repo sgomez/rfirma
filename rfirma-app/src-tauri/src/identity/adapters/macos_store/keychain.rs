@@ -15,7 +15,7 @@ use security_framework_sys::item::kSecAttrTokenID;
 use super::SEARCH_LIST;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
-use crate::identity::domain::ecdsa;
+use crate::identity::domain::digest;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::store::{Store, MACOS_STORE_PREFIX};
 
@@ -84,7 +84,7 @@ pub fn sign(
 ) -> Result<Vec<u8>, TokenError> {
     let (_, identity) = identity_of(reference)?;
     let key = identity.private_key().map_err(|error| failure(&error))?;
-    let digest = ecdsa::digest(algorithm, data)?;
+    let digest = digest::digest(algorithm, data)?;
     key.create_signature(over_a_digest(algorithm), &digest)
         .map_err(|error| refused(&error))
 }

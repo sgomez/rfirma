@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 use crate::card::{
-    Profile, CALL_LOG, HANGS_ON_INITIALIZE, INTERFERENCE, PROFILE, READER, REMOVED_FROM, TRIES_LEFT,
+    Profile, CALL_LOG, HANGS_ON_INITIALIZE, INTERFERENCE, PROFILE, RAW_ONLY, READER, REMOVED_FROM,
+    TRIES_LEFT, WITHOUT_LOGIN,
 };
 
 /// Una tarjeta aislada: cada copia del módulo es una instancia aparte, aunque viva en el mismo proceso.
@@ -59,6 +60,18 @@ impl FakeCard {
     /// La pone en el lector `name`, que la ranura describe como lo haría OpenSC.
     pub fn in_reader(self, name: &str) -> io::Result<Self> {
         fs::write(self.dir.path().join(READER), name)?;
+        Ok(self)
+    }
+
+    /// Una ranura que solo firma con `CKM_RSA_PKCS`, como los HSM que dejan el resumen a quien llama.
+    pub fn without_composed_mechanisms(self) -> io::Result<Self> {
+        fs::write(self.dir.path().join(RAW_ONLY), "")?;
+        Ok(self)
+    }
+
+    /// Un token sin `CKF_LOGIN_REQUIRED` que autoriza cada firma por su cuenta: `C_Login` y `C_Logout` no los implementa.
+    pub fn without_login(self) -> io::Result<Self> {
+        fs::write(self.dir.path().join(WITHOUT_LOGIN), "")?;
         Ok(self)
     }
 

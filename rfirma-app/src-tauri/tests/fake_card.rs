@@ -6,6 +6,9 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use fake_pkcs11::FakeCard;
+use openssl::hash::MessageDigest;
+use openssl::sign::Verifier;
+use openssl::x509::X509;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::adapters::pkcs11::stores::{candidate_modules_under, CANDIDATE_MODULES};
 use rfirma_lib::identity::adapters::pkcs11::RealToken;
@@ -13,9 +16,11 @@ use rfirma_lib::identity::adapters::views::{CertificateView, StoreMarkView};
 use rfirma_lib::identity::application::certificates::{
     certificates_with_their_chains, listed_rows, ListedCertificates,
 };
+use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
+use rfirma_lib::identity::domain::error::Situation;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
-use rfirma_lib::identity::domain::secret::PinWarning;
+use rfirma_lib::identity::domain::secret::{PinWarning, StoreSecret};
 use rfirma_lib::identity::domain::store::{Store, StoreClass};
 use rfirma_lib::identity::ports::{
     CertificateMemory, SecretPromptError, SecretPromptRequest, SecretPrompter,
@@ -382,6 +387,89 @@ fn a_site_hears_one_attempt_left_when_signing_fails_on_a_card_on_its_final_try()
 
     assert_eq!(refusal.attempts_left, Some(1), "{:?}", card.calls());
     assert_eq!(card.tries_left(), 1);
+}
+
+const CKM_RSA_PKCS: &str = "0x1 ";
+const CKM_SHA256_RSA_PKCS: &str = "0x40 ";
+
+fn signed_sha256_with_rsa(card: &FakeCard) {
+    let certificate = signing_certificate_of(card);
+    let signature = pkcs11::sign_with_secret(
+        certificate.reference(),
+        &ProtectedSecret::from_str(FakeCard::PIN),
+        SignatureAlgorithm::Sha256Rsa,
+        b"uno",
+    )
+    .expect("la tarjeta firma SHA256withRSA");
+    let public_key = X509::from_der(certificate.der())
+        .and_then(|certificate| certificate.public_key())
+        .expect("la clave pública del certificado de firma");
+    let mut verifier = Verifier::new(MessageDigest::sha256(), &public_key).unwrap();
+    verifier.update(b"uno").unwrap();
+    assert!(verifier.verify(&signature).unwrap());
+}
+
+fn the_mechanism_signed_with(card: &FakeCard) -> String {
+    card.calls_to("C_SignInit")
+        .last()
+        .expect("se ha llegado a C_SignInit")
+        .trim_start_matches("C_SignInit ")
+        .to_owned()
+}
+
+#[test]
+fn a_slot_without_the_composed_mechanism_signs_rsa_over_the_digest_info() {
+    let card = FakeCard::new()
+        .and_then(FakeCard::without_composed_mechanisms)
+        .expect("la tarjeta falsa deberia montarse");
+
+    signed_sha256_with_rsa(&card);
+
+    assert!(the_mechanism_signed_with(&card).starts_with(CKM_RSA_PKCS));
+}
+
+#[test]
+fn a_slot_with_the_composed_mechanism_keeps_signing_with_it() {
+    let card = FakeCard::new().expect("la tarjeta falsa deberia montarse");
+
+    signed_sha256_with_rsa(&card);
+
+    assert!(the_mechanism_signed_with(&card).starts_with(CKM_SHA256_RSA_PKCS));
+}
+
+#[test]
+fn pss_is_not_signed_over_a_digest_info_when_the_slot_lacks_its_mechanism() {
+    let card = FakeCard::new()
+        .and_then(FakeCard::without_composed_mechanisms)
+        .expect("la tarjeta falsa deberia montarse");
+
+    let refusal = pkcs11::sign_with_secret(
+        signing_certificate_of(&card).reference(),
+        &ProtectedSecret::from_str(FakeCard::PIN),
+        SignatureAlgorithm::Sha256RsaPss,
+        b"uno",
+    )
+    .expect_err("la ranura no ofrece ningún mecanismo PSS");
+
+    assert_eq!(refusal.situation(), Situation::MechanismNotOffered);
+    assert!(card.calls_to("C_Login").is_empty(), "{:?}", card.calls());
+}
+
+#[test]
+fn a_token_without_login_required_signs_without_c_login_or_asking_for_a_secret() {
+    let card = FakeCard::new()
+        .and_then(FakeCard::without_login)
+        .expect("la tarjeta falsa deberia montarse");
+
+    assert_eq!(
+        pkcs11::store_secret(signing_certificate_of(&card).reference())
+            .expect("las banderas del token"),
+        StoreSecret::NotNeeded
+    );
+    signed_sha256_with_rsa(&card);
+
+    assert!(card.calls_to("C_Login").is_empty(), "{:?}", card.calls());
+    assert!(card.calls_to("C_Logout").is_empty(), "{:?}", card.calls());
 }
 
 #[test]

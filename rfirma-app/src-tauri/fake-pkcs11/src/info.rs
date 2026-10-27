@@ -40,14 +40,18 @@ pub(crate) fn slot(reader: &str, card_present: bool) -> CK_SLOT_INFO {
 }
 
 /// La tarjeta, con las señales del PIN que tenga el proceso y sus sesiones abiertas.
-pub(crate) fn token(pin_signals: CK_FLAGS, sessions: usize) -> CK_TOKEN_INFO {
+pub(crate) fn token(login_required: bool, pin_signals: CK_FLAGS, sessions: usize) -> CK_TOKEN_INFO {
     CK_TOKEN_INFO {
         label: padded("DNI electrónico"),
         manufacturerID: padded("DGP-FNMT"),
         model: padded("PKCS#15 emulated"),
         serialNumber: padded("FAKE0000000001"),
         flags: CKF_RNG
-            | CKF_LOGIN_REQUIRED
+            | if login_required {
+                CKF_LOGIN_REQUIRED
+            } else {
+                0
+            }
             | CKF_USER_PIN_INITIALIZED
             | CKF_TOKEN_INITIALIZED
             | pin_signals,

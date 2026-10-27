@@ -12,14 +12,22 @@ use openssl::sign::Signer;
 use crate::material::Material;
 use crate::objects::KeyRole;
 
-/// Los mecanismos de firma que ofrece la ranura.
-pub(crate) const MECHANISMS: [CK_MECHANISM_TYPE; 5] = [
+const MECHANISMS: [CK_MECHANISM_TYPE; 5] = [
     CKM_RSA_PKCS,
     CKM_SHA1_RSA_PKCS,
     CKM_SHA256_RSA_PKCS,
     CKM_SHA384_RSA_PKCS,
     CKM_SHA512_RSA_PKCS,
 ];
+
+/// Los mecanismos de firma que ofrece la ranura: todos, o solo el crudo.
+pub(crate) fn offered(raw_only: bool) -> &'static [CK_MECHANISM_TYPE] {
+    if raw_only {
+        &MECHANISMS[..1]
+    } else {
+        &MECHANISMS
+    }
+}
 
 pub(crate) fn signature_len(material: &Material, role: KeyRole) -> usize {
     key_of(material, role).size()

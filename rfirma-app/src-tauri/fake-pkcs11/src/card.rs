@@ -15,6 +15,8 @@ pub(crate) const INTERFERENCE: &str = "interference";
 pub(crate) const REMOVED_FROM: &str = "removed-from";
 pub(crate) const HANGS_ON_INITIALIZE: &str = "hangs-on-initialize";
 pub(crate) const READER: &str = "reader";
+pub(crate) const RAW_ONLY: &str = "raw-only";
+pub(crate) const WITHOUT_LOGIN: &str = "without-login";
 
 const DEFAULT_READER: &str = "Lector falso de DNIe";
 
@@ -43,6 +45,14 @@ pub(crate) fn reader_name(dir: &Path) -> String {
 
 pub(crate) fn hangs_on_initialize(dir: &Path) -> bool {
     dir.join(HANGS_ON_INITIALIZE).is_file()
+}
+
+pub(crate) fn login_required(dir: &Path) -> bool {
+    !dir.join(WITHOUT_LOGIN).is_file()
+}
+
+pub(crate) fn raw_only(dir: &Path) -> bool {
+    dir.join(RAW_ONLY).is_file()
 }
 
 pub(crate) fn interference_configured(dir: &Path) -> bool {

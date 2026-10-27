@@ -11,7 +11,6 @@ use crate::card;
 use crate::info;
 use crate::module::{check_slot, Module, SLOT};
 use crate::objects::Lookup;
-use crate::signing::MECHANISMS;
 
 static MODULE: Mutex<Option<Module>> = Mutex::new(None);
 
@@ -210,7 +209,11 @@ unsafe extern "C" fn get_slot_info(slot: CK_SLOT_ID, target: *mut CK_SLOT_INFO) 
 unsafe extern "C" fn get_token_info(slot: CK_SLOT_ID, target: *mut CK_TOKEN_INFO) -> CK_RV {
     entry("C_GetTokenInfo", "", |module| {
         check_slot(slot)?;
-        *out(target)? = info::token(module.pin_signals(), module.session_count());
+        *out(target)? = info::token(
+            module.login_required(),
+            module.pin_signals(),
+            module.session_count(),
+        );
         Ok(())
     })
 }
@@ -220,9 +223,9 @@ unsafe extern "C" fn get_mechanism_list(
     list: *mut CK_MECHANISM_TYPE,
     count: *mut CK_ULONG,
 ) -> CK_RV {
-    entry("C_GetMechanismList", "", |_| {
+    entry("C_GetMechanismList", "", |module| {
         check_slot(slot)?;
-        write_list(&MECHANISMS, list, count)
+        write_list(module.mechanisms(), list, count)
     })
 }
 
@@ -231,9 +234,9 @@ unsafe extern "C" fn get_mechanism_info(
     mechanism: CK_MECHANISM_TYPE,
     target: *mut CK_MECHANISM_INFO,
 ) -> CK_RV {
-    entry("C_GetMechanismInfo", "", |_| {
+    entry("C_GetMechanismInfo", "", |module| {
         check_slot(slot)?;
-        if !MECHANISMS.contains(&mechanism) {
+        if !module.mechanisms().contains(&mechanism) {
             return Err(CKR_MECHANISM_INVALID);
         }
         *out(target)? = info::mechanism();

@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::error::{Error, RvError};
 use cryptoki::object::{Attribute, ObjectClass};
-use cryptoki::session::{Session, UserType};
+use cryptoki::session::{Session, SessionState, UserType};
 use cryptoki::slot::{Slot, TokenInfo};
 use cryptoki::types::AuthPin;
 
@@ -140,14 +140,29 @@ pub(super) fn refused_login(context: &Pkcs11, slot: Slot, error: Error) -> Token
     refused
 }
 
-/// Una sesión de la ranura con el usuario dentro, tras comprobar que la tarjeta no declara el PIN bloqueado (ADR-0047).
+/// Una sesión de la ranura con el usuario dentro, o sin él si el token no pide login, tras comprobar que no declara el PIN bloqueado (ADR-0047).
 pub(super) fn logged_in(
     context: &Pkcs11,
     slot: Slot,
     secret: &ProtectedSecret,
 ) -> Result<Session, TokenError> {
-    token_info_unless_locked(context, slot)?;
+    if !token_info_unless_locked(context, slot)?.login_required() {
+        return Ok(context.open_ro_session(slot)?);
+    }
     logged_in_session(context, slot, pin_text(secret)?)
+}
+
+/// Saca al usuario de la sesión, si está dentro: a una sesión pública no le llega `C_Logout`.
+pub(super) fn log_out(session: &Session) {
+    let public = session.get_session_info().is_ok_and(|info| {
+        matches!(
+            info.session_state(),
+            SessionState::RoPublic | SessionState::RwPublic
+        )
+    });
+    if !public {
+        let _ = session.logout();
+    }
 }
 
 fn pin_text(secret: &ProtectedSecret) -> Result<&str, TokenError> {

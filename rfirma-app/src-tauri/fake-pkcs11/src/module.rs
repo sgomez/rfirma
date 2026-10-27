@@ -4,12 +4,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 use cryptoki_sys::{
-    CKF_SERIAL_SESSION, CKR_KEY_HANDLE_INVALID, CKR_MECHANISM_INVALID, CKR_OBJECT_HANDLE_INVALID,
-    CKR_OK, CKR_OPERATION_ACTIVE, CKR_OPERATION_NOT_INITIALIZED, CKR_SESSION_HANDLE_INVALID,
-    CKR_SESSION_PARALLEL_NOT_SUPPORTED, CKR_SLOT_ID_INVALID, CKR_USER_ALREADY_LOGGED_IN,
-    CKR_USER_NOT_LOGGED_IN, CKR_USER_TYPE_INVALID, CKU_CONTEXT_SPECIFIC, CKU_USER,
-    CK_ATTRIBUTE_TYPE, CK_FLAGS, CK_MECHANISM_TYPE, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE,
-    CK_SLOT_ID, CK_USER_TYPE,
+    CKF_SERIAL_SESSION, CKR_FUNCTION_NOT_SUPPORTED, CKR_KEY_HANDLE_INVALID, CKR_MECHANISM_INVALID,
+    CKR_OBJECT_HANDLE_INVALID, CKR_OK, CKR_OPERATION_ACTIVE, CKR_OPERATION_NOT_INITIALIZED,
+    CKR_SESSION_HANDLE_INVALID, CKR_SESSION_PARALLEL_NOT_SUPPORTED, CKR_SLOT_ID_INVALID,
+    CKR_USER_ALREADY_LOGGED_IN, CKR_USER_NOT_LOGGED_IN, CKR_USER_TYPE_INVALID,
+    CKU_CONTEXT_SPECIFIC, CKU_USER, CK_ATTRIBUTE_TYPE, CK_FLAGS, CK_MECHANISM_TYPE,
+    CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
 };
 
 use crate::card::{self, Profile};
@@ -30,6 +30,8 @@ struct Session {
 
 pub(crate) struct Module {
     dir: PathBuf,
+    mechanisms: &'static [CK_MECHANISM_TYPE],
+    login_required: bool,
     material: Material,
     profile: Profile,
     objects: Vec<Object>,
@@ -48,6 +50,8 @@ impl Module {
         let objects = objects::objects_of(&material, profile)?;
         Ok(Self {
             interference_pending: card::interference_configured(&dir),
+            mechanisms: signing::offered(card::raw_only(&dir)),
+            login_required: card::login_required(&dir),
             dir,
             material,
             profile,
@@ -73,6 +77,14 @@ impl Module {
 
     pub(crate) fn is_logged_in(&self) -> bool {
         self.logged_in
+    }
+
+    pub(crate) fn login_required(&self) -> bool {
+        self.login_required
+    }
+
+    fn keys_open(&self) -> bool {
+        self.logged_in || !self.login_required
     }
 
     pub(crate) fn open_session(
@@ -121,6 +133,9 @@ impl Module {
         pin: Option<&[u8]>,
     ) -> Result<(), CK_RV> {
         self.check_session(handle)?;
+        if !self.login_required {
+            return Err(CKR_FUNCTION_NOT_SUPPORTED);
+        }
         match user {
             CKU_USER => self.login_user(handle, pin),
             CKU_CONTEXT_SPECIFIC => self.login_for_signature(handle, pin),
@@ -177,6 +192,9 @@ impl Module {
 
     pub(crate) fn logout(&mut self, handle: CK_SESSION_HANDLE) -> Result<(), CK_RV> {
         self.check_session(handle)?;
+        if !self.login_required {
+            return Err(CKR_FUNCTION_NOT_SUPPORTED);
+        }
         if !self.logged_in {
             return Err(CKR_USER_NOT_LOGGED_IN);
         }
@@ -245,16 +263,20 @@ impl Module {
         Ok(self.object(handle, object)?.lookup(kind))
     }
 
+    pub(crate) fn mechanisms(&self) -> &'static [CK_MECHANISM_TYPE] {
+        self.mechanisms
+    }
+
     pub(crate) fn sign_init(
         &mut self,
         handle: CK_SESSION_HANDLE,
         mechanism: CK_MECHANISM_TYPE,
         key: CK_OBJECT_HANDLE,
     ) -> Result<(), CK_RV> {
-        if !signing::MECHANISMS.contains(&mechanism) {
+        if !self.mechanisms.contains(&mechanism) {
             return Err(CKR_MECHANISM_INVALID);
         }
-        if !self.logged_in {
+        if !self.keys_open() {
             return Err(CKR_USER_NOT_LOGGED_IN);
         }
         key_role(key).ok_or(CKR_KEY_HANDLE_INVALID)?;
@@ -335,10 +357,10 @@ impl Module {
     }
 
     fn visible_objects(&self) -> impl Iterator<Item = (CK_OBJECT_HANDLE, &Object)> {
-        let logged_in = self.logged_in;
+        let keys_open = self.keys_open();
         (1..)
             .zip(self.objects.iter())
-            .filter(move |(_, object)| logged_in || !object.is_private())
+            .filter(move |(_, object)| keys_open || !object.is_private())
     }
 }
 

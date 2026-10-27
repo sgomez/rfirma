@@ -7,13 +7,13 @@ use cryptoki::{context::Pkcs11, session::Session};
 
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::CertificateRef;
-use crate::identity::domain::ecdsa;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::{digest, ecdsa, rsa};
 
 use super::one_login::{self, Refused};
 use super::session::{
-    context, context_logged_in, logged_in, private_key, slot_of, the_store_is_really_there,
+    context, context_logged_in, log_out, logged_in, private_key, slot_of, the_store_is_really_there,
 };
 
 pub(super) fn sign_holding_the_turn(
@@ -40,7 +40,7 @@ pub(super) fn sign_holding_the_turn(
     }
     let session = log_in()?;
     let signature = sign(&session);
-    let _ = session.logout();
+    log_out(&session);
     signature
 }
 
@@ -56,7 +56,10 @@ fn signed_in(
     the_key_is_of_the_kind(session, key, algorithm)?;
     let (mechanism, bytes) = match offered {
         Offered::Composed => (algorithm.mechanism(), data.to_vec()),
-        Offered::EcdsaOverTheDigest => (Mechanism::Ecdsa, ecdsa::digest(algorithm, data)?),
+        Offered::EcdsaOverTheDigest => (Mechanism::Ecdsa, digest::digest(algorithm, data)?),
+        Offered::RsaPkcsOverTheDigestInfo => {
+            (Mechanism::RsaPkcs, rsa::digest_info(algorithm, data)?)
+        }
     };
     let signature = if the_key_always_authenticates(session, key)? {
         session.sign_init(&mechanism, key)?;
@@ -89,6 +92,8 @@ pub(super) enum Offered {
     Composed,
     /// El mecanismo crudo de curva elíptica, que firma el resumen calculado aquí.
     EcdsaOverTheDigest,
+    /// El mecanismo RSA crudo, que firma el `DigestInfo` armado aquí.
+    RsaPkcsOverTheDigestInfo,
 }
 
 /// El mecanismo del algoritmo, buscado en el listado de la ranura antes de pedir el PIN.
@@ -106,6 +111,12 @@ pub(super) fn the_slot_offers(
         && objection_to(context, slot, ecdsa::OVER_A_DIGEST)?.is_none()
     {
         return Ok(Offered::EcdsaOverTheDigest);
+    }
+
+    if rsa::signs_a_digest_info(algorithm)
+        && objection_to(context, slot, rsa::OVER_A_DIGEST_INFO)?.is_none()
+    {
+        return Ok(Offered::RsaPkcsOverTheDigestInfo);
     }
 
     Err(mechanism_not_offered(algorithm, objection))
