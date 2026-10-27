@@ -5,7 +5,7 @@ export const en: Dictionary = {
   "meta.description":
     "An AutoFirma alternative with no Java. Sign PDFs with your digital certificate or DNIe on Linux, macOS and Windows, including on the government sites that require AutoFirma. Alpha version.",
   "meta.image.alt":
-    "The rFirma logo on a green background with the tagline “Alternativa a AutoFirma” and the domain rfirma.sgomez.me",
+    "The rFirma logo on a green background with the tagline “Alternativa a AutoFirma” and the domain rfirma.com",
 
   "notice.aria": "Notice about official ownership",
   "notice.badge": "Notice",
@@ -177,7 +177,7 @@ export const en: Dictionary = {
     'The signing logic consumes the artefacts from <a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">ctt-gob-es/clienteafirma</a>, compiled into a native library with GraalVM Native Image.',
   "transparency.key.title": "Package signing key",
   "transparency.key.body":
-    'Public key at <a href="https://rfirma.sgomez.me/rfirma.asc">rfirma.asc</a>. Check its fingerprint after downloading it with <code>gpg --show-keys rfirma.asc</code>:',
+    'Public key at <a href="https://rfirma.com/rfirma.asc">rfirma.asc</a>. Check its fingerprint after downloading it with <code>gpg --show-keys rfirma.asc</code>:',
 
   "footer.tagline":
     "Native electronic signature for the desktop, with the official cryptographic engine and no Java on your computer.",
@@ -191,7 +191,7 @@ export const en: Dictionary = {
   "footer.comparison": "Differences from AutoFirma",
 
   "notFound.title": "Page not found — rFirma",
-  "notFound.description": "The address you opened does not exist on rfirma.sgomez.me.",
+  "notFound.description": "The address you opened does not exist on rfirma.com.",
   "notFound.heading": "This page does not exist",
   "notFound.body": "The link may be mistyped, or the page may have moved.",
   "notFound.home": "Back to the home page",

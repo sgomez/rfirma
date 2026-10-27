@@ -16,10 +16,10 @@ preferencias.
 Añade la clave pública y el repositorio, y instala el paquete:
 
 ```bash
-curl -fsSL https://rfirma.sgomez.me/rfirma.asc | sudo tee /usr/share/keyrings/rfirma.asc >/dev/null
+curl -fsSL https://rfirma.com/rfirma.asc | sudo tee /usr/share/keyrings/rfirma.asc >/dev/null
 sudo tee /etc/apt/sources.list.d/rfirma.sources <<'EOF'
 Types: deb
-URIs: https://rfirma.sgomez.me/apt/
+URIs: https://rfirma.com/apt/
 Suites: stable
 Components: main
 Signed-By: /usr/share/keyrings/rfirma.asc
@@ -35,11 +35,11 @@ Las actualizaciones llegan con `sudo apt upgrade`.
 sudo tee /etc/yum.repos.d/rfirma.repo <<'EOF'
 [rfirma]
 name=rfirma
-baseurl=https://rfirma.sgomez.me/rpm/
+baseurl=https://rfirma.com/rpm/
 enabled=1
 gpgcheck=1
 repo_gpgcheck=1
-gpgkey=https://rfirma.sgomez.me/rfirma.asc
+gpgkey=https://rfirma.com/rfirma.asc
 EOF
 sudo dnf install rfirma
 ```
@@ -56,7 +56,7 @@ como un repositorio más, después del de Flathub, de donde sale el runtime
 
 ```bash
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak remote-add --if-not-exists rfirma https://rfirma.sgomez.me/rfirma.flatpakrepo
+flatpak remote-add --if-not-exists rfirma https://rfirma.com/rfirma.flatpakrepo
 flatpak install rfirma me.sgomez.rfirma
 ```
 
@@ -85,7 +85,7 @@ rFirma pide esos accesos porque los necesita para firmar:
 
 ## Windows
 
-Descarga el instalador desde la [web](https://rfirma.sgomez.me/#instalacion) o la
+Descarga el instalador desde la [web](https://rfirma.com/#instalacion) o la
 [última Release](https://github.com/sgomez/rfirma/releases/latest). Se instala solo para
 tu usuario, sin permisos de administrador, y usa los certificados que ya tienes en
 Windows.
@@ -109,7 +109,7 @@ Necesitas un Mac con Apple Silicon y macOS 15.4 o posterior. Instálala con Home
 brew install --cask sgomez/rfirma/rfirma
 ```
 
-O descarga el `.dmg` desde la [web](https://rfirma.sgomez.me/#instalacion).
+O descarga el `.dmg` desde la [web](https://rfirma.com/#instalacion).
 
 La primera vez, macOS no la deja abrir porque no está firmada por Apple. Para
 permitirlo, ejecuta esto en el Terminal:
@@ -127,7 +127,7 @@ manejador de `afirma://`: Homebrew solo borra la aplicación.
 ## La huella de la clave GPG
 
 Los paquetes y los repositorios de rFirma se firman con una clave GPG. Su parte
-pública está en [rfirma.asc](https://rfirma.sgomez.me/rfirma.asc). Tras descargarla,
+pública está en [rfirma.asc](https://rfirma.com/rfirma.asc). Tras descargarla,
 comprueba su huella:
 
 ```bash
@@ -154,7 +154,7 @@ sha256sum --check SHA256SUMS
 Un `.rpm` suelto lleva además la firma dentro:
 
 ```bash
-sudo rpm --import https://rfirma.sgomez.me/rfirma.asc
+sudo rpm --import https://rfirma.com/rfirma.asc
 rpm --checksig rfirma-*.rpm
 ```
 

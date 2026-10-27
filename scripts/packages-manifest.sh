@@ -61,7 +61,7 @@ write_notes() {
 ## Antes de publicar
 
 Publicar esta Release es lo que dispara la distribución a los tres repositorios de
-`rfirma.sgomez.me`. Antes de hacerlo:
+`rfirma.com`. Antes de hacerlo:
 
 1. Descarga `manual-gate.pdf` y llévalo a un validador oficial (VALIDe). La puerta manual no la
    cierra ninguna prueba automática.
@@ -72,7 +72,7 @@ Publicar esta Release es lo que dispara la distribución a los tres repositorios
    sha256sum --check SHA256SUMS
    ```
 
-La clave que firma es la de rFirma, publicada en <https://rfirma.sgomez.me/rfirma.asc>. Su huella y
+La clave que firma es la de rFirma, publicada en <https://rfirma.com/rfirma.asc>. Su huella y
 su política de revocación están en `SECURITY.md`.
 
 ## Instalación

@@ -399,3 +399,11 @@ El `.flatpak` de la Release sigue ahí, sin firmar y sin origen, pero es la mate
 que `publish.yml` monta el repositorio ostree, no un canal: ni la landing, ni el manual ni el
 README lo ofrecen como descarga. El `.flatpakref` se sigue sirviendo para no romper los enlaces
 que ya circulan, pero deja de anunciarse.
+
+## Enmienda: el dominio pasa a ser `rfirma.com`
+
+El canal se sirve en `rfirma.com`, y lo que este ADR dice de `rfirma.sgomez.me` vale para él.
+El dominio viejo sigue sirviendo las rutas de los repositorios sin redirigir, porque las
+instalaciones existentes lo llevan grabado en su `.sources`, su `.repo`, su remoto de flatpak y
+el actualizador de Windows y macOS; sus páginas redirigen con un 301 a `rfirma.com`. El
+`app-id` sigue siendo `me.sgomez.rfirma`: cambiarlo convertiría rFirma en otra aplicación.

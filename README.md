@@ -113,7 +113,7 @@ rfirma sign -i contrato.pdf -o contrato-firmado.pdf --alias mi-certificado
 
 La referencia completa —parámetros, rechazos y ejemplos con `secret-tool`, el
 flatpak y Windows— está en el manual:
-[Línea de órdenes](https://rfirma.sgomez.me/manual/linea-de-ordenes/).
+[Línea de órdenes](https://rfirma.com/manual/linea-de-ordenes/).
 
 ---
 
@@ -127,7 +127,7 @@ viven en `rfirma-app/po/`; en local, `just storybook`.
 ## 📦 Instalación
 
 Los canales son **tres** —flatpak, `.deb` y `.rpm`—, todos servidos desde
-`rfirma.sgomez.me` y desde las Releases de GitHub
+`rfirma.com` y desde las Releases de GitHub
 ([ADR-0004](docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md),
 [ADR-0015](docs/adr/0015-canal-de-distribucion-propio.md)). No hace falta tener
 Java: el motor criptográfico va compilado dentro.
@@ -146,7 +146,7 @@ Firefox flatpak y el `.deb` tampoco comparten perfil—.
 **La vía recomendada es añadir el repositorio**, no descargar un fichero suelto:
 una vez dado de alta, las actualizaciones llegan solas con el gestor de
 paquetes del sistema (ADR-0015). Elige tu canal en
-<https://rfirma.sgomez.me>, que da la orden completa para flatpak, apt y dnf.
+<https://rfirma.com>, que da la orden completa para flatpak, apt y dnf.
 
 El bundle de flatpak **no trae el runtime**: se consume del remoto de
 **Flathub**, así que añadirlo es requisito de instalación. Es de un solo uso, y

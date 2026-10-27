@@ -32,7 +32,7 @@ respuesta.
 
 rFirma está en alfa y no hay ramas de mantenimiento: un arreglo de seguridad sale en la
 versión siguiente. Por eso el canal recomendado son los repositorios de
-`rfirma.sgomez.me` y no el paquete suelto — **un paquete instalado a mano no se actualiza
+`rfirma.com` y no el paquete suelto — **un paquete instalado a mano no se actualiza
 nunca**, y sin actualización no hay forma de hacerte llegar el arreglo
 ([ADR-0015](docs/adr/0015-canal-de-distribucion-propio.md)).
 
@@ -48,14 +48,14 @@ para el mismo enunciado —«esto lo hizo rFirma»— serían peor seguridad, no
 | Maestra (sólo certificación, sin caducidad) | Nada: sólo certifica sus subclaves | **Fuera de línea**, con su certificado de revocación, en ningún sistema conectado |
 | Subclave de firma (caduca a los dos años) | Releases, ostree, apt, dnf y cada `.rpm` | Secreto del entorno `release` del CI, y en ninguna otra parte |
 
-**La pública** se sirve en <https://rfirma.sgomez.me/rfirma.asc> — es el `Signed-By` de apt
+**La pública** se sirve en <https://rfirma.com/rfirma.asc> — es el `Signed-By` de apt
 y el `gpgkey` de dnf— y su huella es:
 
 ```
 C8D6 A81C 1ED4 3A28 D426  8112 A6E0 EE02 2344 6A16
 ```
 
-La misma huella se publica en la portada de <https://rfirma.sgomez.me>. Contrástala con lo
+La misma huella se publica en la portada de <https://rfirma.com>. Contrástala con lo
 que descargues (`gpg --show-keys rfirma.asc`) y añádela a lo que ya sepas de rFirma por
 otro camino: es lo que hace que la firma signifique algo.
 
@@ -83,7 +83,7 @@ existen solo confían en la pública embebida en su versión, así que la rotaci
 antes una versión que lleve la nueva.
 
 En Windows, rFirma se actualiza desde la propia aplicación: baja el instalador de
-`https://rfirma.sgomez.me/windows/`, comprueba su firma minisign contra la pública embebida y
+`https://rfirma.com/windows/`, comprueba su firma minisign contra la pública embebida y
 solo entonces lo ejecuta. En flatpak, `.deb` y `.rpm` la actualización es la de su gestor de
 paquetes, y rFirma solo te avisa.
 
@@ -99,7 +99,7 @@ sha256sum --check SHA256SUMS
 Un `.rpm` suelto lleva además la firma dentro, así que se verifica solo:
 
 ```sh
-sudo rpm --import https://rfirma.sgomez.me/rfirma.asc
+sudo rpm --import https://rfirma.com/rfirma.asc
 rpm --checksig rfirma-*.rpm
 ```
 
@@ -119,7 +119,7 @@ Y, salvo la descarga del instalador en Windows, la única. Al arrancar, y cada v
 «Volver a comprobar», rFirma pregunta por la última publicación:
 
 - `GET https://api.github.com/repos/sgomez/rfirma/releases/latest` en flatpak, `.deb` y `.rpm`,
-  y `GET https://rfirma.sgomez.me/windows/latest.json` en Windows.
+  y `GET https://rfirma.com/windows/latest.json` en Windows.
 - Sin caché por tiempo —se pregunta cada vez—, con 4 segundos de espera y sin reintentos.
 - **Sin credenciales y sin identificador de ninguna clase.** Lo único que rFirma dice de sí
   misma es el `User-Agent`, `rfirma/<versión>`, porque la API de GitHub rechaza con 403 lo
