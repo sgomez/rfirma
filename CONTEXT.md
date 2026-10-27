@@ -191,6 +191,16 @@ los dos, como en AutoFirma, porque rFirma no sabe si la sede quiere autenticar o
 firmar: solo los filtros de la sede quitan uno u otro.
 _Avoid_: DNI electrónico (en la interfaz), carné, tarjeta del DNI
 
+**DNIe antiguo**:
+Un DNIe 1.0 o 2.0. rFirma lo reconoce en el lector, pero no firma con él: hay que
+renovar el DNIe.
+_Avoid_: DNIe legacy, DNIe 2.0 (como nombre del concepto)
+
+**DNIe averiado**:
+Un DNIe cuyo chip ha perdido su memoria y ya no firma con ningún programa: hay
+que renovarlo.
+_Avoid_: DNIe quemado, burned
+
 **Intentos restantes**:
 Cuántas veces más se puede fallar el PIN de una tarjeta criptográfica antes de
 que se bloquee. Con cero, la tarjeta está bloqueada y ya no se pide el PIN.
@@ -198,8 +208,8 @@ _Avoid_: reintentos, contador
 
 **Lector**:
 El dispositivo donde se mete una tarjeta criptográfica. Puede estar sin
-tarjeta, con una tarjeta que se está leyendo, con una lista para usar o con una
-que rFirma no sabe leer. Meter o sacar la tarjeta no pregunta nada: sus
+tarjeta, con una tarjeta que se está leyendo, con una lista para usar, con un
+DNIe antiguo, con un DNIe averiado o con una que rFirma no sabe leer. Meter o sacar la tarjeta no pregunta nada: sus
 certificados entran y salen de la lista.
 _Avoid_: lector DNIe, lector de chip, dispositivo PC/SC
 

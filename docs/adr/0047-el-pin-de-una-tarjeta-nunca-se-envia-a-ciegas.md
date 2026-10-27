@@ -24,8 +24,7 @@ tarjeta de verdad queda bloqueada:
    `FINAL_TRY` y desconocido en cualquier otro caso.
 5. **Un secreto rechazado no se reenvía nunca.** Un `C_Login` fallido devuelve
    el control a la persona, el secreto se descarta y cada intento nuevo exige
-   volver a teclearlo. No hay reintento automático en ninguna capa, con una
-   sola excepción, la regla 8.
+   volver a teclearlo. No hay reintento automático en ninguna capa.
 6. **En un ciclo o un lote el PIN se pide una vez, y el primer fallo corta
    todo.** El secreto aceptado sirve para todas las prefirmas del ciclo.
    Cualquier fallo de una de ellas —PIN incorrecto, PIN bloqueado, tarjeta
@@ -34,14 +33,8 @@ tarjeta de verdad queda bloqueada:
 7. **Login por operación cuando la clave lo exige.** Si la clave privada
    declara `CKA_ALWAYS_AUTHENTICATE`, cada firma hace su login de contexto
    específico con el secreto ya aceptado del ciclo, sin volver a pedirlo. Ese
-   login cumple las reglas 5 y 6. El DNIe por OpenSC no lo declara: OpenSC
-   guarda el PIN y lo vuelve a verificar antes de cada firma.
-8. **La interferencia de otro programa no es un rechazo.** `CKR_USER_NOT_LOGGED_IN`
-   en `C_Login` pasa cuando otro programa abre su canal con la tarjeta entre la
-   apertura de la sesión y el login, y está medido que la tarjeta no llega a
-   ver el PIN. El adaptador abre otra sesión y reenvía el mismo secreto **una
-   sola vez**; si vuelve a fallar, el fallo sube como cualquier otro.
-9. **El intento que bloquea se reconoce.** Tras un `CKR_PIN_INCORRECT` el
+   login cumple las reglas 5 y 6.
+8. **El intento que bloquea se reconoce.** Tras un `CKR_PIN_INCORRECT` el
    adaptador relee las banderas de la ranura en el mismo proceso; con
    `CKF_USER_PIN_LOCKED` el caso de uso termina como PIN bloqueado (regla 2) y
    no vuelve a pedir el PIN.
@@ -78,9 +71,10 @@ tarjeta se usara con otro programa, así que no se da.
 
 Cada prueba con un PIN erróneo gasta intentos de una tarjeta personal. El camino
 PKCS#11 se prueba en la grada B (ADR-0014) contra un módulo falso del workspace,
-`fake-pkcs11`, que se porta como el DNIe medido por OpenSC y tiene otro perfil
-con las tres señales; entra por la misma costura que SoftHSM y nunca llega a un
-paquete (ADR-0004). El camino rdnie se prueba contra `rdnie-emulator`, que
+`fake-pkcs11`: una tarjeta con el aspecto del DNIe que da las tres señales del
+PIN y exige el login por firma. Sirve para las reglas de arriba y para comprobar
+que la ranura de OpenSC del lector que lee rdnie no se abre. Entra por la misma
+costura que SoftHSM y nunca llega a un paquete (ADR-0004). El camino rdnie se prueba contra `rdnie-emulator`, que
 habla el protocolo del DNIe con un titular ficticio y solo es dependencia de
 pruebas. El DNIe real solo se usa a mano, en la suite de conformidad, y solo en
 el camino feliz: nunca se teclea un PIN erróneo a propósito.
@@ -89,8 +83,12 @@ el camino feliz: nunca se teclea un PIN erróneo a propósito.
 
 - Una tarjeta que declara el PIN bloqueado nunca recibe un `C_Login` de rFirma,
   ni al pedir el PIN ni justo antes de enviarlo.
-- Lo que el módulo falso imita es lo medido, no la tarjeta: si OpenSC o el DNIe
-  cambian de conducta, el falso miente hasta que se vuelva a medir.
+- Las reglas del camino PKCS#11 se prueban contra señales que el módulo falso
+  da siempre. Un módulo real que solo las enciende tras un fallo queda cubierto
+  por la relectura de la regla 8, pero ninguna prueba lo imita.
+- Sin ningún DNIe por PKCS#11 (ADR-0048) no hay reintento ante
+  `CKR_USER_NOT_LOGGED_IN`: solo pasaba cuando otro programa abría su canal
+  seguro con el DNIe por OpenSC, y sube como cualquier otro fallo de `C_Login`.
 
 ## Considered Options
 
