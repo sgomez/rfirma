@@ -13,7 +13,7 @@
   "dependencies": {
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-router": "8.4.0"
+    "react-router": "8.5.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "catalog:",
