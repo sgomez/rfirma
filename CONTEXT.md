@@ -472,9 +472,15 @@ abandonado —se cerró la ventana o el canal caducó sin respuesta— o interru
 cuando el proceso murió antes de cerrar su diario.
 _Avoid_: resultado, estado del trámite
 
+**Fallo interno**:
+Un fallo de rFirma, no de la sede ni de la persona: un pánico del backend o un
+error de React al pintar, en cualquiera de las dos ventanas.
+_Avoid_: crash, error inesperado
+
 **Informe de problema** (`ProblemReport`):
-Lo que la persona envía, tras verlo entero, sobre un trámite que no acabó con
-éxito: su diario, el entorno anonimizado y, si quiere, su propia descripción.
+Lo que la persona envía a GlitchTip, tras verlo entero, sobre un trámite que no
+acabó con éxito o un fallo interno: el diario o la traza, y el entorno
+anonimizado.
 _Avoid_: informe de fallo, bug report, ticket
 
 ### Distribución

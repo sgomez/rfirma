@@ -1,7 +1,7 @@
 # El diario del trámite solo guarda campos cerrados
 
-El diario del trámite acaba en un informe de problema, y ese informe se publica
-en un issue de GitHub. Por eso el diario nunca guarda texto libre: cada evento
+El diario del trámite acaba en un informe de problema, y ese informe sale del
+equipo hacia GlitchTip (ADR-0054). Por eso el diario nunca guarda texto libre: cada evento
 es un tipo con campos cerrados (enumeraciones, números, rangos de tamaño y el
 host de la sede), y lo que no tiene campo no se graba.
 
@@ -16,9 +16,7 @@ host de la sede), y lo que no tiene campo no se graba.
    el número de serie, ni la huella.
 4. **De una URL, solo el host.** La credencial de canal, las rutas y las
    queries no entran.
-5. **El informe no redacta**: lo que sale es lo que el diario ya guardaba. La
-   única excepción es la descripción que escribe la persona, que va aparte y
-   se ve antes de enviarla.
+5. **El informe no redacta**: lo que sale es lo que el diario ya guardaba.
 
 ## Consequences
 
