@@ -817,3 +817,27 @@ release version:
         echo "Sin subir. Para publicar: git push --atomic origin main $tag"
         echo "Para deshacer: git tag -d $tag && git reset --hard origin/main"
     fi
+
+# Repite la entrega de <version> moviendo su etiqueta a main, solo si no llegó a crear su Release.
+[group('release')]
+[script('bash')]
+release-retry version:
+    set -euo pipefail
+    cd "{{ root }}"
+    version="{{ version }}"
+    tag="v$version"
+    fail() { echo "$1" >&2; exit 1; }
+    [ "$(git branch --show-current)" = main ] || fail "Se publica desde main."
+    [ -z "$(git status --porcelain)" ] || fail "El árbol tiene cambios sin comitear."
+    git fetch --quiet origin main
+    [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || fail "main no coincide con origin/main."
+    [ "$(scripts/app_version.py check)" = "$version" ] || fail "La versión de main no es $version."
+    git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null || fail "La etiqueta $tag no existe en origin: usa just release."
+    if gh release view "$tag" >/dev/null 2>&1; then fail "$tag ya tiene Release, aunque sea en borrador: publica una versión nueva."; fi
+    before="$(git ls-remote --tags origin "refs/tags/$tag" | cut -c1-8)"
+    echo "$tag pasa de $before a $(git rev-parse --short=8 HEAD)."
+    read -r -p "¿Mover $tag y subirla a origin? [s/N] " answer
+    [ "$answer" = s ] || [ "$answer" = S ] || fail "Sin cambios."
+    git push origin ":refs/tags/$tag"
+    git tag -f "$tag"
+    git push origin "$tag"
