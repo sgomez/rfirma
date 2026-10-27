@@ -58,6 +58,16 @@
       }
     },
     {
+      "includes": ["rfirma-app/src/design-system/icons/**", "**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noComponentHookFactories": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/*.astro"],
       "formatter": {
         "enabled": false
