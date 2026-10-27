@@ -3,7 +3,7 @@ export const es = {
   "meta.description":
     "Alternativa a AutoFirma sin Java. Firma PDF con tu certificado digital o DNIe en Linux, macOS y Windows, también en las sedes que piden AutoFirma. Versión alfa.",
   "meta.image.alt":
-    "Logotipo de rFirma sobre fondo verde con el lema «Alternativa a AutoFirma» y el dominio rfirma.sgomez.me",
+    "Logotipo de rFirma sobre fondo verde con el lema «Alternativa a AutoFirma» y el dominio rfirma.com",
 
   "notice.aria": "Aviso sobre titularidad oficial",
   "notice.badge": "Aviso",
@@ -174,7 +174,7 @@ export const es = {
     'La lógica de firma consume los artefactos de <a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">ctt-gob-es/clienteafirma</a>, compilados en una biblioteca nativa con GraalVM Native Image.',
   "transparency.key.title": "Clave de firma de paquetes",
   "transparency.key.body":
-    'Clave pública en <a href="https://rfirma.sgomez.me/rfirma.asc">rfirma.asc</a>. Comprueba su huella tras descargarla con <code>gpg --show-keys rfirma.asc</code>:',
+    'Clave pública en <a href="https://rfirma.com/rfirma.asc">rfirma.asc</a>. Comprueba su huella tras descargarla con <code>gpg --show-keys rfirma.asc</code>:',
 
   "footer.tagline":
     "Firma electrónica nativa para el escritorio, con el motor criptográfico oficial y sin Java en tu equipo.",
@@ -188,7 +188,7 @@ export const es = {
   "footer.comparison": "Diferencias con AutoFirma",
 
   "notFound.title": "Página no encontrada — rFirma",
-  "notFound.description": "La dirección que has abierto no existe en rfirma.sgomez.me.",
+  "notFound.description": "La dirección que has abierto no existe en rfirma.com.",
   "notFound.heading": "Esta página no existe",
   "notFound.body": "Puede que el enlace esté mal escrito o que la página haya cambiado de sitio.",
   "notFound.home": "Volver a la portada",

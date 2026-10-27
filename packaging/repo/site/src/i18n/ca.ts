@@ -5,7 +5,7 @@ export const ca: Dictionary = {
   "meta.description":
     "Alternativa a AutoFirma sense Java. Signa PDF amb el teu certificat digital o DNIe a Linux, macOS i Windows, també a les seus que demanen AutoFirma. Versió alfa.",
   "meta.image.alt":
-    "Logotip de rFirma sobre fons verd amb el lema «Alternativa a AutoFirma» i el domini rfirma.sgomez.me",
+    "Logotip de rFirma sobre fons verd amb el lema «Alternativa a AutoFirma» i el domini rfirma.com",
 
   "notice.aria": "Avís sobre titularitat oficial",
   "notice.badge": "Avís",
@@ -177,7 +177,7 @@ export const ca: Dictionary = {
     'La lògica de signatura consumeix els artefactes de <a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">ctt-gob-es/clienteafirma</a>, compilats en una biblioteca nativa amb GraalVM Native Image.',
   "transparency.key.title": "Clau de signatura de paquets",
   "transparency.key.body":
-    'Clau pública a <a href="https://rfirma.sgomez.me/rfirma.asc">rfirma.asc</a>. Comprova la seva empremta després de descarregar-la amb <code>gpg --show-keys rfirma.asc</code>:',
+    'Clau pública a <a href="https://rfirma.com/rfirma.asc">rfirma.asc</a>. Comprova la seva empremta després de descarregar-la amb <code>gpg --show-keys rfirma.asc</code>:',
 
   "footer.tagline":
     "Signatura electrònica nativa per a l'escriptori, amb el motor criptogràfic oficial i sense Java al teu equip.",
@@ -191,7 +191,7 @@ export const ca: Dictionary = {
   "footer.comparison": "Diferències amb AutoFirma",
 
   "notFound.title": "Pàgina no trobada — rFirma",
-  "notFound.description": "L'adreça que has obert no existeix a rfirma.sgomez.me.",
+  "notFound.description": "L'adreça que has obert no existeix a rfirma.com.",
   "notFound.heading": "Aquesta pàgina no existeix",
   "notFound.body": "Potser l'enllaç està mal escrit o la pàgina ha canviat de lloc.",
   "notFound.home": "Tornar a la portada",

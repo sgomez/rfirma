@@ -1,6 +1,6 @@
-# rfirma.sgomez.me: la landing y la publicación
+# rfirma.com: la landing y la publicación
 
-La imagen que sirve `https://rfirma.sgomez.me` es **Caddy (`caddy:alpine`) con esta landing, y nada
+La imagen que sirve `https://rfirma.com` es **Caddy (`caddy:alpine`) con esta landing, y nada
 más** ([ADR-0015](../../docs/adr/0015-canal-de-distribucion-propio.md)). Los tres
 repositorios de paquetes (ostree, apt, dnf) no van dentro de la imagen: los publica un
 montaje de directorio del anfitrión aparte, por `rsync`, y Caddy los sirve a través de un
@@ -116,6 +116,10 @@ dispara un redespliegue.
 **El montaje**: la aplicación de Coolify necesita `/srv/rfirma-repo` del anfitrión montado en
 `/srv/rfirma-repo` del contenedor, **de sólo lectura**. Sin él, las rutas de los tres
 repositorios devuelven 404 y la landing sigue sirviéndose igual.
+
+**Los dominios**: la aplicación responde a `rfirma.com`, `www.rfirma.com` y `rfirma.sgomez.me`.
+El `Caddyfile` redirige los dos últimos a `rfirma.com`, salvo las rutas de los repositorios en el
+dominio viejo, que siguen sirviéndose para las instalaciones que lo tienen grabado.
 
 ## Aprovisionamiento humano (fuera de este repositorio)
 

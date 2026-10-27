@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { packageUrl } from "./server-download";
 
-const origin = "https://rfirma.sgomez.me";
+const origin = "https://rfirma.com";
 
 describe("packageUrl", () => {
   it("offers the Windows installer the feed announces", () => {

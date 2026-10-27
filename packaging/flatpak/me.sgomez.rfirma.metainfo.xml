@@ -82,7 +82,7 @@
     <control>pointing</control>
   </supports>
   <launchable type="desktop-id">me.sgomez.rfirma.desktop</launchable>
-  <url type="homepage">https://rfirma.sgomez.me</url>
+  <url type="homepage">https://rfirma.com</url>
   <url type="bugtracker">https://github.com/sgomez/rfirma/issues</url>
   <developer id="me.sgomez">
     <name>Sergio Gómez</name>

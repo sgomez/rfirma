@@ -5,7 +5,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import { localePath, locales } from "./i18n";
 
-const site = "https://rfirma.sgomez.me";
+const site = "https://rfirma.com";
 const dist = fileURLToPath(new URL("../dist/", import.meta.url));
 
 function published(path: string): string {

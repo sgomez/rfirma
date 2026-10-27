@@ -5,7 +5,7 @@ export const eu: Dictionary = {
   "meta.description":
     "AutoFirmaren alternatiba, Javarik gabe. Sinatu PDFak zure ziurtagiri digitalarekin edo NANe elektronikoarekin Linux, macOS eta Windows sistemetan, baita AutoFirma eskatzen duten egoitzetan ere. Alfa bertsioa.",
   "meta.image.alt":
-    "rFirmaren logotipoa hondo berdearen gainean, «Alternativa a AutoFirma» leloarekin eta rfirma.sgomez.me domeinuarekin",
+    "rFirmaren logotipoa hondo berdearen gainean, «Alternativa a AutoFirma» leloarekin eta rfirma.com domeinuarekin",
 
   "notice.aria": "Titulartasun ofizialari buruzko oharra",
   "notice.badge": "Oharra",
@@ -179,7 +179,7 @@ export const eu: Dictionary = {
     'Sinadura-logikak <a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">ctt-gob-es/clienteafirma</a>ren artefaktuak erabiltzen ditu, GraalVM Native Image bidez jatorrizko liburutegi batean konpilatuta.',
   "transparency.key.title": "Paketeak sinatzeko gakoa",
   "transparency.key.body":
-    'Gako publikoa <a href="https://rfirma.sgomez.me/rfirma.asc">rfirma.asc</a>en. Egiaztatu bere hatz-marka deskargatu ondoren, <code>gpg --show-keys rfirma.asc</code> erabiliz:',
+    'Gako publikoa <a href="https://rfirma.com/rfirma.asc">rfirma.asc</a>en. Egiaztatu bere hatz-marka deskargatu ondoren, <code>gpg --show-keys rfirma.asc</code> erabiliz:',
 
   "footer.tagline":
     "Mahaigainerako jatorrizko sinadura elektronikoa, motor kriptografiko ofizialarekin eta zure ordenagailuan Javarik gabe.",
@@ -193,7 +193,7 @@ export const eu: Dictionary = {
   "footer.comparison": "AutoFirmarekiko desberdintasunak",
 
   "notFound.title": "Ez da orria aurkitu — rFirma",
-  "notFound.description": "Ireki duzun helbidea ez dago rfirma.sgomez.me webgunean.",
+  "notFound.description": "Ireki duzun helbidea ez dago rfirma.com webgunean.",
   "notFound.heading": "Orri hau ez dago",
   "notFound.body": "Baliteke esteka gaizki idatzita egotea edo orria lekuz aldatu izana.",
   "notFound.home": "Itzuli hasierara",

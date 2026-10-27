@@ -676,7 +676,7 @@ mutants:
     cargo mutants --in-place --in-diff "$diff" \
         --exclude 'adapters/tauri.rs' --exclude 'main.rs' --exclude '{{ ffi_allow }}'
 
-# Lint, construccion y pruebas de la landing de rfirma.sgomez.me; las pruebas leen la salida de dist/.
+# Lint, construccion y pruebas de la landing de rfirma.com; las pruebas leen la salida de dist/.
 [group('ci')]
 [script('bash')]
 check-landing:

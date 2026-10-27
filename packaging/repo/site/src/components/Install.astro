@@ -67,10 +67,10 @@ const tabs = [
           <span class="install-copy__idle">{t("install.copy")}</span>
           <span class="install-copy__done">{t("install.copied")}</span>
         </button>
-        <pre id="code-apt" class="install-code">curl -fsSL https://rfirma.sgomez.me/rfirma.asc | sudo tee /usr/share/keyrings/rfirma.asc &gt;/dev/null
+        <pre id="code-apt" class="install-code">curl -fsSL https://rfirma.com/rfirma.asc | sudo tee /usr/share/keyrings/rfirma.asc &gt;/dev/null
 sudo tee /etc/apt/sources.list.d/rfirma.sources &lt;&lt;'EOF'
 Types: deb
-URIs: https://rfirma.sgomez.me/apt/
+URIs: https://rfirma.com/apt/
 Suites: stable
 Components: main
 Signed-By: /usr/share/keyrings/rfirma.asc
@@ -89,11 +89,11 @@ sudo apt update &amp;&amp; sudo apt install rfirma</pre>
         <pre id="code-dnf" class="install-code">sudo tee /etc/yum.repos.d/rfirma.repo &lt;&lt;'EOF'
 [rfirma]
 name=rfirma
-baseurl=https://rfirma.sgomez.me/rpm/
+baseurl=https://rfirma.com/rpm/
 enabled=1
 gpgcheck=1
 repo_gpgcheck=1
-gpgkey=https://rfirma.sgomez.me/rfirma.asc
+gpgkey=https://rfirma.com/rfirma.asc
 EOF
 sudo dnf install rfirma</pre>
       </div>
@@ -112,7 +112,7 @@ sudo dnf install rfirma</pre>
           <span class="install-copy__done">{t("install.copied")}</span>
         </button>
         <pre id="code-flatpak" class="install-code">flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak remote-add --if-not-exists rfirma https://rfirma.sgomez.me/rfirma.flatpakrepo
+flatpak remote-add --if-not-exists rfirma https://rfirma.com/rfirma.flatpakrepo
 flatpak install rfirma me.sgomez.rfirma</pre>
       </div>
     </div>

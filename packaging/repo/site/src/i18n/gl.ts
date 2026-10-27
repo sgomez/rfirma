@@ -5,7 +5,7 @@ export const gl: Dictionary = {
   "meta.description":
     "Alternativa a AutoFirma sen Java. Asina PDF co teu certificado dixital ou DNIe en Linux, macOS e Windows, tamén nas sedes que piden AutoFirma. Versión alfa.",
   "meta.image.alt":
-    "Logotipo de rFirma sobre fondo verde co lema «Alternativa a AutoFirma» e o dominio rfirma.sgomez.me",
+    "Logotipo de rFirma sobre fondo verde co lema «Alternativa a AutoFirma» e o dominio rfirma.com",
 
   "notice.aria": "Aviso sobre titularidade oficial",
   "notice.badge": "Aviso",
@@ -176,7 +176,7 @@ export const gl: Dictionary = {
     'A lóxica de sinatura consume os artefactos de <a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">ctt-gob-es/clienteafirma</a>, compilados nunha biblioteca nativa con GraalVM Native Image.',
   "transparency.key.title": "Clave de sinatura de paquetes",
   "transparency.key.body":
-    'Clave pública en <a href="https://rfirma.sgomez.me/rfirma.asc">rfirma.asc</a>. Comproba a súa pegada tras descargala con <code>gpg --show-keys rfirma.asc</code>:',
+    'Clave pública en <a href="https://rfirma.com/rfirma.asc">rfirma.asc</a>. Comproba a súa pegada tras descargala con <code>gpg --show-keys rfirma.asc</code>:',
 
   "footer.tagline":
     "Sinatura electrónica nativa para o escritorio, co motor criptográfico oficial e sen Java no teu equipo.",
@@ -190,7 +190,7 @@ export const gl: Dictionary = {
   "footer.comparison": "Diferenzas con AutoFirma",
 
   "notFound.title": "Páxina non atopada — rFirma",
-  "notFound.description": "O enderezo que abriches non existe en rfirma.sgomez.me.",
+  "notFound.description": "O enderezo que abriches non existe en rfirma.com.",
   "notFound.heading": "Esta páxina non existe",
   "notFound.body": "Pode que a ligazón estea mal escrita ou que a páxina cambiase de sitio.",
   "notFound.home": "Volver á portada",

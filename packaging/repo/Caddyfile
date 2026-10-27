@@ -38,6 +38,17 @@
 
     import cabeceras
 
+    # El dominio viejo sigue sirviendo los repositorios a las instalaciones
+    # que lo tienen grabado; sus páginas pasan a rfirma.com.
+    @dominio_viejo {
+        host rfirma.sgomez.me
+        not path /healthz /flatpak/* /apt/* /rpm/* /rfirma.asc /rfirma.flatpakref /rfirma.flatpakrepo /windows/* /macos/*
+    }
+    redir @dominio_viejo https://rfirma.com{uri} permanent
+
+    @www host www.rfirma.com
+    redir @www https://rfirma.com{uri} permanent
+
     # Denegar acceso a ficheros o directorios ocultos (dotfiles)
     @hidden path */.*
     error @hidden 404

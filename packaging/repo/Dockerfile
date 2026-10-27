@@ -1,4 +1,4 @@
-# La imagen de rfirma.sgomez.me: Caddy y la landing (ADR-0015). El contexto es la raíz del repositorio.
+# La imagen de rfirma.com: Caddy y la landing (ADR-0015). El contexto es la raíz del repositorio.
 FROM node:24-alpine AS landing
 
 RUN corepack enable

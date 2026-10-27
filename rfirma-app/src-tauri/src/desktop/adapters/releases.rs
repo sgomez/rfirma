@@ -1,4 +1,4 @@
-//! Consulta HTTP de la última publicación oficial según el canal (la API de GitHub o el `latest.json` de rfirma.sgomez.me en Windows y macOS); no es el instalador, que es `installer.rs` (ADR-0015).
+//! Consulta HTTP de la última publicación oficial según el canal (la API de GitHub o el `latest.json` de rfirma.com en Windows y macOS); no es el instalador, que es `installer.rs` (ADR-0015).
 
 use std::time::Duration;
 
@@ -9,10 +9,10 @@ pub const LATEST_RELEASE_ENDPOINT: &str =
     "https://api.github.com/repos/sgomez/rfirma/releases/latest";
 
 /// `latest.json` estable del servidor propio, el feed del canal de Windows.
-pub const WINDOWS_FEED_ENDPOINT: &str = "https://rfirma.sgomez.me/windows/latest.json";
+pub const WINDOWS_FEED_ENDPOINT: &str = "https://rfirma.com/windows/latest.json";
 
 /// `latest.json` estable del servidor propio, el feed del canal de macOS.
-pub const MACOS_FEED_ENDPOINT: &str = "https://rfirma.sgomez.me/macos/latest.json";
+pub const MACOS_FEED_ENDPOINT: &str = "https://rfirma.com/macos/latest.json";
 
 /// Tiempo máximo de espera para la respuesta del servidor.
 const TIMEOUT: Duration = Duration::from_secs(4);
