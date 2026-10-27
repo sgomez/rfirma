@@ -139,7 +139,7 @@ export function SetupWizard({
     });
   };
 
-  const useRfirmaAsHandler = (target: string) => {
+  const chooseRfirmaAsHandler = (target: string) => {
     setHandler({ kind: "working" });
     statusPort.chooseSiteSignatureHandler(target).then((rows) => {
       const handlerRow = rows.find((row) => row.signal === "siteSignature");
@@ -196,7 +196,7 @@ export function SetupWizard({
                 t={t}
                 status={handler}
                 autoFirmaAppears={autoFirmaAppears}
-                onUse={useRfirmaAsHandler}
+                onUse={chooseRfirmaAsHandler}
                 onDecline={() => setHandler({ kind: "declined" })}
               />
               <ProtectionSetting t={t} preferences={preferences} />

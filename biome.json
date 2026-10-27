@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
   "root": true,
   "vcs": {
     "enabled": true,
@@ -51,6 +51,22 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["**/*.md"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["rfirma-app/src/design-system/icons/**", "**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noComponentHookFactories": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["**/*.astro"],
       "formatter": {
