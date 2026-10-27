@@ -13,14 +13,22 @@ const DOWNLOADS = {
 
 export type DownloadSystem = keyof typeof DOWNLOADS;
 
-/** El paquete que el servidor anuncia en su feed; `undefined` si no está en el propio servidor. */
+/** El paquete que anuncia el feed, servido desde `origin`; `undefined` si no está en la carpeta del sistema. */
 export function packageUrl(feed: Feed, system: DownloadSystem, origin: string): string | undefined {
   const { platform, file } = DOWNLOADS[system];
-  const update = feed.platforms?.[platform]?.url;
-  if (!update?.startsWith(`${origin}/${system}/`)) {
+  const path = pathOf(feed.platforms?.[platform]?.url);
+  if (!path?.startsWith(`/${system}/`)) {
     return undefined;
   }
-  return file(update);
+  return file(`${origin}${path}`);
+}
+
+function pathOf(url: string | undefined): string | undefined {
+  try {
+    return url === undefined ? undefined : new URL(url).pathname;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Apunta el enlace al paquete que anuncia el servidor; si no lo consigue, se queda en la Release. */
