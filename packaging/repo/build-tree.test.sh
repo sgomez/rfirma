@@ -185,7 +185,7 @@ fi
 # unica atadura entre lo que se sirve y lo que la gente copia.
 # ---------------------------------------------------------------------------
 # the_landing_promises_the_suite_and_the_literal_url
-if grep -q '^Suites: stable' "$landing" && grep -q 'baseurl=https://rfirma.sgomez.me/rpm/' "$landing"; then
+if grep -q '^Suites: stable' "$landing" && grep -q 'baseurl=https://rfirma.com/rpm/' "$landing"; then
     ok "la landing sigue prometiendo la suite stable y la URL literal de dnf"
 else
     fail "la landing ya no promete lo que construye build-tree.sh"
@@ -356,7 +356,7 @@ else
 fi
 
 # the_flatpakref_points_at_the_repository_and_carries_the_key
-if grep -q '^Url=https://rfirma.sgomez.me/flatpak/$' "$tmp/arbol/rfirma.flatpakref" \
+if grep -q '^Url=https://rfirma.com/flatpak/$' "$tmp/arbol/rfirma.flatpakref" \
     && grep -q '^Name=me.sgomez.rfirma$' "$tmp/arbol/rfirma.flatpakref" \
     && grep -q '^GPGKey=.\+' "$tmp/arbol/rfirma.flatpakref"; then
     ok "el flatpakref apunta al repositorio y lleva la clave dentro"
@@ -368,7 +368,7 @@ fi
 clave_de() { sed -n 's/^GPGKey=//p' "$1"; }
 if [ -f "$tmp/arbol/rfirma.flatpakrepo" ] \
     && grep -q '^\[Flatpak Repo\]$' "$tmp/arbol/rfirma.flatpakrepo" \
-    && grep -q '^Url=https://rfirma.sgomez.me/flatpak/$' "$tmp/arbol/rfirma.flatpakrepo" \
+    && grep -q '^Url=https://rfirma.com/flatpak/$' "$tmp/arbol/rfirma.flatpakrepo" \
     && [ -n "$(clave_de "$tmp/arbol/rfirma.flatpakrepo")" ] \
     && [ "$(clave_de "$tmp/arbol/rfirma.flatpakrepo")" = "$(clave_de "$tmp/arbol/rfirma.flatpakref")" ]; then
     ok "el flatpakrepo apunta al repositorio y lleva la misma clave que el flatpakref"
@@ -419,10 +419,10 @@ done
 
 # dnf_is_declared_with_the_literal_url_and_both_gpg_switches
 repo="$tmp/arbol/rpm/rfirma.repo"
-if grep -q '^baseurl=https://rfirma.sgomez.me/rpm/$' "$repo" \
+if grep -q '^baseurl=https://rfirma.com/rpm/$' "$repo" \
     && ! grep -q '\$basearch\|\$releasever' "$repo" \
     && grep -q '^gpgcheck=1$' "$repo" && grep -q '^repo_gpgcheck=1$' "$repo" \
-    && grep -q '^gpgkey=https://rfirma.sgomez.me/rfirma.asc$' "$repo"; then
+    && grep -q '^gpgkey=https://rfirma.com/rfirma.asc$' "$repo"; then
     ok "dnf se declara con URL literal y con los dos interruptores de GPG a 1"
 else
     fail "el .repo de dnf no es el que promete la landing"
@@ -481,7 +481,7 @@ latest="$tmp/arbol/windows/latest.json"
 exe_alto="rFirma_0.4.10_x64-setup.exe"
 if [ "$(jq -r .version "$latest")" = "0.4.10" ] \
     && [ "$(jq -r '.platforms | keys | join(",")' "$latest")" = "windows-x86_64" ] \
-    && [ "$(jq -r '.platforms["windows-x86_64"].url' "$latest")" = "https://rfirma.sgomez.me/windows/$exe_alto" ] \
+    && [ "$(jq -r '.platforms["windows-x86_64"].url' "$latest")" = "https://rfirma.com/windows/$exe_alto" ] \
     && [ "$(jq -r '.platforms["windows-x86_64"].signature' "$latest")" = "$(cat "$tmp/arbol/windows/$exe_alto.sig")" ] \
     && jq -e '.pub_date != null and .notes != null' "$latest" > /dev/null \
     && [ -f "$tmp/arbol/windows/$exe_alto" ]; then
@@ -529,7 +529,7 @@ app_alta="rFirma_0.4.10_aarch64.app.tar.gz"
 if [ -f "$latest_mac" ] \
     && [ "$(jq -r .version "$latest_mac")" = "0.4.10" ] \
     && [ "$(jq -r '.platforms | keys | join(",")' "$latest_mac")" = "darwin-aarch64" ] \
-    && [ "$(jq -r '.platforms["darwin-aarch64"].url' "$latest_mac")" = "https://rfirma.sgomez.me/macos/$app_alta" ] \
+    && [ "$(jq -r '.platforms["darwin-aarch64"].url' "$latest_mac")" = "https://rfirma.com/macos/$app_alta" ] \
     && [ "$(jq -r '.platforms["darwin-aarch64"].signature' "$latest_mac")" = "$(cat "$tmp/arbol/macos/$app_alta.sig")" ] \
     && jq -e '.pub_date != null and .notes != null' "$latest_mac" > /dev/null; then
     ok "el latest.json de macos anuncia la entrada darwin-aarch64 de la version mas alta"

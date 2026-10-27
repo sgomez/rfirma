@@ -316,7 +316,7 @@ fi
     echo "Title=rFirma"
     echo "Name=me.sgomez.rfirma"
     echo "Branch=stable"
-    echo "Url=https://rfirma.sgomez.me/flatpak/"
+    echo "Url=https://rfirma.com/flatpak/"
     echo "IsRuntime=false"
     echo "RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo"
     echo "GPGKey=$clave_binaria"
@@ -329,11 +329,11 @@ fi
 {
     echo "[Flatpak Repo]"
     echo "Title=rFirma"
-    echo "Url=https://rfirma.sgomez.me/flatpak/"
-    echo "Homepage=https://rfirma.sgomez.me"
+    echo "Url=https://rfirma.com/flatpak/"
+    echo "Homepage=https://rfirma.com"
     echo "Comment=Firma electrónica con certificado, sin Java"
     echo "Description=Repositorio de rFirma, la aplicación nativa para firmar documentos con tu certificado electrónico"
-    echo "Icon=https://rfirma.sgomez.me/apple-touch-icon.png"
+    echo "Icon=https://rfirma.com/apple-touch-icon.png"
     echo "GPGKey=$clave_binaria"
 } > "$arbol/rfirma.flatpakrepo"
 
@@ -390,7 +390,7 @@ firma_separada "$arbol/apt/dists/stable/Release" "$arbol/apt/dists/stable/Releas
 # ruta de fichero es lo que sustituye a `apt-key`, retirado.
 cat > "$arbol/apt/rfirma.sources" <<'EOF'
 Types: deb
-URIs: https://rfirma.sgomez.me/apt/
+URIs: https://rfirma.com/apt/
 Suites: stable
 Components: main
 Signed-By: /usr/share/keyrings/rfirma.asc
@@ -433,11 +433,11 @@ firma_separada "$arbol/rpm/repodata/repomd.xml" "$arbol/rpm/repodata/repomd.xml.
 cat > "$arbol/rpm/rfirma.repo" <<'EOF'
 [rfirma]
 name=rfirma
-baseurl=https://rfirma.sgomez.me/rpm/
+baseurl=https://rfirma.com/rpm/
 enabled=1
 gpgcheck=1
 repo_gpgcheck=1
-gpgkey=https://rfirma.sgomez.me/rfirma.asc
+gpgkey=https://rfirma.com/rfirma.asc
 EOF
 
 # --------------------------------------------------------------- 4. windows --
@@ -458,7 +458,7 @@ exe_ultimo="${exe_de[$ultima]}"
 jq -n \
     --arg version "${versiones[$ultima]#v}" \
     --arg fecha "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    --arg url "https://rfirma.sgomez.me/windows/$(jq -rn --arg f "$exe_ultimo" '$f | @uri')" \
+    --arg url "https://rfirma.com/windows/$(jq -rn --arg f "$exe_ultimo" '$f | @uri')" \
     --rawfile firma "$arbol/windows/$exe_ultimo.sig" \
     '{version: $version, notes: "", pub_date: $fecha,
       platforms: {"windows-x86_64": {signature: ($firma | rtrimstr("\n")), url: $url}}}' \
@@ -484,7 +484,7 @@ else
     jq -n \
         --arg version "${versiones[$ultima_app]#v}" \
         --arg fecha "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        --arg url "https://rfirma.sgomez.me/macos/$(jq -rn --arg f "$app_ultima" '$f | @uri')" \
+        --arg url "https://rfirma.com/macos/$(jq -rn --arg f "$app_ultima" '$f | @uri')" \
         --rawfile firma "$arbol/macos/$app_ultima.sig" \
         '{version: $version, notes: "", pub_date: $fecha,
           platforms: {"darwin-aarch64": {signature: ($firma | rtrimstr("\n")), url: $url}}}' \
