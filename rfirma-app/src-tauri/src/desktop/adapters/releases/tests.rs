@@ -9,19 +9,16 @@ fn each_channel_asks_its_own_feed() {
     assert_eq!(endpoint_for(Channel::Flatpak), LATEST_RELEASE_ENDPOINT);
     assert_eq!(
         WINDOWS_FEED_ENDPOINT,
-        "https://rfirma.sgomez.me/windows/latest.json"
+        "https://rfirma.com/windows/latest.json"
     );
-    assert_eq!(
-        MACOS_FEED_ENDPOINT,
-        "https://rfirma.sgomez.me/macos/latest.json"
-    );
+    assert_eq!(MACOS_FEED_ENDPOINT, "https://rfirma.com/macos/latest.json");
 }
 
 #[test]
 fn it_asks_github_for_the_latest_release_and_nobody_else() {
     assert_eq!(
         LATEST_RELEASE_ENDPOINT, "https://api.github.com/repos/sgomez/rfirma/releases/latest",
-        "se le pregunta a GitHub, no a rfirma.sgomez.me (ADR-0015)"
+        "se le pregunta a GitHub, no a rfirma.com (ADR-0015)"
     );
 }
 

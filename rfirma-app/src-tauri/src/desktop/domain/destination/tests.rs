@@ -18,17 +18,14 @@ fn releases_identifier_resolves_to_releases_url() {
 
 #[test]
 fn repository_identifier_resolves_to_repository_url() {
-    assert_eq!(
-        resolve_destination(REPOSITORY),
-        Some("https://rfirma.sgomez.me/")
-    );
+    assert_eq!(resolve_destination(REPOSITORY), Some("https://rfirma.com/"));
 }
 
 #[test]
 fn windows_identifier_resolves_to_the_windows_downloads() {
     assert_eq!(
         resolve_destination(WINDOWS),
-        Some("https://rfirma.sgomez.me/windows/")
+        Some("https://rfirma.com/windows/")
     );
 }
 

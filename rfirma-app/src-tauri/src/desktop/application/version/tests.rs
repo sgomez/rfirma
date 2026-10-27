@@ -37,7 +37,7 @@ fn a_newer_published_version_is_announced() {
 
 fn a_latest_json(version: &str) -> String {
     format!(
-        r#"{{"version":"{version}","notes":"","pub_date":"2026-09-30T00:00:00Z","platforms":{{"windows-x86_64":{{"signature":"sig","url":"https://rfirma.sgomez.me/windows/rFirma.exe"}}}}}}"#
+        r#"{{"version":"{version}","notes":"","pub_date":"2026-09-30T00:00:00Z","platforms":{{"windows-x86_64":{{"signature":"sig","url":"https://rfirma.com/windows/rFirma.exe"}}}}}}"#
     )
 }
 
@@ -65,7 +65,7 @@ fn on_windows_the_feed_is_read_as_latest_json_and_the_version_is_installable() {
 
 fn a_macos_latest_json(version: &str) -> String {
     format!(
-        r#"{{"version":"{version}","notes":"","pub_date":"2026-09-30T00:00:00Z","platforms":{{"darwin-aarch64":{{"signature":"sig","url":"https://rfirma.sgomez.me/macos/rfirma.app.tar.gz"}}}}}}"#
+        r#"{{"version":"{version}","notes":"","pub_date":"2026-09-30T00:00:00Z","platforms":{{"darwin-aarch64":{{"signature":"sig","url":"https://rfirma.com/macos/rfirma.app.tar.gz"}}}}}}"#
     )
 }
 

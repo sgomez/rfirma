@@ -5,11 +5,11 @@ pub const DISCUSSIONS_URL: &str = "https://github.com/sgomez/rfirma/discussions"
 pub const RELEASES: &str = "releases";
 pub const RELEASES_URL: &str = "https://github.com/sgomez/rfirma/releases";
 pub const REPOSITORY: &str = "repository";
-pub const REPOSITORY_URL: &str = "https://rfirma.sgomez.me/";
+pub const REPOSITORY_URL: &str = "https://rfirma.com/";
 pub const SOURCE_CODE: &str = "sourceCode";
 pub const SOURCE_CODE_URL: &str = "https://github.com/sgomez/rfirma";
 pub const WINDOWS: &str = "windows";
-pub const WINDOWS_URL: &str = "https://rfirma.sgomez.me/windows/";
+pub const WINDOWS_URL: &str = "https://rfirma.com/windows/";
 pub const CERTIFICATE_ISSUANCE: &str = "certificateIssuance";
 pub const CERTIFICATE_ISSUANCE_URL: &str =
     "https://www.sede.fnmt.gob.es/certificados/persona-fisica/obtener-certificado-software";
