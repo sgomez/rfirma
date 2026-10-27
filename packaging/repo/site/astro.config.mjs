@@ -13,7 +13,7 @@ const designSystem = fileURLToPath(
 // optimiza las imágenes al compilar.
 // Sin `i18n` de Astro: Starlight no lo admite junto a sus `locales`, y la landing no lo usa.
 export default defineConfig({
-  site: "https://rfirma.sgomez.me",
+  site: "https://rfirma.com",
   trailingSlash: "always",
   build: { format: "directory" },
   integrations: [
