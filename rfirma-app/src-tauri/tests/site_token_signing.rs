@@ -4,13 +4,12 @@ use openssl::hash::MessageDigest;
 use openssl::pkey::PKey;
 use openssl::sign::Verifier;
 use rfirma_lib::identity::adapters::pkcs11::{self, RealToken};
-use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
+use rfirma_lib::identity::domain::algorithm::{Digest, SignatureAlgorithm};
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::secret::StoreSecret;
 use rfirma_lib::site::adapters::desk::{secret_for_the_remote_batch, signed_for_the_remote_batch};
-use rfirma_lib::site::domain::protocol::{AskedAlgorithm, SafCode};
-use rfirma_lib::site::ports::composed_for;
+use rfirma_lib::site::domain::protocol::SafCode;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
 use rsa::signature::Verifier as _;
@@ -109,7 +108,7 @@ fn the_sha512_the_site_asks_for_is_signed_by_the_token_and_verifies() {
 #[test]
 fn the_sha1_the_site_asks_for_is_composed_with_the_key_and_the_token_signs_it() {
     let certificate = certificate();
-    let algorithm = composed_for(AskedAlgorithm::Sha1, certificate.key_kind())
+    let algorithm = SignatureAlgorithm::composed(Digest::Sha1, certificate.key_kind())
         .expect("SHA-1 se compone con una clave RSA");
     assert_eq!(algorithm, SignatureAlgorithm::Sha1Rsa);
 

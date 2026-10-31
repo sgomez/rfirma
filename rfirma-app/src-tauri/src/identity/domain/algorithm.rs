@@ -5,6 +5,8 @@ use std::ffi::c_ulong;
 use cryptoki::mechanism::rsa::{PkcsMgfType, PkcsPssParams};
 use cryptoki::mechanism::{Mechanism, MechanismType};
 
+use crate::identity::domain::error::{Situation, TokenError};
+
 /// La clase de clave privada que un algoritmo exige del certificado.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KeyKind {
@@ -12,6 +14,19 @@ pub enum KeyKind {
     Rsa,
     /// Clave de curva elíptica.
     Ec,
+}
+
+/// La huella que se compone con la clase de clave para dar el algoritmo.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Digest {
+    /// SHA-1.
+    Sha1,
+    /// SHA-256.
+    Sha256,
+    /// SHA-384.
+    Sha384,
+    /// SHA-512.
+    Sha512,
 }
 
 /// Un algoritmo de firma de los que el cliente original acepta por su nombre.
@@ -56,6 +71,26 @@ impl SignatureAlgorithm {
         Self::Sha384Ecdsa,
         Self::Sha512Ecdsa,
     ];
+
+    /// La huella compuesta con la clase de clave del certificado (`composeSignatureAlgorithmName`, 1.9.2).
+    pub fn composed(digest: Digest, key: Option<KeyKind>) -> Result<Self, TokenError> {
+        let key = key.ok_or_else(|| {
+            TokenError::new(
+                Situation::KeyKindUnsupported,
+                "la clave del certificado no es RSA ni de curva eliptica",
+            )
+        })?;
+        Ok(match (digest, key) {
+            (Digest::Sha1, KeyKind::Rsa) => Self::Sha1Rsa,
+            (Digest::Sha1, KeyKind::Ec) => Self::Sha1Ecdsa,
+            (Digest::Sha256, KeyKind::Rsa) => Self::Sha256Rsa,
+            (Digest::Sha384, KeyKind::Rsa) => Self::Sha384Rsa,
+            (Digest::Sha512, KeyKind::Rsa) => Self::Sha512Rsa,
+            (Digest::Sha256, KeyKind::Ec) => Self::Sha256Ecdsa,
+            (Digest::Sha384, KeyKind::Ec) => Self::Sha384Ecdsa,
+            (Digest::Sha512, KeyKind::Ec) => Self::Sha512Ecdsa,
+        })
+    }
 
     /// El algoritmo que se llama así, sin distinguir mayúsculas.
     pub fn from_name(name: &str) -> Option<Self> {

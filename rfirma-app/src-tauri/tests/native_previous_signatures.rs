@@ -4,7 +4,7 @@
 mod support;
 
 use base64::Engine;
-use rfirma_lib::signing::application::cycle::ALGORITHM;
+use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 use rfirma_lib::signing::domain::document_signatures::{Tone, Validity};
 
@@ -30,7 +30,7 @@ fn the_bridge_reports_the_signer_and_the_signing_time_of_a_pades_signature() {
     let bridge = bridge();
     let signed = a_cycle_of(
         Format::Pades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &a_one_page_pdf(),
         SignatureOperation::Sign,
         &[],
@@ -58,7 +58,7 @@ fn a_pades_signature_broken_after_signing_is_ko_and_warns_with_attention() {
     let bridge = bridge();
     let signed = a_cycle_of(
         Format::Pades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &a_one_page_pdf(),
         SignatureOperation::Sign,
         &[],

@@ -6,7 +6,7 @@ use std::sync::Mutex;
 
 use crate::documents::domain::document::Document;
 use crate::documents::domain::error::DocumentError;
-use crate::identity::domain::algorithm::SignatureAlgorithm;
+use crate::identity::domain::algorithm::{Digest, SignatureAlgorithm};
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::holder::{stamped_holder_of, PromptedHolder, StampedHolder};
@@ -64,10 +64,11 @@ pub fn begin(
 ) -> Result<StoreSecret, CycleFailure> {
     let bytes = admitted_bytes(files, &document.document, Format::Pades, Waivers::NONE)?;
     let config = config_for(choice, chosen)?;
+    let algorithm = main_window_algorithm(chosen)?;
     open_the_cycle(
         signer,
         Format::Pades,
-        cycle::ALGORITHM,
+        algorithm,
         SignatureOperation::Sign,
         document,
         bytes,
@@ -77,6 +78,13 @@ pub fn begin(
         isolate,
         session,
     )
+}
+
+/// El algoritmo con el que firma la ventana principal: SHA-256 con la clase de clave del certificado.
+pub(crate) fn main_window_algorithm(
+    chosen: &TokenCertificate,
+) -> Result<SignatureAlgorithm, TokenError> {
+    SignatureAlgorithm::composed(Digest::Sha256, chosen.key_kind())
 }
 
 /// Lo que la sede declaró para esta firma: sus parámetros y si consintió cofirmar sobre lo que no se reconoce.

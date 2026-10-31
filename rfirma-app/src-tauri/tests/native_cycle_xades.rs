@@ -5,7 +5,6 @@ mod support;
 
 mod full_cycle {
     use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
-    use rfirma_lib::signing::application::cycle;
     use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, XadesVariant};
 
     use super::support::{
@@ -19,7 +18,7 @@ mod full_cycle {
     fn sign_xades(variant: XadesVariant) -> Vec<u8> {
         a_cycle_of(
             Format::Xades(variant),
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             A_REFERENCE_XML,
             SignatureOperation::Sign,
             &[],
@@ -193,7 +192,7 @@ mod full_cycle {
     fn a_facturae_signature_keeps_the_invoice_as_its_root_and_validates() {
         let signed = a_cycle_of(
             Format::FacturaE,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             A_REFERENCE_INVOICE,
             SignatureOperation::Sign,
             &[],
@@ -225,7 +224,7 @@ mod full_cycle {
     ) -> Vec<u8> {
         a_cycle_of(
             Format::Xades(XadesVariant::Enveloping),
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             data,
             operation,
             declared,

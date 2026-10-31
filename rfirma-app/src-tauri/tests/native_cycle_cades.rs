@@ -4,12 +4,9 @@
 mod support;
 
 mod full_cycle {
-    use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
-    use rfirma_lib::signing::application::cycle;
+    use rfirma_lib::identity::domain::algorithm::{Digest, SignatureAlgorithm};
     use rfirma_lib::signing::domain::bridge::{ExpandRequest, Format, SignatureOperation};
     use rfirma_lib::site::domain::protocol::pairs_of;
-    use rfirma_lib::site::domain::protocol::AskedAlgorithm;
-    use rfirma_lib::site::ports::composed_for;
 
     use super::support::{
         a_cycle_of, a_cycle_signed_by, an_installed_certificate, bridge, cades_cycle,
@@ -40,7 +37,7 @@ mod full_cycle {
             &certificate,
             INSTALLED_CERTIFICATE_PIN,
             Format::Cades,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             CHALLENGE,
             SignatureOperation::Sign,
             &[("mode", "implicit")],
@@ -69,7 +66,7 @@ mod full_cycle {
             &certificate,
             INSTALLED_CERTIFICATE_PIN,
             Format::Pades,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             &a_one_page_pdf(),
             SignatureOperation::Sign,
             &[],
@@ -100,8 +97,9 @@ mod full_cycle {
     #[test]
     #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
     fn a_cades_signature_with_the_sha512_the_site_asked_for_validates() {
-        let algorithm = composed_for(AskedAlgorithm::Sha512, signing_certificate().key_kind())
-            .expect("el certificado de prueba es RSA o de curva eliptica");
+        let algorithm =
+            SignatureAlgorithm::composed(Digest::Sha512, signing_certificate().key_kind())
+                .expect("el certificado de prueba es RSA o de curva eliptica");
         assert_eq!(algorithm, SignatureAlgorithm::Sha512Rsa);
 
         let signed = a_cycle_of(
@@ -140,7 +138,7 @@ mod full_cycle {
             &an_installed_certificate(installed.path()),
             INSTALLED_CERTIFICATE_PIN,
             format,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             data,
             SignatureOperation::Sign,
             &declared,
@@ -182,7 +180,7 @@ mod full_cycle {
     fn an_asic_s_cades_signature_comes_back_as_a_container_with_its_signature_inside() {
         let container = a_cycle_of(
             Format::CadesAsicS,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             CHALLENGE,
             SignatureOperation::Sign,
             &[],

@@ -1,5 +1,13 @@
 use std::collections::BTreeSet;
 
+use crate::crossing::Failure;
+use crate::documents::domain::document::Document;
+use crate::identity::application::tests::{a_certificate, a_usable_certificate};
+use crate::identity::domain::certificate::TokenCertificate;
+use crate::signing::application::session::CycleFailure;
+use crate::signing::application::tests::{
+    an_order, ABridgeThatSigns, AnIsolateWith, DocumentsInMemory,
+};
 use crate::signing::domain::{PadesRect, PageSet, Placement, SignatureConfig};
 
 fn production_half() -> &'static str {
@@ -91,4 +99,39 @@ fn only_the_dry_run_invents_a_pkcs1() {
         !signing.contains("invented_signatures"),
         "el recorrido de la firma se esta inventando el PK1"
     );
+}
+
+fn compose_with(
+    certificate: &TokenCertificate,
+    bridge: &ABridgeThatSigns,
+) -> Result<Vec<u8>, CycleFailure> {
+    let order = an_order();
+    let files = DocumentsInMemory::default().with(&order.document, b"%PDF-1.7 contenido");
+    super::compose(
+        &files,
+        &Document::opened(order.document.clone()),
+        certificate,
+        &order.choice().expect("el recuadro cabe"),
+        &AnIsolateWith(bridge),
+    )
+}
+
+#[test]
+fn the_preview_with_an_elliptic_curve_certificate_presigns_with_sha256_ecdsa() {
+    let bridge = ABridgeThatSigns::default();
+
+    compose_with(&a_usable_certificate("FIRMA"), &bridge).expect("la vista previa se compone");
+
+    assert_eq!(bridge.calls()[0].algorithm, "SHA256withECDSA");
+}
+
+#[test]
+fn the_preview_with_a_key_that_is_neither_rsa_nor_elliptic_is_refused_before_the_bridge() {
+    let bridge = ABridgeThatSigns::default();
+
+    let failure =
+        compose_with(&a_certificate("FIRMA", &[]), &bridge).expect_err("esa clave no firma");
+
+    assert_eq!(Failure::from(failure).situation, "keyKindUnsupported");
+    assert!(bridge.calls().is_empty());
 }

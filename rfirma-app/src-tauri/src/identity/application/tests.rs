@@ -145,6 +145,45 @@ pub(crate) fn a_usable_certificate(label: &str) -> TokenCertificate {
     a_certificate(label, &der)
 }
 
+/// Construye un certificado X.509 autofirmado con una clave RSA de 2048 bits.
+pub(crate) fn an_rsa_certificate(label: &str) -> TokenCertificate {
+    let key =
+        PKey::from_rsa(openssl::rsa::Rsa::generate(2048).expect("deberia generarse la clave RSA"))
+            .expect("deberia envolverse la clave RSA");
+    let mut name = X509Name::builder().expect("deberia poder construirse un nombre");
+    name.append_entry_by_nid(Nid::COMMONNAME, label)
+        .expect("el nombre comun deberia entrar");
+    let name = name.build();
+
+    let mut builder = X509::builder().expect("deberia poder construirse un certificado");
+    builder.set_version(2).expect("la version deberia ponerse");
+    builder
+        .set_serial_number(&random_serial().expect("el serie deberia generarse"))
+        .expect("el serie deberia ponerse");
+    builder
+        .set_subject_name(&name)
+        .expect("el titular deberia ponerse");
+    builder
+        .set_issuer_name(&name)
+        .expect("el emisor deberia ponerse");
+    builder.set_pubkey(&key).expect("la clave deberia ponerse");
+    builder
+        .set_not_before(&Asn1Time::days_from_now(0).expect("deberia haber fecha"))
+        .expect("el inicio deberia ponerse");
+    builder
+        .set_not_after(&Asn1Time::days_from_now(30).expect("deberia haber fecha"))
+        .expect("el fin deberia ponerse");
+    builder
+        .sign(&key, MessageDigest::sha256())
+        .expect("el certificado de pruebas deberia firmarse");
+
+    let der = builder
+        .build()
+        .to_der()
+        .expect("el certificado deberia poder salir en DER");
+    a_certificate(label, &der)
+}
+
 /// Construye un certificado X.509 caducado: en vigor hace sesenta días, hasta hace treinta.
 pub(crate) fn an_expired_certificate(label: &str) -> TokenCertificate {
     let not_before = SystemTime::now() - Duration::from_secs(60 * 24 * 60 * 60);

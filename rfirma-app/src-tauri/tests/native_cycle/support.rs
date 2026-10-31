@@ -11,7 +11,7 @@ use rfirma_lib::documents::adapters::rubric;
 use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates;
-use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
+use rfirma_lib::identity::domain::algorithm::{Digest, SignatureAlgorithm};
 use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use rfirma_lib::identity::domain::keyring::KeyringError;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
@@ -22,8 +22,6 @@ use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 use rfirma_lib::signing::domain::{
     AdmissibleDocument, PadesRect, PageSet, Placement, SignatureConfig, Waivers,
 };
-use rfirma_lib::site::domain::protocol::AskedAlgorithm;
-use rfirma_lib::site::ports::composed_for;
 
 #[path = "../support/softhsm.rs"]
 mod softhsm;
@@ -87,7 +85,7 @@ pub(crate) fn reference() -> CertificateRef {
 pub(crate) fn ecdsa_composed_for_the_ec_certificate(
     certificate: &TokenCertificate,
 ) -> SignatureAlgorithm {
-    let algorithm = composed_for(AskedAlgorithm::Sha256, certificate.key_kind())
+    let algorithm = SignatureAlgorithm::composed(Digest::Sha256, certificate.key_kind())
         .expect("el certificado de prueba es RSA o de curva eliptica");
     assert_eq!(algorithm, SignatureAlgorithm::Sha256Ecdsa);
     algorithm
@@ -104,7 +102,13 @@ pub(crate) fn cades_cycle(
     operation: SignatureOperation,
     declared: &[(&str, &str)],
 ) -> Vec<u8> {
-    a_cycle_of(Format::Cades, cycle::ALGORITHM, data, operation, declared)
+    a_cycle_of(
+        Format::Cades,
+        SignatureAlgorithm::Sha256Rsa,
+        data,
+        operation,
+        declared,
+    )
 }
 
 /// El mismo ciclo, para el formato y el algoritmo que la sede haya pedido.
