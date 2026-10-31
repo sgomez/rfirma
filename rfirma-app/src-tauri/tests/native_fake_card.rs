@@ -98,7 +98,11 @@ fn a_pdf_signed_with_the_fake_card_is_valid_and_the_card_saw_the_pin_once() {
         "{:?}",
         card.calls_to("C_Login")
     );
-    assert!(!card.calls_to("C_Sign").is_empty(), "{:?}", card.calls());
+    assert!(
+        !card.calls_to("C_SignFinal").is_empty(),
+        "{:?}",
+        card.calls()
+    );
 }
 
 /// La lista en caliente de la ventana de sede, con el motor de filtros de verdad (ADR-0048).
