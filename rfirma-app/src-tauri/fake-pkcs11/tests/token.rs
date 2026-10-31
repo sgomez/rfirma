@@ -113,6 +113,45 @@ fn the_slot_offers_rsa_signing_with_its_digest() {
 }
 
 #[test]
+fn a_card_without_composed_mechanisms_offers_and_accepts_only_the_raw_one() {
+    let card = FakeCard::new()
+        .and_then(FakeCard::without_composed_mechanisms)
+        .unwrap();
+    let (context, slot) = process(&card);
+    let session = session(&context, slot);
+    logged_in(&session);
+
+    assert_eq!(
+        context.get_mechanism_list(slot).unwrap(),
+        vec![MechanismType::RSA_PKCS]
+    );
+    assert!(matches!(
+        context.get_mechanism_info(slot, MechanismType::SHA256_RSA_PKCS),
+        Err(Error::Pkcs11(RvError::MechanismInvalid, _))
+    ));
+    assert!(matches!(
+        session.sign(&Mechanism::Sha256RsaPkcs, signing_key(&session), b"datos"),
+        Err(Error::Pkcs11(RvError::MechanismInvalid, _))
+    ));
+}
+
+#[test]
+fn a_card_without_login_shows_its_key_and_signs_but_refuses_c_login() {
+    let card = FakeCard::new().and_then(FakeCard::without_login).unwrap();
+    let (context, slot) = process(&card);
+    let session = session(&context, slot);
+
+    assert!(!context.get_token_info(slot).unwrap().login_required());
+    assert!(matches!(
+        session.login(UserType::User, Some(&AuthPin::new(FakeCard::PIN.into()))),
+        Err(Error::Pkcs11(RvError::FunctionNotSupported, _))
+    ));
+    session
+        .sign(&Mechanism::Sha256RsaPkcs, signing_key(&session), b"datos")
+        .unwrap();
+}
+
+#[test]
 fn the_raw_mechanism_signs_a_digest_info() {
     let card = FakeCard::new().unwrap();
     let (context, slot) = process(&card);

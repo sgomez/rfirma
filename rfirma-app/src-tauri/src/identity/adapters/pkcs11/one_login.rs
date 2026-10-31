@@ -10,6 +10,8 @@ use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::store::StoreClass;
 
+use super::session::log_out;
+
 /// Qué hace con el ámbito un `C_Login` rechazado: comprobar un secreto deja reintentar; firmar con él, no.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Refused {
@@ -37,7 +39,7 @@ struct Scope {
 impl Scope {
     fn replace(&mut self, login: Login) {
         if let Login::Held { session, .. } = std::mem::replace(&mut self.login, login) {
-            let _ = session.logout();
+            log_out(&session);
         }
     }
 }
@@ -127,7 +129,7 @@ pub(super) fn within<T>(
             session,
         } if held == *secret => Some(session),
         Login::Held { session, .. } => {
-            let _ = session.logout();
+            log_out(&session);
             None
         }
         Login::NotYet => None,
@@ -144,7 +146,7 @@ pub(super) fn within<T>(
             session,
         },
         Err(error) => {
-            let _ = session.logout();
+            log_out(&session);
             Login::Cut(error.clone())
         }
     });

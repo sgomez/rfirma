@@ -39,15 +39,15 @@ Los módulos `afirma-crypto-padestri-client` y `afirma-crypto-cadestri-client` *
 
 ## 2. Mecanismo `cryptoki` correspondiente
 
-Es **`CKM_SHA256_RSA_PKCS`** (o el equivalente con el hash que corresponda a `signAlgorithm`; SHA-256 es el caso previsible con los certificados FNMT/DNIe habituales), no `CKM_RSA_PKCS`.
+Es **`CKM_SHA256_RSA_PKCS`** (o el equivalente con el hash que corresponda a `signAlgorithm`; SHA-256 es el caso previsible con los certificados FNMT/DNIe habituales) cuando la ranura lo ofrece; si no, `CKM_RSA_PKCS` sobre el `DigestInfo` armado en Rust.
 
 Razonamiento, directamente derivado del punto 1:
 
 - `sig.update(preSign)` + `sig.sign()` con `algorithmName = "SHA256withRSA"` en JCA es, por definición, un mecanismo **compuesto**: el proveedor calcula `SHA-256(preSign)`, construye el `DigestInfo` ASN.1 internamente y aplica el padding PKCS#1 v1.5 antes de elevar a la clave privada. Ese es exactamente el contrato de `CKM_SHA256_RSA_PKCS` en PKCS#11: recibe el buffer de datos completo y hace hash+relleno+firma en una sola operación.
 - `CKM_RSA_PKCS`, en cambio, firma el bloque que se le pasa **tal cual**, sin hashear ni envolver en `DigestInfo`. Si Rust invocase `CKM_RSA_PKCS` sobre `preSign` sin construir antes el `DigestInfo` DER (`SEQUENCE { AlgorithmIdentifier, OCTET STRING hash }` según PKCS#1 v1.5 / RFC 8017 §9.2), el resultado sería una firma RSA matemáticamente válida pero sobre un bloque de bytes que **ningún verificador CAdES/PAdES reconoce como el `DigestInfo` esperado** — el validador recalcula `SHA-256(SignedAttributes DER)`, lo envuelve en su propio `DigestInfo`, y compara tras descifrar la firma con la clave pública; si Rust firmó los bytes DER "en crudo" con `CKM_RSA_PKCS` (sin ese envoltorio, o peor, firmando un hash de `preSign` sin decir de qué algoritmo es), el resultado descifrado no coincidirá byte a byte con lo que el validador reconstruye. El PDF "parecería" firmado (misma estructura, mismo `ByteRange`) pero la firma criptográfica sería inválida.
-- Usar `CKM_RSA_PKCS` sería además una reimplementación innecesaria y frágil del propio `DigestInfo` en Rust, cuando el HSM/token ya sabe hacerlo de forma estándar con el mecanismo compuesto — y es exactamente lo que hace el cliente Java de referencia.
+- **Y el mecanismo compuesto no siempre está**: hay HSM y módulos de reenvío que solo ofrecen `CKM_RSA_PKCS` y dejan el resumen a quien llama. Para ellos el adaptador resume en Rust, antepone el prefijo DER del `DigestInfo` del hash (RFC 8017, §9.2, nota 1) y firma con `CKM_RSA_PKCS`: el bloque es el que armaría el compuesto y la firma sale idéntica. Es la misma caída que la de ECDSA (§4), y solo se usa cuando la ranura no ofrece el compuesto.
 
-En el crate `cryptoki` (docs.rs, verificado por WebFetch): el enum `Mechanism` expone `Mechanism::Sha256RsaPkcs` (→ `CKM_SHA256_RSA_PKCS`) y `Mechanism::RsaPkcs` (→ `CKM_RSA_PKCS`) como variantes distintas. La firma es la que corresponde al primero.
+En el crate `cryptoki` (docs.rs, verificado por WebFetch): el enum `Mechanism` expone `Mechanism::Sha256RsaPkcs` (→ `CKM_SHA256_RSA_PKCS`) y `Mechanism::RsaPkcs` (→ `CKM_RSA_PKCS`) como variantes distintas. La firma usa el primero, y el segundo solo como caída.
 
 ## 3. Codificación exacta de entrada y salida
 

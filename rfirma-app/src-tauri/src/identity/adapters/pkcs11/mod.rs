@@ -24,7 +24,7 @@ use crate::identity::ports::Token;
 pub use nss::{NssHost, RealNssHost};
 use one_login::Refused;
 use session::{
-    context, logged_in, pin_warning_of, slot_of, the_store_is_really_there,
+    context, log_out, logged_in, pin_warning_of, slot_of, the_store_is_really_there,
     token_info_unless_locked,
 };
 
@@ -221,7 +221,7 @@ pub fn accepts_the_secret(
             return accepted;
         }
         let session = log_in()?;
-        let _ = session.logout();
+        log_out(&session);
         Ok(())
     })
 }

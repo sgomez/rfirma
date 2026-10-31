@@ -10,7 +10,7 @@ use rdnie::{
 
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
-use crate::identity::domain::ecdsa;
+use crate::identity::domain::digest;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
@@ -248,7 +248,7 @@ impl<O: CardOpener> DnieToken<O> {
         shown: Option<&Shown>,
     ) -> Result<Vec<u8>, TokenError> {
         let hash = hash_of(algorithm)?;
-        let digest = ecdsa::digest(algorithm, data)?;
+        let digest = digest::digest(algorithm, data)?;
         let pin = typed_pin(secret)?;
         let attempts = shown.map(|shown| shown.attempts);
         self.with_the_pin(reference, shown, |session| {
