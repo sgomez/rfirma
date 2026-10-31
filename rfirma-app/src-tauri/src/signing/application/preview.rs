@@ -4,7 +4,7 @@ use crate::documents::domain::document::Document;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::application::cycle::{self, SigningRequest};
 use crate::signing::application::session::{
-    admitted_bytes, config_for, on_the_bridge, CycleFailure,
+    admitted_bytes, config_for, main_window_algorithm, on_the_bridge, CycleFailure,
 };
 use crate::signing::domain::{
     AdmissibleDocument, Format, SignatureOperation, SigningChoice, Waivers,
@@ -21,6 +21,7 @@ pub fn compose(
 ) -> Result<Vec<u8>, CycleFailure> {
     let bytes = admitted_bytes(files, document, Format::Pades, Waivers::NONE)?;
     let config = config_for(choice, chosen)?;
+    let algorithm = main_window_algorithm(chosen)?;
     let reference = chosen.reference().clone();
     let chain = chosen.chain();
 
@@ -30,7 +31,7 @@ pub fn compose(
             bridge,
             SigningRequest {
                 format: Format::Pades,
-                algorithm: cycle::ALGORITHM,
+                algorithm,
                 operation: SignatureOperation::Sign,
                 document,
                 chain: &chain,

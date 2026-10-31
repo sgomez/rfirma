@@ -13,9 +13,9 @@ use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::adapters::pkcs11::RealToken;
 use rfirma_lib::identity::application::certificates::certificates_with_their_chains;
 use rfirma_lib::identity::application::readers::LastListing;
+use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::store::Store;
-use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 use rfirma_lib::signing::domain::document_signatures::Validity;
 use rfirma_lib::site::domain::protocol::site_filter;
@@ -75,7 +75,7 @@ fn a_pdf_signed_with_the_fake_card_is_valid_and_the_card_saw_the_pin_once() {
         &certificate,
         FakeCard::PIN,
         Format::Pades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &a_one_page_pdf(),
         SignatureOperation::Sign,
         &[],

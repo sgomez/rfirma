@@ -6,6 +6,7 @@ mod support;
 mod full_cycle {
     use base64::Engine;
     use rfirma_lib::identity::adapters::pkcs11;
+    use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
     use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
     use rfirma_lib::signing::adapters::ffi::NativeBridge;
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
@@ -76,7 +77,7 @@ mod full_cycle {
             &bridge,
             SigningRequest {
                 format: Format::Pades,
-                algorithm: cycle::ALGORITHM,
+                algorithm: SignatureAlgorithm::Sha256Rsa,
                 operation: SignatureOperation::Sign,
                 document: AdmissibleDocument::check(&pdf).expect("es admisible"),
                 chain: &chain,

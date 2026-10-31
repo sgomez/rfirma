@@ -102,7 +102,13 @@ pub(crate) fn cades_cycle(
     operation: SignatureOperation,
     declared: &[(&str, &str)],
 ) -> Vec<u8> {
-    a_cycle_of(Format::Cades, cycle::ALGORITHM, data, operation, declared)
+    a_cycle_of(
+        Format::Cades,
+        SignatureAlgorithm::Sha256Rsa,
+        data,
+        operation,
+        declared,
+    )
 }
 
 /// El mismo ciclo, para el formato y el algoritmo que la sede haya pedido.

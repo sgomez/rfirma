@@ -23,9 +23,6 @@ use crate::signing::domain::TokenSignatures;
 pub static NOTHING_FROM_A_SITE: std::collections::BTreeMap<String, String> =
     std::collections::BTreeMap::new();
 
-/// El algoritmo con el que firma la ventana principal, el mismo para el puente y para el token (ADR-0001).
-pub const ALGORITHM: SignatureAlgorithm = SignatureAlgorithm::Sha256Rsa;
-
 const CHAIN_SEPARATOR: &str = ";";
 
 fn base64(bytes: &[u8]) -> String {

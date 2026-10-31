@@ -1,15 +1,20 @@
 use super::{
     admitted_bytes, begin, cancel, config_for, finish, is_live, note_delivered,
     previous_signatures_in, sign_on_token, signed_document, signed_document_signatures_in,
-    signed_folder, take_signed_cycle, DocumentToSign, SigningSession,
+    signed_folder, take_signed_cycle, CycleFailure, DocumentToSign, SigningSession,
 };
 use crate::crossing::Failure;
 use crate::documents::domain::document::Document;
-use crate::identity::application::tests::{a_certificate, NoToken, TestAuthority};
+use crate::identity::application::tests::{
+    a_certificate, a_usable_certificate, an_rsa_certificate, NoToken, TestAuthority,
+};
+use crate::identity::domain::algorithm::SignatureAlgorithm;
+use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::StoreSecret;
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
 use crate::signing::application::tests::{
-    an_order, AnEngineThatReports, DocumentsInMemory, NoIsolate,
+    an_order, ABridgeThatSigns, AnEngineThatReports, AnIsolateWith, DocumentsInMemory, NoIsolate,
 };
 use crate::signing::domain::{Format, PageSet, SignatureConfig, SigningChoice, Waivers};
 use base64::Engine;
@@ -518,4 +523,92 @@ fn there_are_no_signatures_to_read_before_the_first_signature_of_the_session() {
     let engine = AnEngineThatReports::default();
 
     assert!(signed_document_signatures_in(&files, &engine, &session).is_err());
+}
+
+/// Un token que apunta el algoritmo que se le ofrece y que no admite que se le pida el secreto.
+struct ATokenThatNotesTheAlgorithmOffered(std::sync::Mutex<Vec<SignatureAlgorithm>>);
+
+impl crate::signing::ports::Signer for ATokenThatNotesTheAlgorithmOffered {
+    fn secret_of(
+        &self,
+        _reference: &CertificateRef,
+    ) -> Result<StoreSecret, crate::identity::domain::error::TokenError> {
+        Ok(StoreSecret::NotNeeded)
+    }
+
+    fn offers(
+        &self,
+        _reference: &CertificateRef,
+        algorithm: SignatureAlgorithm,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        crate::lock(&self.0).push(algorithm);
+        Ok(())
+    }
+
+    fn sign_with_secret(
+        &self,
+        _reference: &CertificateRef,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        _algorithm: SignatureAlgorithm,
+        _data: &[u8],
+    ) -> Result<Vec<u8>, crate::identity::domain::error::TokenError> {
+        unreachable!("abrir el ciclo no firma")
+    }
+
+    fn accepts_the_secret(
+        &self,
+        _reference: &CertificateRef,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        unreachable!("abrir el ciclo no prueba el secreto")
+    }
+}
+
+fn begin_with(
+    certificate: &TokenCertificate,
+    token: &ATokenThatNotesTheAlgorithmOffered,
+) -> Result<StoreSecret, CycleFailure> {
+    let order = an_order();
+    let files = DocumentsInMemory::default().with(&order.document, b"%PDF-1.7 contenido");
+    let bridge = ABridgeThatSigns::default();
+    begin(
+        &files,
+        DocumentToSign {
+            handle: order.document.clone(),
+            document: Document::opened(order.document.clone()),
+        },
+        certificate,
+        &chosen(&order),
+        token,
+        &AnIsolateWith(&bridge),
+        &SigningSession::default(),
+    )
+}
+
+#[test]
+fn a_certificate_of_an_elliptic_curve_asks_the_token_for_sha256_ecdsa() {
+    let token = ATokenThatNotesTheAlgorithmOffered(Default::default());
+
+    begin_with(&a_usable_certificate("FIRMA"), &token).expect("el ciclo se abre");
+
+    assert_eq!(*crate::lock(&token.0), [SignatureAlgorithm::Sha256Ecdsa]);
+}
+
+#[test]
+fn a_certificate_of_an_rsa_key_asks_the_token_for_sha256_rsa() {
+    let token = ATokenThatNotesTheAlgorithmOffered(Default::default());
+
+    begin_with(&an_rsa_certificate("FIRMA"), &token).expect("el ciclo se abre");
+
+    assert_eq!(*crate::lock(&token.0), [SignatureAlgorithm::Sha256Rsa]);
+}
+
+#[test]
+fn a_key_that_is_neither_rsa_nor_elliptic_is_refused_before_the_token_is_asked() {
+    let token = ATokenThatNotesTheAlgorithmOffered(Default::default());
+
+    let failure = begin_with(&a_certificate("FIRMA", &[]), &token).expect_err("esa clave no firma");
+
+    assert_eq!(Failure::from(failure).situation, "keyKindUnsupported");
+    assert!(crate::lock(&token.0).is_empty());
 }

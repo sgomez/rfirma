@@ -5,7 +5,6 @@ mod support;
 
 mod full_cycle {
     use rfirma_lib::identity::domain::algorithm::{Digest, SignatureAlgorithm};
-    use rfirma_lib::signing::application::cycle;
     use rfirma_lib::signing::domain::bridge::{ExpandRequest, Format, SignatureOperation};
     use rfirma_lib::site::domain::protocol::pairs_of;
 
@@ -38,7 +37,7 @@ mod full_cycle {
             &certificate,
             INSTALLED_CERTIFICATE_PIN,
             Format::Cades,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             CHALLENGE,
             SignatureOperation::Sign,
             &[("mode", "implicit")],
@@ -67,7 +66,7 @@ mod full_cycle {
             &certificate,
             INSTALLED_CERTIFICATE_PIN,
             Format::Pades,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             &a_one_page_pdf(),
             SignatureOperation::Sign,
             &[],
@@ -139,7 +138,7 @@ mod full_cycle {
             &an_installed_certificate(installed.path()),
             INSTALLED_CERTIFICATE_PIN,
             format,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             data,
             SignatureOperation::Sign,
             &declared,
@@ -181,7 +180,7 @@ mod full_cycle {
     fn an_asic_s_cades_signature_comes_back_as_a_container_with_its_signature_inside() {
         let container = a_cycle_of(
             Format::CadesAsicS,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             CHALLENGE,
             SignatureOperation::Sign,
             &[],
