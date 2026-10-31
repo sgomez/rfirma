@@ -42,8 +42,24 @@ fn a_card_being_listed_is_reading_and_then_ready_or_unreadable() {
 }
 
 #[test]
+fn a_card_the_dnie_wrapper_names_as_unsupported_gives_its_own_status() {
+    let readers = [Reader {
+        name: "Lector".to_owned(),
+        has_a_card: true,
+    }];
+    assert_eq!(
+        status_of(&readers, Listing::Unsupported(UnsupportedDnie::Legacy)),
+        ReaderStatus::LegacyDnie
+    );
+    assert_eq!(
+        status_of(&readers, Listing::Unsupported(UnsupportedDnie::Burned)),
+        ReaderStatus::BurnedDnie
+    );
+}
+
+#[test]
 fn the_most_advanced_status_sums_up_several_readers() {
-    use ReaderStatus::{NoCard, NoReader, Reading, Ready, Unreadable};
+    use ReaderStatus::{BurnedDnie, LegacyDnie, NoCard, NoReader, Reading, Ready, Unreadable};
     let cases = [
         (vec![NoCard, Reading, Ready(ReadyCard::Dnie)], Reading),
         (
@@ -51,6 +67,17 @@ fn the_most_advanced_status_sums_up_several_readers() {
             Ready(ReadyCard::Other),
         ),
         (vec![NoCard, Unreadable], Unreadable),
+        (vec![Unreadable, LegacyDnie, NoCard], LegacyDnie),
+        (vec![Unreadable, BurnedDnie, NoCard], BurnedDnie),
+        (
+            vec![LegacyDnie, Ready(ReadyCard::Other)],
+            Ready(ReadyCard::Other),
+        ),
+        (
+            vec![BurnedDnie, Ready(ReadyCard::Dnie)],
+            Ready(ReadyCard::Dnie),
+        ),
+        (vec![BurnedDnie, Reading], Reading),
         (vec![NoCard, NoCard], NoCard),
         (
             vec![Ready(ReadyCard::Other), Ready(ReadyCard::Dnie)],

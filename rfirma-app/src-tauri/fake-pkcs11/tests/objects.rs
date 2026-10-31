@@ -95,9 +95,17 @@ fn the_signing_key_signs_what_its_certificate_verifies() {
     let data = b"documento que se firma";
 
     let key = find_one(&session, ObjectClass::PRIVATE_KEY, "KprivFirmaDigital");
+    session.sign_init(&Mechanism::Sha256RsaPkcs, key).unwrap();
+    session
+        .login(
+            UserType::ContextSpecific,
+            Some(&AuthPin::new(FakeCard::PIN.into())),
+        )
+        .unwrap();
+    session.sign_update(data).unwrap();
     let signature = session
-        .sign(&Mechanism::Sha256RsaPkcs, key, data)
-        .expect("C_Sign deberia firmar con la clave de firma");
+        .sign_final()
+        .expect("C_SignFinal deberia firmar con la clave de firma");
 
     let certificate = find_one(&session, ObjectClass::CERTIFICATE, "CertFirmaDigital");
     let public_key = public_key_of(&session, certificate);

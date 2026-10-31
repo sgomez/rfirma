@@ -11,7 +11,7 @@ use crate::identity::domain::holder::PromptedHolder;
 use crate::identity::domain::keyring::KeyringError;
 use crate::identity::domain::listed::{Listed, ListedSkipping};
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::readers::{Reader, ReadyCard};
+use crate::identity::domain::readers::{Listing, Reader, UnsupportedDnie};
 use crate::identity::domain::secret::{PinWarning, SecretName, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::memory_error::MemoryError;
@@ -45,6 +45,11 @@ pub trait Token {
 
     /// Cuántos certificados propios tiene un almacén, si sabe contarlos sin leer ninguno; por defecto, no sabe.
     fn holders_without_reading(&self, _store: &Store) -> Option<Result<usize, TokenError>> {
+        None
+    }
+
+    /// El DNIe que rdnie reconoce en un lector y no lee, si lo hay; por defecto, ninguno.
+    fn unsupported_dnie(&self) -> Option<UnsupportedDnie> {
         None
     }
 
@@ -142,8 +147,8 @@ pub trait ReaderWatch: Send {
 
 /// Quien vuelve a listar para una ventana cuando cambian las tarjetas: la principal o la de sede (ADR-0048).
 pub trait Relisting {
-    /// La lista nueva, si la ventana enseña una que cambiar, y la tarjeta que ha enseñado certificados.
-    fn relisted(&self) -> (Option<Vec<ListedCertificate>>, Option<ReadyCard>);
+    /// La lista nueva, si la ventana enseña una que cambiar, y cómo ha acabado el listado de las tarjetas.
+    fn relisted(&self) -> (Option<Vec<ListedCertificate>>, Listing);
 }
 
 /// La carpeta del Almacén de rFirma y el directorio desechable donde se prueba un `.p12`, con sus permisos (ADR-0011).

@@ -87,12 +87,22 @@ fn a_pdf_signed_with_the_fake_card_is_valid_and_the_card_saw_the_pin_once() {
     assert_eq!(report.count(), 1);
     assert_eq!(report.signatures()[0].validity, Validity::Valid);
     assert_eq!(
-        card.calls_to("C_Login").len(),
+        card.calls_to("C_Login CKU_USER").len(),
         1,
         "{:?}",
         card.calls_to("C_Login")
     );
-    assert!(!card.calls_to("C_Sign").is_empty(), "{:?}", card.calls());
+    assert_eq!(
+        card.calls_to("C_Login CKU_CONTEXT_SPECIFIC").len(),
+        1,
+        "{:?}",
+        card.calls_to("C_Login")
+    );
+    assert!(
+        !card.calls_to("C_SignFinal").is_empty(),
+        "{:?}",
+        card.calls()
+    );
 }
 
 /// La lista en caliente de la ventana de sede, con el motor de filtros de verdad (ADR-0048).

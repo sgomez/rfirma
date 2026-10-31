@@ -9,6 +9,7 @@ use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::Situation;
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::readers::{ReadyCard, UnsupportedDnie};
 use crate::identity::domain::secret::StoreSecret;
 
 const CARD: &str = "/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so";
@@ -21,6 +22,7 @@ type Shows = Box<dyn Fn(&Store) -> Vec<TokenCertificate> + Send + Sync>;
 struct Counting {
     asked: Mutex<Vec<Store>>,
     shows: Shows,
+    unsupported: Option<UnsupportedDnie>,
 }
 
 impl Counting {
@@ -33,7 +35,13 @@ impl Counting {
         Self {
             asked: Mutex::new(Vec::new()),
             shows: Box::new(shows),
+            unsupported: None,
         }
+    }
+
+    fn beside(mut self, unsupported: UnsupportedDnie) -> Self {
+        self.unsupported = Some(unsupported);
+        self
     }
 
     fn asked(&self) -> Vec<Store> {
@@ -50,6 +58,10 @@ fn a_certificate_in(store: &Store) -> TokenCertificate {
 }
 
 impl Token for Counting {
+    fn unsupported_dnie(&self) -> Option<UnsupportedDnie> {
+        self.unsupported
+    }
+
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         self.asked.lock().unwrap().push(store.clone());
         Ok((self.shows)(store))
@@ -189,7 +201,33 @@ fn after_a_full_listing_only_the_card_stores_are_opened_again_and_the_others_sta
         Some(2),
         "el de la tarjeta y el de Firefox: {rows:?}"
     );
-    assert_eq!(ready, Some(ReadyCard::Other));
+    assert_eq!(ready, Listing::Done(Some(ReadyCard::Other)));
+}
+
+#[test]
+fn a_dnie_rdnie_does_not_read_is_what_the_relisting_reports_when_no_card_shows_certificates() {
+    for unsupported in [UnsupportedDnie::Legacy, UnsupportedDnie::Burned] {
+        let arranged = Arranged::over(
+            Counting::showing(|_| vec![]).beside(unsupported),
+            vec![Store::module(CARD)],
+        );
+
+        let (_, listing) = arranged.card_listing().relisted();
+
+        assert_eq!(listing, Listing::Unsupported(unsupported));
+    }
+}
+
+#[test]
+fn a_card_that_shows_certificates_outranks_a_dnie_rdnie_does_not_read() {
+    let arranged = Arranged::over(
+        Counting::new().beside(UnsupportedDnie::Legacy),
+        vec![Store::module(CARD)],
+    );
+
+    let (_, listing) = arranged.card_listing().relisted();
+
+    assert_eq!(listing, Listing::Done(Some(ReadyCard::Other)));
 }
 
 #[test]

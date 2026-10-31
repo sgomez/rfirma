@@ -52,7 +52,7 @@ fn signals_in_a_process(card: &FakeCard) -> Vec<&'static str> {
 
 #[test]
 fn each_signal_is_readable_in_a_new_process_when_its_moment_comes() {
-    let card = FakeCard::new().unwrap().signals_profile().unwrap();
+    let card = FakeCard::new().unwrap();
     assert!(signals_in_a_process(&card).is_empty());
 
     fail_in_a_process(&card);
@@ -65,7 +65,7 @@ fn each_signal_is_readable_in_a_new_process_when_its_moment_comes() {
 
 #[test]
 fn the_signing_key_demands_a_context_login_and_the_other_key_does_not() {
-    let card = FakeCard::new().unwrap().signals_profile().unwrap();
+    let card = FakeCard::new().unwrap();
     let (_context, session) = user_session(&card);
 
     let flag = |label: &[u8]| {
@@ -88,7 +88,7 @@ fn the_signing_key_demands_a_context_login_and_the_other_key_does_not() {
 
 #[test]
 fn signing_fails_without_the_context_login_and_enters_with_it() {
-    let card = FakeCard::new().unwrap().signals_profile().unwrap();
+    let card = FakeCard::new().unwrap();
     let (_context, session) = user_session(&card);
     session
         .sign_init(&Mechanism::Sha256RsaPkcs, signing_key(&session))
@@ -106,7 +106,7 @@ fn signing_fails_without_the_context_login_and_enters_with_it() {
 
 #[test]
 fn every_signature_needs_its_own_context_login() {
-    let card = FakeCard::new().unwrap().signals_profile().unwrap();
+    let card = FakeCard::new().unwrap();
     let (_context, session) = user_session(&card);
     let key = signing_key(&session);
     session.sign_init(&Mechanism::Sha256RsaPkcs, key).unwrap();
@@ -124,18 +124,8 @@ fn every_signature_needs_its_own_context_login() {
 }
 
 #[test]
-fn the_dnie_profile_signs_without_a_context_login() {
-    let card = FakeCard::new().unwrap();
-    let (_context, session) = user_session(&card);
-
-    let signature = session.sign(&Mechanism::Sha256RsaPkcs, signing_key(&session), b"datos");
-
-    assert!(signature.is_ok());
-}
-
-#[test]
 fn a_context_login_with_a_wrong_pin_spends_a_try() {
-    let card = FakeCard::new().unwrap().signals_profile().unwrap();
+    let card = FakeCard::new().unwrap();
     let (_context, session) = user_session(&card);
     session
         .sign_init(&Mechanism::Sha256RsaPkcs, signing_key(&session))

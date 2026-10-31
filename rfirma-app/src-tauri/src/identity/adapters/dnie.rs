@@ -13,6 +13,7 @@ use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::digest;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::readers::UnsupportedDnie;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::{Store, DNIE_STORE_PREFIX};
 use crate::identity::ports::Token;
@@ -72,7 +73,7 @@ impl CardOpener for PcscCard {
 
     fn claimed_reader(&self) -> Option<String> {
         let card = PcscTransport::connect_first_dnie().ok()?;
-        rdnie_opens(&card.atr().ok()?).then(|| card.reader())
+        rdnie_recognises(&card.atr().ok()?).then(|| card.reader())
     }
 
     fn readers_with_a_card(&self) -> Option<Vec<String>> {
@@ -91,9 +92,12 @@ impl CardOpener for PcscCard {
     }
 }
 
-/// Si el ATR es de un DNIe que abre rdnie: un 3.0 o 4.0 sin quemar; el 1.0 y el 2.0 siguen por PKCS#11.
-fn rdnie_opens(atr: &Atr) -> bool {
-    atr.check().is_ok()
+/// Si el ATR es de un DNIe que rdnie reconoce: un 3.0 o 4.0 que abre, o un 1.0, 2.0 o averiado que no lee.
+fn rdnie_recognises(atr: &Atr) -> bool {
+    matches!(
+        atr.check(),
+        Ok(()) | Err(rdnie::Error::LegacyDnie | rdnie::Error::BurnedDnie)
+    )
 }
 
 fn take_the_card_turn() -> MutexGuard<'static, ()> {
@@ -426,6 +430,15 @@ fn hash_of(algorithm: SignatureAlgorithm) -> Result<DigestAlgorithm, TokenError>
 }
 
 impl<O: CardOpener> Token for DnieToken<O> {
+    fn unsupported_dnie(&self) -> Option<UnsupportedDnie> {
+        let _turn = take_the_card_turn();
+        match opened(&mut self.inserted(), &self.opener) {
+            Err(rdnie::Error::LegacyDnie) => Some(UnsupportedDnie::Legacy),
+            Err(rdnie::Error::BurnedDnie) => Some(UnsupportedDnie::Burned),
+            _ => None,
+        }
+    }
+
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         self.signing_certificate(store)
     }

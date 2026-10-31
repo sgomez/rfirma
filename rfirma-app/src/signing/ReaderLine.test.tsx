@@ -18,6 +18,24 @@ describe("the reader line under the certificate selector", () => {
     });
   }
 
+  describe("a DNIe that rFirma does not read", () => {
+    it("says a legacy DNIe is not signed with and has to be renewed", () => {
+      renderWithCatalog(<ReaderLine reader={{ kind: "legacyDnie" }} platform="linux" />);
+
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /^rFirma no firma con el DNIe 1\.0 ni con el 2\.0\. Renueva el DNIe\.$/,
+      );
+    });
+
+    it("says a burned DNIe has a chip that does not work and has to be renewed", () => {
+      renderWithCatalog(<ReaderLine reader={{ kind: "burnedDnie" }} platform="linux" />);
+
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /^El chip del DNIe no funciona\. Renueva el DNIe\.$/,
+      );
+    });
+  });
+
   describe("the help for a card it cannot read", () => {
     it("points to Windows Update and the DGP page on Windows", () => {
       renderWithCatalog(<ReaderLine reader={{ kind: "unreadable" }} platform="windows" />);

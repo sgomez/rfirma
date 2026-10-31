@@ -1,4 +1,4 @@
-//! Módulo PKCS#11 falso que se porta como el DNIe medido por OpenSC, y la tarjeta de pruebas que lo arranca.
+//! Módulo PKCS#11 falso que tiene aspecto de DNIe y da las tres señales del PIN, y la tarjeta de pruebas que lo arranca.
 
 mod calls;
 mod card;

@@ -521,6 +521,12 @@ msgstr ""
 msgid "panel.certificate.reader.unreadable"
 msgstr ""
 
+msgid "panel.certificate.reader.legacyDnie"
+msgstr ""
+
+msgid "panel.certificate.reader.burnedDnie"
+msgstr ""
+
 msgid "panel.certificate.reader.unreadableHelp.windows"
 msgstr ""
 
