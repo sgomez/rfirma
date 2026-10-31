@@ -10,7 +10,6 @@ use cryptoki_sys::{
 use openssl::hash::{hash, MessageDigest};
 use openssl::x509::X509;
 
-use crate::card::Profile;
 use crate::material::{Failure, Identity, Material};
 
 /// Un atributo tal como lo pediría quien llama a `C_GetAttributeValue`.
@@ -69,7 +68,10 @@ pub(crate) fn key_role(handle: CK_OBJECT_HANDLE) -> Option<KeyRole> {
 }
 
 /// Los objetos en el orden de sus manejadores, que empiezan en 1.
-pub(crate) fn objects_of(material: &Material, profile: Profile) -> Result<Vec<Object>, Failure> {
+pub(crate) fn objects_of(
+    material: &Material,
+    always_authenticates: bool,
+) -> Result<Vec<Object>, Failure> {
     Ok(vec![
         certificate("CertAutenticacion", &material.authentication.certificate)?,
         certificate("CertFirmaDigital", &material.signing.certificate)?,
@@ -79,7 +81,7 @@ pub(crate) fn objects_of(material: &Material, profile: Profile) -> Result<Vec<Ob
             "KprivFirmaDigital",
             &material.signing,
             false,
-            profile == Profile::Signals,
+            always_authenticates,
         )?,
     ])
 }

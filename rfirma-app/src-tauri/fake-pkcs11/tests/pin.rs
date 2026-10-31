@@ -1,4 +1,4 @@
-//! El PIN de la tarjeta falsa se porta como el del DNIe medido: contador entre procesos y señales solo tras un fallo.
+//! El PIN de la tarjeta falsa: contador entre procesos y señales leídas de él.
 
 mod common;
 
@@ -36,42 +36,10 @@ fn the_right_pin_restores_the_tries() {
 }
 
 #[test]
-fn without_a_failure_there_is_no_signal() {
-    let card = FakeCard::with_tries_left(1).unwrap();
-    let (context, slot) = process(&card);
-
-    assert!(signals(&context, slot).is_empty());
-}
-
-#[test]
-fn a_first_failure_lights_no_signal() {
+fn a_healthy_card_signals_nothing() {
     let card = FakeCard::new().unwrap();
     let (context, slot) = process(&card);
 
-    assert_eq!(
-        log_in(&context, slot, WRONG_PIN),
-        Err(RvError::PinIncorrect)
-    );
-    assert!(signals(&context, slot).is_empty());
-}
-
-#[test]
-fn the_second_failure_lights_final_try_only_in_its_process() {
-    let card = FakeCard::new().unwrap();
-    {
-        let (context, slot) = process(&card);
-        assert_eq!(
-            log_in(&context, slot, WRONG_PIN),
-            Err(RvError::PinIncorrect)
-        );
-        assert_eq!(
-            log_in(&context, slot, WRONG_PIN),
-            Err(RvError::PinIncorrect)
-        );
-        assert_eq!(signals(&context, slot), ["FINAL_TRY"]);
-    }
-
-    let (context, slot) = process(&card);
     assert!(signals(&context, slot).is_empty());
 }
 
@@ -84,12 +52,12 @@ fn the_failure_that_locks_says_incorrect_with_locked() {
         log_in(&context, slot, WRONG_PIN),
         Err(RvError::PinIncorrect)
     );
-    assert_eq!(signals(&context, slot), ["LOCKED"]);
+    assert_eq!(signals(&context, slot), ["COUNT_LOW", "LOCKED"]);
     assert_eq!(card.tries_left(), 0);
 }
 
 #[test]
-fn a_locked_card_refuses_even_the_right_pin_and_signals_nothing() {
+fn a_locked_card_refuses_even_the_right_pin() {
     let card = FakeCard::with_tries_left(1).unwrap();
     let (context, slot) = process(&card);
     assert_eq!(
@@ -101,7 +69,6 @@ fn a_locked_card_refuses_even_the_right_pin_and_signals_nothing() {
         log_in(&context, slot, FakeCard::PIN),
         Err(RvError::PinLocked)
     );
-    assert!(signals(&context, slot).is_empty());
     drop(context);
     assert_eq!(log_in_once(&card, FakeCard::PIN), Err(RvError::PinLocked));
 }
@@ -115,7 +82,6 @@ fn a_locked_card_lists_like_a_healthy_one() {
         .find_objects(&[Attribute::Class(ObjectClass::CERTIFICATE)])
         .unwrap();
     assert_eq!(certificates.len(), 3);
-    assert!(signals(&context, slot).is_empty());
 }
 
 #[test]

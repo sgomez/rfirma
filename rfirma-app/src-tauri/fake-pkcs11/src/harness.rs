@@ -8,8 +8,7 @@ use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 use crate::card::{
-    Profile, CALL_LOG, HANGS_ON_INITIALIZE, INTERFERENCE, PROFILE, RAW_ONLY, READER, REMOVED_FROM,
-    TRIES_LEFT, WITHOUT_LOGIN,
+    CALL_LOG, HANGS_ON_INITIALIZE, RAW_ONLY, READER, REMOVED_FROM, TRIES_LEFT, WITHOUT_LOGIN,
 };
 
 /// Una tarjeta aislada: cada copia del módulo es una instancia aparte, aunque viva en el mismo proceso.
@@ -39,25 +38,13 @@ impl FakeCard {
         Ok(Self { dir })
     }
 
-    /// Pasa a ser una tarjeta que no es el DNIe: da `COUNT_LOW`, `FINAL_TRY` y `LOCKED` siempre y exige un login por firma.
-    pub fn signals_profile(self) -> io::Result<Self> {
-        fs::write(self.dir.path().join(PROFILE), Profile::SIGNALS_NAME)?;
-        Ok(self)
-    }
-
-    /// Otro programa usa la tarjeta tras abrirse la primera sesión: el primer `C_Login` de las sesiones abiertas falla.
-    pub fn interfered(self) -> io::Result<Self> {
-        fs::write(self.dir.path().join(INTERFERENCE), "")?;
-        Ok(self)
-    }
-
     /// Retira la tarjeta a partir de la llamada `call`, contada desde 1: esa y las siguientes fallan como sin tarjeta.
     pub fn removed_from_call(self, call: usize) -> io::Result<Self> {
         fs::write(self.dir.path().join(REMOVED_FROM), call.to_string())?;
         Ok(self)
     }
 
-    /// La pone en el lector `name`, que la ranura describe como lo haría OpenSC.
+    /// La pone en el lector `name`, que la ranura describe como un lector de DNIe.
     pub fn in_reader(self, name: &str) -> io::Result<Self> {
         fs::write(self.dir.path().join(READER), name)?;
         Ok(self)

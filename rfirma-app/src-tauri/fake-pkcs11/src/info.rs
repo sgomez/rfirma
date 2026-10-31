@@ -1,4 +1,4 @@
-//! Cómo se presentan la biblioteca, el lector y la tarjeta: los textos y las banderas de un DNIe por OpenSC.
+//! Cómo se presentan la biblioteca, el lector y la tarjeta: los textos de un DNIe y las banderas del PIN.
 
 use cryptoki_sys::{
     CKF_HW, CKF_HW_SLOT, CKF_LOGIN_REQUIRED, CKF_REMOVABLE_DEVICE, CKF_RNG, CKF_SIGN,
