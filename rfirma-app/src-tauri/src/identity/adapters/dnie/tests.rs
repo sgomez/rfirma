@@ -408,20 +408,20 @@ fn burned(atr: &[u8]) -> Vec<u8> {
 }
 
 #[test]
-fn rdnie_opens_a_dnie_3_and_a_dnie_4() {
-    assert!(super::rdnie_opens(&Atr::new(DNIE_3_ATR)));
-    assert!(super::rdnie_opens(&Atr::new(DNIE_4_ATR)));
+fn rdnie_recognises_every_dnie_in_the_reader() {
+    for atr in [
+        DNIE_3_ATR.to_vec(),
+        DNIE_4_ATR.to_vec(),
+        DNIE_2_ATR.to_vec(),
+        burned(&DNIE_4_ATR),
+    ] {
+        assert!(super::rdnie_recognises(&Atr::new(atr)));
+    }
 }
 
 #[test]
-fn rdnie_leaves_a_dnie_2_to_pkcs11() {
-    assert!(!super::rdnie_opens(&Atr::new(DNIE_2_ATR)));
-}
-
-#[test]
-fn rdnie_leaves_a_burned_dnie_to_pkcs11() {
-    let burned = burned(&DNIE_4_ATR);
-    assert!(!super::rdnie_opens(&Atr::new(burned)));
+fn rdnie_does_not_recognise_any_other_card() {
+    assert!(!super::rdnie_recognises(&Atr::new(vec![0x3B, 0x00])));
 }
 
 mod at_once;

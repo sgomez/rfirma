@@ -264,6 +264,8 @@ export type ReaderStatus =
   | { kind: "reading" }
   | { kind: "dnieReady" }
   | { kind: "cardReady" }
+  | { kind: "legacyDnie" }
+  | { kind: "burnedDnie" }
   | { kind: "unreadable" };
 
 /** Si el estado habla de un lector que hay; `noReader` y `unavailable` no. */

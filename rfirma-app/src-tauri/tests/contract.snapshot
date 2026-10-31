@@ -280,6 +280,8 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Reading
       DnieReady
       CardReady
+      LegacyDnie
+      BurnedDnie
       Unreadable
 
   pub struct ReaderNewsView

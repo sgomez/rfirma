@@ -531,6 +531,12 @@ msgstr "Card ready"
 msgid "panel.certificate.reader.unreadable"
 msgstr "rFirma cannot read the card in the reader"
 
+msgid "panel.certificate.reader.legacyDnie"
+msgstr "rFirma cannot sign with a DNIe 1.0 or 2.0. Renew your DNIe."
+
+msgid "panel.certificate.reader.burnedDnie"
+msgstr "The chip of the DNIe does not work. Renew your DNIe."
+
 msgid "panel.certificate.reader.unreadableHelp.windows"
 msgstr ""
 "If Windows does not recognise it, the card software arrives through Windows "

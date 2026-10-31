@@ -62,6 +62,10 @@ function readerText(
       return t("panel.certificate.reader.dnieReady");
     case "cardReady":
       return t("panel.certificate.reader.cardReady");
+    case "legacyDnie":
+      return t("panel.certificate.reader.legacyDnie");
+    case "burnedDnie":
+      return t("panel.certificate.reader.burnedDnie");
     case "unreadable":
       return t("panel.certificate.reader.unreadable");
   }

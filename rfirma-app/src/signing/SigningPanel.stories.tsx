@@ -130,6 +130,14 @@ export const CardReady: Story = {
   args: { certificate: withReader({ kind: "cardReady" }) },
 };
 
+export const LegacyDnie: Story = {
+  args: { certificate: withReader({ kind: "legacyDnie" }) },
+};
+
+export const BurnedDnie: Story = {
+  args: { certificate: withReader({ kind: "burnedDnie" }) },
+};
+
 export const UnreadableCardOnWindows: Story = {
   args: { certificate: withReader({ kind: "unreadable" }), platform: "windows" },
 };

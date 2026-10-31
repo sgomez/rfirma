@@ -531,6 +531,12 @@ msgstr "Tarjeta lista"
 msgid "panel.certificate.reader.unreadable"
 msgstr "rFirma no puede leer la tarjeta del lector"
 
+msgid "panel.certificate.reader.legacyDnie"
+msgstr "rFirma no firma con el DNIe 1.0 ni con el 2.0. Renueva el DNIe."
+
+msgid "panel.certificate.reader.burnedDnie"
+msgstr "El chip del DNIe no funciona. Renueva el DNIe."
+
 msgid "panel.certificate.reader.unreadableHelp.windows"
 msgstr ""
 "Si Windows no la reconoce, llega por Windows Update al meter la tarjeta o se "

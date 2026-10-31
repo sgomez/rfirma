@@ -4,7 +4,7 @@ use tauri::Manager as _;
 
 use crate::identity::adapters::readers::follow_the_readers_for;
 use crate::identity::domain::certificate::ListedCertificate;
-use crate::identity::domain::readers::{ready_card_among, ReadyCard};
+use crate::identity::domain::readers::{listing_after, ready_card_among, Listing};
 use crate::identity::ports::Relisting;
 use crate::identity::IdentityRoot;
 use crate::site::application::errand::{after_the_readers, AfterTheReaders};
@@ -17,16 +17,17 @@ struct ForTheSiteWindow {
 }
 
 impl Relisting for ForTheSiteWindow {
-    fn relisted(&self) -> (Option<Vec<ListedCertificate>>, Option<ReadyCard>) {
+    fn relisted(&self) -> (Option<Vec<ListedCertificate>>, Listing) {
         let identity = self.app.state::<IdentityRoot>();
         let found = identity.certificates().unwrap_or_default();
         let ready = ready_card_among(&identity.only_on_a_card(&found));
+        let listing = listing_after(ready, || identity.token.unsupported_dnie());
         let after = with_the_desk(&self.app, |desk, live| after_the_readers(desk, found, live));
         let rows = match after {
             AfterTheReaders::Accepted(accepted) => Some(identity.rows_keeping_handles(accepted)),
             AfterTheReaders::Unchanged => None,
         };
-        (rows, ready)
+        (rows, listing)
     }
 }
 

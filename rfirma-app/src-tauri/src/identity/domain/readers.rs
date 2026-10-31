@@ -21,6 +21,15 @@ pub enum ReadyCard {
     Other,
 }
 
+/// Un DNIe que rdnie reconoce y no lee.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UnsupportedDnie {
+    /// Un DNIe 1.0 o 2.0.
+    Legacy,
+    /// Un DNIe cuyo chip ha perdido su memoria.
+    Burned,
+}
+
 /// El estado de un lector, o el que resume a varios.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReaderStatus {
@@ -34,6 +43,10 @@ pub enum ReaderStatus {
     Reading,
     /// La tarjeta enseña sus certificados.
     Ready(ReadyCard),
+    /// Hay un DNIe 1.0 o 2.0, con el que rFirma no firma.
+    LegacyDnie,
+    /// Hay un DNIe averiado, cuyo chip no funciona.
+    BurnedDnie,
     /// Hay tarjeta, pero ningún almacén de tarjeta la enseña.
     Unreadable,
 }
@@ -45,10 +58,12 @@ pub enum Listing {
     InProgress,
     /// Ha terminado: la tarjeta que ha enseñado certificados, o ninguna.
     Done(Option<ReadyCard>),
+    /// Ha terminado y ninguna tarjeta enseña certificados, pero hay un DNIe que rdnie no lee.
+    Unsupported(UnsupportedDnie),
 }
 
 impl ReaderStatus {
-    /// El más avanzado: leyendo, lista, ilegible, sin tarjeta; sin ninguno, sin lector.
+    /// El más avanzado: leyendo, lista, DNIe averiado o antiguo, ilegible, sin tarjeta; sin ninguno, sin lector.
     pub fn most_advanced(statuses: impl IntoIterator<Item = Self>) -> Self {
         statuses
             .into_iter()
@@ -61,9 +76,11 @@ impl ReaderStatus {
             Self::Unavailable | Self::NoReader => 0,
             Self::NoCard => 1,
             Self::Unreadable => 2,
-            Self::Ready(ReadyCard::Other) => 3,
-            Self::Ready(ReadyCard::Dnie) => 4,
-            Self::Reading => 5,
+            Self::LegacyDnie => 3,
+            Self::BurnedDnie => 4,
+            Self::Ready(ReadyCard::Other) => 5,
+            Self::Ready(ReadyCard::Dnie) => 6,
+            Self::Reading => 7,
         }
     }
 }
@@ -78,8 +95,21 @@ pub fn status_of(readers: &[Reader], listing: Listing) -> ReaderStatus {
             Listing::InProgress => ReaderStatus::Reading,
             Listing::Done(Some(card)) => ReaderStatus::Ready(card),
             Listing::Done(None) => ReaderStatus::Unreadable,
+            Listing::Unsupported(UnsupportedDnie::Legacy) => ReaderStatus::LegacyDnie,
+            Listing::Unsupported(UnsupportedDnie::Burned) => ReaderStatus::BurnedDnie,
         }
     }))
+}
+
+/// Cómo acaba el listado: una tarjeta con certificados gana a un DNIe que rdnie no lee.
+pub fn listing_after(
+    ready: Option<ReadyCard>,
+    unsupported: impl FnOnce() -> Option<UnsupportedDnie>,
+) -> Listing {
+    match ready {
+        Some(card) => Listing::Done(Some(card)),
+        None => unsupported().map_or(Listing::Done(None), Listing::Unsupported),
+    }
 }
 
 /// La tarjeta que enseñan los certificados leídos de los almacenes de tarjeta; sin ninguno, ninguna.

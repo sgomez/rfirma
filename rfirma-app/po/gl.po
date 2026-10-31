@@ -529,6 +529,12 @@ msgstr "Tarxeta lista"
 msgid "panel.certificate.reader.unreadable"
 msgstr "rFirma non pode ler a tarxeta do lector"
 
+msgid "panel.certificate.reader.legacyDnie"
+msgstr "rFirma non asina co DNIe 1.0 nin co 2.0. Renova o DNIe."
+
+msgid "panel.certificate.reader.burnedDnie"
+msgstr "O chip do DNIe non funciona. Renova o DNIe."
+
 msgid "panel.certificate.reader.unreadableHelp.windows"
 msgstr ""
 "Se Windows non a recoñece, o software da tarxeta chega por Windows Update ao "
