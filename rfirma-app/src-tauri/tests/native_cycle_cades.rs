@@ -4,12 +4,10 @@
 mod support;
 
 mod full_cycle {
-    use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
+    use rfirma_lib::identity::domain::algorithm::{Digest, SignatureAlgorithm};
     use rfirma_lib::signing::application::cycle;
     use rfirma_lib::signing::domain::bridge::{ExpandRequest, Format, SignatureOperation};
     use rfirma_lib::site::domain::protocol::pairs_of;
-    use rfirma_lib::site::domain::protocol::AskedAlgorithm;
-    use rfirma_lib::site::ports::composed_for;
 
     use super::support::{
         a_cycle_of, a_cycle_signed_by, an_installed_certificate, bridge, cades_cycle,
@@ -100,8 +98,9 @@ mod full_cycle {
     #[test]
     #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
     fn a_cades_signature_with_the_sha512_the_site_asked_for_validates() {
-        let algorithm = composed_for(AskedAlgorithm::Sha512, signing_certificate().key_kind())
-            .expect("el certificado de prueba es RSA o de curva eliptica");
+        let algorithm =
+            SignatureAlgorithm::composed(Digest::Sha512, signing_certificate().key_kind())
+                .expect("el certificado de prueba es RSA o de curva eliptica");
         assert_eq!(algorithm, SignatureAlgorithm::Sha512Rsa);
 
         let signed = a_cycle_of(
