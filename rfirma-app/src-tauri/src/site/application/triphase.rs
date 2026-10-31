@@ -2,9 +2,8 @@
 
 use std::collections::BTreeMap;
 
-use crate::identity::domain::algorithm::KeyKind;
+use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::TokenCertificate;
-use crate::identity::domain::error::{Situation as TokenSituation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::properties::to_java_properties;
 use crate::site::application::session::SiteRefusal;
@@ -15,7 +14,7 @@ use crate::site::domain::triphase_server::{
     params_for_the_server, postsign_form, postsigned, presign_form, presigned, server_url_of,
     ServerCall, ServerFormat, Situation, TriphaseServerError,
 };
-use crate::site::ports::{Neighbours, TriphaseServer};
+use crate::site::ports::{digest_of, Neighbours, TriphaseServer};
 
 /// Quién interviene en la firma: el servidor de la sede, el token y el secreto ya abierto.
 pub struct ServerRun<'a> {
@@ -105,17 +104,9 @@ fn every_pre_signed(
 }
 
 fn composed_name(asked: AskedAlgorithm, key: Option<KeyKind>) -> Result<String, SiteRefusal> {
-    let with = match key {
-        Some(KeyKind::Ec) => "ECDSA",
-        Some(KeyKind::Rsa) => "RSA",
-        None => {
-            return Err(SiteRefusal::Token(TokenError::new(
-                TokenSituation::KeyKindUnsupported,
-                "la clave del certificado no es RSA ni de curva eliptica",
-            )))
-        }
-    };
-    Ok(format!("{}with{with}", asked.name()))
+    SignatureAlgorithm::composed(digest_of(asked), key)
+        .map(|algorithm| algorithm.name().to_owned())
+        .map_err(SiteRefusal::Token)
 }
 
 #[cfg(test)]
