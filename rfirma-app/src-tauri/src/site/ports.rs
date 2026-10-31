@@ -5,9 +5,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::crossing::Failure;
-use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
+use crate::identity::domain::algorithm::Digest;
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
-use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{
@@ -426,6 +426,16 @@ pub trait Neighbours {
     ) -> Result<Vec<u8>, SigningRefusal>;
 }
 
+/// La huella de identidad que corresponde a la que pide la sede.
+pub fn digest_of(asked: AskedAlgorithm) -> Digest {
+    match asked {
+        AskedAlgorithm::Sha1 => Digest::Sha1,
+        AskedAlgorithm::Sha256 => Digest::Sha256,
+        AskedAlgorithm::Sha384 => Digest::Sha384,
+        AskedAlgorithm::Sha512 => Digest::Sha512,
+    }
+}
+
 /// Lo que la sede y la ventana reciben de un fallo, tal como lo decidió quien lo tradujo.
 pub fn signing_refusal_of((told, code): (Failure, SafCode)) -> SigningRefusal {
     SigningRefusal {
@@ -434,29 +444,6 @@ pub fn signing_refusal_of((told, code): (Failure, SafCode)) -> SigningRefusal {
         detail: told.detail,
         attempts_left: told.attempts_left,
     }
-}
-
-/// La huella que pide la sede, compuesta con la clase de clave del certificado (`composeSignatureAlgorithmName`, 1.9.2).
-pub fn composed_for(
-    asked: AskedAlgorithm,
-    key: Option<KeyKind>,
-) -> Result<SignatureAlgorithm, TokenError> {
-    let key = key.ok_or_else(|| {
-        TokenError::new(
-            Situation::KeyKindUnsupported,
-            "la clave del certificado no es RSA ni de curva eliptica",
-        )
-    })?;
-    Ok(match (asked, key) {
-        (AskedAlgorithm::Sha1, KeyKind::Rsa) => SignatureAlgorithm::Sha1Rsa,
-        (AskedAlgorithm::Sha1, KeyKind::Ec) => SignatureAlgorithm::Sha1Ecdsa,
-        (AskedAlgorithm::Sha256, KeyKind::Rsa) => SignatureAlgorithm::Sha256Rsa,
-        (AskedAlgorithm::Sha384, KeyKind::Rsa) => SignatureAlgorithm::Sha384Rsa,
-        (AskedAlgorithm::Sha512, KeyKind::Rsa) => SignatureAlgorithm::Sha512Rsa,
-        (AskedAlgorithm::Sha256, KeyKind::Ec) => SignatureAlgorithm::Sha256Ecdsa,
-        (AskedAlgorithm::Sha384, KeyKind::Ec) => SignatureAlgorithm::Sha384Ecdsa,
-        (AskedAlgorithm::Sha512, KeyKind::Ec) => SignatureAlgorithm::Sha512Ecdsa,
-    })
 }
 
 #[cfg(test)]

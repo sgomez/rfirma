@@ -35,6 +35,7 @@ use crate::site::domain::protocol::{
     SiteOperation,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
+use crate::site::ports::digest_of;
 use crate::site::ports::signing_refusal_of;
 use crate::site::ports::{Neighbours, SiteSigningRequest};
 
@@ -357,8 +358,8 @@ impl Neighbours for TheNeighbours<'_> {
             request.certificate,
             session::DeclaredByTheSite {
                 format: request.format,
-                algorithm: crate::site::ports::composed_for(
-                    request.algorithm,
+                algorithm: crate::identity::domain::algorithm::SignatureAlgorithm::composed(
+                    digest_of(request.algorithm),
                     request.certificate.key_kind(),
                 )
                 .expect("el certificado de prueba es RSA o de curva eliptica"),

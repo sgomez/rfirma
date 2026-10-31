@@ -21,6 +21,7 @@ use crate::documents::domain::document::Document;
 use crate::identity::adapters::failures::situation_name;
 use crate::identity::adapters::pkcs11::stores::discovered_module_named;
 use crate::identity::adapters::{desktop_stores, desktop_token};
+use crate::identity::domain::algorithm::{Digest, SignatureAlgorithm};
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::prompted_holder_of;
@@ -34,8 +35,7 @@ use crate::signing::domain::{to_java_properties, Language};
 use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
 use crate::site::domain::protocol::pairs_of;
-use crate::site::domain::protocol::AskedAlgorithm;
-use crate::site::ports::{composed_for, PolicyEngine};
+use crate::site::ports::PolicyEngine;
 use crate::Roots;
 
 mod descriptor;
@@ -173,12 +173,12 @@ impl RootsSigner<'_> {
     }
 }
 
-fn asked(algorithm: Algorithm) -> AskedAlgorithm {
+fn digest(algorithm: Algorithm) -> Digest {
     match algorithm {
-        Algorithm::Sha512 => AskedAlgorithm::Sha512,
-        Algorithm::Sha384 => AskedAlgorithm::Sha384,
-        Algorithm::Sha256 => AskedAlgorithm::Sha256,
-        Algorithm::Sha1 => AskedAlgorithm::Sha1,
+        Algorithm::Sha512 => Digest::Sha512,
+        Algorithm::Sha384 => Digest::Sha384,
+        Algorithm::Sha256 => Digest::Sha256,
+        Algorithm::Sha1 => Digest::Sha1,
     }
 }
 
@@ -275,8 +275,9 @@ impl RootsSigner<'_> {
         request: &CommandLineSigning<'_>,
         signer: &dyn Signer,
     ) -> Result<StoreSecret, String> {
-        let algorithm = composed_for(asked(request.algorithm), request.certificate.key_kind())
-            .map_err(|error| error.detail().to_owned())?;
+        let algorithm =
+            SignatureAlgorithm::composed(digest(request.algorithm), request.certificate.key_kind())
+                .map_err(|error| error.detail().to_owned())?;
         let parameters = self.expanded(request).map_err(|error| error.to_string())?;
         self.signing
             .begin_for_the_site(

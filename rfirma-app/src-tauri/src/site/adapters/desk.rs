@@ -6,6 +6,7 @@ use crate::crossing::Failure;
 use crate::documents::adapters::failures::code_of_document;
 use crate::documents::DocumentsRoot;
 use crate::identity::adapters::failures::code_of_token;
+use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
@@ -17,7 +18,7 @@ use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
 use crate::site::domain::protocol::{AlgorithmReading, AskedAlgorithm};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
-use crate::site::ports::{composed_for, signing_refusal_of, Neighbours, SiteSigningRequest};
+use crate::site::ports::{digest_of, signing_refusal_of, Neighbours, SiteSigningRequest};
 
 /// Las tres raíces vecinas, vistas por el trámite a través de su único puerto.
 #[derive(Clone, Copy)]
@@ -70,8 +71,11 @@ impl Neighbours for Neighbourhood<'_> {
             .map_err(|error| {
                 signing_refusal_of((Failure::from(error.clone()), code_of_document(&error)))
             })?;
-        let algorithm = composed_for(request.algorithm, request.certificate.key_kind())
-            .map_err(refusal_of_token)?;
+        let algorithm = SignatureAlgorithm::composed(
+            digest_of(request.algorithm),
+            request.certificate.key_kind(),
+        )
+        .map_err(refusal_of_token)?;
         self.signing
             .begin_for_the_site(
                 request.document,
@@ -163,7 +167,7 @@ pub fn signed_for_the_remote_batch(
 ) -> Result<Vec<u8>, SigningRefusal> {
     let asked = digest_named(algorithm)
         .ok_or_else(|| no_mechanism_for(algorithm))
-        .and_then(|asked| composed_for(asked, certificate.key_kind()))
+        .and_then(|asked| SignatureAlgorithm::composed(digest_of(asked), certificate.key_kind()))
         .map_err(refusal_of_token)?;
     signer
         .sign_with_secret(certificate.reference(), secret, asked, data)

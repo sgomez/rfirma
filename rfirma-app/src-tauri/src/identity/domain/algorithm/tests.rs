@@ -1,6 +1,7 @@
 use cryptoki::mechanism::MechanismType;
 
-use super::{KeyKind, SignatureAlgorithm};
+use super::{Digest, KeyKind, SignatureAlgorithm};
+use crate::identity::domain::error::Situation;
 
 /// Nombre del original, mecanismo `cryptoki` y clase de clave, para todos los que acepta.
 const TABLE: [(&str, MechanismType, KeyKind); 11] = [
@@ -90,4 +91,47 @@ fn a_name_in_any_case_and_with_spaces_around_is_the_same_algorithm() {
 fn a_name_the_original_does_not_accept_is_no_algorithm() {
     assert_eq!(SignatureAlgorithm::from_name("RIPEMD160withRSA"), None);
     assert_eq!(SignatureAlgorithm::from_name("SHA256"), None);
+}
+
+#[test]
+fn a_digest_is_composed_with_the_key_class_of_the_certificate() {
+    for (digest, rsa, ec) in [
+        (
+            Digest::Sha1,
+            SignatureAlgorithm::Sha1Rsa,
+            SignatureAlgorithm::Sha1Ecdsa,
+        ),
+        (
+            Digest::Sha256,
+            SignatureAlgorithm::Sha256Rsa,
+            SignatureAlgorithm::Sha256Ecdsa,
+        ),
+        (
+            Digest::Sha384,
+            SignatureAlgorithm::Sha384Rsa,
+            SignatureAlgorithm::Sha384Ecdsa,
+        ),
+        (
+            Digest::Sha512,
+            SignatureAlgorithm::Sha512Rsa,
+            SignatureAlgorithm::Sha512Ecdsa,
+        ),
+    ] {
+        assert_eq!(
+            SignatureAlgorithm::composed(digest, Some(KeyKind::Rsa)),
+            Ok(rsa)
+        );
+        assert_eq!(
+            SignatureAlgorithm::composed(digest, Some(KeyKind::Ec)),
+            Ok(ec)
+        );
+    }
+}
+
+#[test]
+fn a_certificate_without_key_class_composes_no_algorithm() {
+    let error = SignatureAlgorithm::composed(Digest::Sha256, None)
+        .expect_err("sin clase de clave no hay algoritmo");
+
+    assert_eq!(error.situation(), Situation::KeyKindUnsupported);
 }

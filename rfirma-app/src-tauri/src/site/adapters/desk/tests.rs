@@ -2,7 +2,7 @@ use std::sync::Mutex;
 
 use super::*;
 use crate::identity::application::tests::{a_certificate, a_usable_certificate};
-use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
+use crate::identity::domain::algorithm::{Digest, KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::site::domain::protocol::SafCode;
@@ -154,14 +154,20 @@ fn the_digest_the_site_asks_for_is_composed_with_the_key_of_the_certificate() {
             SignatureAlgorithm::Sha512Ecdsa,
         ),
     ] {
-        assert_eq!(composed_for(asked, Some(KeyKind::Rsa)), Ok(rsa));
-        assert_eq!(composed_for(asked, Some(KeyKind::Ec)), Ok(ec));
+        assert_eq!(
+            SignatureAlgorithm::composed(digest_of(asked), Some(KeyKind::Rsa)),
+            Ok(rsa)
+        );
+        assert_eq!(
+            SignatureAlgorithm::composed(digest_of(asked), Some(KeyKind::Ec)),
+            Ok(ec)
+        );
     }
 }
 
 #[test]
 fn a_key_neither_rsa_nor_ec_is_refused_as_an_incompatible_key_type() {
-    let refusal = composed_for(AskedAlgorithm::Sha256, None)
+    let refusal = SignatureAlgorithm::composed(Digest::Sha256, None)
         .map_err(refusal_of_token)
         .expect_err("una clave desconocida no se compone con RSA");
 
@@ -217,19 +223,19 @@ fn a_token_that_cannot_sign_comes_back_with_its_code_and_its_situation() {
 fn the_suffix_declared_by_the_site_is_ignored_and_the_certificate_key_class_rules() {
     let asked = AskedAlgorithm::named("SHA256withRSA").expect("es SHA256");
     assert_eq!(
-        composed_for(asked, Some(KeyKind::Ec)),
+        SignatureAlgorithm::composed(digest_of(asked), Some(KeyKind::Ec)),
         Ok(SignatureAlgorithm::Sha256Ecdsa)
     );
 
     let asked_ecdsa = AskedAlgorithm::named("SHA384withECDSA").expect("es SHA384");
     assert_eq!(
-        composed_for(asked_ecdsa, Some(KeyKind::Rsa)),
+        SignatureAlgorithm::composed(digest_of(asked_ecdsa), Some(KeyKind::Rsa)),
         Ok(SignatureAlgorithm::Sha384Rsa)
     );
 
     let asked_hyphen = AskedAlgorithm::named("SHA-512withRSA").expect("es SHA512");
     assert_eq!(
-        composed_for(asked_hyphen, Some(KeyKind::Ec)),
+        SignatureAlgorithm::composed(digest_of(asked_hyphen), Some(KeyKind::Ec)),
         Ok(SignatureAlgorithm::Sha512Ecdsa)
     );
 }
