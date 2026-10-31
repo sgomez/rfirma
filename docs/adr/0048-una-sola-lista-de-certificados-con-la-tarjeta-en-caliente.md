@@ -101,9 +101,11 @@ a Java (ADR-0001).
 **El DNIe 1.0 y 2.0 no se soportan.** JMulticard los lee y rdnie no. Dejaron de
 expedirse en 2015, con la llegada del 3.0, y un DNIe caduca como mucho a los
 diez años: solo siguen vigentes los permanentes, cuyos certificados caducan de
-todos modos. Tampoco hay tarjeta con la que probarlos. Si OpenSC lee uno, entra
-por PKCS#11 como cualquier otra tarjeta, sin garantía de rFirma. **Esta parte se
-revisa** cuando alguien con un DNIe 1.0 o 2.0 pueda probarlo: rdnie le añadiría
+todos modos. Tampoco hay tarjeta con la que probarlos. rdnie reconoce el **DNIe
+antiguo** y el **averiado**, el que tiene el chip sin memoria, y rFirma reclama su
+lector como el del 3.0: ningún módulo PKCS#11 abre su ranura, y el lector dice
+qué tarjeta es y que hay que renovarla. Así ningún DNIe pasa por PKCS#11 en Linux
+ni en macOS. **Esta parte se revisa** cuando alguien con un DNIe 1.0 o 2.0 pueda probarlo: rdnie le añadiría
 soporte experimental, y rFirma lo reclamaría como al 3.0 y al 4.0.
 
 Quedan dos diferencias con AutoFirma. En Windows, el DNIe sigue entrando por su
