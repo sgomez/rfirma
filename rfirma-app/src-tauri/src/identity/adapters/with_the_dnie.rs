@@ -9,6 +9,7 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::readers::UnsupportedDnie;
 use crate::identity::domain::secret::{PinWarning, StoreSecret};
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::Token;
@@ -147,6 +148,10 @@ impl<T: Token> Token for WithTheDnie<T> {
             return Ok(Vec::new());
         }
         self.platform.every_certificate_skipping(store, &skipped)
+    }
+
+    fn unsupported_dnie(&self) -> Option<UnsupportedDnie> {
+        self.dnie.unsupported_dnie()
     }
 
     fn holders_without_reading(&self, store: &Store) -> Option<Result<usize, TokenError>> {

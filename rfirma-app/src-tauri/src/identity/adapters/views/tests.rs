@@ -225,6 +225,8 @@ fn the_reader_news_crosses_with_its_status_as_a_kind_and_the_list_only_when_it_c
         (ReaderStatus::NoCard, "noCard"),
         (ReaderStatus::Ready(ReadyCard::Other), "cardReady"),
         (ReaderStatus::Unreadable, "unreadable"),
+        (ReaderStatus::LegacyDnie, "legacyDnie"),
+        (ReaderStatus::BurnedDnie, "burnedDnie"),
     ] {
         assert!(
             news(status, None).contains(&format!(r#"{{"kind":"{kind}"}}"#)),

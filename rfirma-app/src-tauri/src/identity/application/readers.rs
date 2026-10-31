@@ -13,7 +13,7 @@ use crate::identity::application::certificates::{
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::readers::{
-    ready_card_among, status_of, Listing, Reader, ReaderStatus, ReadyCard,
+    listing_after, ready_card_among, status_of, Listing, Reader, ReaderStatus,
 };
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{CertificateMemory, ReaderWatch, Relisting, Token};
@@ -239,7 +239,7 @@ impl CardListing<'_> {
 }
 
 impl Relisting for CardListing<'_> {
-    fn relisted(&self) -> (Option<Vec<ListedCertificate>>, Option<ReadyCard>) {
+    fn relisted(&self) -> (Option<Vec<ListedCertificate>>, Listing) {
         let (cards, others): (Vec<Store>, Vec<Store>) = self
             .stores
             .iter()
@@ -247,6 +247,7 @@ impl Relisting for CardListing<'_> {
             .partition(|store| shows_cards(store, self.installed_dir));
         let on_the_cards = listed_in(self.token, &cards, self.last);
         let ready = ready_card_among(&only_on_a_card(&on_the_cards, self.installed_dir));
+        let listing = listing_after(ready, || self.token.unsupported_dnie());
         let mut found = self
             .last
             .other_than_cards(self.installed_dir)
@@ -260,7 +261,7 @@ impl Relisting for CardListing<'_> {
             self.installed_copies,
             self.memory,
         );
-        (Some(rows), ready)
+        (Some(rows), listing)
     }
 }
 
@@ -271,13 +272,13 @@ pub fn follow_the_readers(
     announce: &dyn Fn(ReaderNews),
 ) {
     let mut with_a_card: Option<Vec<String>> = None;
-    let mut ready = None;
+    let mut finished = Listing::Done(None);
     while let Some(readers) = watch.next_change() {
         let now = names_with_a_card(&readers);
         let first = with_a_card.is_none();
         if with_a_card.replace(now.clone()).as_ref() == Some(&now) || (first && now.is_empty()) {
             announce(ReaderNews {
-                reader: status_of(&readers, Listing::Done(ready)),
+                reader: status_of(&readers, finished),
                 certificates: None,
             });
             continue;
@@ -289,9 +290,9 @@ pub fn follow_the_readers(
             });
         }
         let (rows, found) = listing.relisted();
-        ready = found;
+        finished = found;
         announce(ReaderNews {
-            reader: status_of(&readers, Listing::Done(ready)),
+            reader: status_of(&readers, finished),
             certificates: rows,
         });
     }

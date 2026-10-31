@@ -8,6 +8,7 @@ use super::super::WithTheDnie;
 use crate::identity::adapters::dnie::{dnie_store, CardOpener, DnieToken};
 use crate::identity::adapters::pkcs11::RealToken;
 use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::readers::UnsupportedDnie;
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 
@@ -40,6 +41,34 @@ impl CardOpener for InTheReader {
         self.with_a_card
             .map(|readers| readers.iter().map(|&reader| reader.to_owned()).collect())
     }
+}
+
+/// Un DNIe que rdnie reconoce en el lector `reader` y no abre: `error` es lo que dice al abrirlo.
+struct NotReadable {
+    reader: &'static str,
+    error: fn() -> rdnie::Error,
+}
+
+impl CardOpener for NotReadable {
+    type Card = EmulatedDnie;
+
+    fn open(&self) -> Result<Session<EmulatedDnie>, rdnie::Error> {
+        Err((self.error)())
+    }
+
+    fn claimed_reader(&self) -> Option<String> {
+        Some(self.reader.to_owned())
+    }
+}
+
+fn with_a_dnie_that_is_not_readable(error: fn() -> rdnie::Error) -> WithTheDnie<RealToken> {
+    WithTheDnie::new(
+        RealToken,
+        DnieToken::new(NotReadable {
+            reader: DNIE_READER,
+            error,
+        }),
+    )
 }
 
 fn with_the_dnie_in(reader: &'static str) -> WithTheDnie<RealToken> {
@@ -221,4 +250,51 @@ fn opensc_is_opened_when_the_cards_in_the_readers_are_unknown() {
         .expect("el almacen deberia responder");
 
     assert_eq!(card.calls_to("C_Initialize").len(), 1, "{:?}", card.calls());
+}
+
+const NOT_READABLE: [(fn() -> rdnie::Error, UnsupportedDnie); 2] = [
+    (|| rdnie::Error::LegacyDnie, UnsupportedDnie::Legacy),
+    (|| rdnie::Error::BurnedDnie, UnsupportedDnie::Burned),
+];
+
+#[test]
+fn the_slot_of_a_dnie_rdnie_does_not_read_is_never_opened() {
+    for (error, _) in NOT_READABLE {
+        let card = a_card_in(DNIE_READER);
+        let token = with_a_dnie_that_is_not_readable(error);
+        let store = Store::module(card.module());
+
+        let listed = token.list(&store).expect("el almacen deberia responder");
+
+        assert_eq!(labels_of(&listed), Vec::<&str>::new());
+        assert_eq!(card.calls_to("C_OpenSession"), Vec::<String>::new());
+    }
+}
+
+#[test]
+fn a_card_in_another_reader_is_listed_beside_a_dnie_rdnie_does_not_read() {
+    for (error, _) in NOT_READABLE {
+        let card = a_card_in("Otro lector 01 00");
+        let token = with_a_dnie_that_is_not_readable(error);
+
+        let listed = token
+            .list(&Store::module(card.module()))
+            .expect("la tarjeta deberia listarse");
+
+        assert!(labels_of(&listed).contains(&SIGNING_CERTIFICATE));
+    }
+}
+
+#[test]
+fn the_token_says_which_dnie_it_does_not_read() {
+    for (error, expected) in NOT_READABLE {
+        let token = with_a_dnie_that_is_not_readable(error);
+
+        assert_eq!(token.unsupported_dnie(), Some(expected));
+    }
+}
+
+#[test]
+fn a_dnie_rdnie_reads_is_not_unsupported() {
+    assert_eq!(with_the_dnie_in(DNIE_READER).unsupported_dnie(), None);
 }

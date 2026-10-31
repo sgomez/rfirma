@@ -180,6 +180,8 @@ crossing! {
         Reading,
         DnieReady,
         CardReady,
+        LegacyDnie,
+        BurnedDnie,
         Unreadable,
     }
 }
@@ -193,6 +195,8 @@ impl From<ReaderStatus> for ReaderStatusView {
             ReaderStatus::Reading => Self::Reading,
             ReaderStatus::Ready(ReadyCard::Dnie) => Self::DnieReady,
             ReaderStatus::Ready(ReadyCard::Other) => Self::CardReady,
+            ReaderStatus::LegacyDnie => Self::LegacyDnie,
+            ReaderStatus::BurnedDnie => Self::BurnedDnie,
             ReaderStatus::Unreadable => Self::Unreadable,
         }
     }

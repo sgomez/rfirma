@@ -531,6 +531,12 @@ msgstr "Targeta a punt"
 msgid "panel.certificate.reader.unreadable"
 msgstr "L'rFirma no pot llegir la targeta del lector"
 
+msgid "panel.certificate.reader.legacyDnie"
+msgstr "L'rFirma no signa amb el DNIe 1.0 ni amb el 2.0. Renova el DNIe."
+
+msgid "panel.certificate.reader.burnedDnie"
+msgstr "El xip del DNIe no funciona. Renova el DNIe."
+
 msgid "panel.certificate.reader.unreadableHelp.windows"
 msgstr ""
 "Si Windows no la reconeix, el programari de la targeta arriba per Windows "
