@@ -1,6 +1,6 @@
 //! El estado de un proceso que ha cargado el módulo: sesiones, login, búsquedas y firmas en curso.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use cryptoki_sys::{
@@ -12,7 +12,7 @@ use cryptoki_sys::{
     CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
 };
 
-use crate::card::{self, Profile};
+use crate::card;
 use crate::material::{self, Failure, Material};
 use crate::objects::{self, key_role, KeyRole, Lookup, Object};
 use crate::pin;
@@ -33,12 +33,8 @@ pub(crate) struct Module {
     mechanisms: &'static [CK_MECHANISM_TYPE],
     login_required: bool,
     material: Material,
-    profile: Profile,
     objects: Vec<Object>,
     logged_in: bool,
-    pin_signals: CK_FLAGS,
-    interference_pending: bool,
-    stale_sessions: BTreeSet<CK_SESSION_HANDLE>,
     sessions: BTreeMap<CK_SESSION_HANDLE, Session>,
     next_session: CK_SESSION_HANDLE,
 }
@@ -46,29 +42,21 @@ pub(crate) struct Module {
 impl Module {
     pub(crate) fn load(dir: PathBuf) -> Result<Self, Failure> {
         let material = material::load_or_generate(&dir)?;
-        let profile = card::read_profile(&dir);
-        let objects = objects::objects_of(&material, profile)?;
+        let objects = objects::objects_of(&material, card::login_required(&dir))?;
         Ok(Self {
-            interference_pending: card::interference_configured(&dir),
             mechanisms: signing::offered(card::raw_only(&dir)),
             login_required: card::login_required(&dir),
             dir,
             material,
-            profile,
             objects,
             logged_in: false,
-            pin_signals: 0,
-            stale_sessions: BTreeSet::new(),
             sessions: BTreeMap::new(),
             next_session: 1,
         })
     }
 
     pub(crate) fn pin_signals(&self) -> CK_FLAGS {
-        match self.profile {
-            Profile::Dnie => self.pin_signals,
-            Profile::Signals => pin::standing_signals(card::read_tries_left(&self.dir)),
-        }
+        pin::standing_signals(card::read_tries_left(&self.dir))
     }
 
     pub(crate) fn session_count(&self) -> usize {
@@ -137,18 +125,15 @@ impl Module {
             return Err(CKR_FUNCTION_NOT_SUPPORTED);
         }
         match user {
-            CKU_USER => self.login_user(handle, pin),
+            CKU_USER => self.login_user(pin),
             CKU_CONTEXT_SPECIFIC => self.login_for_signature(handle, pin),
             _ => Err(CKR_USER_TYPE_INVALID),
         }
     }
 
-    fn login_user(&mut self, handle: CK_SESSION_HANDLE, pin: Option<&[u8]>) -> Result<(), CK_RV> {
+    fn login_user(&mut self, pin: Option<&[u8]>) -> Result<(), CK_RV> {
         if self.logged_in {
             return Err(CKR_USER_ALREADY_LOGGED_IN);
-        }
-        if self.interfered_with(handle) {
-            return Err(CKR_USER_NOT_LOGGED_IN);
         }
         self.submit_pin(pin)?;
         self.logged_in = true;
@@ -171,20 +156,8 @@ impl Module {
         Ok(())
     }
 
-    /// Otro programa usa la tarjeta una vez: las sesiones abiertas hasta entonces pierden su canal.
-    fn interfered_with(&mut self, handle: CK_SESSION_HANDLE) -> bool {
-        if std::mem::take(&mut self.interference_pending) {
-            self.stale_sessions.extend(self.sessions.keys().copied());
-        }
-        self.stale_sessions.remove(&handle)
-    }
-
     fn submit_pin(&mut self, pin: Option<&[u8]>) -> Result<(), CK_RV> {
-        let attempt = pin::verify(&self.dir, pin);
-        if let Some(signals) = attempt.signals {
-            self.pin_signals = signals;
-        }
-        match attempt.rv {
+        match pin::verify(&self.dir, pin) {
             CKR_OK => Ok(()),
             rv => Err(rv),
         }
@@ -338,7 +311,7 @@ impl Module {
     }
 
     fn requires_login_per_signature(&self, role: KeyRole) -> bool {
-        self.profile == Profile::Signals && role == KeyRole::Signing
+        self.login_required && role == KeyRole::Signing
     }
 
     fn signing_operation(

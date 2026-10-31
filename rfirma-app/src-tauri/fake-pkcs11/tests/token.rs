@@ -168,9 +168,17 @@ fn the_raw_mechanism_signs_a_digest_info() {
     ]
     .concat();
 
-    let signature = session
-        .sign(&Mechanism::RsaPkcs, signing_key(&session), &digest_info)
+    session
+        .sign_init(&Mechanism::RsaPkcs, signing_key(&session))
         .unwrap();
+    session
+        .login(
+            UserType::ContextSpecific,
+            Some(&AuthPin::new(FakeCard::PIN.into())),
+        )
+        .unwrap();
+    session.sign_update(&digest_info).unwrap();
+    let signature = session.sign_final().unwrap();
 
     let public_key = signing_certificate(&session).public_key().unwrap();
     let mut verifier = Verifier::new(MessageDigest::sha256(), &public_key).unwrap();

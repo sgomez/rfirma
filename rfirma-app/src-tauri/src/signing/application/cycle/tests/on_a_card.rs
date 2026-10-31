@@ -53,7 +53,12 @@ fn a_countersignature_on_a_card_logs_in_once_for_every_block() {
         .sign_on_token(&RealToken, &ProtectedSecret::from_str(FakeCard::PIN))
         .expect("la tarjeta firma cada bloque");
 
-    assert_eq!(card.calls_to("C_Login").len(), 1, "{:?}", card.calls());
+    assert_eq!(
+        card.calls_to("C_Login CKU_USER").len(),
+        1,
+        "{:?}",
+        card.calls()
+    );
 }
 
 #[test]
@@ -83,5 +88,10 @@ fn the_cycles_of_one_batch_on_a_card_share_one_login() {
         }
     });
 
-    assert_eq!(card.calls_to("C_Login").len(), 1, "{:?}", card.calls());
+    assert_eq!(
+        card.calls_to("C_Login CKU_USER").len(),
+        1,
+        "{:?}",
+        card.calls()
+    );
 }

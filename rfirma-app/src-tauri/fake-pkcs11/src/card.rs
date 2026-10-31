@@ -10,8 +10,6 @@ pub(crate) const PIN: &str = "12345678";
 pub(crate) const MAX_TRIES: u8 = 3;
 pub(crate) const TRIES_LEFT: &str = "tries-left";
 pub(crate) const CALL_LOG: &str = "calls.log";
-pub(crate) const PROFILE: &str = "profile";
-pub(crate) const INTERFERENCE: &str = "interference";
 pub(crate) const REMOVED_FROM: &str = "removed-from";
 pub(crate) const HANGS_ON_INITIALIZE: &str = "hangs-on-initialize";
 pub(crate) const READER: &str = "reader";
@@ -19,24 +17,6 @@ pub(crate) const RAW_ONLY: &str = "raw-only";
 pub(crate) const WITHOUT_LOGIN: &str = "without-login";
 
 const DEFAULT_READER: &str = "Lector falso de DNIe";
-
-/// Qué tarjeta imita el módulo: el DNIe medido, o una que da las tres señales del PIN y exige el login por firma.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub(crate) enum Profile {
-    Dnie,
-    Signals,
-}
-
-impl Profile {
-    pub(crate) const SIGNALS_NAME: &'static str = "signals";
-}
-
-pub(crate) fn read_profile(dir: &Path) -> Profile {
-    match fs::read_to_string(dir.join(PROFILE)) {
-        Ok(name) if name.trim() == Profile::SIGNALS_NAME => Profile::Signals,
-        _ => Profile::Dnie,
-    }
-}
 
 /// El nombre del lector donde está la tarjeta.
 pub(crate) fn reader_name(dir: &Path) -> String {
@@ -53,10 +33,6 @@ pub(crate) fn login_required(dir: &Path) -> bool {
 
 pub(crate) fn raw_only(dir: &Path) -> bool {
     dir.join(RAW_ONLY).is_file()
-}
-
-pub(crate) fn interference_configured(dir: &Path) -> bool {
-    dir.join(INTERFERENCE).is_file()
 }
 
 /// La llamada, contada desde 1, a partir de la cual la tarjeta ya no está.

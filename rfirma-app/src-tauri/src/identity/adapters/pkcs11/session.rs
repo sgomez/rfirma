@@ -89,7 +89,7 @@ pub(super) fn pin_warning_of(context: &Pkcs11, slot: Slot) -> Result<PinWarning,
     ))
 }
 
-/// Abre una sesión con el usuario dentro; si otro programa se interpuso, repite una sola vez en otra (ADR-0047).
+/// Abre una sesión con el usuario dentro (ADR-0047).
 pub(super) fn logged_in_session(
     context: &Pkcs11,
     slot: Slot,
@@ -97,18 +97,8 @@ pub(super) fn logged_in_session(
 ) -> Result<Session, TokenError> {
     let pin = AuthPin::new(pin.into());
     let session = context.open_ro_session(slot)?;
-    match session.login(UserType::User, Some(&pin)) {
-        Err(Error::Pkcs11(RvError::UserNotLoggedIn, _)) => {
-            drop(session);
-            let again = context.open_ro_session(slot)?;
-            accepted_or_already_in(again.login(UserType::User, Some(&pin)), context, slot)?;
-            Ok(again)
-        }
-        first => {
-            accepted_or_already_in(first, context, slot)?;
-            Ok(session)
-        }
-    }
+    accepted_or_already_in(session.login(UserType::User, Some(&pin)), context, slot)?;
+    Ok(session)
 }
 
 fn accepted_or_already_in(
