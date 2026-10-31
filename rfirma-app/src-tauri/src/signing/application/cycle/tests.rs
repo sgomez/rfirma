@@ -1,4 +1,4 @@
-use super::{presign, SigningRequest, ALGORITHM, NOTHING_FROM_A_SITE};
+use super::{presign, SigningRequest, NOTHING_FROM_A_SITE};
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::collections::BTreeSet;
@@ -194,7 +194,7 @@ fn a_request<'a>(
 ) -> SigningRequest<'a> {
     SigningRequest {
         format,
-        algorithm: ALGORITHM,
+        algorithm: SignatureAlgorithm::Sha256Rsa,
         operation: SignatureOperation::Sign,
         document,
         chain,
@@ -318,9 +318,9 @@ fn a_pades_cycle_sends_the_bridge_the_very_same_call_as_before_the_format() {
 
 #[test]
 fn the_algorithm_matches_the_pkcs11_mechanism() {
-    assert_eq!(ALGORITHM.name(), "SHA256withRSA");
+    assert_eq!(SignatureAlgorithm::Sha256Rsa.name(), "SHA256withRSA");
     assert_eq!(
-        ALGORITHM.mechanism().mechanism_type(),
+        SignatureAlgorithm::Sha256Rsa.mechanism().mechanism_type(),
         cryptoki::mechanism::MechanismType::SHA256_RSA_PKCS
     );
 }
@@ -338,7 +338,7 @@ fn a_countersignature_asks_the_secret_once_and_signs_every_block_it_got() {
         &bridge,
         SigningRequest {
             format: Format::Cades,
-            algorithm: ALGORITHM,
+            algorithm: SignatureAlgorithm::Sha256Rsa,
             operation: SignatureOperation::Countersign,
             document,
             chain: std::slice::from_ref(&b"der".to_vec()),
@@ -379,7 +379,7 @@ fn a_cosignature_names_its_operation_at_the_border() {
         &bridge,
         SigningRequest {
             format: Format::Cades,
-            algorithm: ALGORITHM,
+            algorithm: SignatureAlgorithm::Sha256Rsa,
             operation: SignatureOperation::Cosign,
             document,
             chain: std::slice::from_ref(&b"der".to_vec()),

@@ -7,6 +7,7 @@ mod full_cycle {
     use std::path::{Path, PathBuf};
     use std::process::Command;
 
+    use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
     use rfirma_lib::signing::adapters::ffi::NativeBridge;
     use rfirma_lib::signing::adapters::orders::SigningOrder;
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
@@ -34,7 +35,7 @@ mod full_cycle {
             &bridge,
             SigningRequest {
                 format: Format::Pades,
-                algorithm: cycle::ALGORITHM,
+                algorithm: SignatureAlgorithm::Sha256Rsa,
                 operation: SignatureOperation::Sign,
                 document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
                 chain: &chain,
@@ -247,7 +248,7 @@ mod full_cycle {
             &bridge,
             SigningRequest {
                 format: Format::Pades,
-                algorithm: cycle::ALGORITHM,
+                algorithm: SignatureAlgorithm::Sha256Rsa,
                 operation: SignatureOperation::Sign,
                 document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
                 chain: &chain,

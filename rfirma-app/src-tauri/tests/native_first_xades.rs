@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use rfirma_lib::identity::adapters::pkcs11;
+use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::signing::adapters::ffi::{locate, NativeBridge};
@@ -51,7 +52,7 @@ fn sign_xades(bridge: &NativeBridge, certificate: &TokenCertificate) {
         bridge,
         SigningRequest {
             format,
-            algorithm: cycle::ALGORITHM,
+            algorithm: SignatureAlgorithm::Sha256Rsa,
             operation: SignatureOperation::Sign,
             document: AdmissibleDocument::check_for(format, A_REFERENCE_XML, Waivers::NONE)
                 .expect("un XML es firmable en XAdES"),

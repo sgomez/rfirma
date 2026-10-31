@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use super::{secret_for_the_batch, sign_on_token_with_prompter, signed_on_the_token};
 use crate::documents::domain::document::Document;
-use crate::identity::application::tests::a_certificate;
+use crate::identity::application::tests::{a_certificate, a_usable_certificate};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
@@ -257,7 +257,7 @@ impl Signer for ATokenThatSignsOnceThePinIsRight {
 
 #[test]
 fn the_token_secret_is_asked_over_the_main_window() {
-    let certificate = a_certificate("FIRMA", b"der");
+    let certificate = a_usable_certificate("FIRMA");
     let signer = ATokenThatSignsOnceThePinIsRight {
         attempts: RefCell::new(0),
     };
@@ -283,7 +283,7 @@ fn the_token_secret_is_asked_over_the_main_window() {
 fn sign_on_token_with_prompter_retries_after_an_incorrect_pin() {
     use crate::identity::domain::secret::SecretName;
 
-    let certificate = a_certificate("FIRMA", b"der");
+    let certificate = a_usable_certificate("FIRMA");
     let signer = ATokenThatSignsOnceThePinIsRight {
         attempts: RefCell::new(0),
     };
@@ -312,7 +312,7 @@ fn sign_on_token_with_prompter_retries_after_an_incorrect_pin() {
 
 #[test]
 fn sign_on_token_with_prompter_cancellation_aborts_the_cycle() {
-    let certificate = a_certificate("FIRMA", b"der");
+    let certificate = a_usable_certificate("FIRMA");
     let signer = ATokenThatSignsOnceThePinIsRight {
         attempts: RefCell::new(0),
     };
@@ -345,7 +345,7 @@ fn sign_on_token_with_prompter_names_the_secret_for_a_file_store() {
             "FIRMA",
             vec![0x01],
         ),
-        b"der".to_vec(),
+        a_usable_certificate("FIRMA").der().to_vec(),
     );
     let signer = ATokenThatSignsOnceThePinIsRight {
         attempts: RefCell::new(0),
@@ -403,7 +403,7 @@ impl Signer for ATokenThatSignsWithoutAsking {
 
 #[test]
 fn a_store_that_needs_no_secret_signs_without_opening_the_dialog() {
-    let certificate = a_certificate("FIRMA", b"der");
+    let certificate = a_usable_certificate("FIRMA");
     let session = a_session_with_open_cycle(&ATokenThatSignsWithoutAsking, &certificate);
     let prompter = MockSecretPrompter::with_secrets(&[]);
 
@@ -473,7 +473,7 @@ impl Signer for ATokenOnItsFinalTryAfterAFailure {
 
 #[test]
 fn the_main_window_dialog_after_a_failure_carries_the_warning_read_again() {
-    let certificate = a_certificate("FIRMA", b"der");
+    let certificate = a_usable_certificate("FIRMA");
     let signer = ATokenOnItsFinalTryAfterAFailure {
         failures: RefCell::new(0),
     };
@@ -557,7 +557,7 @@ impl Signer for ATokenThatCountsItsAttempts {
 
 #[test]
 fn a_card_with_no_attempts_left_ends_the_signature_as_a_locked_pin_without_a_dialog() {
-    let certificate = a_certificate("FIRMA", b"der");
+    let certificate = a_usable_certificate("FIRMA");
     let signer = ATokenThatCountsItsAttempts::with(0);
     let session = a_session_with_open_cycle(&signer, &certificate);
     let prompter = MockSecretPrompter::with_secrets(&[]);
@@ -595,7 +595,7 @@ fn a_batch_on_a_card_with_no_attempts_left_ends_as_a_locked_pin_without_a_dialog
 
 #[test]
 fn each_dialog_carries_the_exact_attempts_left_read_again_after_a_wrong_pin() {
-    let certificate = a_certificate("FIRMA", b"der");
+    let certificate = a_usable_certificate("FIRMA");
     let signer = ATokenThatCountsItsAttempts::with(3);
     let session = a_session_with_open_cycle(&signer, &certificate);
     let prompter = MockSecretPrompter::with_secrets(&["0000", "1234"]);
@@ -622,7 +622,7 @@ fn each_dialog_carries_the_exact_attempts_left_read_again_after_a_wrong_pin() {
 
 #[test]
 fn spending_the_last_attempt_ends_as_a_locked_pin_without_asking_again() {
-    let certificate = a_certificate("FIRMA", b"der");
+    let certificate = a_usable_certificate("FIRMA");
     let signer = ATokenThatCountsItsAttempts::with(1);
     let session = a_session_with_open_cycle(&signer, &certificate);
     let prompter = MockSecretPrompter::with_secrets(&["0000"]);

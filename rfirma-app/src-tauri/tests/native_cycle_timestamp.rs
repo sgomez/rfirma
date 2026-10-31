@@ -140,7 +140,7 @@ mod fake_tsa {
 }
 
 mod timestamp {
-    use rfirma_lib::signing::application::cycle;
+    use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
     use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, XadesVariant};
 
     use super::fake_tsa::{unreachable_url, FakeTsa};
@@ -167,7 +167,7 @@ mod timestamp {
             &signing_certificate(),
             PIN,
             format,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             data,
             SignatureOperation::Sign,
             &[("tsaURL", tsa_url)],
@@ -182,7 +182,7 @@ mod timestamp {
 
         let signed = a_cycle_of(
             Format::Cades,
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             CHALLENGE,
             SignatureOperation::Sign,
             &[("mode", "implicit"), ("tsaURL", tsa.url())],
@@ -203,7 +203,7 @@ mod timestamp {
 
         let signed = a_cycle_of(
             Format::Xades(XadesVariant::Enveloping),
-            cycle::ALGORITHM,
+            SignatureAlgorithm::Sha256Rsa,
             REFERENCE_XML,
             SignatureOperation::Sign,
             &[("tsaURL", tsa.url())],

@@ -4,7 +4,7 @@
 mod support;
 
 use base64::Engine;
-use rfirma_lib::signing::application::cycle::ALGORITHM;
+use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 use rfirma_lib::signing::domain::document_signatures::{
     DocumentFinding, DocumentSignatures, SigningDate, Validity, ValidityReason,
@@ -26,7 +26,13 @@ fn sample(name: &str) -> Vec<u8> {
 }
 
 fn signed(pdf: &[u8]) -> Vec<u8> {
-    a_cycle_of(Format::Pades, ALGORITHM, pdf, SignatureOperation::Sign, &[])
+    a_cycle_of(
+        Format::Pades,
+        SignatureAlgorithm::Sha256Rsa,
+        pdf,
+        SignatureOperation::Sign,
+        &[],
+    )
 }
 
 const CONTENT: &str = "BT /F1 24 Tf 72 750 Td (rfirma: validez) Tj ET\n";

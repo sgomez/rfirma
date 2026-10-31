@@ -25,7 +25,6 @@ use rfirma_lib::desktop::ports::{
 };
 use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
-use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, XadesVariant};
 
 use support::{
@@ -152,7 +151,7 @@ fn a_valid_signature_prints_firma_valida() {
 fn a_pades_signed_with_the_token_prints_firma_valida() {
     let signed = a_cycle_of(
         Format::Pades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &a_one_page_pdf(),
         SignatureOperation::Sign,
         &[],
@@ -227,14 +226,14 @@ fn a_file_of_no_signature_format_prints_its_result() {
 fn a_pdf_signed_twice_with_the_token() -> PathBuf {
     let signed = a_cycle_of(
         Format::Pades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &a_one_page_pdf(),
         SignatureOperation::Sign,
         &[],
     );
     let twice = a_cycle_of(
         Format::Pades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &signed,
         SignatureOperation::Sign,
         &[],
@@ -306,7 +305,7 @@ fn a_pdf_signed_by_the_legal_entity_representative() -> PathBuf {
         &certificate_labelled("FNMT-REPRESENTANTE-PJ"),
         PIN,
         Format::Pades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &a_one_page_pdf(),
         SignatureOperation::Sign,
         &[],
@@ -339,14 +338,14 @@ fn a_cades_cosigned_with_the_token() -> PathBuf {
     let challenge = std::fs::read(sample("reference/challenge.bin")).expect("el reto se lee");
     let signed = a_cycle_of(
         Format::Cades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &challenge,
         SignatureOperation::Sign,
         &[("mode", "implicit")],
     );
     let cosigned = a_cycle_of(
         Format::Cades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &signed,
         SignatureOperation::Cosign,
         &[("mode", "implicit")],
@@ -380,14 +379,14 @@ fn a_cades_countersigned_with_the_token() -> PathBuf {
     let challenge = std::fs::read(sample("reference/challenge.bin")).expect("el reto se lee");
     let signed = a_cycle_of(
         Format::Cades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &challenge,
         SignatureOperation::Sign,
         &[("mode", "implicit")],
     );
     let countersigned = a_cycle_of(
         Format::Cades,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &signed,
         SignatureOperation::Countersign,
         &[("target", "tree")],
@@ -421,14 +420,14 @@ fn a_xades_countersigned_with_the_token() -> PathBuf {
     let challenge = std::fs::read(sample("reference/document.xml")).expect("el XML se lee");
     let signed = a_cycle_of(
         Format::Xades(XadesVariant::Enveloping),
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &challenge,
         SignatureOperation::Sign,
         &[],
     );
     let countersigned = a_cycle_of(
         Format::Xades(XadesVariant::Enveloping),
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &signed,
         SignatureOperation::Countersign,
         &[("target", "tree")],
@@ -465,7 +464,7 @@ fn verbose_prints_the_format_and_the_sheet_of_a_signed_invoice() {
     let invoice = std::fs::read(sample("reference/invoice.xml")).expect("la factura se lee");
     let signed = a_cycle_of(
         Format::FacturaE,
-        ALGORITHM,
+        SignatureAlgorithm::Sha256Rsa,
         &invoice,
         SignatureOperation::Sign,
         &[],
