@@ -86,7 +86,7 @@ jobs:
         run: just check-glibc
 
       - name: Sube artefacto librfirma_crypto.so
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: librfirma-crypto
           path: rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so
@@ -103,7 +103,7 @@ jobs:
           ref: ${{ inputs.ref }}
 
       - name: Descarga librfirma_crypto.so
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: librfirma-crypto
           path: rfirma-native-bridge/target/lib/rfirma
@@ -124,7 +124,7 @@ jobs:
           ref: ${{ inputs.ref }}
 
       - name: Descarga librfirma_crypto.so
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: librfirma-crypto
           path: rfirma-native-bridge/target/lib/rfirma
@@ -159,7 +159,7 @@ jobs:
         run: just flatpak
 
       - name: Sube artefacto flatpak
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bundle-flatpak
           path: ${{ env.FLATPAK_BUNDLE }}
@@ -177,7 +177,7 @@ jobs:
           ref: ${{ inputs.ref }}
 
       - name: Descarga librfirma_crypto.so
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: librfirma-crypto
           path: rfirma-native-bridge/target/lib/rfirma
@@ -196,7 +196,7 @@ jobs:
         run: just bundle
 
       - name: Sube artefactos .deb y .rpm
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bundles-native
           path: |
@@ -235,7 +235,7 @@ jobs:
         run: just bundle
 
       - name: Sube el instalador
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bundle-windows
           path: rfirma-app/src-tauri/target/release/bundle/nsis/*-setup.exe
@@ -269,7 +269,7 @@ jobs:
           TAURI_BUNDLER_DMG_IGNORE_CI: 'true'
 
       - name: Sube el .dmg y la actualizacion
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bundle-macos
           path: |
@@ -289,7 +289,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: bundle-macos
           path: dmg
@@ -331,26 +331,26 @@ jobs:
         run: mkdir -p "${{ runner.temp }}/paquetes"
 
       - name: Descarga bundle flatpak
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: bundle-flatpak
           path: ${{ runner.temp }}/paquetes
 
       - name: Descarga el instalador de Windows
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: bundle-windows
           path: ${{ runner.temp }}/paquetes
 
       - name: Descarga el .dmg y la actualizacion de macOS
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: bundle-macos
           path: ${{ runner.temp }}/paquetes
 
       - name: Descarga bundles nativos (.deb y .rpm)
         if: needs.native-bridge.outputs.native-packages == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: bundles-native
           path: ${{ runner.temp }}/paquetes-nativos
@@ -391,7 +391,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Paquetes
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: paquetes
           path: ${{ runner.temp }}/paquetes/
