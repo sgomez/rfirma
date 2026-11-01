@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.4",
-    "gettext-parser": "9.1.1",
+    "gettext-parser": "10.0.0",
     "i18next": "26.5.11",
     "pdfjs-dist": "6.4.299",
     "react": "catalog:",
