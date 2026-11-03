@@ -94,8 +94,8 @@ importers:
         specifier: 2.12.4
         version: 2.12.4
       gettext-parser:
-        specifier: 9.1.1
-        version: 9.1.1
+        specifier: 10.0.0
+        version: 10.0.0
       i18next:
         specifier: 26.5.11
         version: 26.5.11(typescript@7.0.2)
@@ -3024,8 +3024,8 @@ packages:
     resolution: {integrity: sha512-X6fBC0pmImC70gvX2zm56go9hx0MyoGVdG0tUCkg/D+Xnh5TJsOZ7iDbOdI3PvmtrDxnu1YdDufpK2QJX1Meqw==}
     engines: {node: '>=20.20.0'}
 
-  gettext-parser@9.1.1:
-    resolution: {integrity: sha512-ZLeqWPz9OMNrTgMuww0C22kkcNqis+e4059R94t7L7ERlZ2rUNpiDbaAUus+esBC6uBAQWbS9N+R5vJIJg//lw==}
+  gettext-parser@10.0.0:
+    resolution: {integrity: sha512-hELgK4pFrOrqFiUOo4GQ6kFg0ywhlEJXN6R22cgZ1dxzZj9LUXA2NnwmyoUqxLyunm0yrSPwd6fA5bNqjuvmYA==}
     engines: {node: '>=20'}
 
   github-slugger@2.0.0:
@@ -6777,7 +6777,7 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  gettext-parser@9.1.1:
+  gettext-parser@10.0.0:
     dependencies:
       content-type: 1.0.5
       encoding: 0.1.13
