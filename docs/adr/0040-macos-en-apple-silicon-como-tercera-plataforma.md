@@ -109,7 +109,7 @@ de terceros. Con firma ad hoc, cada versión es otra identidad de código para m
 
 ## GraalVM: la 25.0.2 en el CI, la 25.0.1 en un Mac Intel
 
-El CI construye con la 25.0.2 fijada (ADR-0035) en `macos-14`, que es Apple Silicon. La 25.0.2 no
+El CI construye con la 25.0.2 fijada (ADR-0035) en `macos-15`, que es Apple Silicon. La 25.0.2 no
 publica versión para macOS x64, así que en un Mac Intel se desarrolla con la 25.0.1, que sí la
 publica. `native-image` no compila en cruzado: la `.dylib` de un Mac Intel es x86_64 y solo sirve
 para probar allí; el paquete arm64 sale siempre del CI o de un Mac con Apple Silicon. El código de
